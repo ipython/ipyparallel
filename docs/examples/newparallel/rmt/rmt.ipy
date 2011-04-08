@@ -7,7 +7,8 @@
 # doing run rmt.ipy.
 
 from rmtkernel import *
-from IPython.kernel import client
+import numpy
+from IPython.parallel import Client
 
 
 def wignerDistribution(s):
@@ -28,29 +29,27 @@ def serialDiffs(num, N):
 
 
 def parallelDiffs(rc, num, N):
-    nengines = len(rc.get_ids())
+    nengines = len(rc.targets)
     num_per_engine = num/nengines
     print "Running with", num_per_engine, "per engine."
-    rc.push(dict(num_per_engine=num_per_engine, N=N))
-    rc.execute('diffs = ensembleDiffs(num_per_engine, N)')
-	# gather blocks always for now
-    pr = rc.gather('diffs')
-    return pr.r
+    ar = rc.apply_async(ensembleDiffs, num_per_engine, N)
+    return numpy.array(ar.get()).flatten()
 
 
 # Main code
 if __name__ == '__main__':
-    rc = client.MultiEngineClient()
+    rc = Client()
+    view = rc[:]
     print "Distributing code to engines..."
-    r = rc.run('rmtkernel.py')
-    rc.block = False
+    view.run('rmtkernel.py')
+    view.block = False
 
     # Simulation parameters
     nmats = 100
     matsize = 30
-    
-    %timeit -n1 -r1 serialDiffs(nmats,matsize)
-    %timeit -n1 -r1 parallelDiffs(rc, nmats, matsize)
+    # tic = time.time()
+    %timeit -r1 -n1 serialDiffs(nmats,matsize)
+    %timeit -r1 -n1 parallelDiffs(view, nmats, matsize)
 
     # Uncomment these to plot the histogram
     # import pylab

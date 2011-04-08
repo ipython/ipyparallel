@@ -16,12 +16,25 @@ should be equal.
 """
 
 # Import statements
-
 from __future__ import division, with_statement
+
 import numpy as np
 from matplotlib import pyplot as plt
 
 # Top-level functions
+
+def fetch_pi_file(filename):
+    """This will download a segment of pi from super-computing.org
+    if the file is not already present.
+    """
+    import os, urllib
+    ftpdir="ftp://pi.super-computing.org/.2/pi200m/"
+    if os.path.exists(filename):
+        # we already have it
+        return
+    else:
+        # download it
+        urllib.urlretrieve(ftpdir+filename,filename)
 
 def compute_one_digit_freqs(filename):
     """

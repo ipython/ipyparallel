@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 """Test the performance of the task farming system.
 
-This script submits a set of tasks to the TaskClient.  The tasks
+This script submits a set of tasks via a LoadBalancedView.  The tasks
 are basically just a time.sleep(t), where t is a random number between
 two limits that can be configured at the command line.  To run 
 the script there must first be an IPython controller and engines running::
 
-    ipcluster -n 16
+    ipclusterz start -n 16
 
 A good test to run with 16 engines is::
 
@@ -19,16 +19,14 @@ import random, sys
 from optparse import OptionParser
 
 from IPython.utils.timing import time
-from IPython.kernel import client
+from IPython.parallel import Client
 
 def main():
     parser = OptionParser()
     parser.set_defaults(n=100)
     parser.set_defaults(tmin=1)
     parser.set_defaults(tmax=60)
-    parser.set_defaults(controller='localhost')
-    parser.set_defaults(meport=10105)
-    parser.set_defaults(tport=10113)
+    parser.set_defaults(profile='default')
     
     parser.add_option("-n", type='int', dest='n',
         help='the number of tasks to run')
@@ -36,33 +34,28 @@ def main():
         help='the minimum task length in seconds')
     parser.add_option("-T", type='float', dest='tmax',
         help='the maximum task length in seconds')
-    parser.add_option("-c", type='string', dest='controller',
-        help='the address of the controller')
-    parser.add_option("-p", type='int', dest='meport',
-        help="the port on which the controller listens for the MultiEngine/RemoteController client")
-    parser.add_option("-P", type='int', dest='tport',
-        help="the port on which the controller listens for the TaskClient client")
+    parser.add_option("-p", '--profile', type='str', dest='profile',
+        help="the cluster profile [default: 'default']")
     
     (opts, args) = parser.parse_args()
     assert opts.tmax >= opts.tmin, "tmax must not be smaller than tmin"
     
-    rc = client.MultiEngineClient()
-    tc = client.TaskClient()
-    print tc.task_controller
+    rc = Client()
+    view = rc.load_balanced_view()
+    print view
     rc.block=True
-    nengines = len(rc.get_ids())
-    rc.execute('from IPython.utils.timing import time')
+    nengines = len(rc.ids)
+    rc[:].execute('from IPython.utils.timing import time')
 
     # the jobs should take a random time within a range
     times = [random.random()*(opts.tmax-opts.tmin)+opts.tmin for i in range(opts.n)]
-    tasks = [client.StringTask("time.sleep(%f)"%t) for t in times]
     stime = sum(times)
     
     print "executing %i tasks, totalling %.1f secs on %i engines"%(opts.n, stime, nengines)
     time.sleep(1)
     start = time.time()
-    taskids = [tc.run(t) for t in tasks]
-    tc.barrier(taskids)
+    amr = view.map(time.sleep, times)
+    amr.get()
     stop = time.time()
 
     ptime = stop-start

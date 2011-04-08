@@ -2,22 +2,23 @@
 An exceptionally lousy site spider
 Ken Kinder <ken@kenkinder.com>
 
-This module gives an example of how the TaskClient interface to the 
+Updated for newparallel by Min Ragan-Kelley <benjaminrk@gmail.com>
+
+This module gives an example of how the task interface to the 
 IPython controller works.  Before running this script start the IPython controller
 and some engines using something like::
 
-    ipcluster -n 4
+    ipclusterz start -n 4
 """
-from twisted.python.failure import Failure
-from IPython.kernel import client
+import sys
+from IPython.parallel import Client, error
 import time
-
-fetchParse = """
-from twisted.web import microdom
-import urllib2
-import urlparse
+import BeautifulSoup # this isn't necessary, but it helps throw the dependency error earlier
 
 def fetchAndParse(url, data=None):
+    import urllib2
+    import urlparse
+    import BeautifulSoup
     links = []
     try:
         page = urllib2.urlopen(url, data=data)
@@ -25,12 +26,12 @@ def fetchAndParse(url, data=None):
         return links
     else:
         if page.headers.type == 'text/html':
-            doc = microdom.parseString(page.read(), beExtremelyLenient=True)
-            for node in doc.getElementsByTagName('a'):
-                if node.getAttribute('href'):
-                    links.append(urlparse.urljoin(url, node.getAttribute('href')))
+            doc = BeautifulSoup.BeautifulSoup(page.read())
+            for node in doc.findAll('a'):
+                href = node.get('href', None)
+                if href:
+                    links.append(urlparse.urljoin(url, href))
         return links
-"""
 
 class DistributedSpider(object):
     
@@ -38,9 +39,9 @@ class DistributedSpider(object):
     pollingDelay = 0.5
     
     def __init__(self, site):
-        self.tc = client.TaskClient()
-        self.rc = client.MultiEngineClient()
-        self.rc.execute(fetchParse)
+        self.client = Client()
+        self.view = self.client.load_balanced_view()
+        self.mux = self.client[:]
         
         self.allLinks = []
         self.linksWorking = {}
@@ -53,19 +54,14 @@ class DistributedSpider(object):
             self.allLinks.append(url)
             if url.startswith(self.site):
                 print '    ', url
-                self.linksWorking[url] = self.tc.run(client.StringTask('links = fetchAndParse(url)', pull=['links'], push={'url': url}))
+                self.linksWorking[url] = self.view.apply(fetchAndParse, url)
         
-    def onVisitDone(self, result, url):
+    def onVisitDone(self, links, url):
         print url, ':'
         self.linksDone[url] = None
         del self.linksWorking[url]
-        if isinstance(result.failure, Failure):
-            txt = result.failure.getTraceback()
-            for line in txt.split('\n'):
-                print '    ', line
-        else:
-            for link in result.ns.links:
-                self.visitLink(link)
+        for link in links:
+            self.visitLink(link)
                 
     def run(self):
         self.visitLink(self.site)
@@ -75,15 +71,26 @@ class DistributedSpider(object):
             time.sleep(self.pollingDelay)
     
     def synchronize(self):
-        for url, taskId in self.linksWorking.items():
+        for url, ar in self.linksWorking.items():
             # Calling get_task_result with block=False will return None if the
             # task is not done yet.  This provides a simple way of polling.
-            result = self.tc.get_task_result(taskId, block=False)
-            if result is not None:
-                self.onVisitDone(result, url)
+            try:
+                links = ar.get(0)
+            except error.TimeoutError:
+                continue
+            except Exception as e:
+                self.linksDone[url] = None
+                del self.linksWorking[url]
+                print url, ':', e.traceback
+            else:
+                self.onVisitDone(links, url)
 
 def main():
-    distributedSpider = DistributedSpider(raw_input('Enter site to crawl: '))
+    if len(sys.argv) > 1:
+        site = sys.argv[1]
+    else:
+        site = raw_input('Enter site to crawl: ')
+    distributedSpider = DistributedSpider(site)
     distributedSpider.run()
 
 if __name__ == '__main__':

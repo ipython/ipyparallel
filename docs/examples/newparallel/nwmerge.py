@@ -4,7 +4,7 @@
 # http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/511509
 
 import heapq
-from IPython.kernel.error import CompositeError
+from IPython.parallel.error import RemoteError
 
 def mergesort(list_of_lists, key=None):
     """ Perform an N-way merge operation on sorted lists.
@@ -74,29 +74,29 @@ def mergesort(list_of_lists, key=None):
                 heapq.heappop(heap)
 
 
-def remote_iterator(rc,engine,name):
+def remote_iterator(view,name):
     """Return an iterator on an object living on a remote engine.
     """
-    # Check that the object exists on the engine and pin a reference to it
-    iter_name = '_%s_rmt_iter_' % name
-    rc.execute('%s = iter(%s)' % (iter_name,name), targets=engine)
-    tpl = '_tmp = %s.next()' % iter_name
+    view.execute('it%s=iter(%s)'%(name,name), block=True)
     while True:
         try:
-            rc.execute(tpl, targets=engine)
-            result = rc.pull('_tmp', targets=engine)[0]
+            result = view.apply_sync(lambda x: x.next(), Reference('it'+name))
         # This causes the StopIteration exception to be raised.
-        except CompositeError, e:
-            e.raise_exception()
+        except RemoteError, e:
+            if e.ename == 'StopIteration':
+                raise StopIteration
+            else:
+                raise e
         else:
             yield result
 
 # Main, interactive testing
 if __name__ == '__main__':
 
-    from IPython.kernel import client
-    ipc = client.MultiEngineClient()
-    print 'Engine IDs:',ipc.get_ids()
+    from IPython.parallel import Client, Reference
+    rc = Client()
+    view = rc[:]
+    print 'Engine IDs:', rc.ids
 
     # Make a set of 'sorted datasets'
     a0 = range(5,20)
@@ -106,14 +106,14 @@ if __name__ == '__main__':
     # Now, imagine these had been created in the remote engines by some long
     # computation.  In this simple example, we just send them over into the
     # remote engines.  They will all be called 'a' in each engine.
-    ipc.push(dict(a=a0), targets=0)
-    ipc.push(dict(a=a1), targets=1)
-    ipc.push(dict(a=a2), targets=2)
+    rc[0]['a'] = a0
+    rc[1]['a'] = a1
+    rc[2]['a'] = a2
 
     # And we now make a local object which represents the remote iterator
-    aa0 = remote_iterator(ipc,0,'a')
-    aa1 = remote_iterator(ipc,1,'a')
-    aa2 = remote_iterator(ipc,2,'a')
+    aa0 = remote_iterator(rc[0],'a')
+    aa1 = remote_iterator(rc[1],'a')
+    aa2 = remote_iterator(rc[2],'a')
 
     # Let's merge them, both locally and remotely:
     print 'Merge the local datasets:'
