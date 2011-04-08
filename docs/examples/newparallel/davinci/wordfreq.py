@@ -5,9 +5,11 @@ from __future__ import division
 import cmath as math
 
 
-def wordfreq(text):
+def wordfreq(text, is_filename=False):
     """Return a dictionary of words and word counts in a string."""
-
+    if is_filename:
+        with open(text) as f:
+            text = f.read()
     freqs = {}
     for word in text.split():
         lword = word.lower()
