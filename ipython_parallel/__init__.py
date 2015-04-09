@@ -13,6 +13,7 @@ from traitlets.config.configurable import MultipleInstanceError
 
 from ipython_kernel.pickleutil import Reference
 
+from ._version import version_info, __version__
 from .client.asyncresult import *
 from .client.client import Client
 from .client.remotefunction import *
