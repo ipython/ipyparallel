@@ -32,7 +32,7 @@ class TestProcessLauncher(LocalProcessLauncher):
             # Store stdout & stderr to show with failing tests.
             # This is defined in IPython.testing.iptest
             self.process = Popen(self.args,
-                stdout=nose.iptest_stdstreams_fileno, stderr=STDOUT,
+                stdout=nose.iptest_stdstreams_fileno(), stderr=STDOUT,
                 env=os.environ,
                 cwd=self.work_dir
             )
