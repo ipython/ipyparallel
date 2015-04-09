@@ -1,0 +1,15 @@
+# http://travis-ci.org/#!/ipython/ipython_parallel
+language: python
+python:
+    - 3.4
+    - 3.3
+    - 2.7
+sudo: false
+before_install:
+    - git clone --quiet --depth 1 https://github.com/minrk/travis-wheels travis-wheels
+install:
+    - pip install -f travis-wheels/wheelhouse -r requirements.txt . coveralls
+script:
+    - iptest --coverage xml ipython_parallel.tests
+after_success:
+    - coveralls
