@@ -32,7 +32,7 @@ from ipython_parallel.controller.sqlitedb import SQLiteDB
 from ipython_parallel.controller.hub import init_record, empty_record
 
 from IPython.testing import decorators as dec
-from IPython.kernel.zmq.session import Session
+from jupyter_client.session import Session
 
 
 #-------------------------------------------------------------------------------

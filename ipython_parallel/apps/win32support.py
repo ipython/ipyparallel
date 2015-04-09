@@ -24,7 +24,7 @@ import zmq
 
 from threading import Thread
 
-from IPython.utils.py3compat import unicode_type
+from ipython_genutils.py3compat import unicode_type
 
 #-----------------------------------------------------------------------------
 # Code

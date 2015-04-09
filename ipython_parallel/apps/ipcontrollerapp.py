@@ -43,11 +43,11 @@ from ipython_parallel.apps.baseapp import (
     base_flags,
     catch_config_error,
 )
-from IPython.utils.importstring import import_item
-from IPython.utils.localinterfaces import localhost, public_ips
-from IPython.utils.traitlets import Instance, Unicode, Bool, List, Dict, TraitError
+from ipython_genutils.importstring import import_item
+from jupyter_client.localinterfaces import localhost, public_ips
+from traitlets import Instance, Unicode, Bool, List, Dict, TraitError
 
-from IPython.kernel.zmq.session import (
+from jupyter_client.session import (
     Session, session_aliases, session_flags,
 )
 

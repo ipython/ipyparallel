@@ -13,15 +13,15 @@ from types import ModuleType
 
 import zmq
 
-from IPython.utils import pickleutil
-from IPython.utils.traitlets import (
+from ipython_kernel import pickleutil
+from traitlets import (
     HasTraits, Any, Bool, List, Dict, Set, Instance, CFloat, Integer
 )
 from decorator import decorator
 
 from ipython_parallel import util
 from ipython_parallel.controller.dependency import Dependency, dependent
-from IPython.utils.py3compat import string_types, iteritems, PY3
+from ipython_genutils.py3compat import string_types, iteritems, PY3
 
 from . import map as Map
 from .asyncresult import AsyncResult, AsyncMapResult
@@ -424,7 +424,7 @@ class DirectView(View):
         importing recarray from numpy on engine(s)
 
         """
-        from IPython.utils.py3compat import builtin_mod
+        from ipython_genutils.py3compat import builtin_mod
         local_import = builtin_mod.__import__
         modules = set()
         results = []

@@ -27,10 +27,10 @@ from zmq.eventloop import ioloop, zmqstream
 
 # local imports
 from decorator import decorator
-from IPython.config.application import Application
-from IPython.config.loader import Config
-from IPython.utils.traitlets import Instance, Dict, List, Set, Integer, Enum, CBytes
-from IPython.utils.py3compat import cast_bytes
+from traitlets.config.application import Application
+from traitlets.config.loader import Config
+from traitlets import Instance, Dict, List, Set, Integer, Enum, CBytes
+from ipython_genutils.py3compat import cast_bytes
 
 from ipython_parallel import error, util
 from ipython_parallel.factory import SessionFactory

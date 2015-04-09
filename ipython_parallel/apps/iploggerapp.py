@@ -26,7 +26,7 @@ import sys
 import zmq
 
 from IPython.core.profiledir import ProfileDir
-from IPython.utils.traitlets import Bool, Dict, Unicode
+from traitlets import Bool, Dict, Unicode
 
 from ipython_parallel.apps.baseapp import (
     BaseParallelApplication,

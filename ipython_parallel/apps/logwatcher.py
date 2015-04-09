@@ -25,9 +25,9 @@ import sys
 import zmq
 from zmq.eventloop import ioloop, zmqstream
 
-from IPython.config.configurable import LoggingConfigurable
-from IPython.utils.localinterfaces import localhost
-from IPython.utils.traitlets import Int, Unicode, Instance, List
+from traitlets.config.configurable import LoggingConfigurable
+from jupyter_client.localinterfaces import localhost
+from traitlets import Int, Unicode, Instance, List
 
 #-----------------------------------------------------------------------------
 # Classes

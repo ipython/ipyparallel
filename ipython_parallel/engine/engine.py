@@ -15,29 +15,29 @@ from getpass import getpass
 import zmq
 from zmq.eventloop import ioloop, zmqstream
 
-from IPython.utils.localinterfaces import localhost
-from IPython.utils.traitlets import (
+from jupyter_client.localinterfaces import localhost
+from traitlets import (
     Instance, Dict, Integer, Type, Float, Unicode, CBytes, Bool
 )
-from IPython.utils.py3compat import cast_bytes
+from ipython_genutils.py3compat import cast_bytes
 
 from ipython_parallel.controller.heartmonitor import Heart
 from ipython_parallel.factory import RegistrationFactory
 from ipython_parallel.util import disambiguate_url
 
-from IPython.kernel.zmq.ipkernel import IPythonKernel as Kernel
-from IPython.kernel.zmq.kernelapp import IPKernelApp
+from ipython_kernel.ipkernel import IPythonKernel as Kernel
+from ipython_kernel.kernelapp import IPKernelApp
 
 class EngineFactory(RegistrationFactory):
     """IPython engine"""
 
     # configurables:
-    out_stream_factory=Type('IPython.kernel.zmq.iostream.OutStream', config=True,
+    out_stream_factory=Type('ipython_kernel.iostream.OutStream', config=True,
         help="""The OutStream for handling stdout/err.
-        Typically 'IPython.kernel.zmq.iostream.OutStream'""")
-    display_hook_factory=Type('IPython.kernel.zmq.displayhook.ZMQDisplayHook', config=True,
+        Typically 'ipython_kernel.iostream.OutStream'""")
+    display_hook_factory=Type('ipython_kernel.displayhook.ZMQDisplayHook', config=True,
         help="""The class for handling displayhook.
-        Typically 'IPython.kernel.zmq.displayhook.ZMQDisplayHook'""")
+        Typically 'ipython_kernel.displayhook.ZMQDisplayHook'""")
     location=Unicode(config=True,
         help="""The location (an IP address) of the controller.  This is
         used for disambiguating URLs, to determine whether

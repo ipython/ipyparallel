@@ -45,7 +45,7 @@ import re
 from IPython.core.error import UsageError
 from IPython.core.magic import Magics
 from IPython.core import magic_arguments
-from IPython.utils.text import dedent
+from ipython_genutils.text import dedent
 
 #-----------------------------------------------------------------------------
 # Definitions of magic functions for use with IPython

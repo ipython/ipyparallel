@@ -16,11 +16,11 @@ Authors:
 # Imports
 #-----------------------------------------------------------------------------
 
-from IPython.utils.localinterfaces import localhost
-from IPython.utils.traitlets import Integer, Unicode
+from jupyter_client.localinterfaces import localhost
+from traitlets import Integer, Unicode
 
 from ipython_parallel.util import select_random_ports
-from IPython.kernel.zmq.session import SessionFactory
+from jupyter_client.session import SessionFactory
 
 #-----------------------------------------------------------------------------
 # Classes

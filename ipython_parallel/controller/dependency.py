@@ -16,8 +16,8 @@ from types import ModuleType
 from ipython_parallel.client.asyncresult import AsyncResult
 from ipython_parallel.error import UnmetDependency
 from ipython_parallel.util import interactive
-from IPython.utils import py3compat
-from IPython.utils.py3compat import string_types
+from ipython_genutils import py3compat
+from ipython_genutils.py3compat import string_types
 from ipython_kernel.pickleutil import can, uncan
 
 class depend(object):

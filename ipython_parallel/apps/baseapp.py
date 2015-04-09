@@ -9,7 +9,7 @@ import logging
 import re
 import sys
 
-from IPython.config.application import catch_config_error, LevelFormatter
+from traitlets.config.application import catch_config_error, LevelFormatter
 from IPython.core import release
 from IPython.core.crashhandler import CrashHandler
 from IPython.core.application import (
@@ -19,10 +19,10 @@ from IPython.core.application import (
 )
 from IPython.utils.path import expand_path
 from IPython.utils.process import check_pid
-from IPython.utils import py3compat
-from IPython.utils.py3compat import unicode_type
+from ipython_genutils import py3compat
+from ipython_genutils.py3compat import unicode_type
 
-from IPython.utils.traitlets import Unicode, Bool, Instance, Dict
+from traitlets import Unicode, Bool, Instance, Dict
 
 #-----------------------------------------------------------------------------
 # Module errors

@@ -29,12 +29,12 @@ from unittest import TestCase
 
 from nose import SkipTest
 
-from IPython.config import Config
+from traitlets.config import Config
 
 from ipython_parallel.apps import launcher
 
 from IPython.testing import decorators as dec
-from IPython.utils.py3compat import string_types
+from ipython_genutils.py3compat import string_types
 
 
 #-------------------------------------------------------------------------------

@@ -1,16 +1,8 @@
 """toplevel setup/teardown for parallel tests."""
 from __future__ import print_function
 
-#-------------------------------------------------------------------------------
-#  Copyright (C) 2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-# Imports
-#-------------------------------------------------------------------------------
+# Copyright (c) IPython Development Team.
+# Distributed under the terms of the Modified BSD License.
 
 import os
 import tempfile
@@ -19,7 +11,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 import nose
 
-from IPython.utils.path import get_ipython_dir
+from IPython.paths import get_ipython_dir
 from ipython_parallel import Client, error
 from ipython_parallel.apps.launcher import (LocalProcessLauncher,
                                                   ipengine_cmd_argv,
@@ -40,7 +32,7 @@ class TestProcessLauncher(LocalProcessLauncher):
             # Store stdout & stderr to show with failing tests.
             # This is defined in IPython.testing.iptest
             self.process = Popen(self.args,
-                stdout=nose.iptest_stdstreams_fileno(), stderr=STDOUT,
+                stdout=nose.iptest_stdstreams_fileno, stderr=STDOUT,
                 env=os.environ,
                 cwd=self.work_dir
             )

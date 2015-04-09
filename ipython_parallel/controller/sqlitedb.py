@@ -18,10 +18,10 @@ except ImportError:
 
 from zmq.eventloop import ioloop
 
-from IPython.utils.traitlets import Unicode, Instance, List, Dict
+from traitlets import Unicode, Instance, List, Dict
 from .dictdb import BaseDB
 from jupyter_client.jsonutil import date_default, extract_dates, squash_dates
-from IPython.utils.py3compat import iteritems
+from ipython_genutils.py3compat import iteritems
 
 #-----------------------------------------------------------------------------
 # SQLite operators, adapters, and converters

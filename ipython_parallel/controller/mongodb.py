@@ -19,7 +19,7 @@ try:
 except ImportError:
     from bson import Binary
 
-from IPython.utils.traitlets import Dict, List, Unicode, Instance
+from traitlets import Dict, List, Unicode, Instance
 
 from .dictdb import BaseDB
 

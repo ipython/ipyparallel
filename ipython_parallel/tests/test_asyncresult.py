@@ -13,7 +13,7 @@ from ipython_parallel.error import TimeoutError
 from ipython_parallel import error, Client
 from ipython_parallel.tests import add_engines
 from .clienttest import ClusterTestCase
-from IPython.utils.py3compat import iteritems
+from ipython_genutils.py3compat import iteritems
 
 def setup():
     add_engines(2, total=True)
@@ -278,7 +278,7 @@ class AsyncResultTest(ClusterTestCase):
         v = self.client[-1]
         ar = v.execute('\n'.join([
             "import time",
-            "from IPython.kernel.zmq.datapub import publish_data",
+            "from ipython_kernel.datapub import publish_data",
             "for i in range(5):",
             "    publish_data(dict(i=i))",
             "    time.sleep(0.1)",
