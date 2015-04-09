@@ -45,10 +45,10 @@ copy._deepcopy_dispatch[memoryview] = lambda x, memo: memoryview(x)
 
 from datetime import datetime
 
-from IPython.config.configurable import LoggingConfigurable
+from traitlets.config.configurable import LoggingConfigurable
 
-from IPython.utils.py3compat import iteritems, itervalues
-from IPython.utils.traitlets import Dict, Unicode, Integer, Float
+from ipython_genutils.py3compat import iteritems, itervalues
+from traitlets import Dict, Unicode, Integer, Float
 
 filters = {
  '$lt' : lambda a,b: a < b,

@@ -15,9 +15,9 @@ import zmq
 from zmq.devices import ThreadDevice, ThreadMonitoredQueue
 from zmq.eventloop import ioloop, zmqstream
 
-from IPython.config.configurable import LoggingConfigurable
-from IPython.utils.py3compat import str_to_bytes
-from IPython.utils.traitlets import Set, Instance, CFloat, Integer, Dict, Bool
+from traitlets.config.configurable import LoggingConfigurable
+from ipython_genutils.py3compat import str_to_bytes
+from traitlets import Set, Instance, CFloat, Integer, Dict, Bool
 
 from ipython_parallel.util import log_errors
 

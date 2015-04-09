@@ -27,13 +27,13 @@ except:
 import zmq
 from zmq.log import handlers
 
-from IPython.utils.log import get_logger
+from traitlets.log import get_logger
 from decorator import decorator
 
-from IPython.config.application import Application
-from IPython.utils.localinterfaces import localhost, is_public_ip, public_ips
-from IPython.utils.py3compat import string_types, iteritems, itervalues
-from IPython.kernel.zmq.log import EnginePUBHandler
+from traitlets.config.application import Application
+from jupyter_client.localinterfaces import localhost, is_public_ip, public_ips
+from ipython_genutils.py3compat import string_types, iteritems, itervalues
+from ipython_kernel.log import EnginePUBHandler
 
 
 #-----------------------------------------------------------------------------

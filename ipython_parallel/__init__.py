@@ -9,7 +9,7 @@ import warnings
 
 import zmq
 
-from IPython.config.configurable import MultipleInstanceError
+from traitlets.config.configurable import MultipleInstanceError
 
 from ipython_kernel.pickleutil import Reference
 
@@ -34,7 +34,7 @@ def bind_kernel(**kwargs):
     
     This function returns immediately.
     """
-    from IPython.kernel.zmq.kernelapp import IPKernelApp
+    from ipython_kernel.kernelapp import IPKernelApp
     from ipython_parallel.apps.ipengineapp import IPEngineApp
     
     # first check for IPKernelApp, in which case this should be a no-op

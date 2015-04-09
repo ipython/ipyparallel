@@ -27,9 +27,9 @@ import uuid
 
 from xml.etree import ElementTree as ET
 
-from IPython.config.configurable import Configurable
-from IPython.utils.py3compat import iteritems
-from IPython.utils.traitlets import (
+from traitlets.config.configurable import Configurable
+from ipython_genutils.py3compat import iteritems
+from traitlets import (
     Unicode, Integer, List, Instance,
     Enum, Bool
 )

@@ -36,22 +36,22 @@ from ipython_parallel.apps.baseapp import (
     base_flags,
     catch_config_error,
 )
-from IPython.kernel.zmq.log import EnginePUBHandler
-from IPython.kernel.zmq.ipkernel import IPythonKernel as Kernel
-from IPython.kernel.zmq.kernelapp import IPKernelApp
-from IPython.kernel.zmq.session import (
+from ipython_kernel.log import EnginePUBHandler
+from ipython_kernel.ipkernel import IPythonKernel as Kernel
+from ipython_kernel.kernelapp import IPKernelApp
+from jupyter_client.session import (
     Session, session_aliases, session_flags
 )
-from IPython.kernel.zmq.zmqshell import ZMQInteractiveShell
+from ipython_kernel.zmqshell import ZMQInteractiveShell
 
-from IPython.config.configurable import Configurable
+from traitlets.config.configurable import Configurable
 
 from ipython_parallel.engine.engine import EngineFactory
 from ipython_parallel.util import disambiguate_ip_address
 
-from IPython.utils.importstring import import_item
-from IPython.utils.py3compat import cast_bytes
-from IPython.utils.traitlets import Bool, Unicode, Dict, List, Float, Instance
+from ipython_genutils.importstring import import_item
+from ipython_genutils.py3compat import cast_bytes
+from traitlets import Bool, Unicode, Dict, List, Float, Instance
 
 
 #-----------------------------------------------------------------------------
@@ -283,6 +283,7 @@ class IPEngineApp(BaseParallelApplication):
         app.init_heartbeat()
         
         app.log_connection_info()
+        app.connection_dir = self.profile_dir.security_dir
         app.write_connection_file()
         
     

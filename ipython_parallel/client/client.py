@@ -19,17 +19,18 @@ pjoin = os.path.join
 
 import zmq
 
-from IPython.config.configurable import MultipleInstanceError
+from traitlets.config.configurable import MultipleInstanceError
 from IPython.core.application import BaseIPythonApplication
 from IPython.core.profiledir import ProfileDir, ProfileDirError
 
 from IPython.utils.capture import RichOutput
 from IPython.utils.coloransi import TermColors
 from jupyter_client.jsonutil import rekey, extract_dates, parse_date
-from IPython.utils.localinterfaces import localhost, is_local_ip
-from IPython.utils.path import get_ipython_dir, compress_user
-from IPython.utils.py3compat import cast_bytes, string_types, xrange, iteritems
-from IPython.utils.traitlets import (HasTraits, Integer, Instance, Unicode,
+from jupyter_client.localinterfaces import localhost, is_local_ip
+from IPython.paths import get_ipython_dir
+from IPython.utils.path import compress_user
+from ipython_genutils.py3compat import cast_bytes, string_types, xrange, iteritems
+from traitlets import (HasTraits, Integer, Instance, Unicode,
                                     Dict, List, Bool, Set, Any)
 from decorator import decorator
 
@@ -37,8 +38,8 @@ from ipython_parallel import Reference
 from ipython_parallel import error
 from ipython_parallel import util
 
-from IPython.kernel.zmq.session import Session, Message
-from IPython.kernel.zmq import serialize
+from jupyter_client.session import Session, Message
+from ipython_kernel import serialize
 
 from .asyncresult import AsyncResult, AsyncHubResult
 from .view import DirectView, LoadBalancedView

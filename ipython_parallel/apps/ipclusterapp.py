@@ -12,14 +12,14 @@ import signal
 from subprocess import check_call, CalledProcessError, PIPE
 import zmq
 
-from IPython.config.application import catch_config_error
-from IPython.config.loader import Config
+from traitlets.config.application import catch_config_error
+from traitlets.config.loader import Config
 from IPython.core.application import BaseIPythonApplication
 from IPython.core.profiledir import ProfileDir
-from IPython.utils.importstring import import_item
-from IPython.utils.py3compat import string_types
+from ipython_genutils.importstring import import_item
+from ipython_genutils.py3compat import string_types
 from IPython.utils.sysinfo import num_cpus
-from IPython.utils.traitlets import (Integer, Unicode, Bool, CFloat, Dict, List, Any,
+from traitlets import (Integer, Unicode, Bool, CFloat, Dict, List, Any,
                                         DottedObjectName)
 
 from .baseapp import (

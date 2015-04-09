@@ -40,16 +40,16 @@ except ImportError:
 
 from zmq.eventloop import ioloop
 
-from IPython.config.application import Application
-from IPython.config.configurable import LoggingConfigurable
+from traitlets.config.application import Application
+from traitlets.config.configurable import LoggingConfigurable
 from IPython.utils.text import EvalFormatter
-from IPython.utils.traitlets import (
+from traitlets import (
     Any, Integer, CFloat, List, Unicode, Dict, Instance, HasTraits, CRegExp
 )
-from IPython.utils.encoding import DEFAULT_ENCODING
+from ipython_genutils.encoding import DEFAULT_ENCODING
 from IPython.utils.path import get_home_dir, ensure_dir_exists
 from IPython.utils.process import find_cmd, FindCmdError
-from IPython.utils.py3compat import iteritems, itervalues
+from ipython_genutils.py3compat import iteritems, itervalues
 
 from .win32support import forward_read_events
 

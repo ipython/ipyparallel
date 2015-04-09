@@ -19,18 +19,18 @@ import zmq
 from zmq.eventloop.zmqstream import ZMQStream
 
 # internal:
-from IPython.utils.importstring import import_item
+from ipython_genutils.importstring import import_item
 from jupyter_client.jsonutil import extract_dates
-from IPython.utils.localinterfaces import localhost
-from IPython.utils.py3compat import cast_bytes, unicode_type, iteritems
-from IPython.utils.traitlets import (
+from jupyter_client.localinterfaces import localhost
+from ipython_genutils.py3compat import cast_bytes, unicode_type, iteritems
+from traitlets import (
         HasTraits, Any, Instance, Integer, Unicode, Dict, Set, Tuple, DottedObjectName
         )
 
 from ipython_parallel import error, util
 from ipython_parallel.factory import RegistrationFactory
 
-from IPython.kernel.zmq.session import SessionFactory
+from jupyter_client.session import SessionFactory
 
 from .heartmonitor import HeartMonitor
 

@@ -14,7 +14,7 @@ from zmq import MessageTracker
 from IPython.core.display import clear_output, display, display_pretty
 from decorator import decorator
 from ipython_parallel import error
-from IPython.utils.py3compat import string_types
+from ipython_genutils.py3compat import string_types
 
 
 def _raw_text(s):
