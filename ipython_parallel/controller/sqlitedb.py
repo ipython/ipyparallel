@@ -21,7 +21,7 @@ from zmq.eventloop import ioloop
 from traitlets import Unicode, Instance, List, Dict
 from .dictdb import BaseDB
 from jupyter_client.jsonutil import date_default, extract_dates, squash_dates
-from ipython_genutils.py3compat import iteritems
+from ipython_genutils.py3compat import iteritems, buffer_to_bytes
 
 #-----------------------------------------------------------------------------
 # SQLite operators, adapters, and converters
@@ -67,8 +67,8 @@ def _convert_dict(ds):
 def _adapt_bufs(bufs):
     # this is *horrible*
     # copy buffers into single list and pickle it:
-    if bufs and isinstance(bufs[0], (bytes, buffer)):
-        return sqlite3.Binary(pickle.dumps(list(map(bytes, bufs)),-1))
+    if bufs and isinstance(bufs[0], (bytes, buffer, memoryview)):
+        return sqlite3.Binary(pickle.dumps(list(map(buffer_to_bytes, bufs)),-1))
     elif bufs:
         return bufs
     else:
