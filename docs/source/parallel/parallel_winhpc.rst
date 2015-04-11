@@ -324,7 +324,7 @@ apply it to each element of an array of integers in parallel using the
 
 .. sourcecode:: ipython
 
-    In [1]: from IPython.parallel import *
+    In [1]: from ipython_parallel import *
 
     In [2]: c = Client(profile='mycluster')
 

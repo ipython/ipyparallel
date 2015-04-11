@@ -17,7 +17,7 @@ of the IPython engines.
 """
 from __future__ import print_function
 
-from IPython.parallel import Client
+from ipython_parallel import Client
 from matplotlib import pyplot as plt
 import numpy as np
 from pidigits import *
