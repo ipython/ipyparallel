@@ -1,7 +1,7 @@
 .. _parallel_transition:
 
 =====================================================
-Transitioning from IPython.kernel to IPython.parallel
+Transitioning from IPython.kernel to ipython_parallel
 =====================================================
 
 
@@ -55,7 +55,7 @@ To create a new client, and set up the default direct and load-balanced objects:
     In [3]: tc = kclient.TaskClient()
     
     # new 
-    In [1]: from IPython.parallel import Client
+    In [1]: from ipython_parallel import Client
     
     In [2]: rc = Client()
 
@@ -176,7 +176,7 @@ In the new code, this is simpler:
 
     In [10]: import numpy
     
-    In [11]: from IPython.parallel import Reference
+    In [11]: from ipython_parallel import Reference
     
     In [12]: ar = lbview.apply(numpy.dot, Reference('A'), B)
     

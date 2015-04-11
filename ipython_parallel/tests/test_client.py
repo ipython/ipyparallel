@@ -10,7 +10,7 @@ from datetime import datetime
 
 import zmq
 
-from IPython import parallel
+import ipython_parallel as parallel
 from ipython_parallel.client import client as clientmod
 from ipython_parallel import error
 from ipython_parallel import AsyncResult, AsyncHubResult

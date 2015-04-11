@@ -27,12 +27,12 @@ our :ref:`introduction <parallel_overview>` to using IPython for parallel comput
 Creating a ``DirectView`` instance
 ==================================
 
-The first step is to import the IPython :mod:`IPython.parallel`
+The first step is to import the IPython :mod:`ipython_parallel`
 module and then create a :class:`.Client` instance:
 
 .. sourcecode:: ipython
 
-    In [1]: from IPython.parallel import Client
+    In [1]: from ipython_parallel import Client
     
     In [2]: rc = Client()
 
@@ -523,7 +523,7 @@ be collected and raise a CompositeError, as demonstrated in the next section.
 
 .. sourcecode:: ipython
 
-    In [69]: from IPython.parallel import require
+    In [69]: from ipython_parallel import require
 
     In [70]: @require('re')
        ....: def findall(pat, x):
@@ -591,7 +591,7 @@ If you want, you can even raise one of these original exceptions:
 
 .. sourcecode:: ipython
 
-    In [79]: from IPython.parallel import CompositeError
+    In [79]: from ipython_parallel import CompositeError
 
     In [80]: try:
        ....:     dview.execute('1/0', block=True)
@@ -672,7 +672,7 @@ You can change this limit to suit your needs with:
 
 .. sourcecode:: ipython
 
-    In [20]: from IPython.parallel import CompositeError
+    In [20]: from ipython_parallel import CompositeError
     In [21]: CompositeError.tb_limit = 1
     In [22]: %px x=z
     [0:execute]: 

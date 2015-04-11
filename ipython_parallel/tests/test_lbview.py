@@ -23,7 +23,7 @@ import zmq
 from nose import SkipTest
 from nose.plugins.attrib import attr
 
-from IPython import parallel  as pmod
+import ipython_parallel  as pmod
 from ipython_parallel import error
 
 from ipython_parallel.tests import add_engines

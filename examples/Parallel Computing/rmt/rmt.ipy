@@ -14,7 +14,7 @@
 
 from rmtkernel import ensemble_diffs, normalize_diffs, GOE
 import numpy as np
-from IPython.parallel import Client
+from ipython_parallel import Client
 
 # <markdowncell>
 

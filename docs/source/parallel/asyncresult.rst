@@ -48,7 +48,7 @@ as in IPython's :file:`examples/parallel/interengine` examples.
 Metadata
 ========
 
-IPython.parallel tracks some metadata about the tasks, which is stored
+ipython_parallel tracks some metadata about the tasks, which is stored
 in the :attr:`.Client.metadata` dict.  The AsyncResult object gives you an
 interface for this information as well, including timestamps stdout/err,
 and engine IDs.
