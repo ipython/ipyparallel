@@ -8,7 +8,7 @@ Overview and getting started
 Examples
 ========
 
-We have various example scripts and notebooks for using IPython.parallel in our
+We have various example scripts and notebooks for using ipython_parallel in our
 :file:`examples/Parallel%20Computing` directory, or they can be viewed `using nbviewer`__.
 Some of these are covered in more detail in the :ref:`examples
 <parallel_examples>` section.
@@ -82,7 +82,7 @@ The IPython architecture consists of four components:
 * The IPython schedulers.
 * The controller client.
 
-These components live in the :mod:`IPython.parallel` package and are
+These components live in the :mod:`ipython_parallel` package and are
 installed with IPython.  They do, however, have additional dependencies
 that must be installed.  For more information, see our
 :ref:`installation documentation <install_index>`.
@@ -260,7 +260,7 @@ everything is working correctly, try the following commands:
 
 .. sourcecode:: ipython
 
-	In [1]: from IPython.parallel import Client
+	In [1]: from ipython_parallel import Client
 	
 	In [2]: c = Client()
 	

@@ -8,7 +8,7 @@ Authors
 """
 import networkx as nx
 from random import randint, random
-from IPython import parallel
+import ipython_parallel as parallel
 
 def randomwait():
     import time

@@ -18,7 +18,7 @@ where you can reorder the partial data before performing the reduce.
 """
 from __future__ import print_function
 
-from IPython.parallel import Client, Reference
+from ipython_parallel import Client, Reference
 
 
 # connect client and create views

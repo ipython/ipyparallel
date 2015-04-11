@@ -21,7 +21,7 @@ from __future__ import print_function
 
 import time
 
-from IPython import parallel
+import ipython_parallel as parallel
 
 # create client & view
 rc = parallel.Client()
