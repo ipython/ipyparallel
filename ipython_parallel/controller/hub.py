@@ -22,7 +22,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 from ipython_genutils.importstring import import_item
 from jupyter_client.jsonutil import extract_dates
 from jupyter_client.localinterfaces import localhost
-from ipython_genutils.py3compat import cast_bytes, unicode_type, iteritems
+from ipython_genutils.py3compat import cast_bytes, unicode_type, iteritems, buffer_to_bytes_py2
 from traitlets import (
         HasTraits, Any, Instance, Integer, Unicode, Dict, Set, Tuple, DottedObjectName
         )
@@ -1326,7 +1326,7 @@ class Hub(SessionFactory):
             'io' : io_dict,
         }
         if rec['result_buffers']:
-            buffers = list(map(bytes, rec['result_buffers']))
+            buffers = list(map(buffer_to_bytes_py2, rec['result_buffers']))
         else:
             buffers = []
 
