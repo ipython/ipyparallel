@@ -5,7 +5,7 @@
 from __future__ import print_function
 
 import heapq
-from IPython.parallel.error import RemoteError
+from ipython_parallel.error import RemoteError
 
 def mergesort(list_of_lists, key=None):
     """ Perform an N-way merge operation on sorted lists.
@@ -94,7 +94,7 @@ def remote_iterator(view,name):
 # Main, interactive testing
 if __name__ == '__main__':
 
-    from IPython.parallel import Client, Reference
+    from ipython_parallel import Client, Reference
     rc = Client()
     view = rc[:]
     print('Engine IDs:', rc.ids)

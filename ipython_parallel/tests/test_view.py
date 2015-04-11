@@ -18,7 +18,7 @@ from IPython.testing import decorators as dec
 from IPython.utils.io import capture_output
 from ipython_genutils.py3compat import unicode_type
 
-from IPython import parallel  as pmod
+import ipython_parallel  as pmod
 from ipython_parallel import error
 from ipython_parallel import AsyncResult, AsyncHubResult, AsyncMapResult
 from ipython_parallel.util import interactive

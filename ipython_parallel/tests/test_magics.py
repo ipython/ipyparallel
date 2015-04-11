@@ -23,7 +23,7 @@ import time
 from IPython.testing import decorators as dec
 from IPython.utils.io import capture_output
 
-from IPython import parallel  as pmod
+import ipython_parallel  as pmod
 from ipython_parallel import AsyncResult
 
 from ipython_parallel.tests import add_engines

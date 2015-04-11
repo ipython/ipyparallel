@@ -1,4 +1,4 @@
-from IPython.parallel import *
+from ipython_parallel import *
 
 client = Client()
 
