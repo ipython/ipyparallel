@@ -1,5 +1,2 @@
-_version_extra = 'dev'
-version_info = (4, 0, 0, _version_extra)
-
+version_info = (4, 0, 0, 'dev')
 __version__ = '.'.join(map(str, version_info))
-version = __version__  # backwards compatibility name
