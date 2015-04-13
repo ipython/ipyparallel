@@ -9,7 +9,7 @@ Examples
 ========
 
 We have various example scripts and notebooks for using ipython_parallel in our
-:file:`examples/Parallel%20Computing` directory, or they can be viewed `using nbviewer`__.
+:file:`examples` directory, or they can be viewed `using nbviewer`__.
 Some of these are covered in more detail in the :ref:`examples
 <parallel_examples>` section.
 
@@ -46,14 +46,14 @@ the ``I`` in IPython.  The following are some example usage cases for IPython:
   distributed) interactively using IPython and tools like
   matplotlib/TVTK.
 
-* Develop, test and debug new parallel algorithms 
+* Develop, test and debug new parallel algorithms
   (that may use MPI) interactively.
 
 * Tie together multiple MPI jobs running on different systems into
   one giant distributed and parallel system.
 
-* Start a parallel job on your cluster and then have a remote 	
-  collaborator connect to it and pull back data into their 
+* Start a parallel job on your cluster and then have a remote
+  collaborator connect to it and pull back data into their
   local IPython session for plotting and analysis.
 
 * Run a set of tasks on a set of CPUs using dynamic load balancing.
@@ -123,9 +123,9 @@ primary models for interacting with engines are:
   appropriate engines.
 
 Advanced users can readily extend the View models to enable other
-styles of parallelism. 
+styles of parallelism.
 
-.. note:: 
+.. note::
 
     A single controller and set of engines can be used with multiple models
     simultaneously. This opens the door for lots of interesting things.
@@ -181,8 +181,8 @@ To connect and authenticate to the controller an engine or client needs
 some information that the controller has stored in a JSON file.
 Thus, the JSON files need to be copied to a location where
 the clients and engines can find them. Typically, this is the
-:file:`~/.ipython/profile_default/security` directory on the host where the 
-client/engine is running (which could be a different host than the controller). 
+:file:`~/.ipython/profile_default/security` directory on the host where the
+client/engine is running (which could be a different host than the controller).
 Once the JSON files are copied over, everything should work fine.
 
 Currently, there are two JSON files that the controller creates:
@@ -261,12 +261,12 @@ everything is working correctly, try the following commands:
 .. sourcecode:: ipython
 
 	In [1]: from ipython_parallel import Client
-	
+
 	In [2]: c = Client()
-	
+
 	In [4]: c.ids
 	Out[4]: set([0, 1, 2, 3])
-	
+
 	In [5]: c[:].apply_sync(lambda : "Hello, World")
 	Out[5]: [ 'Hello, World', 'Hello, World', 'Hello, World', 'Hello, World' ]
 
