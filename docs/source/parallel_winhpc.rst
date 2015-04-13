@@ -48,9 +48,9 @@ HPC Server 2008. Here is a broad overview of what is involved with setting up
 such a cluster:
 
 1. Install Windows Server 2008 on the head and compute nodes in the cluster.
-2. Setup the network configuration on each host. Each host should have a 
+2. Setup the network configuration on each host. Each host should have a
    static IP address.
-3. On the head node, activate the "Active Directory Domain Services" role 
+3. On the head node, activate the "Active Directory Domain Services" role
    and make the head node the domain controller.
 4. Join the compute nodes to the newly created Active Directory (AD) domain.
 5. Setup user accounts in the domain with shared home directories.
@@ -140,13 +140,13 @@ IPython cluster. An IPython cluster consists of one controller and multiple
 engines:
 
 IPython controller
-    The IPython controller manages the engines and acts as a gateway between 
+    The IPython controller manages the engines and acts as a gateway between
     the engines and the client, which runs in the user's interactive IPython
     session. The controller is started using the :command:`ipcontroller`
     command.
 
 IPython engine
-    IPython engines run a user's Python code in parallel on the compute nodes. 
+    IPython engines run a user's Python code in parallel on the compute nodes.
     Engines are starting using the :command:`ipengine` command.
 
 Once these processes are started, a user can run Python code interactively and
@@ -189,11 +189,11 @@ The result should look something like this::
     [IPClusterStart] Starting 15 engines
     [IPClusterStart] Writing job description file: \\blue\domainusers$\bgranger\.ipython\profile_mycluster\ipcontroller_job.xml
     [IPClusterStart] Starting Win HPC Job: job submit /jobfile:\\blue\domainusers$\bgranger\.ipython\profile_mycluster\ipengineset_job.xml /scheduler:HEADNODE
-    
+
 
 At this point, the controller and two engines are running on your local host.
 This configuration is useful for testing and for situations where you want to
-take advantage of multiple cores on your local computer. 
+take advantage of multiple cores on your local computer.
 
 Now that we have confirmed that :command:`ipcluster` is working properly, we
 describe how to configure and run an IPython cluster on an actual compute
@@ -250,7 +250,7 @@ the following configuration files in the cluster directory:
 * :file:`ipcontroller_config.py`
 * :file:`ipengine_config.py`
 
-When :command:`ipcluster` is run, these configuration files are used to 
+When :command:`ipcluster` is run, these configuration files are used to
 determine how the engines and controller will be started. In most cases,
 you will only have to set a few of the attributes in these files.
 
@@ -358,4 +358,4 @@ The :meth:`map` method has the same signature as Python's builtin :func:`map`
 function, but runs the calculation in parallel. More involved examples of using
 :class:`DirectView` are provided in the examples that follow.
 
-.. include:: ../links.txt
+.. include:: links.txt
