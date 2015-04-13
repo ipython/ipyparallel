@@ -1,8 +1,23 @@
-.. _parallel_index:
-
 ====================================
 Using IPython for parallel computing
 ====================================
+
+.. htmlonly::
+
+   :Release: |release|
+   :Date: |today|
+
+.. only:: not rtd
+
+    Welcome to the official IPython.parallel documentation.
+
+.. only:: rtd
+
+    This is a partial copy of IPython.parallel documentation, please visit `IPython official documentation <http://ipython.org/documentation.html>`_.
+
+
+Contents
+========
 
 .. toctree::
    :maxdepth: 2
@@ -21,5 +36,7 @@ Using IPython for parallel computing
    dag_dependencies
    parallel_details
    parallel_transition
+   development/parallel_connections
+   development/parallel_messages
 
 
