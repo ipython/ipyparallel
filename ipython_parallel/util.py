@@ -386,4 +386,23 @@ def set_hwm(sock, hwm=0):
         except zmq.ZMQError:
             pass
 
-        
+
+def int_keys(dikt):
+    """Rekey a dict that has been forced to cast number keys to str for JSON
+    
+    where there should be ints.
+    """
+    for k in list(dikt):
+        if isinstance(k, string_types):
+            nk = None
+            try:
+                nk = int(k)
+            except ValueError:
+                try:
+                    nk = float(k)
+                except ValueError:
+                    continue
+            if nk in dikt:
+                raise KeyError("already have key %r" % nk)
+            dikt[nk] = dikt.pop(k)
+    return dikt

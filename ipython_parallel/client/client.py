@@ -25,7 +25,7 @@ from IPython.core.profiledir import ProfileDir, ProfileDirError
 
 from IPython.utils.capture import RichOutput
 from IPython.utils.coloransi import TermColors
-from jupyter_client.jsonutil import rekey, extract_dates, parse_date
+from jupyter_client.jsonutil import extract_dates, parse_date
 from jupyter_client.localinterfaces import localhost, is_local_ip
 from IPython.paths import get_ipython_dir
 from IPython.utils.path import compress_user
@@ -1657,7 +1657,7 @@ class Client(HasTraits):
         status = content.pop('status')
         if status != 'ok':
             raise self._unwrap_exception(content)
-        content = rekey(content)
+        content = util.int_keys(content)
         if isinstance(targets, int):
             return content[targets]
         else:
