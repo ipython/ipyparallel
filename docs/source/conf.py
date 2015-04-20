@@ -231,7 +231,7 @@ html_style = 'default.css'
 #html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'IPythonparalleldoc'
+htmlhelp_basename = 'ipythonparalleldoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -253,7 +253,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'IPythonparallel.tex', u'ipython_parallel Documentation',
+  (master_doc, 'ipythonparallel.tex', u'ipython_parallel Documentation',
    u'The IPython Development Team', 'manual'),
   ('parallel/winhpc_index', 'winhpc_whitepaper.tex', u'Using IPython on Windows HPC Server 2008',
    u"Brian E. Granger", 'manual', True),
@@ -299,8 +299,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'IPythonparallel', u'ipython_parallel Documentation',
-   author, 'IPythonparallel', 'One line description of project.',
+  (master_doc, 'ipythonparallel', u'ipython_parallel Documentation',
+   author, 'ipythonparallel', 'One line description of project.',
    'Miscellaneous'),
 ]
 
