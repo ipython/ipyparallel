@@ -16,8 +16,8 @@ Beyond multiprocessing's AsyncResult
 
 .. Note::
 
-    The :class:`~.AsyncResult` object provides a superset of the interface in 
-    :py:class:`multiprocessing.pool.AsyncResult`.  See the 
+    The :class:`~.AsyncResult` object provides a superset of the interface in
+    :py:class:`multiprocessing.pool.AsyncResult`.  See the
     `official Python documentation <http://docs.python.org/library/multiprocessing#multiprocessing.pool.AsyncResult>`_
     for more on the basics of this interface.
 
@@ -78,8 +78,8 @@ For use after the tasks are done:
 * :attr:`ar.serial_time` is the sum of the computation time of all of the tasks
   done in parallel.
 * :attr:`ar.wall_time` is the time between the first task submitted and last result
-  received.  This is the actual cost of computation, including IPython overhead. 
-  
+  received.  This is the actual cost of computation, including IPython overhead.
+
 
 .. note::
 
@@ -103,10 +103,10 @@ Map results are iterable!
 When an AsyncResult object has multiple results (e.g. the :class:`~AsyncMapResult`
 object), you can actually iterate through results themselves, and act on them as they arrive:
 
-.. literalinclude:: ../../../examples/Parallel Computing/itermapresult.py
+.. literalinclude:: ../../examples/itermapresult.py
     :language: python
     :lines: 20-67
-    
+
 That is to say, if you treat an AsyncMapResult as if it were a list of your actual
 results, it should behave as you would expect, with the only difference being
 that you can start iterating through the results before they have even been computed.
@@ -146,5 +146,5 @@ To break that down:
     When AsyncResult or the AsyncMapResult don't provide what you need (for instance,
     handling individual results as they arrive, but with metadata), you can always
     just split the original result's ``msg_ids`` attribute, and handle them as you like.
-    
+
     For an example of this, see :file:`examples/parallel/customresult.py`
