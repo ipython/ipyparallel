@@ -6,33 +6,30 @@ Using IPython for parallel computing
 
 .. only:: not rtd
 
-    Welcome to the official IPython.parallel documentation.
+    Welcome to the official IPython parallel documentation.
 
-.. only:: rtd
-
-    This is a partial copy of IPython.parallel documentation, please visit `IPython official documentation <http://ipython.org/documentation.html>`_.
 
 Contents:
 
 .. toctree::
    :maxdepth: 1
 
-   parallel_intro
-   parallel_process
-   parallel_multiengine
+   intro
+   process
+   multiengine
    magics
-   parallel_task
+   task
    asyncresult
-   parallel_mpi
-   parallel_db
-   parallel_security
-   parallel_winhpc
-   parallel_demos
+   mpi
+   db
+   security
+   winhpc
+   demos
    dag_dependencies
-   parallel_details
-   parallel_transition
-   development/parallel_messages
-   development/parallel_connections
+   details
+   transition
+   development/messages
+   development/connections
 
 
 Indices and tables
