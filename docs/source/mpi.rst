@@ -118,7 +118,7 @@ manner using our :func:`psum` function:
 
 .. sourcecode:: ipython
 
-    In [1]: from ipython_parallel import Client
+    In [1]: from ipyparallel import Client
 
     In [2]: c = Client(profile='mpi')
 

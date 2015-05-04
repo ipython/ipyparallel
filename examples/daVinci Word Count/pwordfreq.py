@@ -14,7 +14,7 @@ from itertools import repeat
 
 from wordfreq import print_wordfreq, wordfreq
 
-from ipython_parallel import Client, Reference
+from ipyparallel import Client, Reference
 
 try: #python2
     from urllib import urlretrieve

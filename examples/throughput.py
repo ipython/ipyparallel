@@ -2,7 +2,7 @@ from __future__ import print_function
 
 import time
 import numpy as np
-import ipython_parallel as parallel
+import ipyparallel as parallel
 
 nlist = map(int, np.logspace(2,9,16,base=2))
 nlist2 = map(int, np.logspace(2,8,15,base=2))

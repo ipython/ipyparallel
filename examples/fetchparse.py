@@ -13,7 +13,7 @@ and some engines using something like::
 from __future__ import print_function
 
 import sys
-from ipython_parallel import Client, error
+from ipyparallel import Client, error
 import time
 import BeautifulSoup # this isn't necessary, but it helps throw the dependency error earlier
 

@@ -3,7 +3,7 @@ import socket
 import uuid
 import zmq
 
-from ipython_parallel.util import disambiguate_url
+from ipyparallel.util import disambiguate_url
 
 class EngineCommunicator(object):
     

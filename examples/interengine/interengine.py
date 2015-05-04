@@ -1,6 +1,6 @@
 import sys
 
-from ipython_parallel import Client
+from ipyparallel import Client
 
 
 rc = Client()
