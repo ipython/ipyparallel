@@ -159,7 +159,7 @@ and Windows HPC Server.
 
 In general, these are configured by the :attr:`IPClusterEngines.engine_set_launcher_class`,
 and :attr:`IPClusterStart.controller_launcher_class` configurables, which can be the
-fully specified object name (e.g. ``'ipython_parallel.apps.launcher.LocalControllerLauncher'``),
+fully specified object name (e.g. ``'ipyparallel.apps.launcher.LocalControllerLauncher'``),
 but if you are using IPython's builtin launchers, you can specify just the class name,
 or even just the prefix e.g:
 
@@ -169,7 +169,7 @@ or even just the prefix e.g:
     # equivalent to
     c.IPClusterEngines.engine_launcher_class = 'SSHEngineSetLauncher'
     # both of which expand to
-    c.IPClusterEngines.engine_launcher_class = 'ipython_parallel.apps.launcher.SSHEngineSetLauncher'
+    c.IPClusterEngines.engine_launcher_class = 'ipyparallel.apps.launcher.SSHEngineSetLauncher'
 
 The shortest form being of particular use on the command line, where all you need to do to
 get an IPython cluster running with engines started with MPI is:
@@ -611,7 +611,7 @@ the engines.
     
     [IPControllerApp] Using existing profile dir: u'/Users/me/.ipython/profile_default'
     [IPControllerApp] Hub listening on tcp://192.168.1.16:63320 for registration.
-    [IPControllerApp] Hub using DB backend: 'ipython_parallel.controller.dictdb.DictDB'
+    [IPControllerApp] Hub using DB backend: 'ipyparallel.controller.dictdb.DictDB'
     [IPControllerApp] hub::created hub
     [IPControllerApp] writing connection info to /Users/me/.ipython/profile_default/security/ipcontroller-client.json
     [IPControllerApp] writing connection info to /Users/me/.ipython/profile_default/security/ipcontroller-engine.json
@@ -781,17 +781,17 @@ To use one of these backends, you must set the :attr:`HubFactory.db_class` trait
 
     # for a simple dict-based in-memory implementation, use dictdb
     # This is the default and the fastest, since it doesn't involve the filesystem
-    c.HubFactory.db_class = 'ipython_parallel.controller.dictdb.DictDB'
+    c.HubFactory.db_class = 'ipyparallel.controller.dictdb.DictDB'
     
     # To use MongoDB:
-    c.HubFactory.db_class = 'ipython_parallel.controller.mongodb.MongoDB'
+    c.HubFactory.db_class = 'ipyparallel.controller.mongodb.MongoDB'
     
     # and SQLite:
-    c.HubFactory.db_class = 'ipython_parallel.controller.sqlitedb.SQLiteDB'
+    c.HubFactory.db_class = 'ipyparallel.controller.sqlitedb.SQLiteDB'
     
     # You can use NoDB to disable the database altogether, in case you don't need
     # to reuse tasks or results, and want to keep memory consumption under control.
-    c.HubFactory.db_class = 'ipython_parallel.controller.dictdb.NoDB'
+    c.HubFactory.db_class = 'ipyparallel.controller.dictdb.NoDB'
 
 When using the proper databases, you can actually allow for tasks to persist from
 one session to the next by specifying the MongoDB database or SQLite table in

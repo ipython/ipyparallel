@@ -165,7 +165,7 @@ Apply
 -----
 
 The principal method of remote execution is :meth:`apply`, of
-:class:`~ipython_parallel.client.view.View` objects. The Client provides the full execution and
+:class:`~ipyparallel.client.view.View` objects. The Client provides the full execution and
 communication API for engines via its low-level :meth:`send_apply_message` method, which is used
 by all higher level methods of its Views.
 
@@ -365,9 +365,9 @@ between engines, MPI should be used:
 Push and pull
 -------------
 
-:meth:`~ipython_parallel.client.view.DirectView.push`
+:meth:`~ipyparallel.client.view.DirectView.push`
 
-:meth:`~ipython_parallel.client.view.DirectView.pull`
+:meth:`~ipyparallel.client.view.DirectView.pull`
 
 .. note::
 
@@ -634,13 +634,13 @@ Decorators and RemoteFunctions
 
     TODO: write this section
 
-:func:`~ipython_parallel.client.remotefunction.@parallel`
+:func:`~ipyparallel.client.remotefunction.@parallel`
 
-:func:`~ipython_parallel.client.remotefunction.@remote`
+:func:`~ipyparallel.client.remotefunction.@remote`
 
-:class:`~ipython_parallel.client.remotefunction.RemoteFunction`
+:class:`~ipyparallel.client.remotefunction.RemoteFunction`
 
-:class:`~ipython_parallel.client.remotefunction.ParallelFunction`
+:class:`~ipyparallel.client.remotefunction.ParallelFunction`
 
 Dependencies
 ============
@@ -649,8 +649,8 @@ Dependencies
 
     TODO: write this section
 
-:func:`~ipython_parallel.controller.dependency.@depend`
+:func:`~ipyparallel.controller.dependency.@depend`
 
-:func:`~ipython_parallel.controller.dependency.@require`
+:func:`~ipyparallel.controller.dependency.@require`
 
-:class:`~ipython_parallel.controller.dependency.Dependency`
+:class:`~ipyparallel.controller.dependency.Dependency`

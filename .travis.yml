@@ -1,4 +1,4 @@
-# http://travis-ci.org/#!/ipython/ipython_parallel
+# http://travis-ci.org/#!/ipython/ipyparallel
 language: python
 python:
     - 3.4
@@ -10,6 +10,6 @@ before_install:
 install:
     - pip install -f travis-wheels/wheelhouse -r requirements.txt . coveralls
 script:
-    - iptest --coverage xml ipython_parallel.tests
+    - iptest --coverage xml ipyparallel.tests
 after_success:
     - coveralls

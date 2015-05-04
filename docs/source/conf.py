@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# ipython_parallel documentation build configuration file, created by
+# ipyparallel documentation build configuration file, created by
 # sphinx-quickstart on Mon Apr 13 12:53:58 2015.
 
 # NOTE: This file has been edited manually from the auto-generated one from
@@ -28,7 +28,7 @@ import shlex
 
 # We load the ipython release info into a dict by explicit execution
 iprelease = {}
-exec(compile(open('../../ipython_parallel/_version.py').read(), '../../ipython_parallel/_version.py', 'exec'),iprelease)
+exec(compile(open('../../ipyparallel/_version.py').read(), '../../ipyparallel/_version.py', 'exec'),iprelease)
 
 # -- General configuration ------------------------------------------------
 
@@ -72,7 +72,7 @@ if iprelease['version_info'][-1] == 'dev':
 master_doc = 'index'
 
 # General information about the project.
-project = u'ipython_parallel'
+project = u'ipyparallel'
 copyright = u'2015, The IPython Development Team'
 author = u'The IPython Development Team'
 
@@ -253,7 +253,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'ipythonparallel.tex', u'ipython_parallel Documentation',
+  (master_doc, 'ipythonparallel.tex', u'ipyparallel Documentation',
    u'The IPython Development Team', 'manual'),
   ('parallel/winhpc_index', 'winhpc_whitepaper.tex', u'Using IPython on Windows HPC Server 2008',
    u"Brian E. Granger", 'manual', True),
@@ -285,7 +285,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'ipythonparallel', u'ipython_parallel Documentation',
+    (master_doc, 'ipythonparallel', u'ipyparallel Documentation',
      [author], 1)
 ]
 
@@ -299,7 +299,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'ipythonparallel', u'ipython_parallel Documentation',
+  (master_doc, 'ipythonparallel', u'ipyparallel Documentation',
    author, 'ipythonparallel', 'One line description of project.',
    'Miscellaneous'),
 ]

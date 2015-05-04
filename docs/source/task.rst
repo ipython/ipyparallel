@@ -32,13 +32,13 @@ our :ref:`introduction <parallel_overview>` to using IPython for parallel comput
 Creating a ``LoadBalancedView`` instance
 ========================================
 
-The first step is to import the IPython :mod:`ipython_parallel`
+The first step is to import the IPython :mod:`ipyparallel`
 module and then create a :class:`.Client` instance, and we will also be using
 a :class:`LoadBalancedView`, here called `lview`:
 
 .. sourcecode:: ipython
 
-    In [1]: from ipython_parallel import Client
+    In [1]: from ipyparallel import Client
 
     In [2]: rc = Client()
     
@@ -132,7 +132,7 @@ Functional Dependencies
 
 Functional dependencies are used to determine whether a given engine is capable of running
 a particular task.  This is implemented via a special :class:`Exception` class, 
-:class:`UnmetDependency`, found in `ipython_parallel.error`.  Its use is very simple: 
+:class:`UnmetDependency`, found in `ipyparallel.error`.  Its use is very simple: 
 if a task fails with an UnmetDependency exception, then the scheduler, instead of relaying
 the error up to the client like any other error, catches the error, and submits the task
 to a different engine.  This will repeat indefinitely, and a task will never be submitted
@@ -145,7 +145,7 @@ There are two decorators and a class used for functional dependencies:
 
 .. sourcecode:: ipython
 
-    In [9]: from ipython_parallel import depend, require, dependent
+    In [9]: from ipyparallel import depend, require, dependent
 
 @require
 ********
@@ -452,10 +452,10 @@ The :class:`LoadBalancedView` has many more powerful features that allow quite a
 of flexibility in how tasks are defined and run. The next places to look are
 in the following classes:
 
-* :class:`~ipython_parallel.client.view.LoadBalancedView`
-* :class:`~ipython_parallel.client.asyncresult.AsyncResult`
-* :meth:`~ipython_parallel.client.view.LoadBalancedView.apply`
-* :mod:`~ipython_parallel.controller.dependency`
+* :class:`~ipyparallel.client.view.LoadBalancedView`
+* :class:`~ipyparallel.client.asyncresult.AsyncResult`
+* :meth:`~ipyparallel.client.view.LoadBalancedView.apply`
+* :mod:`~ipyparallel.controller.dependency`
 
 The following is an overview of how to use these classes together:
 

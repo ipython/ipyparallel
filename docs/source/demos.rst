@@ -128,7 +128,7 @@ calculation can also be run by simply typing the commands from
 
 .. sourcecode:: ipython
 
-    In [1]: from ipython_parallel import Client
+    In [1]: from ipyparallel import Client
 
     # The Client allows us to use the engines interactively.
     # We simply pass Client the name of the cluster profile we

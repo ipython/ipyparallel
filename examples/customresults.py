@@ -12,7 +12,7 @@ Authors
 import time
 import random
 
-import ipython_parallel as parallel
+import ipyparallel as parallel
 
 # create client & views
 rc = parallel.Client()

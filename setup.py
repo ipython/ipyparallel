@@ -7,7 +7,7 @@
 from __future__ import print_function
 
 # the name of the project
-name = 'ipython_parallel'
+name = 'ipyparallel'
 
 #-----------------------------------------------------------------------------
 # Minimal Python version sanity check
