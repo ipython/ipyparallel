@@ -21,7 +21,7 @@ __docformat__ = "restructuredtext en"
 # import
 import os
 
-from ipython_kernel.pickleutil import can, uncan
+from ipykernel.pickleutil import can, uncan
 
 import ipyparallel as pmod
 from ipyparallel.util import interactive

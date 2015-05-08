@@ -36,13 +36,13 @@ from ipyparallel.apps.baseapp import (
     base_flags,
     catch_config_error,
 )
-from ipython_kernel.log import EnginePUBHandler
-from ipython_kernel.ipkernel import IPythonKernel as Kernel
-from ipython_kernel.kernelapp import IPKernelApp
+from ipykernel.log import EnginePUBHandler
+from ipykernel.ipkernel import IPythonKernel as Kernel
+from ipykernel.kernelapp import IPKernelApp
 from jupyter_client.session import (
     Session, session_aliases, session_flags
 )
-from ipython_kernel.zmqshell import ZMQInteractiveShell
+from ipykernel.zmqshell import ZMQInteractiveShell
 
 from traitlets.config.configurable import Configurable
 

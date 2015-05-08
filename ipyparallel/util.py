@@ -33,7 +33,7 @@ from decorator import decorator
 from traitlets.config.application import Application
 from jupyter_client.localinterfaces import localhost, is_public_ip, public_ips
 from ipython_genutils.py3compat import string_types, iteritems, itervalues
-from ipython_kernel.log import EnginePUBHandler
+from ipykernel.log import EnginePUBHandler
 
 
 #-----------------------------------------------------------------------------

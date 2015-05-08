@@ -18,7 +18,7 @@ from ipyparallel.error import UnmetDependency
 from ipyparallel.util import interactive
 from ipython_genutils import py3compat
 from ipython_genutils.py3compat import string_types
-from ipython_kernel.pickleutil import can, uncan
+from ipykernel.pickleutil import can, uncan
 
 class depend(object):
     """Dependency decorator, for use with tasks.
@@ -81,7 +81,7 @@ class dependent(object):
 def _require(*modules, **mapping):
     """Helper for @require decorator."""
     from ipyparallel.error import UnmetDependency
-    from ipython_kernel.pickleutil import uncan
+    from ipykernel.pickleutil import uncan
     user_ns = globals()
     for name in modules:
         try:
