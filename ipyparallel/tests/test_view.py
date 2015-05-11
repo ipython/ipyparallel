@@ -711,7 +711,7 @@ class TestView(ClusterTestCase):
     def test_data_pub_single(self):
         view = self.client[-1]
         ar = view.execute('\n'.join([
-            'from ipython_kernel.datapub import publish_data',
+            'from ipykernel.datapub import publish_data',
             'for i in range(5):',
             '  publish_data(dict(i=i))'
         ]), block=False)
@@ -722,7 +722,7 @@ class TestView(ClusterTestCase):
     def test_data_pub(self):
         view = self.client[:]
         ar = view.execute('\n'.join([
-            'from ipython_kernel.datapub import publish_data',
+            'from ipykernel.datapub import publish_data',
             'for i in range(5):',
             '  publish_data(dict(i=i))'
         ]), block=False)

@@ -11,7 +11,7 @@ import zmq
 
 from traitlets.config.configurable import MultipleInstanceError
 
-from ipython_kernel.pickleutil import Reference, can_map
+from ipykernel.pickleutil import Reference, can_map
 
 
 from ._version import version_info, __version__
@@ -39,7 +39,7 @@ def bind_kernel(**kwargs):
     
     This function returns immediately.
     """
-    from ipython_kernel.kernelapp import IPKernelApp
+    from ipykernel.kernelapp import IPKernelApp
     from ipyparallel.apps.ipengineapp import IPEngineApp
     
     # first check for IPKernelApp, in which case this should be a no-op

@@ -3,7 +3,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from ipython_kernel.pickleutil import CannedObject, can_map
+from ipykernel.pickleutil import CannedObject, can_map
 from .controller.dependency import dependent
 
 def _uncan_dependent_hook(dep, g=None):

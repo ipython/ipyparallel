@@ -13,7 +13,7 @@ from types import ModuleType
 
 import zmq
 
-from ipython_kernel import pickleutil
+from ipykernel import pickleutil
 from traitlets import (
     HasTraits, Any, Bool, List, Dict, Set, Instance, CFloat, Integer
 )
@@ -500,7 +500,7 @@ class DirectView(View):
         
         adds support for closures, etc.
         
-        This calls ipython_kernel.pickleutil.use_dill() here and on each engine.
+        This calls ipykernel.pickleutil.use_dill() here and on each engine.
         """
         pickleutil.use_dill()
         return self.apply(pickleutil.use_dill)
