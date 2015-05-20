@@ -777,6 +777,7 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher):
                 self.launchers[ "%s/%i" % (host,i) ] = el
                 dlist.append(d)
         self.notify_start(dlist)
+        self.n = self.engine_count()
         return dlist
 
 
