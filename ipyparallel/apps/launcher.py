@@ -751,12 +751,19 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher):
         dlist = []
         for host, n in iteritems(self.engines):
             cmd = None
+            args = None
             if isinstance(n, (tuple, list)):
-                if len(n) == 2:
-                    n, args = n
-                elif len(n) == 3:
-                    n, args, cmd = n
-            else:
+                n, args = n
+            if isinstance(n, dict):
+                cdict = n
+                if 'n' not in cdict:
+                    raise ValueError("Need to specify 'n' in engine's config dictionary.")
+                n = cdict['n']
+                if 'engine_args' in cdict:
+                    args = cdict['engine_args']
+                if 'engine_cmd' in cdict:
+                    cmd = cdict['engine_cmd']
+            if args is None:
                 args = copy.deepcopy(self.engine_args)
             if cmd is None:
                 cmd = copy.deepcopy(self.engine_cmd)
