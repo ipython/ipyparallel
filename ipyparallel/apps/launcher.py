@@ -750,10 +750,23 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher):
 
         dlist = []
         for host, n in iteritems(self.engines):
+            cmd = None
+            args = None
             if isinstance(n, (tuple, list)):
                 n, args = n
-            else:
+            if isinstance(n, dict):
+                cdict = n
+                if 'n' not in cdict:
+                    raise ValueError("Need to specify 'n' in engine's config dictionary.")
+                n = cdict['n']
+                if 'engine_args' in cdict:
+                    args = cdict['engine_args']
+                if 'engine_cmd' in cdict:
+                    cmd = cdict['engine_cmd']
+            if args is None:
                 args = copy.deepcopy(self.engine_args)
+            if cmd is None:
+                cmd = copy.deepcopy(self.engine_cmd)
 
             if '@' in host:
                 user,host = host.split('@',1)
@@ -770,7 +783,7 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher):
                     el.to_send = []
 
                 # Copy the engine args over to each engine launcher.
-                el.engine_cmd = self.engine_cmd
+                el.engine_cmd = cmd
                 el.engine_args = args
                 el.on_stop(self._notice_engine_stopped)
                 d = el.start(user=user, hostname=host)

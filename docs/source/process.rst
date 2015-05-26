@@ -424,12 +424,18 @@ on that host.
     c.SSHEngineSetLauncher.engines = { 'host1.example.com' : 2,
                 'host2.example.com' : 5,
                 'host3.example.com' : (1, ['--profile-dir=/home/different/location']),
-                'host4.example.com' : 8 }
+                'host4.example.com' : {'n': 3, 'engine_args': ['--profile-dir=/away/location'], 'engine_cmd': '/home/venv/bin/python'},
+                'host5.example.com' : 8 }
 
 * The `engines` dict, where the keys are the host we want to run engines on and
   the value is the number of engines to run on that host.
 * on host3, the value is a tuple, where the number of engines is first, and the arguments
   to be passed to :command:`ipengine` are the second element.
+* on host4, a dictionary configures the engine. The dictionary can be used to specify 
+  the number of engines to be run on that host `n`, the engine arguments `engine_args`, 
+  as well as the engine command itself `engine_cmd`. This is particularly useful for 
+  virtual environments on heterogeneous clusters where the location of the python 
+  executable might vary from host to host.
 
 For engines without explicitly specified arguments, the default arguments are set in
 a single location:
