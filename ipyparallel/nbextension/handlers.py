@@ -1,34 +1,42 @@
-"""Tornado handlers for cluster web service."""
+"""Tornado handlers for IPython cluster web service."""
 
-# Copyright (c) Jupyter Development Team.
+# Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
 import json
+import os
 
 from tornado import web
 
-from ...base.handlers import IPythonHandler
-
-#-----------------------------------------------------------------------------
-# Cluster handlers
-#-----------------------------------------------------------------------------
+from notebook.utils import url_path_join as ujoin
+from notebook.base.handlers import IPythonHandler
+from notebook.nbextensions import install_nbextension
 
 
-class MainClusterHandler(IPythonHandler):
+from .clustermanager import ClusterManager
+
+static = os.path.join(os.path.dirname(__file__), 'static')
+
+class ClusterHandler(IPythonHandler):
+    @property
+    def cluster_manager(self):
+        return self.settings['cluster_manager']
+
+class MainClusterHandler(ClusterHandler):
 
     @web.authenticated
     def get(self):
         self.finish(json.dumps(self.cluster_manager.list_profiles()))
 
 
-class ClusterProfileHandler(IPythonHandler):
+class ClusterProfileHandler(ClusterHandler):
 
     @web.authenticated
     def get(self, profile):
         self.finish(json.dumps(self.cluster_manager.profile_info(profile)))
 
 
-class ClusterActionHandler(IPythonHandler):
+class ClusterActionHandler(ClusterHandler):
 
     @web.authenticated
     def post(self, profile, action):
@@ -57,3 +65,22 @@ default_handlers = [
     (r"/clusters/%s/%s" % (_profile_regex, _cluster_action_regex), ClusterActionHandler),
     (r"/clusters/%s" % _profile_regex, ClusterProfileHandler),
 ]
+
+
+def load_jupyter_server_extension(nbapp):
+    """Load the nbserver"""
+    install_nbextension(static, destination='ipyparallel', symlink=True, user=True)
+    webapp = nbapp.web_app
+    webapp.settings['cluster_manager'] = ClusterManager(parent=nbapp)
+    
+    cfgm = nbapp.config_manager
+    cfgm.update('tree', {
+        'load_extensions': {
+            'ipyparallel/main': True,
+        }
+    })
+    base_url = webapp.settings['base_url']
+    webapp.add_handlers(".*$", [
+        (ujoin(base_url, pat), handler)
+        for pat, handler in default_handlers
+    ])
