@@ -7,7 +7,7 @@ define(function(require) {
     var clusterlist = require('./clusterlist');
     
     var cluster_html = $([
-'<div id="clusters" class="tab-pane">',
+'<div id="ipyclusters" class="tab-pane">',
 '  <div id="cluster_toolbar" class="row">',
 '    <div class="col-xs-8 no-padding">',
 '      <span id="cluster_list_info">IPython parallel computing clusters</span>',
@@ -32,6 +32,8 @@ define(function(require) {
     function load() {
         if (!IPython.notebook_list) return;
         var base_url = IPython.notebook_list.base_url;
+        // hide the deprecated clusters tab
+        $("#tabs").find('[href=#clusters]').hide();
         $('head').append(
             $('<link>')
             .attr('rel', 'stylesheet')
@@ -43,11 +45,11 @@ define(function(require) {
             $('<li>')
             .append(
                 $('<a>')
-                .attr('href', '#clusters')
+                .attr('href', '#ipyclusters')
                 .attr('data-toggle', 'tab')
-                .text('Clusters')
+                .text('IPython Clusters')
                 .click(function (e) {
-                    window.history.pushState(null, null, '#clusters');
+                    window.history.pushState(null, null, '#ipyclusters');
                 })
             )
         );
