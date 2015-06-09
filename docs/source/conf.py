@@ -44,7 +44,7 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.intersphinx',
-    'numpydoc',  # to preprocess docstrings
+    'sphinx.ext.napoleon',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -253,7 +253,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'ipythonparallel.tex', u'ipyparallel Documentation',
+  (master_doc, 'ipythonparallel.tex', u'IPython Parallel Documentation',
    u'The IPython Development Team', 'manual'),
   ('parallel/winhpc_index', 'winhpc_whitepaper.tex', u'Using IPython on Windows HPC Server 2008',
    u"Brian E. Granger", 'manual', True),
@@ -285,7 +285,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'ipythonparallel', u'ipyparallel Documentation',
+    (master_doc, 'ipythonparallel', u'IPython Parallel Documentation',
      [author], 1)
 ]
 
@@ -299,7 +299,7 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'ipythonparallel', u'ipyparallel Documentation',
+  (master_doc, 'ipythonparallel', u'IPython Parallel Documentation',
    author, 'ipythonparallel', 'One line description of project.',
    'Miscellaneous'),
 ]
@@ -318,6 +318,6 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'python': ('http://docs.python.org/2/', None),
+intersphinx_mapping = {'python': ('http://docs.python.org/3/', None),
                        'ipython': ('http://ipython.org/ipython-doc/dev/', None),}
 
