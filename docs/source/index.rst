@@ -31,6 +31,14 @@ Contents:
    development/messages
    development/connections
 
+ipyparallel API
+===============
+
+.. toctree::
+    :maxdepth: 2
+    
+    api/ipyparallel.rst
+
 
 Indices and tables
 ==================

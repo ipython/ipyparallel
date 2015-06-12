@@ -209,12 +209,13 @@ class Metadata(dict):
 
 
 class Client(HasTraits):
-    """A semi-synchronous client to the IPython ZMQ cluster
+    """A semi-synchronous client to an IPython parallel cluster
 
     Parameters
     ----------
 
-    url_file : str/unicode; path to ipcontroller-client.json
+    url_file : str
+        The path to ipcontroller-client.json.
         This JSON file should contain all the information needed to connect to a cluster,
         and is likely the only argument needed.
         Connection information for the Hub's registration.  If a json connector
@@ -235,26 +236,13 @@ class Client(HasTraits):
         Pass an existing zmq.Context instance, otherwise the client will create its own.
     debug : bool
         flag for lots of message printing for debug purposes
-    timeout : int/float
+    timeout : float
         time (in seconds) to wait for connection replies from the Hub
         [Default: 10]
-
-    #-------------- session related args ----------------
-
-    config : Config object
-        If specified, this will be relayed to the Session for configuration
-    username : str
-        set username for the session object
-
-    #-------------- ssh related args ----------------
-    # These are args for configuring the ssh tunnel to be used
-    # credentials are used to forward connections over ssh to the Controller
-    # Note that the ip given in `addr` needs to be relative to sshserver
-    # The most basic case is to leave addr as pointing to localhost (127.0.0.1),
-    # and set sshserver as the same machine the Controller is on. However,
-    # the only requirement is that sshserver is able to see the Controller
-    # (i.e. is within the same trusted network).
-
+    
+    Other Parameters
+    ----------------
+    
     sshserver : str
         A string of the form passed to ssh, i.e. 'server.tld' or 'user@server.tld:port'
         If keyfile or password is specified, and this is not, it will default to
@@ -292,29 +280,6 @@ class Client(HasTraits):
     block : bool
         determines default behavior when block not specified
         in execution methods
-
-    Methods
-    -------
-
-    spin
-        flushes incoming results and registration state changes
-        control methods spin, and requesting `ids` also ensures up to date
-
-    wait
-        wait on one or more msg_ids
-
-    execution methods
-        apply
-        legacy: execute, run
-
-    data movement
-        push, pull, scatter, gather
-
-    query methods
-        queue_status, get_result, purge, result_status
-
-    control methods
-        abort, shutdown
 
     """
 
