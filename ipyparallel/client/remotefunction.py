@@ -20,11 +20,11 @@ from .asyncresult import AsyncMapResult
 def remote(view, block=None, **flags):
     """Turn a function into a remote function.
 
-    This method can be used for map:
-
-    In [1]: @remote(view,block=True)
-       ...: def func(a):
-       ...:    pass
+    This method can be used for map::
+    
+        In [1]: @remote(view,block=True)
+           ...: def func(a):
+           ...:    pass
     """
 
     def remote_function(f):
@@ -34,11 +34,11 @@ def remote(view, block=None, **flags):
 def parallel(view, dist='b', block=None, ordered=True, **flags):
     """Turn a function into a parallel remote function.
 
-    This method can be used for map:
+    This method can be used for map::
 
-    In [1]: @parallel(view, block=True)
-       ...: def func(a):
-       ...:    pass
+        In [1]: @parallel(view, block=True)
+           ...: def func(a):
+           ...:    pass
     """
 
     def parallel_function(f):
