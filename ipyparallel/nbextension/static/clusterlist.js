@@ -182,10 +182,6 @@ define([
         });
     };
 
-    // For backwards compatability.
-    IPython.ClusterList = ClusterList;
-    IPython.ClusterItem = ClusterItem;
-
     return {
         'ClusterList': ClusterList,
         'ClusterItem': ClusterItem,
