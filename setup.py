@@ -57,7 +57,7 @@ setup_args = dict(
     url             = 'http://ipython.org',
     license         = 'BSD',
     platforms       = "Linux, Mac OS X, Windows",
-    keywords        = ['Interactive', 'Interpreter', 'Shell', 'Web'],
+    keywords        = ['Interactive', 'Interpreter', 'Shell', 'Parallel'],
     classifiers     = [
         'Intended Audience :: Developers',
         'Intended Audience :: System Administrators',
@@ -70,7 +70,7 @@ setup_args = dict(
     ],
 )
 
-if 'develop' in sys.argv or any(a.startswith('bdist') for a in sys.argv):
+if 'develop' in sys.argv or any(bdist in sys.argv for bdist in ['bdist_wheel', 'bdist_egg']):
     import setuptools
 
 setuptools_args = {}
@@ -79,14 +79,10 @@ install_requires = setuptools_args['install_requires'] = [
     'ipython_genutils',
     'decorator',
     'pyzmq>=13',
-    'ipython',
+    'ipython>=4.0.0.dev0',
     'jupyter_client',
     'ipykernel',
 ]
-
-extras_require = setuptools_args['extras_require'] = {
-
-}
 
 if 'setuptools' in sys.modules:
     setup_args.update(setuptools_args)
