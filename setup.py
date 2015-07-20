@@ -41,6 +41,8 @@ for d, _, _ in os.walk(pjoin(here, name)):
     if os.path.exists(pjoin(d, '__init__.py')):
         packages.append(d[len(here)+1:].replace(os.path.sep, '.'))
 
+package_data = {'ipyparallel.nbextension': [pjoin('static', '*')]}
+
 version_ns = {}
 with open(pjoin(here, name, '_version.py')) as f:
     exec(f.read(), {}, version_ns)
@@ -51,6 +53,7 @@ setup_args = dict(
     version         = version_ns['__version__'],
     scripts         = glob(pjoin('scripts', '*')),
     packages        = packages,
+    package_data    = package_data,
     description     = "Interactive Parallel Computing with IPython",
     author          = 'IPython Development Team',
     author_email    = 'ipython-dev@scipy.org',
