@@ -5,6 +5,7 @@
 
 import json
 import os
+import sys
 
 from tornado import web
 
@@ -68,8 +69,9 @@ default_handlers = [
 
 
 def load_jupyter_server_extension(nbapp):
-    """Load the nbserver"""
-    install_nbextension(static, destination='ipyparallel', symlink=True, user=True)
+    """Load the nbserver extension"""
+    windows = sys.platform.startswith('win')
+    install_nbextension(static, destination='ipyparallel', symlink=not windows, user=True)
     webapp = nbapp.web_app
     webapp.settings['cluster_manager'] = ClusterManager(parent=nbapp)
     
