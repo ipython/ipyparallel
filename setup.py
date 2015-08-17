@@ -89,6 +89,14 @@ install_requires = setuptools_args['install_requires'] = [
 
 if 'setuptools' in sys.modules:
     setup_args.update(setuptools_args)
+    setup_args.pop('scripts')
+    setup_args['entrypoints'] = {
+        'console_scripts': [
+            'ipcluster = ipyparallel.apps.ipclusterapp:launch_new_instance',
+            'ipcontroller = ipyparallel.apps.ipcontrollerapp:launch_new_instance',
+            'ipengine = ipyparallel.apps.ipengineapp:launch_new_instance',
+        ]
+    }
 
 if __name__ == '__main__':
     setup(**setup_args)
