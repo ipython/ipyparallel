@@ -55,6 +55,10 @@ setup_args = dict(
     packages        = packages,
     package_data    = package_data,
     description     = "Interactive Parallel Computing with IPython",
+    long_description= """Use multiple instances of IPython in parallel, interactively.
+    
+    See https://ipyparallel.readthedocs.org for more info.
+    """,
     author          = 'IPython Development Team',
     author_email    = 'ipython-dev@scipy.org',
     url             = 'http://ipython.org',
