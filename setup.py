@@ -86,7 +86,7 @@ install_requires = setuptools_args['install_requires'] = [
     'ipython_genutils',
     'decorator',
     'pyzmq>=13',
-    'ipython>=4.0.0.dev0',
+    'ipython>=4',
     'jupyter_client',
     'ipykernel',
 ]
@@ -94,7 +94,7 @@ install_requires = setuptools_args['install_requires'] = [
 if 'setuptools' in sys.modules:
     setup_args.update(setuptools_args)
     setup_args.pop('scripts')
-    setup_args['entrypoints'] = {
+    setup_args['entry_points'] = {
         'console_scripts': [
             'ipcluster = ipyparallel.apps.ipclusterapp:launch_new_instance',
             'ipcontroller = ipyparallel.apps.ipcontrollerapp:launch_new_instance',
