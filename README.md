@@ -14,6 +14,8 @@ To install the `IPython Clusters` tab in Jupyter Notebook, add this to your `jup
 c.NotebookApp.server_extensions.append('ipyparallel.nbextension')
 ```
 
+See the [documentation on configuring the notebook server](http://jupyter-notebook.readthedocs.org/en/latest/examples/Notebook/Configuring%20the%20Notebook%20and%20Server.html)
+to find your config or setup your initial `jupyter_notebook_config.py`.
 
 ## Run
 
