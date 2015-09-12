@@ -30,8 +30,10 @@ from jupyter_client.localinterfaces import localhost, is_local_ip
 from IPython.paths import get_ipython_dir
 from IPython.utils.path import compress_user
 from ipython_genutils.py3compat import cast_bytes, string_types, xrange, iteritems
-from traitlets import (HasTraits, Integer, Instance, Unicode,
-                                    Dict, List, Bool, Set, Any)
+from traitlets import (
+    HasTraits, Integer, Instance, Unicode,
+    Dict, List, Bool, Set, Any, Float,
+)
 from decorator import decorator
 
 from ipyparallel import Reference
@@ -292,6 +294,12 @@ class Client(HasTraits):
     debug = Bool(False)
     _spin_thread = Any()
     _stop_spinning = Any()
+    _spin_interval = Float(0.2,
+        help="""
+        The maximum spin interval (seconds) when waiting for results.
+        Starts as 1ms with exponential growth to this value.
+        """
+    )
 
     profile=Unicode()
     def _profile_default(self):
@@ -1063,11 +1071,13 @@ class Client(HasTraits):
         if not theids.intersection(self.outstanding):
             return True
         self.spin()
+        interval = 1e-3
         while theids.intersection(self.outstanding):
             if timeout >= 0 and ( time.time()-tic ) > timeout:
                 break
-            time.sleep(1e-3)
+            time.sleep(interval)
             self.spin()
+            interval = min(1.1 * interval, self._spin_interval)
         return len(theids.intersection(self.outstanding)) == 0
 
     #--------------------------------------------------------------------------
