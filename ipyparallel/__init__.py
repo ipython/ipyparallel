@@ -11,8 +11,6 @@ import zmq
 
 from traitlets.config.configurable import MultipleInstanceError
 
-from ipykernel.pickleutil import Reference, can_map
-
 
 from ._version import version_info, __version__
 from .client.asyncresult import *
@@ -22,9 +20,7 @@ from .client.view import *
 from .controller.dependency import *
 from .error import *
 from .util import interactive
-from . import pickleutil
-
-pickleutil.enable()
+from .serialization import *
 
 #-----------------------------------------------------------------------------
 # Functions
