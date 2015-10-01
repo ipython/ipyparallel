@@ -740,6 +740,8 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher):
         for n in itervalues(self.engines):
             if isinstance(n, (tuple,list)):
                 n,args = n
+            if isinstance(n, dict):
+                n = n['n']
             count += n
         return count
     
