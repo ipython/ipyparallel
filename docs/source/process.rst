@@ -424,7 +424,7 @@ on that host.
     c.SSHEngineSetLauncher.engines = { 'host1.example.com' : 2,
                 'host2.example.com' : 5,
                 'host3.example.com' : (1, ['--profile-dir=/home/different/location']),
-                'host4.example.com' : {'n': 3, 'engine_args': ['--profile-dir=/away/location'], 'engine_cmd': '/home/venv/bin/python'},
+                'host4.example.com' : {'n': 3, 'engine_args': ['--profile-dir=/away/location'], 'engine_cmd': ['/home/venv/bin/python', '-m', 'ipyparallel.engine']},
                 'host5.example.com' : 8 }
 
 * The `engines` dict, where the keys are the host we want to run engines on and
