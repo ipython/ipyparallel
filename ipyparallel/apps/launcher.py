@@ -409,12 +409,13 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
 
     def _notice_engine_stopped(self, data):
         pid = data['pid']
-        for idx,el in iteritems(self.launchers):
+        for idx, el in iteritems(self.launchers):
             if el.process.pid == pid:
                 break
-        self.launchers.pop(idx)
-        self.stop_data[idx] = data
-        if not self.launchers:
+        if self.launchers:
+            self.launchers.pop(idx)
+            self.stop_data[idx] = data
+        else:
             self.notify_stop(self.stop_data)
 
 
@@ -546,6 +547,8 @@ class SSHLauncher(LocalProcessLauncher):
         help="args to pass to ssh")
     scp_cmd = List(['scp'], config=True,
         help="command for sending files")
+    scp_args = List([], config=True,
+        help="args to pass to scp")
     program = List(['date'],
         help="Program to launch via ssh")
     program_args = List([],
@@ -589,7 +592,7 @@ class SSHLauncher(LocalProcessLauncher):
             [self.location, 'mkdir', '-p', '--', remote_dir]
         )
         self.log.info("sending %s to %s", local, full_remote)
-        check_output(self.scp_cmd + [local, full_remote])
+        check_output(self.scp_cmd + self.scp_args + [local, full_remote])
     
     def send_files(self):
         """send our files (called before start)"""
@@ -622,11 +625,16 @@ class SSHLauncher(LocalProcessLauncher):
         for remote_file, local_file in self.to_fetch:
             self._fetch_file(remote_file, local_file)
 
-    def start(self, hostname=None, user=None):
+    def start(self, hostname=None, user=None, port=None):
         if hostname is not None:
             self.hostname = hostname
         if user is not None:
             self.user = user
+        if port is not None:
+            self.ssh_args.append('-p')
+            self.ssh_args.append(port)
+            self.scp_args.append('-P')
+            self.scp_args.append(port)
         
         self.send_files()
         super(SSHLauncher, self).start()
@@ -774,6 +782,11 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher):
                 user,host = host.split('@',1)
             else:
                 user=None
+            if ':' in host:
+                host,port = host.split(':',1)
+            else:
+                port = None
+
             for i in range(n):
                 if i > 0:
                     time.sleep(self.delay)
@@ -788,7 +801,7 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher):
                 el.engine_cmd = cmd
                 el.engine_args = args
                 el.on_stop(self._notice_engine_stopped)
-                d = el.start(user=user, hostname=host)
+                d = el.start(user=user, hostname=host, port=port)
                 self.launchers[ "%s/%i" % (host,i) ] = el
                 dlist.append(d)
         self.notify_start(dlist)
