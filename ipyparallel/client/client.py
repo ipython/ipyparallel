@@ -1080,7 +1080,18 @@ class Client(HasTraits):
             self.spin()
             interval = min(1.1 * interval, self._spin_interval)
         return len(theids.intersection(self.outstanding)) == 0
-
+    
+    def wait_interactive(self, jobs=None, interval=1., timeout=-1.):
+        """Wait interactively for jobs
+        
+        If no job is specified, will wait for all outstanding jobs to complete.
+        """
+        if jobs is None:
+            jobs = self.outstanding
+        msg_ids = self._msg_ids_from_jobs(jobs)
+        ar = AsyncResult(self, msg_ids=msg_ids, owner=False)
+        return ar.wait_interactive(interval=interval, timeout=timeout)
+    
     #--------------------------------------------------------------------------
     # Control methods
     #--------------------------------------------------------------------------

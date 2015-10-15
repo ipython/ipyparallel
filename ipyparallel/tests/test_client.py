@@ -552,3 +552,8 @@ class TestClient(ClusterTestCase):
         self.assertTrue('pxall' in magics['line'])
         self.assertTrue('pxall' in magics['cell'])
         self.assertEqual(v0.targets, 'all')
+    
+    def test_wait_interactive(self):
+        ar = self.client[-1].apply_async(lambda : 1)
+        self.client.wait_interactive()
+        self.assertEqual(self.client.outstanding, set())
