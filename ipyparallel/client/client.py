@@ -10,6 +10,7 @@ import json
 import sys
 from threading import Thread, Event
 import time
+import types
 import warnings
 from datetime import datetime
 from getpass import getpass
@@ -40,7 +41,7 @@ from ipyparallel import Reference
 from ipyparallel import error
 from ipyparallel import util
 
-from jupyter_client.session import Session, Message
+from jupyter_client.session import Session
 from ipykernel import serialize
 
 from .asyncresult import AsyncResult, AsyncHubResult
@@ -1356,7 +1357,7 @@ class Client(HasTraits):
     #--------------------------------------------------------------------------
     # Query methods
     #--------------------------------------------------------------------------
-
+    
     @spin_first
     def get_result(self, indices_or_msg_ids=None, block=None, owner=True):
         """Retrieve a result by msg_id or history index, wrapped in an AsyncResult object.
@@ -1379,7 +1380,8 @@ class Client(HasTraits):
         Parameters
         ----------
 
-        indices_or_msg_ids : integer history index, str msg_id, or list of either
+        indices_or_msg_ids : integer history index, str msg_id, AsyncResult,
+            or a list of same.
             The indices or msg_ids of indices to be retrieved
 
         block : bool
@@ -1404,18 +1406,8 @@ class Client(HasTraits):
         if indices_or_msg_ids is None:
             indices_or_msg_ids = -1
         
-        single_result = False
-        if not isinstance(indices_or_msg_ids, (list,tuple)):
-            indices_or_msg_ids = [indices_or_msg_ids]
-            single_result = True
-
-        theids = []
-        for id in indices_or_msg_ids:
-            if isinstance(id, int):
-                id = self.history[id]
-            if not isinstance(id, string_types):
-                raise TypeError("indices must be str or int, not %r"%id)
-            theids.append(id)
+        single_result = isinstance(indices_or_msg_ids, string_types + (int,))
+        theids = self._msg_ids_from_jobs(indices_or_msg_ids)
 
         local_ids = [msg_id for msg_id in theids if (msg_id in self.outstanding or msg_id in self.results)]
         remote_ids = [msg_id for msg_id in theids if msg_id not in local_ids]
@@ -1461,17 +1453,7 @@ class Client(HasTraits):
         if indices_or_msg_ids is None:
             indices_or_msg_ids = -1
 
-        if not isinstance(indices_or_msg_ids, (list,tuple)):
-            indices_or_msg_ids = [indices_or_msg_ids]
-
-        theids = []
-        for id in indices_or_msg_ids:
-            if isinstance(id, int):
-                id = self.history[id]
-            if not isinstance(id, string_types):
-                raise TypeError("indices must be str or int, not %r"%id)
-            theids.append(id)
-
+        theids = self._msg_ids_from_jobs(indices_or_msg_ids)
         content = dict(msg_ids = theids)
 
         self.session.send(self._query_socket, 'resubmit_request', content)
@@ -1518,16 +1500,7 @@ class Client(HasTraits):
             be lists of msg_ids that are incomplete or complete. If `status_only`
             is False, then completed results will be keyed by their `msg_id`.
         """
-        if not isinstance(msg_ids, (list,tuple)):
-            msg_ids = [msg_ids]
-
-        theids = []
-        for msg_id in msg_ids:
-            if isinstance(msg_id, int):
-                msg_id = self.history[msg_id]
-            if not isinstance(msg_id, string_types):
-                raise TypeError("msg_ids must be str, not %r"%msg_id)
-            theids.append(msg_id)
+        theids = self._msg_ids_from_jobs(msg_ids)
 
         completed = []
         local_results = {}
@@ -1638,30 +1611,36 @@ class Client(HasTraits):
         else:
             return content
 
-    def _build_msgids_from_target(self, targets=None):
+    def _msg_ids_from_target(self, targets=None):
         """Build a list of msg_ids from the list of engine targets"""
         if not targets: # needed as _build_targets otherwise uses all engines
             return []
         target_ids = self._build_targets(targets)[0] 
         return [md_id for md_id in self.metadata if self.metadata[md_id]["engine_uuid"] in target_ids]
     
-    def _build_msgids_from_jobs(self, jobs=None):
-        """Build a list of msg_ids from "jobs" """
-        if not jobs:
-            return []
-        msg_ids = []
-        if isinstance(jobs, string_types + (AsyncResult,)):
-            jobs = [jobs]
-        bad_ids = [obj for obj in jobs if not isinstance(obj, string_types + (AsyncResult,))]
-        if bad_ids:
-            raise TypeError("Invalid msg_id type %r, expected str or AsyncResult"%bad_ids[0])
-        for j in jobs:
-            if isinstance(j, AsyncResult):
-                msg_ids.extend(j.msg_ids)
-            else:
-                msg_ids.append(j)
-        return msg_ids        
+    def _msg_ids_from_jobs(self, jobs=None):
+        """Given a 'jobs' argument, convert it to a list of msg_ids.
         
+        Can be either one or a list of:
+        
+        - msg_id strings
+        - integer indices to this Client's history
+        - AsyncResult objects
+        """
+        if not isinstance(jobs, (list, tuple, set, types.GeneratorType)):
+            jobs = [jobs]
+        msg_ids = []
+        for job in jobs:
+            if isinstance(job, int):
+                msg_ids.append(self.history[job])
+            elif isinstance(job, string_types):
+                msg_ids.append(job)
+            elif isinstance(job, AsyncResult):
+                msg_ids.extend(job.msg_ids)
+            else:
+                raise TypeError("Expected msg_id, int, or AsyncResult, got %r" % job)
+        return msg_ids
+    
     def purge_local_results(self, jobs=[], targets=[]):
         """Clears the client caches of results and their metadata.
 
@@ -1702,8 +1681,8 @@ class Client(HasTraits):
             self.metadata.clear()
         else:
             msg_ids = set()
-            msg_ids.update(self._build_msgids_from_target(targets))
-            msg_ids.update(self._build_msgids_from_jobs(jobs))
+            msg_ids.update(self._msg_ids_from_target(targets))
+            msg_ids.update(self._msg_ids_from_jobs(jobs))
             still_outstanding = self.outstanding.intersection(msg_ids)
             if still_outstanding:
                 raise RuntimeError("Can't purge outstanding tasks: %s" % still_outstanding)
@@ -1740,7 +1719,7 @@ class Client(HasTraits):
         if jobs == 'all':
             msg_ids = jobs
         else:
-            msg_ids = self._build_msgids_from_jobs(jobs)
+            msg_ids = self._msg_ids_from_jobs(jobs)
 
         content = dict(engine_ids=targets, msg_ids=msg_ids)
         self.session.send(self._query_socket, "purge_request", content=content)

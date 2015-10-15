@@ -149,6 +149,10 @@ class TestClient(ClusterTestCase):
         ar2 = self.client.get_result(ar.msg_ids[0])
         self.assertNotIsInstance(ar2, AsyncHubResult)
         self.assertEqual(ahr.get(), ar2.get())
+        ar3 = self.client.get_result(ar2)
+        self.assertEqual(ar3.msg_ids, ar2.msg_ids)
+        ar3 = self.client.get_result([ar2])
+        self.assertEqual(ar3.msg_ids, ar2.msg_ids)
         c.close()
     
     def test_get_execute_result(self):
