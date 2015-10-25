@@ -403,7 +403,7 @@ class IPControllerApp(BaseParallelApplication):
         if 'TaskScheduler.scheme_name' in self.config:
             scheme = self.config.TaskScheduler.scheme_name
         else:
-            scheme = TaskScheduler.scheme_name.get_default_value()
+            scheme = TaskScheduler.scheme_name.default_value
         # Task Queue (in a Process)
         if scheme == 'pure':
             self.log.warn("task::using pure DEALER Task scheduler")
