@@ -33,7 +33,6 @@ from decorator import decorator
 from traitlets.config.application import Application
 from jupyter_client.localinterfaces import localhost, is_public_ip, public_ips
 from ipython_genutils.py3compat import string_types, iteritems, itervalues
-from ipykernel.log import EnginePUBHandler
 
 
 #-----------------------------------------------------------------------------
@@ -342,6 +341,8 @@ def connect_logger(logname, context, iface, root="ip", loglevel=logging.DEBUG):
     return logger
 
 def connect_engine_logger(context, iface, engine, loglevel=logging.DEBUG):
+    from ipyparallel.engine.log import EnginePUBHandler
+    
     logger = logging.getLogger()
     if any([isinstance(h, handlers.PUBHandler) for h in logger.handlers]):
         # don't add a second PUBHandler

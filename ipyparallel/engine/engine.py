@@ -25,7 +25,6 @@ from ipyparallel.controller.heartmonitor import Heart
 from ipyparallel.factory import RegistrationFactory
 from ipyparallel.util import disambiguate_url
 
-# from ipykernel.ipkernel import IPythonKernel as Kernel
 from .kernel import IPythonParallelKernel as Kernel
 from ipykernel.kernelapp import IPKernelApp
 
