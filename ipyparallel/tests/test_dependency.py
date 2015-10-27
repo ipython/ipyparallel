@@ -1,29 +1,13 @@
-"""Tests for dependency.py
+"""Tests for dependency.py"""
 
-Authors:
+# Copyright (c) IPython Development Team.
+# Distributed under the terms of the Modified BSD License.
 
-* Min RK
-"""
-
-__docformat__ = "restructuredtext en"
-
-#-------------------------------------------------------------------------------
-#  Copyright (C) 2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-# Imports
-#-------------------------------------------------------------------------------
-
-# import
 import os
 
-from ipykernel.pickleutil import can, uncan
+from ipyparallel.serialize import can, uncan
 
-import ipyparallel as pmod
+import ipyparallel as ipp
 from ipyparallel.util import interactive
 
 from ipyparallel.tests import add_engines
@@ -32,12 +16,12 @@ from .clienttest import ClusterTestCase
 def setup():
     add_engines(1, total=True)
 
-@pmod.require('time')
+@ipp.require('time')
 def wait(n):
     time.sleep(n)
     return n
 
-@pmod.interactive
+@ipp.interactive
 def func(x):
     return x*x
 
@@ -74,7 +58,7 @@ class DependencyTest(ClusterTestCase):
     def test_require_imports(self):
         """test that @require imports names"""
         @self.cancan
-        @pmod.require('base64')
+        @ipp.require('base64')
         @interactive
         def encode(arg):
             return base64.b64encode(arg)
@@ -82,13 +66,13 @@ class DependencyTest(ClusterTestCase):
         self.assertEqual(encode(b'foo'), b'Zm9v')
     
     def test_success_only(self):
-        dep = pmod.Dependency(mixed, success=True, failure=False)
+        dep = ipp.Dependency(mixed, success=True, failure=False)
         self.assertUnmet(dep)
         self.assertUnreachable(dep)
         dep.all=False
         self.assertMet(dep)
         self.assertReachable(dep)
-        dep = pmod.Dependency(completed, success=True, failure=False)
+        dep = ipp.Dependency(completed, success=True, failure=False)
         self.assertMet(dep)
         self.assertReachable(dep)
         dep.all=False
@@ -96,13 +80,13 @@ class DependencyTest(ClusterTestCase):
         self.assertReachable(dep)
 
     def test_failure_only(self):
-        dep = pmod.Dependency(mixed, success=False, failure=True)
+        dep = ipp.Dependency(mixed, success=False, failure=True)
         self.assertUnmet(dep)
         self.assertUnreachable(dep)
         dep.all=False
         self.assertMet(dep)
         self.assertReachable(dep)
-        dep = pmod.Dependency(completed, success=False, failure=True)
+        dep = ipp.Dependency(completed, success=False, failure=True)
         self.assertUnmet(dep)
         self.assertUnreachable(dep)
         dep.all=False
@@ -111,12 +95,12 @@ class DependencyTest(ClusterTestCase):
     
     def test_require_function(self):
         
-        @pmod.interactive
+        @ipp.interactive
         def bar(a):
             return func(a)
 
-        @pmod.require(func)
-        @pmod.interactive
+        @ipp.require(func)
+        @ipp.interactive
         def bar2(a):
             return func(a)
         
@@ -127,8 +111,8 @@ class DependencyTest(ClusterTestCase):
 
     def test_require_object(self):
         
-        @pmod.require(foo=func)
-        @pmod.interactive
+        @ipp.require(foo=func)
+        @ipp.interactive
         def bar(a):
             return foo(a)
 

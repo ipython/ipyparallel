@@ -83,7 +83,7 @@ def use_dill():
     pickle = dill
 
     try:
-        from ipykernel import serialize
+        from . import serialize
     except ImportError:
         pass
     else:
@@ -103,7 +103,7 @@ def use_cloudpickle():
     pickle = cloudpickle
 
     try:
-        from ipykernel import serialize
+        from . import serialize
     except ImportError:
         pass
     else:

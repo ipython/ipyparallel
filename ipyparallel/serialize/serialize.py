@@ -13,7 +13,7 @@ except:
 from itertools import chain
 
 from ipython_genutils.py3compat import PY3, buffer_to_bytes_py2
-from ipykernel.pickleutil import (
+from .canning import (
     can, uncan, can_sequence, uncan_sequence, CannedObject,
     istype, sequence_types, PICKLE_PROTOCOL,
 )
