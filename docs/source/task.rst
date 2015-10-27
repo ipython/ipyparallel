@@ -162,6 +162,22 @@ you specify are importable:
 
 Now, any time you apply :func:`myfunc`, the task will only run on a machine that has
 numpy and pyzmq available, and when :func:`myfunc` is called, numpy and zmq will be imported.
+You can also require specific objects, not just module names:
+
+.. sourcecode:: python
+
+    def foo(a):
+        return a*a
+
+    @parallel.require(foo)
+    def bar(b):
+        return foo(b)
+
+    @parallel.require(bar)
+    def baz(c, d):
+        return bar(c) - bar(d)
+
+    view.apply_sync(baz, 4, 5)
 
 @depend
 *******
