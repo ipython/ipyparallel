@@ -13,6 +13,7 @@ from traitlets.config.configurable import MultipleInstanceError
 
 
 from ._version import version_info, __version__
+from .serialize import *
 from .client.asyncresult import *
 from .client.client import Client
 from .client.remotefunction import *
@@ -20,7 +21,6 @@ from .client.view import *
 from .controller.dependency import *
 from .error import *
 from .util import interactive
-from .serialization import *
 
 #-----------------------------------------------------------------------------
 # Functions

@@ -6,7 +6,7 @@
 from traitlets.config import Configurable
 from traitlets import Instance, Dict, CBytes, Any
 from ipykernel.jsonutil import json_clean
-from ipykernel.serialize import serialize_object
+from ipyparallel.serialize import serialize_object
 from jupyter_client.session import Session, extract_header
 
 class ZMQDataPublisher(Configurable):
