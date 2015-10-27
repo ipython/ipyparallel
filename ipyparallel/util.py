@@ -339,6 +339,7 @@ def connect_logger(logname, context, iface, root="ip", loglevel=logging.DEBUG):
     handler.root_topic = root
     logger.addHandler(handler)
     logger.setLevel(loglevel)
+    return logger
 
 def connect_engine_logger(context, iface, engine, loglevel=logging.DEBUG):
     logger = logging.getLogger()
