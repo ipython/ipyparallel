@@ -67,7 +67,7 @@ Clients use the same socket as engines to start their connections. Connection re
 from clients need no information:
 
 Message type: ``connection_request``::
-    
+
     content = {}
 
 The reply to a Client registration request contains the connection information for the
@@ -136,7 +136,7 @@ cannot handle number keys.  The three keys of each dict are::
 
     'completed' :  messages submitted via any queue that ran on the engine
     'queue' : jobs submitted via MUX queue, whose results have not been received
-    'tasks' : tasks that are known to have been submitted to the engine, but 
+    'tasks' : tasks that are known to have been submitted to the engine, but
                 have not completed.  Note that with the pure zmq scheduler, this will
                 always be 0/[].
 
@@ -166,7 +166,7 @@ Message type: ``result_request``::
 
 The :func:`result_request` reply contains the content objects of the actual execution
 reply messages. If `statusonly=True`, then there will be only the 'pending' and
-'completed' lists.  
+'completed' lists.
 
 
 Message type: ``result_reply``::
@@ -181,7 +181,7 @@ Message type: ``result_reply``::
         'completed' : ['msg_id','...'], # list of completed msg_ids
     }
     buffers = ['bufs','...'] # the buffers that contained the results of the objects.
-                            # this will be empty if no messages are complete, or if 
+                            # this will be empty if no messages are complete, or if
                             # statusonly is True.
 
 For memory management purposes, Clients can also instruct the hub to forget the
@@ -223,7 +223,7 @@ The MUX and Control schedulers are simple MonitoredQueue ØMQ devices, with ``RO
 sockets on either side. This allows the queue to relay individual messages to particular
 targets via ``zmq.IDENTITY`` routing. The Task scheduler may be a MonitoredQueue ØMQ
 device, in which case the client-facing socket is ``ROUTER``, and the engine-facing socket
-is ``DEALER``.  The result of this is that client-submitted messages are load-balanced via 
+is ``DEALER``.  The result of this is that client-submitted messages are load-balanced via
 the ``DEALER`` socket, but the engine's replies to each message go to the requesting client.
 
 Raw ``DEALER`` scheduling is quite primitive, and doesn't allow message introspection, so
@@ -252,7 +252,7 @@ The `Namespace <http://gist.github.com/483294>`_ model suggests that execution b
 use the model::
 
     ns.apply(f, *args, **kwargs)
-    
+
 which takes `f`, a function in the user's namespace, and executes ``f(*args, **kwargs)``
 on a remote engine, returning the result (or, for non-blocking, information facilitating
 later retrieval of the result). This model, unlike the execute message which just uses a
@@ -290,6 +290,36 @@ Message type: ``apply_reply``::
                     # only populated if status is 'ok'
 
 All engine execution and data movement is performed via apply messages.
+
+Raw Data Publication
+********************
+
+``display_data`` lets you publish *representations* of data, such as images and html.
+This ``data_pub`` message lets you publish *actual raw data*, sent via message buffers.
+
+data_pub messages are constructed via the :func:`ipyparallel.datapub.publish_data` function:
+
+.. sourcecode:: python
+
+    from ipyparallel.datapub import publish_data
+    ns = dict(x=my_array)
+    publish_data(ns)
+
+
+Message type: ``data_pub``::
+
+    content = {
+        # the keys of the data dict, after it has been unserialized
+        'keys' : ['a', 'b']
+    }
+    # the namespace dict will be serialized in the message buffers,
+    # which will have a length of at least one
+    buffers = [b'pdict', ...]
+
+
+The interpretation of a sequence of data_pub messages for a given parent request should be
+to update a single namespace with subsequent results.
+
 
 Control Messages
 ----------------
