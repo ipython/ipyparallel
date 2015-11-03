@@ -2,24 +2,10 @@
 # encoding: utf-8
 """
 The IPython engine application
-
-Authors:
-
-* Brian Granger
-* MinRK
-
 """
 
-#-----------------------------------------------------------------------------
-#  Copyright (C) 2008-2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-----------------------------------------------------------------------------
-
-#-----------------------------------------------------------------------------
-# Imports
-#-----------------------------------------------------------------------------
+# Copyright (c) IPython Development Team.
+# Distributed under the terms of the Modified BSD License.
 
 import json
 import os
@@ -36,7 +22,6 @@ from ipyparallel.apps.baseapp import (
     base_flags,
     catch_config_error,
 )
-from ipykernel.log import EnginePUBHandler
 from ipykernel.ipkernel import IPythonKernel as Kernel
 from ipykernel.kernelapp import IPKernelApp
 from jupyter_client.session import (
@@ -46,6 +31,7 @@ from ipykernel.zmqshell import ZMQInteractiveShell
 
 from traitlets.config.configurable import Configurable
 
+from ipyparallel.engine.log import EnginePUBHandler
 from ipyparallel.engine.engine import EngineFactory
 from ipyparallel.util import disambiguate_ip_address
 

@@ -25,7 +25,7 @@ from ipyparallel.controller.heartmonitor import Heart
 from ipyparallel.factory import RegistrationFactory
 from ipyparallel.util import disambiguate_url
 
-from ipykernel.ipkernel import IPythonKernel as Kernel
+from .kernel import IPythonParallelKernel as Kernel
 from ipykernel.kernelapp import IPKernelApp
 
 class EngineFactory(RegistrationFactory):
@@ -225,7 +225,7 @@ class EngineFactory(RegistrationFactory):
                 sys.displayhook = self.display_hook_factory(self.session, iopub_socket)
                 sys.displayhook.topic = cast_bytes('engine.%i.execute_result' % self.id)
 
-            self.kernel = Kernel(parent=self, int_id=self.id, ident=self.ident, session=self.session,
+            self.kernel = Kernel(parent=self, engine_id=self.id, ident=self.ident, session=self.session,
                     control_stream=control_stream, shell_streams=shell_streams, iopub_socket=iopub_socket,
                     loop=loop, user_ns=self.user_ns, log=self.log)
             

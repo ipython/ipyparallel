@@ -6,14 +6,12 @@
 from __future__ import print_function
 
 import imp
-import sys
 import warnings
 from contextlib import contextmanager
-from types import ModuleType
 
 import zmq
 
-from ipykernel import pickleutil
+from .. import serialize
 from traitlets import (
     HasTraits, Any, Bool, List, Dict, Set, Instance, CFloat, Integer
 )
@@ -500,16 +498,18 @@ class DirectView(View):
         
         adds support for closures, etc.
         
-        This calls ipykernel.pickleutil.use_dill() here and on each engine.
+        This calls ipyparallel.serialize.use_dill() here and on each engine.
         """
-        pickleutil.use_dill()
-        return self.apply(pickleutil.use_dill)
+        serialize.use_dill()
+        return self.apply(serialize.use_dill)
 
     def use_cloudpickle(self):
         """Expand serialization support with cloudpickle.
+        
+        This calls ipyparallel.serialize.use_cloudpickle() here and on each engine.
         """
-        pickleutil.use_cloudpickle()
-        return self.apply(pickleutil.use_cloudpickle)
+        serialize.use_cloudpickle()
+        return self.apply(serialize.use_cloudpickle)
 
 
     @sync_results

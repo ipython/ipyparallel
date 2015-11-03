@@ -42,7 +42,7 @@ from ipyparallel import error
 from ipyparallel import util
 
 from jupyter_client.session import Session
-from ipykernel import serialize
+from ipyparallel import serialize
 
 from .asyncresult import AsyncResult, AsyncHubResult
 from .view import DirectView, LoadBalancedView
