@@ -31,9 +31,6 @@ class IPythonParallelKernel(IPythonKernel):
         # add apply_request, in anticipation of upstream deprecation
         self.shell_handlers['apply_request'] = self.apply_request
         # set up data pub
-        if getattr(self.shell, 'data_pub', None):
-            # upstream data_pub hasn't been removed
-            return
         data_pub = self.shell.data_pub = self.data_pub_class(parent=self)
         self.shell.configurables.append(data_pub)
         data_pub.session = self.session
