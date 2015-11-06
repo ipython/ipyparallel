@@ -52,7 +52,6 @@ class TestView(ClusterTestCase):
         tic = time.time()
         while eid in self.client.ids and time.time()-tic < 5:
             time.sleep(.01)
-            self.client.spin()
         self.assertFalse(eid in self.client.ids, "Engine should have died")
     
     def test_push_pull(self):
@@ -148,7 +147,6 @@ class TestView(ClusterTestCase):
         ar2 = v2.get_result(ar.msg_ids[0])
         self.assertNotIsInstance(ar2, AsyncHubResult)
         self.assertEqual(ahr.get(), ar2.get())
-        c.spin()
         c.close()
     
     def test_run_newline(self):

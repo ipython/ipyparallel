@@ -161,7 +161,6 @@ class ClusterTestCase(BaseZMQTestCase):
             if f():
                 return
             time.sleep(0.1)
-            self.client.spin()
         if not f():
             print("Warning: Awaited condition never arrived")
     
@@ -182,7 +181,6 @@ class ClusterTestCase(BaseZMQTestCase):
         # allow flushing of incoming messages to prevent crash on socket close
         self.client.wait(timeout=2)
         # time.sleep(2)
-        self.client.spin()
         self.client.close()
         BaseZMQTestCase.tearDown(self)
         # this will be redundant when pyzmq merges PR #88

@@ -528,7 +528,7 @@ class Hub(SessionFactory):
             content = error.wrap_exception()
             self.log.error("Bad Query Message: %r", msg, exc_info=True)
             self.session.send(self.query, "hub_error", ident=client_id,
-                    content=content)
+                    content=content, parent=msg)
             return
         # print client_id, header, parent, content
         #switch on message type:
@@ -541,7 +541,7 @@ class Hub(SessionFactory):
             content = error.wrap_exception()
             self.log.error("Bad Message Type: %r", msg_type, exc_info=True)
             self.session.send(self.query, "hub_error", ident=client_id,
-                    content=content)
+                    content=content, parent=msg)
             return
 
         else:
@@ -1120,9 +1120,9 @@ class Hub(SessionFactory):
 
     def shutdown_request(self, client_id, msg):
         """handle shutdown request."""
-        self.session.send(self.query, 'shutdown_reply', content={'status': 'ok'}, ident=client_id)
+        self.session.send(self.query, 'shutdown_reply', content={'status': 'ok'}, ident=client_id, parent=msg)
         # also notify other clients of shutdown
-        self.session.send(self.notifier, 'shutdown_notice', content={'status': 'ok'})
+        self.session.send(self.notifier, 'shutdown_notice', content={'status': 'ok'}, parent=msg)
         self.loop.add_timeout(self.loop.time() + 1, self._shutdown)
 
     def _shutdown(self):
@@ -1139,14 +1139,14 @@ class Hub(SessionFactory):
         except:
             content = error.wrap_exception()
             self.session.send(self.query, "hub_error",
-                    content=content, ident=client_id)
+                    content=content, ident=client_id, parent=msg)
             return
 
         content = dict(status='ok')
         # loads = {}
         for t in targets:
             content[bytes(t)] = len(self.queues[t])+len(self.tasks[t])
-        self.session.send(self.query, "load_reply", content=content, ident=client_id)
+        self.session.send(self.query, "load_reply", content=content, ident=client_id, parent=msg)
 
 
     def queue_status(self, client_id, msg):
@@ -1167,7 +1167,7 @@ class Hub(SessionFactory):
         except:
             content = error.wrap_exception()
             self.session.send(self.query, "hub_error",
-                    content=content, ident=client_id)
+                    content=content, ident=client_id, parent=msg)
             return
         verbose = content.get('verbose', False)
         content = dict(status='ok')
@@ -1182,7 +1182,7 @@ class Hub(SessionFactory):
             content[str(t)] = {'queue': queue, 'completed': completed , 'tasks': tasks}
         content['unassigned'] = list(self.unassigned) if verbose else len(self.unassigned)
         # print (content)
-        self.session.send(self.query, "queue_reply", content=content, ident=client_id)
+        self.session.send(self.query, "queue_reply", content=content, ident=client_id, parent=msg)
 
     def purge_results(self, client_id, msg):
         """Purge results from memory. This method is more valuable before we move
@@ -1230,12 +1230,14 @@ class Hub(SessionFactory):
                         self.log.exception("Error dropping records")
                         break
 
-        self.session.send(self.query, 'purge_reply', content=reply, ident=client_id)
+        self.session.send(self.query, 'purge_reply', content=reply, ident=client_id, parent=msg)
 
     def resubmit_task(self, client_id, msg):
         """Resubmit one or more tasks."""
+        parent = msg
         def finish(reply):
-            self.session.send(self.query, 'resubmit_reply', content=reply, ident=client_id)
+            print("finishing resubmit")
+            self.session.send(self.query, 'resubmit_reply', content=reply, ident=client_id, parent=parent)
 
         content = msg['content']
         msg_ids = content['msg_ids']

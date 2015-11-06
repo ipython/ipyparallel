@@ -26,7 +26,7 @@ finished_tracker = MessageTracker()
 
 @decorator
 def check_ready(f, self, *args, **kwargs):
-    """Call spin() to sync state prior to calling the method."""
+    """Check ready state prior to calling the method."""
     self.wait(0)
     if not self._ready:
         raise error.TimeoutError("result not ready")
@@ -64,7 +64,6 @@ class AsyncResult(object):
         self.owner = owner
         
         self._ready = False
-        self._outputs_ready = False
         self._success = None
         self._metadata = [self._client.metadata[id] for id in self.msg_ids]
 
@@ -113,8 +112,6 @@ class AsyncResult(object):
         """Return whether the call has completed."""
         if not self._ready:
             self.wait(0)
-        elif not self._outputs_ready:
-            self._wait_for_outputs(0)
         
         return self._ready
 
@@ -124,7 +121,6 @@ class AsyncResult(object):
         This method always returns None.
         """
         if self._ready:
-            self._wait_for_outputs(timeout)
             return
         self._ready = self._client.wait(self.msg_ids, timeout)
         if self._ready:
@@ -147,7 +143,6 @@ class AsyncResult(object):
                 if timeout is None or timeout < 0:
                     # cutoff infinite wait at 10s
                     timeout = 10
-                self._wait_for_outputs(timeout)
                 
                 if self.owner:
                     
@@ -367,12 +362,7 @@ class AsyncResult(object):
         Computed as the time between the latest `received` stamp
         and the earliest `submitted`.
         
-        Only reliable if Client was spinning/waiting when the task finished, because
-        the `received` timestamp is created when a result is pulled off of the zmq queue,
-        which happens as a result of `client.spin()`.
-        
         For similar comparison of other timestamp pairs, check out AsyncResult.timedelta.
-        
         """
         return self.timedelta(self.submitted, self.received)
     
@@ -430,27 +420,6 @@ class AsyncResult(object):
         
         if self.execute_result is not None:
             display(self.get())
-    
-    def _wait_for_outputs(self, timeout=-1):
-        """wait for the 'status=idle' message that indicates we have all outputs
-        """
-        if self._outputs_ready or not self._success:
-            # don't wait on errors
-            return
-        
-        # cast None to -1 for infinite timeout
-        if timeout is None:
-            timeout = -1
-        
-        tic = time.time()
-        while True:
-            self._client._flush_iopub(self._client._iopub_socket)
-            self._outputs_ready = all(md['outputs_ready']
-                                      for md in self._metadata)
-            if self._outputs_ready or \
-               (timeout >= 0 and time.time() > tic + timeout):
-                break
-            time.sleep(0.01)
     
     @check_ready
     def display_outputs(self, groupby="type"):
@@ -652,10 +621,6 @@ class AsyncHubResult(AsyncResult):
     so use `AsyncHubResult.wait()` sparingly.
     """
 
-    def _wait_for_outputs(self, timeout=-1):
-        """no-op, because HubResults are never incomplete"""
-        self._outputs_ready = True
-    
     def wait(self, timeout=-1):
         """wait for result to complete."""
         start = time.time()

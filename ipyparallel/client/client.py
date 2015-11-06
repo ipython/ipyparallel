@@ -7,9 +7,7 @@ from __future__ import print_function
 
 import os
 import json
-import sys
 from threading import Thread, Event
-import time
 import types
 import warnings
 from datetime import datetime
@@ -19,6 +17,10 @@ from pprint import pprint
 pjoin = os.path.join
 
 import zmq
+from zmq.eventloop.ioloop import IOLoop
+from zmq.eventloop.zmqstream import ZMQStream
+from tornado.concurrent import Future
+from tornado.gen import multi_future
 
 from traitlets.config.configurable import MultipleInstanceError
 from IPython.core.application import BaseIPythonApplication
@@ -32,8 +34,8 @@ from IPython.paths import get_ipython_dir
 from IPython.utils.path import compress_user
 from ipython_genutils.py3compat import cast_bytes, string_types, xrange, iteritems
 from traitlets import (
-    HasTraits, Integer, Instance, Unicode,
-    Dict, List, Bool, Set, Any, Float,
+    HasTraits, Instance, Unicode,
+    Dict, List, Bool, Set, Any
 )
 from decorator import decorator
 
@@ -53,15 +55,58 @@ from .view import DirectView, LoadBalancedView
 
 
 @decorator
-def spin_first(f, self, *args, **kwargs):
-    """Call spin() to sync state prior to calling the method."""
-    self.spin()
-    return f(self, *args, **kwargs)
-
+def unpack_message(f, self, msg_parts):
+    """Unpack a message before calling the decorated method."""
+    idents, msg = self.session.feed_identities(msg_parts, copy=False)
+    try:
+        msg = self.session.deserialize(msg, content=True, copy=False)
+    except:
+        self.log.error("Invalid Message", exc_info=True)
+    else:
+        if self.debug:
+            pprint(msg)
+        return f(self, msg)
 
 #--------------------------------------------------------------------------
 # Classes
 #--------------------------------------------------------------------------
+
+
+class MessageFuture(Future):
+    """Future class to wrap async messages"""
+    def __init__(self, msg_id, track=False):
+        super(MessageFuture, self).__init__()
+        self.msg_id = msg_id
+        self._evt = Event()
+        self.track = track
+        self._tracker = None
+        if track:
+            self._tracker_evt = Event()
+        else:
+            self._tracker_evt = None
+        self.add_done_callback(lambda f: self._evt.set())
+    
+    def wait(self, timeout=None):
+        if not self.done():
+            return self._evt.wait(timeout)
+        return True
+    
+    @property
+    def tracker(self):
+        if not self.track:
+            return None
+        else:
+            self._tracker_evt.wait()
+            return self._tracker
+
+class ExecutionFuture(MessageFuture):
+    """Future wrapping an execution. Resolves when reply *and* output have arrived."""
+    def __init__(self, msg_id, track=False):
+        super(ExecutionFuture, self).__init__(msg_id, track=track)
+        self.reply = Future()
+        self.output = Future()
+        self._pair = multi_future([self.reply, self.output])
+        self._pair.add_done_callback(lambda f: self.set_result(self.reply.result()))
 
 _no_connection_file_msg = """
 Failed to connect because no Controller could be found.
@@ -184,7 +229,6 @@ class Metadata(dict):
               'stderr' : '',
               'outputs' : [],
               'data': {},
-              'outputs_ready' : False,
             }
         self.update(md)
         self.update(dict(*args, **kwargs))
@@ -293,14 +337,9 @@ class Client(HasTraits):
     metadata = Instance('collections.defaultdict', (Metadata,))
     history = List()
     debug = Bool(False)
-    _spin_thread = Any()
-    _stop_spinning = Any()
-    _spin_interval = Float(0.2,
-        help="""
-        The maximum spin interval (seconds) when waiting for results.
-        Starts as 1ms with exponential growth to this value.
-        """
-    )
+    _futures = Dict()
+    _io_loop = Any()
+    _io_thread = Any()
 
     profile=Unicode()
     def _profile_default(self):
@@ -331,8 +370,6 @@ class Client(HasTraits):
     _task_socket=Instance('zmq.Socket', allow_none=True)
     _task_scheme=Unicode()
     _closed = False
-    _ignored_control_replies=Integer(0)
-    _ignored_hub_replies=Integer(0)
 
     def __new__(self, *args, **kw):
         # don't raise on positional args
@@ -350,7 +387,6 @@ class Client(HasTraits):
         if context is None:
             context = zmq.Context.instance()
         self._context = context
-        self._stop_spinning = Event()
         
         if 'url_or_file' in extra_args:
             url_file = extra_args['url_or_file']
@@ -495,7 +531,7 @@ class Client(HasTraits):
     def __del__(self):
         """cleanup sockets, but _not_ context."""
         self.close()
-
+    
     def _setup_profile_dir(self, profile, profile_dir, ipython_dir):
         if ipython_dir is None:
             ipython_dir = get_ipython_dir()
@@ -596,7 +632,7 @@ class Client(HasTraits):
         evts = poller.poll(timeout*1000)
         if not evts:
             raise error.TimeoutError("Hub connection request timed out")
-        idents,msg = self.session.recv(self._query_socket,mode=0)
+        idents, msg = self.session.recv(self._query_socket, mode=0)
         if self.debug:
             pprint(msg)
         content = msg['content']
@@ -624,7 +660,9 @@ class Client(HasTraits):
         else:
             self._connected = False
             raise Exception("Failed to connect!")
-
+        
+        self._start_io_thread()
+    
     #--------------------------------------------------------------------------
     # handlers and callbacks for incoming messages
     #--------------------------------------------------------------------------
@@ -715,6 +753,7 @@ class Client(HasTraits):
 
         parent = msg['parent_header']
         msg_id = parent['msg_id']
+        future = self._futures.get(msg_id, None)
         if msg_id not in self.outstanding:
             if msg_id in self.history:
                 print("got stale result: %s"%msg_id)
@@ -729,8 +768,6 @@ class Client(HasTraits):
         # construct metadata:
         md = self.metadata[msg_id]
         md.update(self._extract_metadata(msg))
-        # is this redundant?
-        self.metadata[msg_id] = md
         
         e_outstanding = self._outstanding_dict[md['engine_uuid']]
         if msg_id in e_outstanding:
@@ -741,16 +778,25 @@ class Client(HasTraits):
             self.results[msg_id] = ExecuteReply(msg_id, content, md)
         elif content['status'] == 'aborted':
             self.results[msg_id] = error.TaskAborted(msg_id)
+            if future:
+                future.output.set_result(None)
         elif content['status'] == 'resubmitted':
             # TODO: handle resubmission
             pass
         else:
-            self.results[msg_id] = self._unwrap_exception(content)
+            self.results[msg_id] = result = self._unwrap_exception(content)
+        if future:
+            if content['status'] != 'ok' and content.get('engine_info'):
+                # not an engine failure, don't expect output
+                if not future.output.done():
+                    future.output.set_result(None)
+            future.reply.set_result(self.results[msg_id])
 
     def _handle_apply_reply(self, msg):
         """Save the reply to an apply_request into our results."""
         parent = msg['parent_header']
         msg_id = parent['msg_id']
+        future = self._futures.get(msg_id, None)
         if msg_id not in self.outstanding:
             if msg_id in self.history:
                 print("got stale result: %s"%msg_id)
@@ -783,114 +829,153 @@ class Client(HasTraits):
             pass
         else:
             self.results[msg_id] = self._unwrap_exception(content)
-
-    def _flush_notifications(self):
-        """Flush notifications of engine registrations waiting
-        in ZMQ queue."""
-        idents,msg = self.session.recv(self._notification_socket, mode=zmq.NOBLOCK)
-        while msg is not None:
-            if self.debug:
-                pprint(msg)
-            msg_type = msg['header']['msg_type']
-            handler = self._notification_handlers.get(msg_type, None)
-            if handler is None:
-                raise Exception("Unhandled message type: %s" % msg_type)
-            else:
-                handler(msg)
-            idents,msg = self.session.recv(self._notification_socket, mode=zmq.NOBLOCK)
-
-    def _flush_results(self, sock):
-        """Flush task or queue results waiting in ZMQ queue."""
-        idents,msg = self.session.recv(sock, mode=zmq.NOBLOCK)
-        while msg is not None:
-            if self.debug:
-                pprint(msg)
-            msg_type = msg['header']['msg_type']
-            handler = self._queue_handlers.get(msg_type, None)
-            if handler is None:
-                raise Exception("Unhandled message type: %s" % msg_type)
-            else:
-                handler(msg)
-            idents,msg = self.session.recv(sock, mode=zmq.NOBLOCK)
-
-    def _flush_control(self, sock):
-        """Flush replies from the control channel waiting
-        in the ZMQ queue.
-
-        Currently: ignore them."""
-        if self._ignored_control_replies <= 0:
-            return
-        idents,msg = self.session.recv(sock, mode=zmq.NOBLOCK)
-        while msg is not None:
-            self._ignored_control_replies -= 1
-            if self.debug:
-                pprint(msg)
-            idents,msg = self.session.recv(sock, mode=zmq.NOBLOCK)
-
-    def _flush_ignored_control(self):
-        """flush ignored control replies"""
-        while self._ignored_control_replies > 0:
-            self.session.recv(self._control_socket)
-            self._ignored_control_replies -= 1
-
-    def _flush_ignored_hub_replies(self):
-        ident,msg = self.session.recv(self._query_socket, mode=zmq.NOBLOCK)
-        while msg is not None:
-            ident,msg = self.session.recv(self._query_socket, mode=zmq.NOBLOCK)
-
-    def _flush_iopub(self, sock):
-        """Flush replies from the iopub channel waiting
-        in the ZMQ queue.
-        """
-        idents,msg = self.session.recv(sock, mode=zmq.NOBLOCK)
-        while msg is not None:
-            if self.debug:
-                pprint(msg)
-            parent = msg['parent_header']
-            if not parent or parent['session'] != self.session.session:
-                # ignore IOPub messages not from here
-                idents,msg = self.session.recv(sock, mode=zmq.NOBLOCK)
-                continue
-            msg_id = parent['msg_id']
-            content = msg['content']
-            header = msg['header']
-            msg_type = msg['header']['msg_type']
+        if future:
+            if content['status'] != 'ok' and not content.get('engine_info'):
+                # not an engine failure, don't expect output
+                if not future.output.done():
+                    future.output.set_result(None)
             
-            if msg_type == 'status' and msg_id not in self.metadata:
-                # ignore status messages if they aren't mine
-                idents,msg = self.session.recv(sock, mode=zmq.NOBLOCK)
-                continue
+            future.reply.set_result(self.results[msg_id])
 
-            # init metadata:
-            md = self.metadata[msg_id]
+    def _make_io_loop(self):
+        """Make my IOLoop. Override with IOLoop.current to return"""
+        return IOLoop()
+    
+    def _stop_io_thread(self):
+        """Stop my IO thread"""
+        if self._io_loop:
+            self._io_loop.add_callback(self._io_loop.stop)
+        if self._io_thread:
+            self._io_thread.join()
+    
+    def _start_io_thread(self):
+        """Start IOLoop in a background thread."""
+        self._io_loop = self._make_io_loop()
+        self._query_stream = ZMQStream(self._query_socket, self._io_loop)
+        self._query_stream.on_recv(self._dispatch_single_reply, copy=False)
+        self._control_stream = ZMQStream(self._control_socket, self._io_loop)
+        self._control_stream.on_recv(self._dispatch_single_reply, copy=False)
+        self._mux_stream = ZMQStream(self._mux_socket, self._io_loop)
+        self._mux_stream.on_recv(self._dispatch_reply, copy=False)
+        self._task_stream = ZMQStream(self._task_socket, self._io_loop)
+        self._task_stream.on_recv(self._dispatch_reply, copy=False)
+        self._iopub_stream = ZMQStream(self._iopub_socket, self._io_loop)
+        self._iopub_stream.on_recv(self._dispatch_iopub, copy=False)
+        self._notification_stream = ZMQStream(self._notification_socket, self._io_loop)
+        self._notification_stream.on_recv(self._dispatch_notification, copy=False)
+        
+        self._io_thread = Thread(target=self._io_main)
+        self._io_thread.daemon = True
+        self._io_thread.start()
+    
+    def _io_main(self):
+        """main loop for background IO thread"""
+        self._io_loop.start()
+        self._io_loop.close()
+    
+    @unpack_message
+    def _dispatch_single_reply(self, msg):
+        """Dispatch single (non-execution) replies"""
+        msg_id = msg['parent_header'].get('msg_id', None)
+        future = self._futures.get(msg_id)
+        if future is not None:
+            future.set_result(msg)
+    
+    @unpack_message
+    def _dispatch_notification(self, msg):
+        """Dispatch notification messages"""
+        msg_type = msg['header']['msg_type']
+        handler = self._notification_handlers.get(msg_type, None)
+        if handler is None:
+            raise KeyError("Unhandled notification message type: %s" % msg_type)
+        else:
+            handler(msg)
 
-            if msg_type == 'stream':
-                name = content['name']
-                s = md[name] or ''
-                md[name] = s + content['text']
-            elif msg_type == 'error':
-                md.update({'error' : self._unwrap_exception(content)})
-            elif msg_type == 'execute_input':
-                md.update({'execute_input' : content['code']})
-            elif msg_type == 'display_data':
-                md['outputs'].append(content)
-            elif msg_type == 'execute_result':
-                md['execute_result'] = content
-            elif msg_type == 'data_message':
-                data, remainder = serialize.deserialize_object(msg['buffers'])
-                md['data'].update(data)
-            elif msg_type == 'status':
-                # idle message comes after all outputs
-                if content['execution_state'] == 'idle':
-                    md['outputs_ready'] = True
-            else:
-                # unhandled msg_type (status, etc.)
-                pass
+    @unpack_message
+    def _dispatch_reply(self, msg):
+        """handle execution replies waiting in ZMQ queue."""
+        msg_type = msg['header']['msg_type']
+        handler = self._queue_handlers.get(msg_type, None)
+        if handler is None:
+            raise KeyError("Unhandled reply message type: %s" % msg_type)
+        else:
+            handler(msg)
 
-            # reduntant?
-            self.metadata[msg_id] = md
+    @unpack_message
+    def _dispatch_iopub(self, msg):
+        """handler for IOPub messages"""
+        parent = msg['parent_header']
+        if not parent or parent['session'] != self.session.session:
+            # ignore IOPub messages not from here
+            return
+        msg_id = parent['msg_id']
+        content = msg['content']
+        header = msg['header']
+        msg_type = msg['header']['msg_type']
+        
+        if msg_type == 'status' and msg_id not in self.metadata:
+            # ignore status messages if they aren't mine
+            return
 
-            idents,msg = self.session.recv(sock, mode=zmq.NOBLOCK)
+        # init metadata:
+        md = self.metadata[msg_id]
+
+        if msg_type == 'stream':
+            name = content['name']
+            s = md[name] or ''
+            md[name] = s + content['text']
+        elif msg_type == 'error':
+            md.update({'error' : self._unwrap_exception(content)})
+        elif msg_type == 'execute_input':
+            md.update({'execute_input' : content['code']})
+        elif msg_type == 'display_data':
+            md['outputs'].append(content)
+        elif msg_type == 'execute_result':
+            md['execute_result'] = content
+        elif msg_type == 'data_message':
+            data, remainder = serialize.deserialize_object(msg['buffers'])
+            md['data'].update(data)
+        elif msg_type == 'status':
+            # idle message comes after all outputs
+            if content['execution_state'] == 'idle':
+                future = self._futures.get(msg_id)
+                if future and not future.output.done():
+                    # TODO: should probably store actual outputs on the Future
+                    future.output.set_result(None)
+        else:
+            # unhandled msg_type (status, etc.)
+            pass
+    
+    def _send(self, socket, msg_type, content=None, parent=None, ident=None,
+              buffers=None, track=False, header=None, metadata=None):
+        """Send a message in the IO thread
+        
+        returns msg object"""
+        # self.session.debug = True
+        msg = self.session.msg(msg_type, content=content, parent=parent,
+                               header=header, metadata=metadata)
+        msg_id = msg['header']['msg_id']
+        Future = ExecutionFuture if msg_type in {'execute_request', 'apply_request'} else MessageFuture
+            
+        self._futures[msg_id] = future = Future(msg_id, track=track)
+        # On resolution, pop future
+        future.add_done_callback(lambda f: self._futures.pop(msg_id, None))
+        
+        def _really_send():
+            sent = self.session.send(socket, msg, track=track, buffers=buffers, ident=ident)
+            if track:
+                future._tracker = sent['tracker']
+                future._tracker_evt.set()
+        
+        # hand off actual send to IO thread
+        self._io_loop.add_callback(_really_send)
+        return future
+    
+    def _send_recv(self, *args, **kwargs):
+        """Send a message in the IO thread and return its reply"""
+        future = self._send(*args, **kwargs)
+        future.wait()
+        return future.result()
 
     #--------------------------------------------------------------------------
     # len, getitem
@@ -925,7 +1010,6 @@ class Client(HasTraits):
     @property
     def ids(self):
         """Always up-to-date ids property."""
-        self._flush_notifications()
         # always copy:
         return list(self._ids)
 
@@ -960,7 +1044,7 @@ class Client(HasTraits):
         """
         if self._closed:
             return
-        self.stop_spin_thread()
+        self._stop_io_thread()
         snames = [ trait for trait in self.trait_names() if trait.endswith("socket") ]
         for name in snames:
             socket = getattr(self, name)
@@ -971,68 +1055,34 @@ class Client(HasTraits):
                     socket.close()
         self._closed = True
 
-    def _spin_every(self, interval=1):
-        """target func for use in spin_thread"""
-        while True:
-            if self._stop_spinning.is_set():
-                return
-            time.sleep(interval)
-            self.spin()
-
     def spin_thread(self, interval=1):
-        """call Client.spin() in a background thread on some regular interval
-        
-        This helps ensure that messages don't pile up too much in the zmq queue
-        while you are working on other things, or just leaving an idle terminal.
-        
-        It also helps limit potential padding of the `received` timestamp
-        on AsyncResult objects, used for timings.
-        
-        Parameters
-        ----------
-        
-        interval : float, optional
-            The interval on which to spin the client in the background thread
-            (simply passed to time.sleep).
-        
-        Notes
-        -----
-        
-        For precision timing, you may want to use this method to put a bound
-        on the jitter (in seconds) in `received` timestamps used
-        in AsyncResult.wall_time.
-        
-        """
-        if self._spin_thread is not None:
-            self.stop_spin_thread()
-        self._stop_spinning.clear()
-        self._spin_thread = Thread(target=self._spin_every, args=(interval,))
-        self._spin_thread.daemon = True
-        self._spin_thread.start()
+        """DEPRECATED, DOES NOTHING"""
+        warnings.warn("Client.spin_thread is deprecated now that IO is always in a thread", DeprecationWarning)
     
     def stop_spin_thread(self):
-        """stop background spin_thread, if any"""
-        if self._spin_thread is not None:
-            self._stop_spinning.set()
-            self._spin_thread.join()
-            self._spin_thread = None
+        """DEPRECATED, DOES NOTHING"""
+        warnings.warn("Client.spin_thread is deprecated now that IO is always in a thread", DeprecationWarning)
+    
+    def _await(self, msg_ids, timeout):
+        """Wait for a collection of msg_ids to be done"""
+        event = Event()
+        if timeout and timeout < 0:
+            timeout = None
+        futures = []
+        for msg_id in msg_ids:
+            f = self._futures.get(msg_id, None)
+            if f:
+                futures.append(f)
+        if futures:
+            f = multi_future(futures)
+            f.add_done_callback(lambda f: event.set())
+            return event.wait(timeout)
+        else:
+            return True
 
     def spin(self):
-        """Flush any registration notifications and execution results
-        waiting in the ZMQ queue.
-        """
-        if self._notification_socket:
-            self._flush_notifications()
-        if self._iopub_socket:
-            self._flush_iopub(self._iopub_socket)
-        if self._mux_socket:
-            self._flush_results(self._mux_socket)
-        if self._task_socket:
-            self._flush_results(self._task_socket)
-        if self._control_socket:
-            self._flush_control(self._control_socket)
-        if self._query_socket:
-            self._flush_ignored_hub_replies()
+        """DEPRECATED, DOES NOTHING"""
+        warnings.warn("Client.spin is deprecated now that IO is in a thread", DeprecationWarning)
 
     def wait(self, jobs=None, timeout=-1):
         """waits on one or more `jobs`, for up to `timeout` seconds.
@@ -1054,7 +1104,6 @@ class Client(HasTraits):
         True : when all msg_ids are done
         False : timeout reached, some msg_ids still outstanding
         """
-        tic = time.time()
         if jobs is None:
             theids = self.outstanding
         else:
@@ -1071,15 +1120,8 @@ class Client(HasTraits):
                 theids.add(job)
         if not theids.intersection(self.outstanding):
             return True
-        self.spin()
-        interval = 1e-3
-        while theids.intersection(self.outstanding):
-            if timeout >= 0 and ( time.time()-tic ) > timeout:
-                break
-            time.sleep(interval)
-            self.spin()
-            interval = min(1.1 * interval, self._spin_interval)
-        return len(theids.intersection(self.outstanding)) == 0
+        
+        return self._await(theids.intersection(self.outstanding), timeout)
     
     def wait_interactive(self, jobs=None, interval=1., timeout=-1.):
         """Wait interactively for jobs
@@ -1096,29 +1138,22 @@ class Client(HasTraits):
     # Control methods
     #--------------------------------------------------------------------------
 
-    @spin_first
     def clear(self, targets=None, block=None):
         """Clear the namespace in target(s)."""
         block = self.block if block is None else block
         targets = self._build_targets(targets)[0]
+        futures = []
         for t in targets:
-            self.session.send(self._control_socket, 'clear_request', content={}, ident=t)
-        error = False
-        if block:
-            self._flush_ignored_control()
-            for i in range(len(targets)):
-                idents,msg = self.session.recv(self._control_socket,0)
-                if self.debug:
-                    pprint(msg)
-                if msg['content']['status'] != 'ok':
-                    error = self._unwrap_exception(msg['content'])
-        else:
-            self._ignored_control_replies += len(targets)
-        if error:
-            raise error
+            futures.append(self._send(self._control_socket, 'clear_request', content={}, ident=t))
+        if not block:
+            return multi_future(futures)
+        for future in futures:
+            future.wait()
+            msg = future.result()
+            if msg['content']['status'] != 'ok':
+                raise self._unwrap_exception(msg['content'])
 
 
-    @spin_first
     def abort(self, jobs=None, targets=None, block=None):
         """Abort specific jobs from the execution queues of target(s).
 
@@ -1150,24 +1185,20 @@ class Client(HasTraits):
             else:
                 msg_ids.append(j)
         content = dict(msg_ids=msg_ids)
+        futures = []
         for t in targets:
-            self.session.send(self._control_socket, 'abort_request',
-                    content=content, ident=t)
-        error = False
-        if block:
-            self._flush_ignored_control()
-            for i in range(len(targets)):
-                idents,msg = self.session.recv(self._control_socket,0)
-                if self.debug:
-                    pprint(msg)
-                if msg['content']['status'] != 'ok':
-                    error = self._unwrap_exception(msg['content'])
+            futures.append(self._send(self._control_socket, 'abort_request',
+                    content=content, ident=t))
+        
+        if not block:
+            return multi_future(futures)
         else:
-            self._ignored_control_replies += len(targets)
-        if error:
-            raise error
+            for f in futures:
+                f.wait()
+                msg = f.result()
+                if msg['content']['status'] != 'ok':
+                    raise self._unwrap_exception(msg['content'])
 
-    @spin_first
     def shutdown(self, targets='all', restart=False, hub=False, block=None):
         """Terminates one or more engine processes, optionally including the hub.
         
@@ -1195,27 +1226,21 @@ class Client(HasTraits):
             targets = self._build_targets(targets)[0]
         except NoEnginesRegistered:
             targets = []
+        
+        futures = []
         for t in targets:
-            self.session.send(self._control_socket, 'shutdown_request',
-                        content={'restart':restart},ident=t)
+            futures.append(self._send(self._control_socket, 'shutdown_request',
+                        content={'restart':restart},ident=t))
         error = False
         if block or hub:
-            self._flush_ignored_control()
-            for i in range(len(targets)):
-                idents,msg = self.session.recv(self._control_socket, 0)
-                if self.debug:
-                    pprint(msg)
+            for f in futures:
+                f.wait()
+                msg = f.result()
                 if msg['content']['status'] != 'ok':
                     error = self._unwrap_exception(msg['content'])
-        else:
-            self._ignored_control_replies += len(targets)
 
         if hub:
-            time.sleep(0.25)
-            self.session.send(self._query_socket, 'shutdown_request')
-            idents,msg = self.session.recv(self._query_socket, 0)
-            if self.debug:
-                pprint(msg)
+            msg = self._send_recv(self._query_socket, 'shutdown_request')
             if msg['content']['status'] != 'ok':
                 error = self._unwrap_exception(msg['content'])
 
@@ -1263,10 +1288,10 @@ class Client(HasTraits):
             item_threshold=self.session.item_threshold,
         )
 
-        msg = self.session.send(socket, "apply_request", buffers=bufs, ident=ident,
+        future = self._send(socket, "apply_request", buffers=bufs, ident=ident,
                             metadata=metadata, track=track)
 
-        msg_id = msg['header']['msg_id']
+        msg_id = future.msg_id
         self.outstanding.add(msg_id)
         if ident:
             # possibly routed to a specific engine
@@ -1278,7 +1303,7 @@ class Client(HasTraits):
         self.history.append(msg_id)
         self.metadata[msg_id]['submitted'] = datetime.now()
 
-        return msg
+        return future
 
     def send_execute_request(self, socket, code, silent=True, metadata=None, ident=None):
         """construct and send an execute request via a socket.
@@ -1300,10 +1325,10 @@ class Client(HasTraits):
         content = dict(code=code, silent=bool(silent), user_expressions={})
 
 
-        msg = self.session.send(socket, "execute_request", content=content, ident=ident,
+        future = self._send(socket, "execute_request", content=content, ident=ident,
                             metadata=metadata)
 
-        msg_id = msg['header']['msg_id']
+        msg_id = future.msg_id
         self.outstanding.add(msg_id)
         if ident:
             # possibly routed to a specific engine
@@ -1315,7 +1340,7 @@ class Client(HasTraits):
         self.history.append(msg_id)
         self.metadata[msg_id]['submitted'] = datetime.now()
 
-        return msg
+        return future
 
     #--------------------------------------------------------------------------
     # construct a View object
@@ -1369,7 +1394,6 @@ class Client(HasTraits):
     # Query methods
     #--------------------------------------------------------------------------
     
-    @spin_first
     def get_result(self, indices_or_msg_ids=None, block=None, owner=True):
         """Retrieve a result by msg_id or history index, wrapped in an AsyncResult object.
 
@@ -1438,7 +1462,6 @@ class Client(HasTraits):
 
         return ar
 
-    @spin_first
     def resubmit(self, indices_or_msg_ids=None, metadata=None, block=None):
         """Resubmit one or more tasks.
 
@@ -1467,13 +1490,8 @@ class Client(HasTraits):
         theids = self._msg_ids_from_jobs(indices_or_msg_ids)
         content = dict(msg_ids = theids)
 
-        self.session.send(self._query_socket, 'resubmit_request', content)
-
-        zmq.select([self._query_socket], [], [])
-        idents,msg = self.session.recv(self._query_socket, zmq.NOBLOCK)
-        if self.debug:
-            pprint(msg)
-        content = msg['content']
+        reply = self._send_recv(self._query_socket, 'resubmit_request', content)
+        content = reply['content']
         if content['status'] != 'ok':
             raise self._unwrap_exception(content)
         mapping = content['resubmitted']
@@ -1486,7 +1504,6 @@ class Client(HasTraits):
 
         return ar
 
-    @spin_first
     def result_status(self, msg_ids, status_only=True):
         """Check on the status of the result(s) of the apply request with `msg_ids`.
 
@@ -1525,15 +1542,11 @@ class Client(HasTraits):
 
         if theids: # some not locally cached
             content = dict(msg_ids=theids, status_only=status_only)
-            msg = self.session.send(self._query_socket, "result_request", content=content)
-            zmq.select([self._query_socket], [], [])
-            idents,msg = self.session.recv(self._query_socket, zmq.NOBLOCK)
-            if self.debug:
-                pprint(msg)
-            content = msg['content']
+            reply = self._send_recv(self._query_socket, "result_request", content=content)
+            content = reply['content']
             if content['status'] != 'ok':
                 raise self._unwrap_exception(content)
-            buffers = msg['buffers']
+            buffers = reply['buffers']
         else:
             content = dict(completed=[],pending=[])
 
@@ -1589,7 +1602,6 @@ class Client(HasTraits):
         error.collect_exceptions(failures, "result_status")
         return content
 
-    @spin_first
     def queue_status(self, targets='all', verbose=False):
         """Fetch the status of engine queues.
 
@@ -1608,11 +1620,8 @@ class Client(HasTraits):
         else:
             engine_ids = self._build_targets(targets)[1]
         content = dict(targets=engine_ids, verbose=verbose)
-        self.session.send(self._query_socket, "queue_request", content=content)
-        idents,msg = self.session.recv(self._query_socket, 0)
-        if self.debug:
-            pprint(msg)
-        content = msg['content']
+        reply = self._send_recv(self._query_socket, "queue_request", content=content)
+        content = reply['content']
         status = content.pop('status')
         if status != 'ok':
             raise self._unwrap_exception(content)
@@ -1702,7 +1711,6 @@ class Client(HasTraits):
                 self.metadata.pop(mid, None)
 
 
-    @spin_first
     def purge_hub_results(self, jobs=[], targets=[]):
         """Tell the Hub to forget results.
 
@@ -1733,11 +1741,8 @@ class Client(HasTraits):
             msg_ids = self._msg_ids_from_jobs(jobs)
 
         content = dict(engine_ids=targets, msg_ids=msg_ids)
-        self.session.send(self._query_socket, "purge_request", content=content)
-        idents, msg = self.session.recv(self._query_socket, 0)
-        if self.debug:
-            pprint(msg)
-        content = msg['content']
+        reply = self._send_recv(self._query_socket, "purge_request", content=content)
+        content = reply['content']
         if content['status'] != 'ok':
             raise self._unwrap_exception(content)
 
@@ -1776,7 +1781,6 @@ class Client(HasTraits):
         self.history = []
         self.session.digest_history.clear()
 
-    @spin_first
     def hub_history(self):
         """Get the Hub's history
 
@@ -1793,18 +1797,13 @@ class Client(HasTraits):
                 list of all msg_ids, ordered by task submission time.
         """
 
-        self.session.send(self._query_socket, "history_request", content={})
-        idents, msg = self.session.recv(self._query_socket, 0)
-
-        if self.debug:
-            pprint(msg)
-        content = msg['content']
+        reply = self._send_recv(self._query_socket, "history_request", content={})
+        content = reply['content']
         if content['status'] != 'ok':
             raise self._unwrap_exception(content)
         else:
             return content['history']
 
-    @spin_first
     def db_query(self, query, keys=None):
         """Query the Hub's TaskRecord database
 
@@ -1822,11 +1821,8 @@ class Client(HasTraits):
         if isinstance(keys, string_types):
             keys = [keys]
         content = dict(query=query, keys=keys)
-        self.session.send(self._query_socket, "db_request", content=content)
-        idents, msg = self.session.recv(self._query_socket, 0)
-        if self.debug:
-            pprint(msg)
-        content = msg['content']
+        reply = self._send_recv(self._query_socket, "db_request", content=content)
+        content = reply['content']
         if content['status'] != 'ok':
             raise self._unwrap_exception(content)
 
@@ -1834,7 +1830,7 @@ class Client(HasTraits):
 
         buffer_lens = content['buffer_lens']
         result_buffer_lens = content['result_buffer_lens']
-        buffers = msg['buffers']
+        buffers = reply['buffers']
         has_bufs = buffer_lens is not None
         has_rbufs = result_buffer_lens is not None
         for i,rec in enumerate(records):
