@@ -317,6 +317,7 @@ class AsyncResultTest(ClusterTestCase):
         view = self.client[-1]
         ar = view.apply_async(lambda : 1)
         ar.get()
+        ar.wait_for_output()
         msg_id = ar.msg_ids[0]
         self.assertNotIn(msg_id, self.client.results)
         self.assertNotIn(msg_id, self.client.metadata)
@@ -328,6 +329,7 @@ class AsyncResultTest(ClusterTestCase):
         ar = view.apply_async(lambda : 1)
         ar.owner = False
         ar.get()
+        ar.wait_for_output()
         msg_id = ar.msg_ids[0]
         self.assertIn(msg_id, self.client.results)
         self.assertIn(msg_id, self.client.metadata)

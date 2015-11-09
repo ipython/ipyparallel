@@ -64,8 +64,11 @@ class AsyncResult(object):
         self.owner = owner
         
         self._ready = False
+        self._output_ready = False
         self._success = None
         self._metadata = [self._client.metadata[id] for id in self.msg_ids]
+        self._futures = [self._client._futures[msg_id] for msg_id in msg_ids if msg_id in self._client._futures]
+        self._output_futures = [self._client._output_futures[msg_id] for msg_id in msg_ids if msg_id in self._client._output_futures]
 
     def __repr__(self):
         if self._ready:
@@ -114,7 +117,20 @@ class AsyncResult(object):
             self.wait(0)
         
         return self._ready
-
+    
+    def wait_for_output(self, timeout=-1):
+        """Wait for our output to be complete.
+        
+        AsyncResult.wait only waits for the result,
+        which may arrive before output is complete.
+        """
+        if self._output_ready:
+            return True
+        self._output_ready = self._client._await_futures(self._output_futures, timeout)
+        if self._output_ready and self.owner:
+            [self._client.metadata.pop(mid) for mid in self.msg_ids]
+        return self._output_ready
+        
     def wait(self, timeout=-1):
         """Wait until the result is available or until `timeout` seconds pass.
 
@@ -122,7 +138,7 @@ class AsyncResult(object):
         """
         if self._ready:
             return
-        self._ready = self._client.wait(self.msg_ids, timeout)
+        self._ready = self._client._await_futures(self._futures, timeout)
         if self._ready:
             try:
                 results = list(map(self._client.results.get, self.msg_ids))
@@ -140,15 +156,10 @@ class AsyncResult(object):
             else:
                 self._success = True
             finally:
-                if timeout is None or timeout < 0:
-                    # cutoff infinite wait at 10s
-                    timeout = 10
-                
+                self._metadata = [self._client.metadata[mid] for mid in self.msg_ids]
+                self.wait_for_output(0)
                 if self.owner:
-                    
-                    self._metadata = [self._client.metadata.pop(mid) for mid in self.msg_ids]
-                    [self._client.results.pop(mid) for mid in self.msg_ids]
-                
+                    [ self._client.results.pop(mid) for mid in self.msg_ids ]
 
 
     def successful(self):
@@ -245,6 +256,7 @@ class AsyncResult(object):
         elif isinstance(key, string_types):
             # metadata proxy *does not* require that results are done
             self.wait(0)
+            self.wait_for_output(0)
             values = [ md[key] for md in self._metadata ]
             if self._single_result:
                 return values[0]
@@ -450,6 +462,7 @@ class AsyncResult(object):
                 several plots, and you would like to see all of the first
                 plots together, then all of the second plots, and so on.
         """
+        self.wait_for_output()
         if self._single_result:
             self._display_single_result()
             return
@@ -617,7 +630,7 @@ class AsyncMapResult(AsyncResult):
 class AsyncHubResult(AsyncResult):
     """Class to wrap pending results that must be requested from the Hub.
 
-    Note that waiting/polling on these objects requires polling the Hubover the network,
+    Note that waiting/polling on these objects requires polling the Hub over the network,
     so use `AsyncHubResult.wait()` sparingly.
     """
 
@@ -643,6 +656,7 @@ class AsyncHubResult(AsyncResult):
                 if not pending:
                     self._ready = True
         if self._ready:
+            self._output_ready = True
             try:
                 results = list(map(self._client.results.get, self.msg_ids))
                 self._result = results

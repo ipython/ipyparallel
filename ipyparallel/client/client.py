@@ -99,15 +99,6 @@ class MessageFuture(Future):
             self._tracker_evt.wait()
             return self._tracker
 
-class ExecutionFuture(MessageFuture):
-    """Future wrapping an execution. Resolves when reply *and* output have arrived."""
-    def __init__(self, msg_id, track=False):
-        super(ExecutionFuture, self).__init__(msg_id, track=track)
-        self.reply = Future()
-        self.output = Future()
-        self._pair = multi_future([self.reply, self.output])
-        self._pair.add_done_callback(lambda f: self.set_result(self.reply.result()))
-
 _no_connection_file_msg = """
 Failed to connect because no Controller could be found.
 Please double-check your profile and ensure that a cluster is running.
@@ -338,6 +329,7 @@ class Client(HasTraits):
     history = List()
     debug = Bool(False)
     _futures = Dict()
+    _output_futures = Dict()
     _io_loop = Any()
     _io_thread = Any()
 
@@ -778,19 +770,22 @@ class Client(HasTraits):
             self.results[msg_id] = ExecuteReply(msg_id, content, md)
         elif content['status'] == 'aborted':
             self.results[msg_id] = error.TaskAborted(msg_id)
-            if future:
-                future.output.set_result(None)
+            # aborted tasks will not get output
+            out_future = self._output_futures.get(msg_id)
+            if out_future and not out_future.done():
+                out_future.set_result(None)
         elif content['status'] == 'resubmitted':
             # TODO: handle resubmission
             pass
         else:
-            self.results[msg_id] = result = self._unwrap_exception(content)
+            self.results[msg_id] = self._unwrap_exception(content)
+        if content['status'] != 'ok' and not content.get('engine_info'):
+            # not an engine failure, don't expect output
+            out_future = self._output_futures.get(msg_id)
+            if out_future and not out_future.done():
+                out_future.set_result(None)
         if future:
-            if content['status'] != 'ok' and content.get('engine_info'):
-                # not an engine failure, don't expect output
-                if not future.output.done():
-                    future.output.set_result(None)
-            future.reply.set_result(self.results[msg_id])
+            future.set_result(self.results[msg_id])
 
     def _handle_apply_reply(self, msg):
         """Save the reply to an apply_request into our results."""
@@ -824,18 +819,21 @@ class Client(HasTraits):
             self.results[msg_id] = serialize.deserialize_object(msg['buffers'])[0]
         elif content['status'] == 'aborted':
             self.results[msg_id] = error.TaskAborted(msg_id)
+            out_future = self._output_futures.get(msg_id)
+            if out_future and not out_future.done():
+                out_future.set_result(None)
         elif content['status'] == 'resubmitted':
             # TODO: handle resubmission
             pass
         else:
             self.results[msg_id] = self._unwrap_exception(content)
+        if content['status'] != 'ok' and not content.get('engine_info'):
+            # not an engine failure, don't expect output
+            out_future = self._output_futures.get(msg_id)
+            if out_future and not out_future.done():
+                out_future.set_result(None)
         if future:
-            if content['status'] != 'ok' and not content.get('engine_info'):
-                # not an engine failure, don't expect output
-                if not future.output.done():
-                    future.output.set_result(None)
-            
-            future.reply.set_result(self.results[msg_id])
+            future.set_result(self.results[msg_id])
 
     def _make_io_loop(self):
         """Make my IOLoop. Override with IOLoop.current to return"""
@@ -938,10 +936,10 @@ class Client(HasTraits):
         elif msg_type == 'status':
             # idle message comes after all outputs
             if content['execution_state'] == 'idle':
-                future = self._futures.get(msg_id)
-                if future and not future.output.done():
+                future = self._output_futures.get(msg_id)
+                if future and not future.done():
                     # TODO: should probably store actual outputs on the Future
-                    future.output.set_result(None)
+                    future.set_result(None)
         else:
             # unhandled msg_type (status, etc.)
             pass
@@ -955,9 +953,12 @@ class Client(HasTraits):
         msg = self.session.msg(msg_type, content=content, parent=parent,
                                header=header, metadata=metadata)
         msg_id = msg['header']['msg_id']
-        Future = ExecutionFuture if msg_type in {'execute_request', 'apply_request'} else MessageFuture
-            
-        self._futures[msg_id] = future = Future(msg_id, track=track)
+        if msg_type in {'execute_request', 'apply_request'}:
+            # add future for output
+            future = self._output_futures[msg_id] = MessageFuture(msg_id)
+            future.add_done_callback(lambda f: self._output_futures.pop(msg_id, None))
+        
+        self._futures[msg_id] = future = MessageFuture(msg_id, track=track)
         # On resolution, pop future
         future.add_done_callback(lambda f: self._futures.pop(msg_id, None))
         
@@ -1062,27 +1063,36 @@ class Client(HasTraits):
     def stop_spin_thread(self):
         """DEPRECATED, DOES NOTHING"""
         warnings.warn("Client.spin_thread is deprecated now that IO is always in a thread", DeprecationWarning)
+
+    def spin(self):
+        """DEPRECATED, DOES NOTHING"""
+        warnings.warn("Client.spin is deprecated now that IO is in a thread", DeprecationWarning)
+
     
-    def _await(self, msg_ids, timeout):
-        """Wait for a collection of msg_ids to be done"""
+    def _await_futures(self, futures, timeout):
+        """Wait for a collection of futures"""
+        if not futures:
+            return True
+        
         event = Event()
         if timeout and timeout < 0:
             timeout = None
+        
+        f = multi_future(futures)
+        f.add_done_callback(lambda f: event.set())
+        return event.wait(timeout)
+    
+    def _futures_for_msgs(self, msg_ids):
+        """Turn msg_ids into Futures
+        
+        msg_ids not in futures dict are presumed done.
+        """
         futures = []
         for msg_id in msg_ids:
             f = self._futures.get(msg_id, None)
             if f:
                 futures.append(f)
-        if futures:
-            f = multi_future(futures)
-            f.add_done_callback(lambda f: event.set())
-            return event.wait(timeout)
-        else:
-            return True
-
-    def spin(self):
-        """DEPRECATED, DOES NOTHING"""
-        warnings.warn("Client.spin is deprecated now that IO is in a thread", DeprecationWarning)
+        return futures
 
     def wait(self, jobs=None, timeout=-1):
         """waits on one or more `jobs`, for up to `timeout` seconds.
@@ -1121,7 +1131,8 @@ class Client(HasTraits):
         if not theids.intersection(self.outstanding):
             return True
         
-        return self._await(theids.intersection(self.outstanding), timeout)
+        futures = self._futures_for_msgs(theids)
+        return self._await_futures(futures, timeout)
     
     def wait_interactive(self, jobs=None, interval=1., timeout=-1.):
         """Wait interactively for jobs

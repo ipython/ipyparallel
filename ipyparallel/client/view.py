@@ -642,6 +642,7 @@ class DirectView(View):
         if block:
             try:
                 ar.get()
+                ar.wait_for_output()
             except KeyboardInterrupt:
                 pass
         return ar
