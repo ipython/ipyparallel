@@ -49,7 +49,6 @@ class TestLoadBalancedView(ClusterTestCase):
         tic = time.time()
         while eid in self.client.ids and time.time()-tic < 5:
             time.sleep(.01)
-            self.client.spin()
         self.assertFalse(eid in self.client.ids, "Engine should have died")
 
     def test_map(self):

@@ -210,7 +210,6 @@ class TestClient(ClusterTestCase):
         self.client.shutdown(id0, block=True)
         while id0 in self.client.ids:
             time.sleep(0.1)
-            self.client.spin()
         
         self.assertRaises(IndexError, lambda : self.client[id0])
         
@@ -436,7 +435,6 @@ class TestClient(ClusterTestCase):
         self.client.purge_hub_results(hist[-1])
         newhist = self.client.hub_history()
         self.assertEqual(len(newhist)+1,len(hist))
-        rc2.spin()
         rc2.close()
 
     def test_purge_local_results(self):
@@ -516,28 +514,6 @@ class TestClient(ClusterTestCase):
         # the hub results
         hist = self.client.hub_history()
         self.assertEqual(len(hist), 0, msg="hub history not empty")
-        
-    
-    def test_spin_thread(self):
-        self.client.spin_thread(0.01)
-        ar = self.client[-1].apply_async(lambda : 1)
-        md = self.client.metadata[ar.msg_ids[0]]
-        # 3s timeout, 100ms poll
-        for i in range(30):
-            time.sleep(0.1)
-            if md['received'] is not None:
-                break
-        self.assertIsInstance(md['received'], datetime)
-    
-    def test_stop_spin_thread(self):
-        self.client.spin_thread(0.01)
-        self.client.stop_spin_thread()
-        ar = self.client[-1].apply_async(lambda : 1)
-        md = self.client.metadata[ar.msg_ids[0]]
-        # 500ms timeout, 100ms poll
-        for i in range(5):
-            time.sleep(0.1)
-            self.assertIsNone(md['received'], None)
     
     def test_activate(self):
         ip = get_ipython()

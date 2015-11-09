@@ -89,6 +89,7 @@ install_requires = setuptools_args['install_requires'] = [
     'ipython>=4',
     'jupyter_client',
     'ipykernel',
+    'tornado>=4',
 ]
 
 if 'setuptools' in sys.modules:

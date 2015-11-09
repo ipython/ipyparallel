@@ -55,12 +55,6 @@ def sync_results(f, self, *args, **kwargs):
         self._sync_results()
     return ret
 
-@decorator
-def spin_after(f, self, *args, **kwargs):
-    """call spin after the method."""
-    ret = f(self, *args, **kwargs)
-    self.spin()
-    return ret
 
 #-----------------------------------------------------------------------------
 # Classes
@@ -224,7 +218,6 @@ class View(HasTraits):
         """
         return self._really_apply(f, args, kwargs, block=False)
 
-    @spin_after
     def apply_sync(self, f, *args, **kwargs):
         """calls ``f(*args, **kwargs)`` on remote engines in a blocking manner,
          returning the result.
@@ -299,7 +292,6 @@ class View(HasTraits):
             targets = self.targets
         return self.client.shutdown(targets=targets, restart=restart, hub=hub, block=block)
 
-    @spin_after
     def get_result(self, indices_or_msg_ids=None, block=None, owner=True):
         """return one or more results, specified by history index or msg_id.
 
@@ -553,13 +545,16 @@ class DirectView(View):
         
         _idents, _targets = self.client._build_targets(targets)
         msg_ids = []
-        trackers = []
+        futures = []
         for ident in _idents:
-            msg = self.client.send_apply_request(self._socket, f, args, kwargs, track=track,
+            future = self.client.send_apply_request(self._socket, f, args, kwargs, track=track,
                                     ident=ident)
-            if track:
-                trackers.append(msg['tracker'])
-            msg_ids.append(msg['header']['msg_id'])
+            futures.append(future)
+            msg_ids.append(future.msg_id)
+        if track:
+            trackers = [future.tracker for future in futures]
+        else:
+            trackers = []
         if isinstance(targets, int):
             msg_ids = msg_ids[0]
         tracker = None if track is False else zmq.MessageTracker(*trackers)
@@ -638,10 +633,9 @@ class DirectView(View):
 
         _idents, _targets = self.client._build_targets(targets)
         msg_ids = []
-        trackers = []
         for ident in _idents:
-            msg = self.client.send_execute_request(self._socket, code, silent=silent, ident=ident)
-            msg_ids.append(msg['header']['msg_id'])
+            future = self.client.send_execute_request(self._socket, code, silent=silent, ident=ident)
+            msg_ids.append(future.msg_id)
         if isinstance(targets, int):
             msg_ids = msg_ids[0]
         ar = AsyncResult(self.client, msg_ids, fname='execute', targets=_targets, owner=True)
@@ -720,7 +714,6 @@ class DirectView(View):
         """
         block = block if block is not None else self.block
         targets = targets if targets is not None else self.targets
-        applier = self.apply_sync if block else self.apply_async
         if isinstance(names, string_types):
             pass
         elif isinstance(names, (list,tuple,set)):
@@ -1042,11 +1035,11 @@ class LoadBalancedView(View):
         follow = self._render_dependency(follow)
         metadata = dict(after=after, follow=follow, timeout=timeout, targets=idents, retries=retries)
 
-        msg = self.client.send_apply_request(self._socket, f, args, kwargs, track=track,
+        future = self.client.send_apply_request(self._socket, f, args, kwargs, track=track,
                                 metadata=metadata)
-        tracker = None if track is False else msg['tracker']
+        tracker = None if track is False else future.tracker
 
-        ar = AsyncResult(self.client, msg['header']['msg_id'], fname=getname(f),
+        ar = AsyncResult(self.client, future.msg_id, fname=getname(f),
             targets=None, tracker=tracker, owner=True,
         )
         if block:

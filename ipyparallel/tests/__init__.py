@@ -105,7 +105,6 @@ def add_engines(n=1, profile='iptest', total=False):
         elif time.time()-tic > 15:
             raise RuntimeError("Timeout waiting for engines to connect.")
         time.sleep(.1)
-        rc.spin()
     rc.close()
     return eps
 
