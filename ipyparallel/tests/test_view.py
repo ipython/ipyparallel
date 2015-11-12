@@ -613,6 +613,7 @@ class TestView(ClusterTestCase):
         
         ar = view.apply_async(publish)
         ar.get(5)
+        assert ar.wait_for_output(5)
         expected = [ {u'text/plain' : unicode_type(j)} for j in range(5) ]
         for outputs in ar.outputs:
             mimes = [ out['data'] for out in outputs ]
@@ -688,6 +689,7 @@ class TestView(ClusterTestCase):
         # include imports, in case user config
         ar = view.execute("plot(rand(100))", silent=False)
         reply = ar.get(5)
+        assert ar.wait_for_output(5)
         self.assertEqual(len(reply.outputs), 1)
         output = reply.outputs[0]
         self.assertTrue("data" in output)
@@ -706,6 +708,7 @@ class TestView(ClusterTestCase):
         ar = view.apply_async(bar)
         r = ar.get(10)
         self.assertEqual(r, 'foo')
+    
     def test_data_pub_single(self):
         view = self.client[-1]
         ar = view.execute('\n'.join([
@@ -715,6 +718,7 @@ class TestView(ClusterTestCase):
         ]), block=False)
         self.assertTrue(isinstance(ar.data, dict))
         ar.get(5)
+        assert ar.wait_for_output(5)
         self.assertEqual(ar.data, dict(i=4))
 
     def test_data_pub(self):
@@ -726,6 +730,7 @@ class TestView(ClusterTestCase):
         ]), block=False)
         self.assertTrue(all(isinstance(d, dict) for d in ar.data))
         ar.get(5)
+        assert ar.wait_for_output(5)
         self.assertEqual(ar.data, [dict(i=4)] * len(ar))
     
     def test_can_list_arg(self):
