@@ -643,7 +643,7 @@ class SSHLauncher(LocalProcessLauncher):
     def signal(self, sig):
         if self.state == 'running':
             # send escaped ssh connection-closer
-            self.process.stdin.write('~.')
+            self.process.stdin.write(b'~.')
             self.process.stdin.flush()
 
 class SSHClusterLauncher(SSHLauncher, ClusterAppMixin):
