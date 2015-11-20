@@ -24,6 +24,29 @@ if v[:2] < (2,7) or (v[0] >= 3 and v[:2] < (3,3)):
 PY3 = (sys.version_info[0] >= 3)
 
 #-----------------------------------------------------------------------------
+# Add test command
+#-----------------------------------------------------------------------------
+
+from distutils.cmd import Command
+
+class IPTestCommand(Command):
+    description = "Run unit tests using iptest"
+    user_options = []
+
+    def initialize_options(self):
+        pass
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        from IPython.testing import iptest
+        old_argv = sys.argv
+        sys.argv = ['iptest', 'ipyparallel.tests']
+        iptest.run_iptest()
+        sys.argv = old_argv
+
+#-----------------------------------------------------------------------------
 # get on with it
 #-----------------------------------------------------------------------------
 
@@ -75,6 +98,9 @@ setup_args = dict(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',
     ],
+    cmdclass        = {
+        'test': IPTestCommand,
+    },
 )
 
 if 'develop' in sys.argv or any(bdist in sys.argv for bdist in ['bdist_wheel', 'bdist_egg']):
@@ -90,6 +116,14 @@ install_requires = setuptools_args['install_requires'] = [
     'jupyter_client',
     'ipykernel',
     'tornado>=4',
+]
+
+extras_require = setuptools_args['extras_require'] = {
+    'nbext': ["notebook"],
+}
+
+tests_require = setuptools_args['tests_require'] = [
+    'nose',
 ]
 
 if 'setuptools' in sys.modules:
