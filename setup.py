@@ -90,6 +90,9 @@ install_requires = setuptools_args['install_requires'] = [
     'jupyter_client',
     'ipykernel',
 ]
+tests_require = setuptools_args['tests_require'] = [
+    'nose',
+]
 
 if 'setuptools' in sys.modules:
     setup_args.update(setuptools_args)
