@@ -90,6 +90,11 @@ install_requires = setuptools_args['install_requires'] = [
     'jupyter_client',
     'ipykernel',
 ]
+
+extras_require = setuptools_args['extras_require'] = {
+    'nbext': ["notebook"],
+}
+
 tests_require = setuptools_args['tests_require'] = [
     'nose',
 ]
