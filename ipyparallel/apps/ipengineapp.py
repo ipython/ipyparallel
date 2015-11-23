@@ -13,7 +13,6 @@ import sys
 import time
 
 import zmq
-from zmq.eventloop import ioloop
 
 from IPython.core.profiledir import ProfileDir
 from ipyparallel.apps.baseapp import (
@@ -35,9 +34,8 @@ from ipyparallel.engine.log import EnginePUBHandler
 from ipyparallel.engine.engine import EngineFactory
 from ipyparallel.util import disambiguate_ip_address
 
-from ipython_genutils.importstring import import_item
 from ipython_genutils.py3compat import cast_bytes
-from traitlets import Bool, Unicode, Dict, List, Float, Instance
+from traitlets import Unicode, Dict, List, Float, Instance
 
 
 #-----------------------------------------------------------------------------
@@ -176,7 +174,6 @@ class IPEngineApp(BaseParallelApplication):
         Here we don't try to actually see if it exists for is valid as that
         is hadled by the connection logic.
         """
-        config = self.config
         # Find the actual controller key file
         if not self.url_file:
             self.url_file = os.path.join(
@@ -284,13 +281,6 @@ class IPEngineApp(BaseParallelApplication):
         keys = set(self.config.EngineFactory.keys())
         keys = keys.union(set(self.config.RegistrationFactory.keys()))
         
-        if keys.intersection(set(['ip', 'url', 'port'])):
-            # Connection info was specified, don't wait for the file
-            url_specified = True
-            self.wait_for_url_file = 0
-        else:
-            url_specified = False
-
         if self.wait_for_url_file and not os.path.exists(self.url_file):
             self.log.warn("url_file %r not found", self.url_file)
             self.log.warn("Waiting up to %.1f seconds for it to arrive.", self.wait_for_url_file)
@@ -301,7 +291,7 @@ class IPEngineApp(BaseParallelApplication):
             
         if os.path.exists(self.url_file):
             self.load_connector_file()
-        elif not url_specified:
+        else:
             self.log.fatal("Fatal: url file never arrived: %s", self.url_file)
             self.exit(1)
         
