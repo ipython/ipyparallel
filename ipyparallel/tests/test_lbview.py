@@ -128,7 +128,7 @@ class TestLoadBalancedView(ClusterTestCase):
         astheycame = list(amr)
         # Ensure that results came in order
         self.assertEqual(astheycame, reference)
-        self.assertEqual(amr.result, reference)
+        self.assertEqual(amr.get(), reference)
 
     def test_map_iterable(self):
         """test map on iterables (balanced)"""

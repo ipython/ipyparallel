@@ -276,11 +276,10 @@ class TestParallelMagics(ClusterTestCase):
             ip.magic('autopx')
         
         output = io.stdout.rstrip()
-        
         assert output.startswith('%autopx enabled'), output
         assert output.endswith('%autopx disabled'), output
         self.assertNotIn('ZeroDivisionError', output)
-        ar = v.get_result(-2)
+        ar = v.get_result(-2, owner=False)
         self.assertRaisesRemote(ZeroDivisionError, ar.get)
         # prevent TaskAborted on pulls, due to ZeroDivisionError
         time.sleep(0.5)

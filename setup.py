@@ -119,6 +119,7 @@ install_requires = setuptools_args['install_requires'] = [
 ]
 
 extras_require = setuptools_args['extras_require'] = {
+    ':python_version == "2.7"': ['futures'],
     'nbext': ["notebook"],
 }
 

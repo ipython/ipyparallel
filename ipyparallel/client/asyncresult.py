@@ -7,8 +7,11 @@ from __future__ import print_function
 
 import sys
 import time
+from concurrent.futures import Future
 from datetime import datetime
+from threading import Event
 
+from tornado.gen import multi_future
 from zmq import MessageTracker
 
 from IPython.core.display import clear_output, display, display_pretty
@@ -20,6 +23,7 @@ from ipython_genutils.py3compat import string_types
 def _raw_text(s):
     display_pretty(s, raw=True)
 
+_default = object()
 
 # global empty tracker that's always done:
 finished_tracker = MessageTracker()
@@ -32,7 +36,8 @@ def check_ready(f, self, *args, **kwargs):
         raise error.TimeoutError("result not ready")
     return f(self, *args, **kwargs)
 
-class AsyncResult(object):
+
+class AsyncResult(Future):
     """Class for representing results of non-blocking calls.
 
     Provides the same interface as :py:class:`multiprocessing.pool.AsyncResult`.
@@ -42,33 +47,72 @@ class AsyncResult(object):
     _targets = None
     _tracker = None
     _single_result = False
-    owner = False,
+    owner = False
 
-    def __init__(self, client, msg_ids, fname='unknown', targets=None, tracker=None,
+    def __init__(self, client, children, fname='unknown', targets=None, tracker=None,
         owner=False,
     ):
-        if isinstance(msg_ids, string_types):
-            # always a list
-            msg_ids = [msg_ids]
+        super(AsyncResult, self).__init__()
+        if not isinstance(children, list):
+            children = [children]
             self._single_result = True
         else:
             self._single_result = False
+        
+        if isinstance(children[0], string_types):
+            self.msg_ids = children
+            self._children = []
+        else:
+            self._children = children
+            self.msg_ids = [ f.msg_id for f in children ]
+
         if tracker is None:
             # default to always done
             tracker = finished_tracker
+        
         self._client = client
-        self.msg_ids = msg_ids
         self._fname=fname
         self._targets = targets
         self._tracker = tracker
         self.owner = owner
         
         self._ready = False
+        self._ready_event = Event()
         self._output_ready = False
+        self._output_event = Event()
         self._success = None
-        self._metadata = [self._client.metadata[id] for id in self.msg_ids]
-        self._futures = [self._client._futures[msg_id] for msg_id in msg_ids if msg_id in self._client._futures]
-        self._output_futures = [self._client._output_futures[msg_id] for msg_id in msg_ids if msg_id in self._client._output_futures]
+        if self._children:
+            self._metadata = [ f.output.metadata for f in self._children ]
+        else:
+            self._metadata = [self._client.metadata[id] for id in self.msg_ids]
+        self._init_futures()
+    
+    def _init_futures(self):
+        """Build futures for results and output; hook up callbacks"""
+        if not self._children:
+            for msg_id in self.msg_ids:
+                future = self._client._futures.get(msg_id, None)
+                if not future:
+                    result = self._client.results.get(msg_id, _default)
+                    # result resides in local cache, construct already-resolved Future
+                    if result is not _default:
+                        future = Future()
+                        future.msg_id = msg_id
+                        future.output = Future()
+                        future.output.metadata = self.client.metadata[msg_id]
+                        future.set_result(result)
+                        future.output.set_result(None)
+                if not future:
+                    raise KeyError("No Future or result for msg_id: %s" % msg_id)
+                self._children.append(future)
+                
+        self._result_future = multi_future(self._children)
+        self._output_future = multi_future([self._result_future] + [
+            f.output for f in self._children
+        ])
+        # on completion of my constituents, trigger my own resolution
+        self._result_future.add_done_callback(self._resolve_result)
+        self._output_future.add_done_callback(self._resolve_output)
 
     def __repr__(self):
         if self._ready:
@@ -101,9 +145,9 @@ class AsyncResult(object):
 
         if self._ready:
             if self._success:
-                return self._result
+                return self.result()
             else:
-                raise self._exception
+                raise self.exception()
         else:
             raise error.TimeoutError("Result not ready.")
 
@@ -126,41 +170,54 @@ class AsyncResult(object):
         """
         if self._output_ready:
             return True
-        self._output_ready = self._client._await_futures(self._output_futures, timeout)
-        if self._output_ready and self.owner:
-            [self._client.metadata.pop(mid) for mid in self.msg_ids]
-        return self._output_ready
-        
+        if timeout and timeout < 0:
+            timeout = None
+        return self._output_event.wait(timeout)
+    
+    def _resolve_output(self, f=None):
+        """Callback that fires when outputs are ready"""
+        if self.owner:
+            [ self._client.metadata.pop(mid, None) for mid in self.msg_ids ]
+        self._output_ready = True
+        self._output_event.set()
+    
     def wait(self, timeout=-1):
         """Wait until the result is available or until `timeout` seconds pass.
 
         This method always returns None.
         """
         if self._ready:
-            return
-        self._ready = self._client._await_futures(self._futures, timeout)
-        if self._ready:
-            try:
-                results = list(map(self._client.results.get, self.msg_ids))
-                self._result = results
-                if self._single_result:
-                    r = results[0]
-                    if isinstance(r, Exception):
-                        raise r
-                else:
-                    results = error.collect_exceptions(results, self._fname)
-                self._result = self._reconstruct_result(results)
-            except Exception as e:
-                self._exception = e
-                self._success = False
+            return True
+        if timeout and timeout < 0:
+            timeout = None
+        
+        self._ready_event.wait(timeout)
+        self.wait_for_output(0)
+        return self._ready
+    
+    def _resolve_result(self, f=None):
+        try:
+            if f:
+                results = f.result()
             else:
-                self._success = True
-            finally:
-                self._metadata = [self._client.metadata[mid] for mid in self.msg_ids]
-                self.wait_for_output(0)
-                if self.owner:
-                    [ self._client.results.pop(mid) for mid in self.msg_ids ]
-
+                results = list(map(self._client.results.get, self.msg_ids))
+            if self._single_result:
+                r = results[0]
+                if isinstance(r, Exception):
+                    raise r
+            else:
+                results = error.collect_exceptions(results, self._fname)
+            self.set_result(self._reconstruct_result(results))
+        except Exception as e:
+            self.set_exception(e)
+            self._success = False
+        else:
+            self._success = True
+        finally:
+            if self.owner:
+                [ self._client.results.pop(mid, None) for mid in self.msg_ids ]
+            self._ready = True
+            self._ready_event.set()
 
     def successful(self):
         """Return whether the call completed without raising an exception.
@@ -198,12 +255,9 @@ class AsyncResult(object):
         return rdict
 
     @property
-    def result(self):
+    def r(self):
         """result property wrapper for `get(timeout=-1)`."""
         return self.get()
-
-    # abbreviated alias:
-    r = result
 
     @property
     def metadata(self):
@@ -249,10 +303,10 @@ class AsyncResult(object):
         """
         if isinstance(key, int):
             self._check_ready()
-            return error.collect_exceptions([self._result[key]], self._fname)[0]
+            return error.collect_exceptions([self.result()[key]], self._fname)[0]
         elif isinstance(key, slice):
             self._check_ready()
-            return error.collect_exceptions(self._result[key], self._fname)
+            return error.collect_exceptions(self.result()[key], self._fname)
         elif isinstance(key, string_types):
             # metadata proxy *does not* require that results are done
             self.wait(0)
@@ -281,8 +335,9 @@ class AsyncResult(object):
             rlist = self.get(0)
         except error.TimeoutError:
             # wait for each result individually
-            for msg_id in self.msg_ids:
-                ar = AsyncResult(self._client, msg_id, self._fname)
+            
+            for child in self._children:
+                ar = AsyncResult(self._client, child, self._fname)
                 yield ar.get()
         else:
             # already done
@@ -389,8 +444,7 @@ class AsyncResult(object):
             clear_output(wait=True)
             print("%4i/%i tasks finished after %4i s" % (self.progress, N, self.elapsed), end="")
             sys.stdout.flush()
-        print()
-        print("done")
+        print("\ndone")
     
     def _republish_displaypub(self, content, eid):
         """republish individual displaypub content dicts"""
@@ -575,8 +629,8 @@ class AsyncMapResult(AsyncResult):
             rlist = self.get(0)
         except error.TimeoutError:
             # wait for each result individually
-            for msg_id in self.msg_ids:
-                ar = AsyncResult(self._client, msg_id, self._fname)
+            for child in self._children:
+                ar = AsyncResult(self._client, child, self._fname)
                 rlist = ar.get()
                 try:
                     for r in rlist:
@@ -611,7 +665,8 @@ class AsyncMapResult(AsyncResult):
                 pending = pending.difference(ready)
                 while ready:
                     msg_id = ready.pop()
-                    ar = AsyncResult(self._client, msg_id, self._fname)
+                    child = self._children[self.msg_ids.index(msg_id)]
+                    ar = AsyncResult(self._client, child, self._fname)
                     rlist = ar.get()
                     try:
                         for r in rlist:
@@ -633,6 +688,10 @@ class AsyncHubResult(AsyncResult):
     Note that waiting/polling on these objects requires polling the Hub over the network,
     so use `AsyncHubResult.wait()` sparingly.
     """
+    
+    def _init_futures(self):
+        """disable Future-based resolution of Hub results"""
+        pass
 
     def wait(self, timeout=-1):
         """wait for result to complete."""
@@ -659,21 +718,20 @@ class AsyncHubResult(AsyncResult):
             self._output_ready = True
             try:
                 results = list(map(self._client.results.get, self.msg_ids))
-                self._result = results
                 if self._single_result:
                     r = results[0]
                     if isinstance(r, Exception):
                         raise r
+                        self.set_result(r)
                 else:
                     results = error.collect_exceptions(results, self._fname)
-                self._result = self._reconstruct_result(results)
+                self.set_result(self._reconstruct_result(results))
             except Exception as e:
-                self._exception = e
+                self.set_exception(e)
                 self._success = False
             else:
                 self._success = True
             finally:
-                self._metadata = [self._client.metadata[mid] for mid in self.msg_ids]
                 if self.owner:
                     [self._client.metadata.pop(mid) for mid in self.msg_ids]
                     [self._client.results.pop(mid) for mid in self.msg_ids]

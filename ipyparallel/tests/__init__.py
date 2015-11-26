@@ -92,7 +92,6 @@ def add_engines(n=1, profile='iptest', total=False):
         ep = TestProcessLauncher()
         ep.cmd_and_args = ipengine_cmd_argv + [
             '--profile=%s' % profile,
-            '--log-level=50',
             '--InteractiveShell.colors=nocolor'
             ]
         ep.start()

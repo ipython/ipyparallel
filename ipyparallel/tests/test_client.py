@@ -439,34 +439,23 @@ class TestClient(ClusterTestCase):
 
     def test_purge_local_results(self):
         # ensure there are some tasks
-        res = []
-        for i in range(5):
-            res.append(self.client[:].apply_async(lambda : 1))
-        self._wait_for_idle()
-        self.client.wait(10) # wait for the results to come back
+        # purge local results is mostly unnecessary now that we have Futures
+        msg_id = 'asdf'
+        self.client.results[msg_id] = 5
+        md = self.client.metadata[msg_id]
         before = len(self.client.results)
-        self.assertEqual(len(self.client.metadata),before)
-        self.client.purge_local_results(res[-1])
-        self.assertEqual(len(self.client.results),before-len(res[-1]), msg="Not removed from results")
-        self.assertEqual(len(self.client.metadata),before-len(res[-1]), msg="Not removed from metadata")
+        self.assertEqual(len(self.client.metadata), before)
+        self.client.purge_local_results(msg_id)
+        self.assertLessEqual(len(self.client.results), before-1, msg="Not removed from results")
+        self.assertLessEqual(len(self.client.metadata), before-1, msg="Not removed from metadata")
     
     def test_purge_local_results_outstanding(self):
         v = self.client[-1]
-        ar = v.apply_async(lambda : 1)
-        msg_id = ar.msg_ids[0]
-        ar.owner = False
-        ar.get()
-        self._wait_for_idle()
-        ar2 = v.apply_async(time.sleep, 1)
-        self.assertIn(msg_id, self.client.results)
-        self.assertIn(msg_id, self.client.metadata)
-        self.client.purge_local_results(ar)
-        self.assertNotIn(msg_id, self.client.results)
-        self.assertNotIn(msg_id, self.client.metadata)
+        ar = v.apply_async(time.sleep, 1)
         with self.assertRaises(RuntimeError):
-            self.client.purge_local_results(ar2)
-        ar2.get()
-        self.client.purge_local_results(ar2)
+            self.client.purge_local_results(ar)
+        ar.get()
+        self.client.purge_local_results(ar)
     
     def test_purge_all_local_results_outstanding(self):
         v = self.client[-1]

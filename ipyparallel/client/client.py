@@ -99,6 +99,7 @@ class MessageFuture(Future):
             self._tracker_evt.wait()
             return self._tracker
 
+
 _no_connection_file_msg = """
 Failed to connect because no Controller could be found.
 Please double-check your profile and ensure that a cluster is running.
@@ -658,7 +659,7 @@ class Client(HasTraits):
     #--------------------------------------------------------------------------
     # handlers and callbacks for incoming messages
     #--------------------------------------------------------------------------
-
+    
     def _unwrap_exception(self, content):
         """unwrap exception, and remap engine_id to int."""
         e = error.unwrap_exception(content)
@@ -807,8 +808,6 @@ class Client(HasTraits):
         # construct metadata:
         md = self.metadata[msg_id]
         md.update(self._extract_metadata(msg))
-        # is this redundant?
-        self.metadata[msg_id] = md
 
         e_outstanding = self._outstanding_dict[md['engine_uuid']]
         if msg_id in e_outstanding:
@@ -953,14 +952,31 @@ class Client(HasTraits):
         msg = self.session.msg(msg_type, content=content, parent=parent,
                                header=header, metadata=metadata)
         msg_id = msg['header']['msg_id']
+        asyncresult = False
         if msg_type in {'execute_request', 'apply_request'}:
+            asyncresult = True
             # add future for output
-            future = self._output_futures[msg_id] = MessageFuture(msg_id)
-            future.add_done_callback(lambda f: self._output_futures.pop(msg_id, None))
+            self._output_futures[msg_id] = output = MessageFuture(msg_id)
+            # hook up metadata
+            output.metadata = self.metadata[msg_id]
+            
         
         self._futures[msg_id] = future = MessageFuture(msg_id, track=track)
-        # On resolution, pop future
-        future.add_done_callback(lambda f: self._futures.pop(msg_id, None))
+        futures = [future]
+        
+        if asyncresult:
+            future.output = output
+            futures.append(output)
+            output.metadata['submitted'] = datetime.now()
+        
+        def cleanup(f):
+            """Purge caches on Future resolution"""
+            self.results.pop(msg_id, None)
+            self._futures.pop(msg_id, None)
+            self._output_futures.pop(msg_id, None)
+            self.metadata.pop(msg_id, None)
+            
+        multi_future(futures).add_done_callback(cleanup)
         
         def _really_send():
             sent = self.session.send(socket, msg, track=track, buffers=buffers, ident=ident)
@@ -1140,9 +1156,9 @@ class Client(HasTraits):
         If no job is specified, will wait for all outstanding jobs to complete.
         """
         if jobs is None:
-            jobs = self.outstanding
-        msg_ids = self._msg_ids_from_jobs(jobs)
-        ar = AsyncResult(self, msg_ids=msg_ids, owner=False)
+            ar = AsyncResult(self, list(self._futures.values()), owner=False)
+        else:
+            ar = self._asyncresult_from_jobs(jobs, owner=False)
         return ar.wait_interactive(interval=interval, timeout=timeout)
     
     #--------------------------------------------------------------------------
@@ -1312,7 +1328,6 @@ class Client(HasTraits):
                 # save for later, in case of engine death
                 self._outstanding_dict[ident].add(msg_id)
         self.history.append(msg_id)
-        self.metadata[msg_id]['submitted'] = datetime.now()
 
         return future
 
@@ -1451,22 +1466,8 @@ class Client(HasTraits):
         block = self.block if block is None else block
         if indices_or_msg_ids is None:
             indices_or_msg_ids = -1
-        
-        single_result = isinstance(indices_or_msg_ids, string_types + (int,))
-        theids = self._msg_ids_from_jobs(indices_or_msg_ids)
 
-        local_ids = [msg_id for msg_id in theids if (msg_id in self.outstanding or msg_id in self.results)]
-        remote_ids = [msg_id for msg_id in theids if msg_id not in local_ids]
-        
-        # given single msg_id initially, get_result shot get the result itself,
-        # not a length-one list
-        if single_result:
-            theids = theids[0]
-
-        if remote_ids:
-            ar = AsyncHubResult(self, msg_ids=theids, owner=owner)
-        else:
-            ar = AsyncResult(self, msg_ids=theids, owner=owner)
+        ar = self._asyncresult_from_jobs(indices_or_msg_ids, owner=owner)
 
         if block:
             ar.wait()
@@ -1508,7 +1509,7 @@ class Client(HasTraits):
         mapping = content['resubmitted']
         new_ids = [ mapping[msg_id] for msg_id in theids ]
 
-        ar = AsyncHubResult(self, msg_ids=new_ids)
+        ar = AsyncHubResult(self, new_ids)
 
         if block:
             ar.wait()
@@ -1672,6 +1673,46 @@ class Client(HasTraits):
                 raise TypeError("Expected msg_id, int, or AsyncResult, got %r" % job)
         return msg_ids
     
+    def _asyncresult_from_jobs(self, jobs=None, owner=False):
+        """Construct an AsyncResult from msg_ids or asyncresult objects"""
+        if not isinstance(jobs, (list, tuple, set, types.GeneratorType)):
+            single = True
+            jobs = [jobs]
+        else:
+            single = False
+        futures = []
+        msg_ids = []
+        for job in jobs:
+            if isinstance(job, int):
+                job = self.history[job]
+            if isinstance(job, string_types):
+                if job in self._futures:
+                    futures.append(job)
+                elif job in self.results:
+                    f = MessageFuture(job)
+                    f.set_result(self.results[job])
+                    f.output = Future()
+                    f.output.metadata = self.metadata[job]
+                    f.output.set_result(None)
+                    futures.append(f)
+                else:
+                    msg_ids.append(job)
+            elif isinstance(job, AsyncResult):
+                if job._children:
+                    futures.extend(job._children)
+                else:
+                    msg_ids.extend(job.msg_ids)
+            else:
+                raise TypeError("Expected msg_id, int, or AsyncResult, got %r" % job)
+        if msg_ids:
+            if single:
+                msg_ids = msg_ids[0]
+            return AsyncHubResult(self, msg_ids, owner=owner)
+        else:
+            if single and futures:
+                futures = futures[0]
+            return AsyncResult(self, futures, owner=owner)
+    
     def purge_local_results(self, jobs=[], targets=[]):
         """Clears the client caches of results and their metadata.
 
@@ -1710,6 +1751,8 @@ class Client(HasTraits):
                 raise RuntimeError("Can't purge outstanding tasks: %s" % self.outstanding)
             self.results.clear()
             self.metadata.clear()
+            self._futures.clear()
+            self._output_futures.clear()
         else:
             msg_ids = set()
             msg_ids.update(self._msg_ids_from_target(targets))
@@ -1720,6 +1763,8 @@ class Client(HasTraits):
             for mid in msg_ids:
                 self.results.pop(mid, None)
                 self.metadata.pop(mid, None)
+                self._futures.pop(mid, None)
+                self._output_futures.pop(mid, None)
 
 
     def purge_hub_results(self, jobs=[], targets=[]):

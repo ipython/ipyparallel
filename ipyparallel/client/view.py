@@ -193,7 +193,7 @@ class View(HasTraits):
         delta = self.outstanding.difference(self.client.outstanding)
         completed = self.outstanding.intersection(delta)
         self.outstanding = self.outstanding.difference(completed)
-        
+    
     @sync_results
     @save_ids
     def _really_apply(self, f, args, kwargs, block=None, **options):
@@ -292,7 +292,7 @@ class View(HasTraits):
             targets = self.targets
         return self.client.shutdown(targets=targets, restart=restart, hub=hub, block=block)
 
-    def get_result(self, indices_or_msg_ids=None, block=None, owner=True):
+    def get_result(self, indices_or_msg_ids=None, block=None, owner=False):
         """return one or more results, specified by history index or msg_id.
 
         See :meth:`ipyparallel.client.client.Client.get_result` for details.
@@ -544,21 +544,19 @@ class DirectView(View):
         targets = self.targets if targets is None else targets
         
         _idents, _targets = self.client._build_targets(targets)
-        msg_ids = []
         futures = []
         for ident in _idents:
             future = self.client.send_apply_request(self._socket, f, args, kwargs, track=track,
                                     ident=ident)
             futures.append(future)
-            msg_ids.append(future.msg_id)
         if track:
-            trackers = [future.tracker for future in futures]
+            trackers = [f.tracker for f in futures]
         else:
             trackers = []
         if isinstance(targets, int):
-            msg_ids = msg_ids[0]
+            futures = futures[0]
         tracker = None if track is False else zmq.MessageTracker(*trackers)
-        ar = AsyncResult(self.client, msg_ids, fname=getname(f), targets=_targets,
+        ar = AsyncResult(self.client, futures, fname=getname(f), targets=_targets,
             tracker=tracker, owner=True,
         )
         if block:
@@ -632,13 +630,13 @@ class DirectView(View):
         targets = self.targets if targets is None else targets
 
         _idents, _targets = self.client._build_targets(targets)
-        msg_ids = []
+        futures = []
         for ident in _idents:
             future = self.client.send_execute_request(self._socket, code, silent=silent, ident=ident)
-            msg_ids.append(future.msg_id)
+            futures.append(future)
         if isinstance(targets, int):
-            msg_ids = msg_ids[0]
-        ar = AsyncResult(self.client, msg_ids, fname='execute', targets=_targets, owner=True)
+            futures = futures[0]
+        ar = AsyncResult(self.client, futures, fname='execute', targets=_targets, owner=True)
         if block:
             try:
                 ar.get()
@@ -738,7 +736,7 @@ class DirectView(View):
 
         mapObject = Map.dists[dist]()
         nparts = len(targets)
-        msg_ids = []
+        futures = []
         trackers = []
         for index, engineid in enumerate(targets):
             partition = mapObject.getPartition(seq, index, nparts)
@@ -747,7 +745,8 @@ class DirectView(View):
             else:
                 ns = {key: partition}
             r = self.push(ns, block=False, track=track, targets=engineid)
-            msg_ids.extend(r.msg_ids)
+            r.owner = False
+            futures.extend(r._children)
             if track:
                 trackers.append(r._tracker)
 
@@ -756,7 +755,7 @@ class DirectView(View):
         else:
             tracker = None
 
-        r = AsyncResult(self.client, msg_ids, fname='scatter', targets=targets,
+        r = AsyncResult(self.client, futures, fname='scatter', targets=targets,
             tracker=tracker, owner=True,
         )
         if block:
@@ -778,10 +777,13 @@ class DirectView(View):
         # construct integer ID list:
         targets = self.client._build_targets(targets)[1]
         
+        futures = []
         for index, engineid in enumerate(targets):
-            msg_ids.extend(self.pull(key, block=False, targets=engineid).msg_ids)
+            ar = self.pull(key, block=False, targets=engineid)
+            ar.owner = False
+            futures.extend(ar._children)
 
-        r = AsyncMapResult(self.client, msg_ids, mapObject, fname='gather')
+        r = AsyncMapResult(self.client, futures, mapObject, fname='gather')
 
         if block:
             try:
@@ -1040,7 +1042,7 @@ class LoadBalancedView(View):
                                 metadata=metadata)
         tracker = None if track is False else future.tracker
 
-        ar = AsyncResult(self.client, future.msg_id, fname=getname(f),
+        ar = AsyncResult(self.client, future, fname=getname(f),
             targets=None, tracker=tracker, owner=True,
         )
         if block:
