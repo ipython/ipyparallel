@@ -8,6 +8,7 @@ from __future__ import print_function
 import os
 import json
 from threading import Thread, Event, current_thread
+import time
 import types
 import warnings
 from datetime import datetime
@@ -402,9 +403,16 @@ class Client(HasTraits):
                 else:
                     client_json = 'ipcontroller-%s-client.json' % cluster_id
                 url_file = pjoin(self._cd.security_dir, client_json)
+                short = compress_user(url_file)
+                if not os.path.exists(url_file):
+                    print("Waiting for connection file: %s" % short)
+                    for i in range(30):
+                        time.sleep(1)
+                        if os.path.exists(url_file):
+                            break
                 if not os.path.exists(url_file):
                     msg = '\n'.join([
-                        "Connection file %r not found." % compress_user(url_file),
+                        "Connection file %r not found." % short,
                         no_file_msg,
                     ])
                     raise IOError(msg)
