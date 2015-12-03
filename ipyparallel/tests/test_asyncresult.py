@@ -77,10 +77,9 @@ class AsyncResultTest(ClusterTestCase):
             self.assertEqual(d, {view.targets : v})
     
     def test_get_dict_bad(self):
-        ar = self.client[:].apply_async(lambda : 5)
-        ar2 = self.client[:].apply_async(lambda : 5)
-        ar = self.client.get_result(ar.msg_ids + ar2.msg_ids)
-        self.assertRaises(ValueError, ar.get_dict)
+        v = self.client.load_balanced_view()
+        amr = v.map_async(lambda x: x, range(len(self.client) * 2))
+        self.assertRaises(ValueError, amr.get_dict)
     
     def test_list_amr(self):
         ar = self.client.load_balanced_view().map_async(wait, [0.1]*5)
@@ -321,24 +320,4 @@ class AsyncResultTest(ClusterTestCase):
         msg_id = ar.msg_ids[0]
         self.assertNotIn(msg_id, self.client.results)
         self.assertNotIn(msg_id, self.client.metadata)
-
-    def test_non_owner(self):
-        self.minimum_engines(1)
-        
-        view = self.client[-1]
-        ar = view.apply_async(lambda : 1)
-        ar.owner = False
-        ar.get()
-        ar.wait_for_output()
-        msg_id = ar.msg_ids[0]
-        self.assertIn(msg_id, self.client.results)
-        self.assertIn(msg_id, self.client.metadata)
-        ar2 = self.client.get_result(msg_id, owner=True)
-        self.assertIs(type(ar2), type(ar))
-        self.assertTrue(ar2.owner)
-        self.assertEqual(ar.get(), ar2.get())
-        ar2.get()
-        self.assertNotIn(msg_id, self.client.results)
-        self.assertNotIn(msg_id, self.client.metadata)
-
 

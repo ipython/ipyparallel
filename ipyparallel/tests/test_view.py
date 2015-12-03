@@ -655,12 +655,11 @@ class TestView(ClusterTestCase):
     def test_compositeerror_truncate(self):
         """Truncate CompositeErrors with many exceptions"""
         view = self.client[:]
-        msg_ids = []
+        requests = []
         for i in range(10):
-            ar = view.execute("1/0")
-            msg_ids.extend(ar.msg_ids)
+            requests.append(view.execute("1/0"))
         
-        ar = self.client.get_result(msg_ids)
+        ar = self.client.get_result(requests)
         try:
             ar.get()
         except error.CompositeError as _e:

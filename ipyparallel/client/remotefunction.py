@@ -216,7 +216,7 @@ class ParallelFunction(RemoteFunction):
                 targets = [targets]
             nparts = len(targets)
 
-        msg_ids = []
+        futures = []
         for index, t in enumerate(targets):
             args = []
             for seq in sequences:
@@ -238,10 +238,11 @@ class ParallelFunction(RemoteFunction):
             view = self.view if balanced else client[t]
             with view.temp_flags(block=False, **self.flags):
                 ar = view.apply(f, *args)
+                ar.owner = False
 
-            msg_ids.extend(ar.msg_ids)
+            futures.extend(ar._children)
 
-        r = AsyncMapResult(self.view.client, msg_ids, self.mapObject,
+        r = AsyncMapResult(self.view.client, futures, self.mapObject,
                             fname=getname(self.func),
                             ordered=self.ordered
                         )
