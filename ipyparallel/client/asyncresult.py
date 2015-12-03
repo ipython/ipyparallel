@@ -36,6 +36,7 @@ def check_ready(f, self, *args, **kwargs):
         raise error.TimeoutError("result not ready")
     return f(self, *args, **kwargs)
 
+_metadata_keys = []
 
 class AsyncResult(Future):
     """Class for representing results of non-blocking calls.
@@ -119,7 +120,15 @@ class AsyncResult(Future):
             return "<%s: finished>"%(self.__class__.__name__)
         else:
             return "<%s: %s>"%(self.__class__.__name__,self._fname)
-
+    
+    def __dir__(self):
+        keys = super(AsyncResult, self).__dir__()
+        if not _metadata_keys:
+            from .client import Metadata
+            _metadata_keys.extend(Metadata().keys())
+        keys.extend(_metadata_keys)
+        return keys
+        
 
     def _reconstruct_result(self, res):
         """Reconstruct our result from actual result list (always a list)
