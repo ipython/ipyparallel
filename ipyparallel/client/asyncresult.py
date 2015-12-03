@@ -122,7 +122,7 @@ class AsyncResult(Future):
             return "<%s: %s>"%(self.__class__.__name__,self._fname)
     
     def __dir__(self):
-        keys = super(AsyncResult, self).__dir__()
+        keys = dir(self.__class__)
         if not _metadata_keys:
             from .client import Metadata
             _metadata_keys.extend(Metadata().keys())
