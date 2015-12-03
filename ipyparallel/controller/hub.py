@@ -1122,7 +1122,7 @@ class Hub(SessionFactory):
         """handle shutdown request."""
         self.session.send(self.query, 'shutdown_reply', content={'status': 'ok'}, ident=client_id, parent=msg)
         # also notify other clients of shutdown
-        self.session.send(self.notifier, 'shutdown_notice', content={'status': 'ok'}, parent=msg)
+        self.session.send(self.notifier, 'shutdown_notification', content={'status': 'ok'}, parent=msg)
         self.loop.add_timeout(self.loop.time() + 1, self._shutdown)
 
     def _shutdown(self):
