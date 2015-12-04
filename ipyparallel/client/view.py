@@ -555,10 +555,7 @@ class DirectView(View):
             trackers = []
         if isinstance(targets, int):
             futures = futures[0]
-        tracker = None if track is False else zmq.MessageTracker(*trackers)
-        ar = AsyncResult(self.client, futures, fname=getname(f), targets=_targets,
-            tracker=tracker, owner=True,
-        )
+        ar = AsyncResult(self.client, futures, fname=getname(f), targets=_targets, owner=True)
         if block:
             try:
                 return ar.get()
@@ -747,17 +744,8 @@ class DirectView(View):
             r = self.push(ns, block=False, track=track, targets=engineid)
             r.owner = False
             futures.extend(r._children)
-            if track:
-                trackers.append(r._tracker)
 
-        if track:
-            tracker = zmq.MessageTracker(*trackers)
-        else:
-            tracker = None
-
-        r = AsyncResult(self.client, futures, fname='scatter', targets=targets,
-            tracker=tracker, owner=True,
-        )
+        r = AsyncResult(self.client, futures, fname='scatter', targets=targets, owner=True)
         if block:
             r.wait()
         else:
@@ -1040,10 +1028,9 @@ class LoadBalancedView(View):
 
         future = self.client.send_apply_request(self._socket, f, args, kwargs, track=track,
                                 metadata=metadata)
-        tracker = None if track is False else future.tracker
 
         ar = AsyncResult(self.client, future, fname=getname(f),
-            targets=None, tracker=tracker, owner=True,
+            targets=None, owner=True,
         )
         if block:
             try:
