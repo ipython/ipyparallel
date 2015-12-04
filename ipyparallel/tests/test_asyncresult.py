@@ -320,4 +320,13 @@ class AsyncResultTest(ClusterTestCase):
         msg_id = ar.msg_ids[0]
         self.assertNotIn(msg_id, self.client.results)
         self.assertNotIn(msg_id, self.client.metadata)
+    
+    def test_dir(self):
+        """dir(AsyncResult)"""
+        view = self.client[-1]
+        ar = view.apply_async(lambda : 1)
+        ar.get()
+        d = dir(ar)
+        self.assertIn('stdout', d)
+        self.assertIn('get', d)
 
