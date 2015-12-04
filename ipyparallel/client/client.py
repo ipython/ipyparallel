@@ -7,7 +7,7 @@ from __future__ import print_function
 
 import os
 import json
-from threading import Thread, Event
+from threading import Thread, Event, current_thread
 import types
 import warnings
 from datetime import datetime
@@ -842,7 +842,7 @@ class Client(HasTraits):
         """Stop my IO thread"""
         if self._io_loop:
             self._io_loop.add_callback(self._io_loop.stop)
-        if self._io_thread:
+        if self._io_thread and self._io_thread is not current_thread():
             self._io_thread.join()
     
     def _start_io_thread(self):
@@ -948,7 +948,8 @@ class Client(HasTraits):
         """Send a message in the IO thread
         
         returns msg object"""
-        # self.session.debug = True
+        if self._closed:
+            raise IOError("Connections have been closed.")
         msg = self.session.msg(msg_type, content=content, parent=parent,
                                header=header, metadata=metadata)
         msg_id = msg['header']['msg_id']
@@ -1267,9 +1268,13 @@ class Client(HasTraits):
                     error = self._unwrap_exception(msg['content'])
 
         if hub:
+            # don't trigger close on shutdown notification, which will prevent us from receiving the reply
+            self._notification_handlers['shutdown_notification'] = lambda msg: None
             msg = self._send_recv(self._query_socket, 'shutdown_request')
             if msg['content']['status'] != 'ok':
                 error = self._unwrap_exception(msg['content'])
+            if not error:
+                self.close()
 
         if error:
             raise error
