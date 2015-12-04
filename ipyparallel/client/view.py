@@ -90,11 +90,11 @@ class View(HasTraits):
 
     """
     # flags
-    block=Bool(False)
-    track=Bool(True)
+    block = Bool(False)
+    track = Bool(False)
     targets = Any()
 
-    history=List()
+    history = List()
     outstanding = Set()
     results = Dict()
     client = Instance('ipyparallel.Client', allow_none=True)
