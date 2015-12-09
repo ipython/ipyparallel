@@ -11,14 +11,16 @@ from concurrent.futures import Future
 from datetime import datetime
 from threading import Event
 
+from decorator import decorator
 from tornado.gen import multi_future
+import zmq
 from zmq import MessageTracker
 
 from IPython.core.display import clear_output, display, display_pretty
-from decorator import decorator
 from ipyparallel import error
 from ipython_genutils.py3compat import string_types
 
+from .futures import MessageFuture
 
 def _raw_text(s):
     display_pretty(s, raw=True)
@@ -50,7 +52,7 @@ class AsyncResult(Future):
     _single_result = False
     owner = False
 
-    def __init__(self, client, children, fname='unknown', targets=None, tracker=None,
+    def __init__(self, client, children, fname='unknown', targets=None,
         owner=False,
     ):
         super(AsyncResult, self).__init__()
@@ -67,20 +69,16 @@ class AsyncResult(Future):
             self._children = children
             self.msg_ids = [ f.msg_id for f in children ]
 
-        if tracker is None:
-            # default to always done
-            tracker = finished_tracker
-        
         self._client = client
-        self._fname=fname
+        self._fname = fname
         self._targets = targets
-        self._tracker = tracker
         self.owner = owner
         
         self._ready = False
         self._ready_event = Event()
         self._output_ready = False
         self._output_event = Event()
+        self._sent_event = Event()
         self._success = None
         if self._children:
             self._metadata = [ f.output.metadata for f in self._children ]
@@ -97,8 +95,7 @@ class AsyncResult(Future):
                     result = self._client.results.get(msg_id, _default)
                     # result resides in local cache, construct already-resolved Future
                     if result is not _default:
-                        future = Future()
-                        future.msg_id = msg_id
+                        future = MessageFuture(msg_id)
                         future.output = Future()
                         future.output.metadata = self.client.metadata[msg_id]
                         future.set_result(result)
@@ -108,6 +105,10 @@ class AsyncResult(Future):
                 self._children.append(future)
                 
         self._result_future = multi_future(self._children)
+        
+        self._sent_future = multi_future([ f.tracker for f in self._children ])
+        self._sent_future.add_done_callback(self._handle_sent)
+        
         self._output_future = multi_future([self._result_future] + [
             f.output for f in self._children
         ])
@@ -288,11 +289,18 @@ class AsyncResult(Future):
         """abort my tasks."""
         assert not self.ready(), "Can't abort, I am already done!"
         return self._client.abort(self.msg_ids, targets=self._targets, block=True)
-
+    
+    def _handle_sent(self, f):
+        """Resolve sent Future, build MessageTracker"""
+        trackers = f.result()
+        trackers = [t for t in trackers if t is not None]
+        self._tracker = MessageTracker(*trackers)
+        self._sent_event.set()
+    
     @property
     def sent(self):
         """check whether my messages have been sent."""
-        return self._tracker.done
+        return self._sent_event.is_set() and self._tracker.done
 
     def wait_for_send(self, timeout=-1):
         """wait for pyzmq send to complete.
@@ -301,7 +309,25 @@ class AsyncResult(Future):
         `timeout` is in seconds, and will raise TimeoutError if it is reached
         before the send completes.
         """
-        return self._tracker.wait(timeout)
+        if not self._sent_event.is_set():
+            if timeout and timeout < 0:
+                # Event doesn't like timeout < 0
+                timeout = None
+            # wait for Future to indicate send having been called,
+            # which means MessageTracker is ready.
+            tic = time.time()
+            if not self._sent_event.wait(timeout):
+                raise error.TimeoutError("Still waiting to be sent")
+                return False
+            if timeout:
+                timeout = max(0, timeout - (time.time() - tic))
+        try:
+            if timeout is None:
+                # MessageTracker doesn't like timeout=None
+                timeout = -1
+            return self._tracker.wait(timeout)
+        except zmq.NotDone:
+            raise error.TimeoutError("Still waiting to be sent")
 
     #-------------------------------------
     # dict-access

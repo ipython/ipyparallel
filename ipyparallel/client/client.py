@@ -48,6 +48,7 @@ from jupyter_client.session import Session
 from ipyparallel import serialize
 
 from .asyncresult import AsyncResult, AsyncHubResult
+from .futures import MessageFuture
 from .view import DirectView, LoadBalancedView
 
 #--------------------------------------------------------------------------
@@ -71,34 +72,6 @@ def unpack_message(f, self, msg_parts):
 #--------------------------------------------------------------------------
 # Classes
 #--------------------------------------------------------------------------
-
-
-class MessageFuture(Future):
-    """Future class to wrap async messages"""
-    def __init__(self, msg_id, track=False):
-        super(MessageFuture, self).__init__()
-        self.msg_id = msg_id
-        self._evt = Event()
-        self.track = track
-        self._tracker = None
-        if track:
-            self._tracker_evt = Event()
-        else:
-            self._tracker_evt = None
-        self.add_done_callback(lambda f: self._evt.set())
-    
-    def wait(self, timeout=None):
-        if not self.done():
-            return self._evt.wait(timeout)
-        return True
-    
-    @property
-    def tracker(self):
-        if not self.track:
-            return None
-        else:
-            self._tracker_evt.wait()
-            return self._tracker
 
 
 _no_connection_file_msg = """
@@ -990,8 +963,7 @@ class Client(HasTraits):
         def _really_send():
             sent = self.session.send(socket, msg, track=track, buffers=buffers, ident=ident)
             if track:
-                future._tracker = sent['tracker']
-                future._tracker_evt.set()
+                future.tracker.set_result(sent['tracker'])
         
         # hand off actual send to IO thread
         self._io_loop.add_callback(_really_send)

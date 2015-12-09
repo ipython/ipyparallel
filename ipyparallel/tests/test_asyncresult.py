@@ -3,6 +3,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+import os
 import time
 
 import nose.tools as nt
@@ -329,4 +330,14 @@ class AsyncResultTest(ClusterTestCase):
         d = dir(ar)
         self.assertIn('stdout', d)
         self.assertIn('get', d)
+    
+    def test_wait_for_send(self):
+        view = self.client[-1]
+        view.track = True
+        data = os.urandom(10*1024*1024)
+        ar = view.apply_async(lambda x:x, data)
+        with self.assertRaises(error.TimeoutError):
+            ar.wait_for_send(0)
+        ar.wait_for_send(10)
+    
 

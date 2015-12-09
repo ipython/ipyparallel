@@ -169,9 +169,11 @@ class TestView(ClusterTestCase):
             with v.temp_flags(**kwargs):
                 return v.apply(lambda x: x, 'x'*n)
         ar = echo(1, track=False)
+        ar.wait_for_send(5)
         self.assertTrue(isinstance(ar._tracker, zmq.MessageTracker))
         self.assertTrue(ar.sent)
         ar = echo(track=True)
+        ar.wait_for_send(5)
         self.assertTrue(isinstance(ar._tracker, zmq.MessageTracker))
         self.assertEqual(ar.sent, ar._tracker.done)
         ar._tracker.wait()
@@ -182,12 +184,10 @@ class TestView(ClusterTestCase):
         ns = dict(x='x'*1024*1024)
         v = self.client[t]
         ar = v.push(ns, block=False, track=False)
-        self.assertTrue(isinstance(ar._tracker, zmq.MessageTracker))
         self.assertTrue(ar.sent)
         
         ar = v.push(ns, block=False, track=True)
-        self.assertTrue(isinstance(ar._tracker, zmq.MessageTracker))
-        ar._tracker.wait()
+        ar.wait_for_send()
         self.assertEqual(ar.sent, ar._tracker.done)
         self.assertTrue(ar.sent)
         ar.get()
@@ -196,13 +196,13 @@ class TestView(ClusterTestCase):
         t = self.client.ids
         x='x'*1024*1024
         ar = self.client[t].scatter('x', x, block=False, track=False)
-        self.assertTrue(isinstance(ar._tracker, zmq.MessageTracker))
         self.assertTrue(ar.sent)
         
         ar = self.client[t].scatter('x', x, block=False, track=True)
+        ar._sent_event.wait()
         self.assertTrue(isinstance(ar._tracker, zmq.MessageTracker))
         self.assertEqual(ar.sent, ar._tracker.done)
-        ar._tracker.wait()
+        ar.wait_for_send()
         self.assertTrue(ar.sent)
         ar.get()
     
