@@ -1367,13 +1367,30 @@ class Client(HasTraits):
         ----------
 
         targets: list,slice,int,etc. [default: use all engines]
-            The subset of engines across which to load-balance
+            The subset of engines across which to load-balance execution
         """
         if targets == 'all':
             targets = None
         if targets is not None:
             targets = self._build_targets(targets)[1]
         return LoadBalancedView(client=self, socket=self._task_socket, targets=targets)
+    
+    def executor(self, targets=None):
+        """Construct a PEP-3148 Executor with a LoadBalancedView
+        
+        Parameters
+        ----------
+
+        targets: list,slice,int,etc. [default: use all engines]
+            The subset of engines across which to load-balance execution
+        
+        Returns
+        -------
+
+        executor: Executor
+            The Executor object
+        """
+        return self.load_balanced_view(targets).executor
 
     def direct_view(self, targets='all'):
         """construct a DirectView object.

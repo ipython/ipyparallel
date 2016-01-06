@@ -109,6 +109,7 @@ class View(HasTraits):
         super(View, self).__init__(client=client, _socket=socket)
         self.results = client.results
         self.block = client.block
+        self.executor = ViewExecutor(self)
 
         self.set_flags(**flags)
 
@@ -1101,4 +1102,35 @@ class LoadBalancedView(View):
         pf = ParallelFunction(self, f, block=block, chunksize=chunksize, ordered=ordered)
         return pf.map(*sequences)
 
-__all__ = ['LoadBalancedView', 'DirectView']
+from concurrent.futures import Executor
+
+class ViewExecutor(Executor):
+    """A PEP-3148 Executor API for Views
+    
+    Access as view.executor
+    """
+    def __init__(self, view):
+        self.view = view
+    
+    def submit(self, fn, *args, **kwargs):
+        """Same as View.apply_async"""
+        return self.view.apply_async(fn, *args, **kwargs)
+    
+    def map(self, func, *iterables, **kwargs):
+        """Return generator for View.map_async"""
+        if 'timeout' in kwargs:
+            warnings.warn("timeout unsupported in ViewExecutor.map")
+            kwargs.pop('timeout')
+        for r in self.view.map_async(func, *iterables, **kwargs):
+            yield r
+    
+    def shutdown(self, wait=True):
+        """ViewExecutor does *not* shutdown engines
+        
+        results are awaited if wait=True, but engines are *not* shutdown.
+        """
+        if wait:
+            self.view.wait()
+
+__all__ = ['LoadBalancedView', 'DirectView', 'ViewExecutor']
+
