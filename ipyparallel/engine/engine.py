@@ -211,6 +211,13 @@ class EngineFactory(RegistrationFactory):
             iopub_socket = ctx.socket(zmq.PUB)
             iopub_socket.setsockopt(zmq.IDENTITY, identity)
             connect(iopub_socket, iopub_addr)
+            try:
+                from ipykernel.iostream import IOPubThread
+            except ImportError:
+                pass
+            else:
+                iopub_socket = IOPubThread(iopub_socket)
+                iopub_socket.start()
 
             # disable history:
             self.config.HistoryManager.hist_file = ':memory:'
