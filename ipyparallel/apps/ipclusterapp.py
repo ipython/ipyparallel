@@ -418,7 +418,8 @@ start_aliases = {}
 start_aliases.update(engine_aliases)
 start_aliases.update(dict(
     delay='IPClusterStart.delay',
-    controller = 'IPClusterStart.controller_launcher_class',
+    controller='IPClusterStart.controller_launcher_class',
+    ip='IPClusterStart.controller_ip',
 ))
 start_aliases['clean-logs'] = 'IPClusterStart.clean_logs'
 
@@ -440,7 +441,8 @@ class IPClusterStart(IPClusterEngines):
 
     delay = CFloat(1., config=True,
         help="delay (in s) between starting the controller and the engines")
-
+    
+    controller_ip = Unicode(config=True, help="Set the IP address of the controller.")
     controller_launcher = Any(config=True, help="Deprecated, use controller_launcher_class")
     def _controller_launcher_changed(self, name, old, new):
         if isinstance(new, string_types):
@@ -490,6 +492,8 @@ class IPClusterStart(IPClusterEngines):
 
     def init_launchers(self):
         self.controller_launcher = self.build_launcher(self.controller_launcher_class, 'Controller')
+        if self.controller_ip:
+            self.controller_launcher.controller_args.append('--ip=%s' % self.controller_ip)
         self.engine_launcher = self.build_launcher(self.engine_launcher_class, 'EngineSet')
     
     def engines_stopped(self, r):
