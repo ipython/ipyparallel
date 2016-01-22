@@ -4,10 +4,6 @@ Using IPython for parallel computing
    :Release: |release|
    :Date: |today|
 
-.. only:: not rtd
-
-    Welcome to the official IPython parallel documentation.
-
 .. _install:
 
 Installing IPython Parallel
@@ -39,7 +35,6 @@ Contents
    mpi
    db
    security
-   winhpc
    demos
    dag_dependencies
    details
