@@ -187,7 +187,7 @@ class HubFactory(RegistrationFactory):
 
     monitor_url = Unicode('')
 
-    db_class = DottedObjectName('NoDB',
+    db_class = DottedObjectName('DictDB',
         config=True, help="""The class to use for the DB backend
         
         Options include:
