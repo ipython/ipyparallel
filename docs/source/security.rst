@@ -25,7 +25,7 @@ are summarized here:
 * The IPython *engine*.  This process is a full blown Python
   interpreter in which user code is executed.  Multiple
   engines are started to make parallel computing possible.
-* The IPython *hub*.  This process monitors a set of 
+* The IPython *hub*.  This process monitors a set of
   engines and schedulers, and keeps track of the state of the processes. It listens
   for registration connections from engines and clients, and monitor connections
   from schedulers.
@@ -86,7 +86,7 @@ arbitrary execution as the user on the engine machines. As a result, the default
 of controller processes is to only listen for clients on the loopback interface, and the
 client must establish SSH tunnels to connect to the controller processes.
 
-.. warning:: 
+.. warning::
 
     If the controller's loopback interface is untrusted, then IPython should be considered
     vulnerable, and this extends to the loopback of all connected clients, which have
@@ -232,7 +232,7 @@ or:
 
 * The user has to use SSH port forwarding to tunnel the
   connections through the firewall.
-   
+
 In either case, an attacker is presented with additional barriers that prevent
 attacking or even probing the system.
 
@@ -247,5 +247,5 @@ while still enabling user's to use the system in open networks.
 .. [RFC5246] <http://tools.ietf.org/html/rfc5246>
 
 .. [OpenSSH] <http://www.openssh.com/>
-.. [Paramiko] <http://www.lag.net/paramiko/>
+.. [Paramiko] <https://www.lag.net/paramiko/>
 .. [HMAC] <http://tools.ietf.org/html/rfc2104.html>

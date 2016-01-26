@@ -7,7 +7,7 @@ IPython's Task Database
 Enabling a DB Backend
 =====================
 
-The IPython Hub can store all task requests and results in a database. 
+The IPython Hub can store all task requests and results in a database.
 Currently supported backends are: MongoDB, SQLite, and an in-memory DictDB.
 
 This database behavior is optional due to its potential :ref:`db_cost`,
@@ -36,12 +36,12 @@ The most common use case for this is clients requesting results for tasks they d
 However, since we have this DB backend, we provide a direct query method in the :class:`~.Client`
 for users who want deeper introspection into their task history. The :meth:`db_query` method of
 the Client is modeled after MongoDB queries, so if you have used MongoDB it should look
-familiar.  In fact, when the MongoDB backend is in use, the query is relayed directly.  
+familiar.  In fact, when the MongoDB backend is in use, the query is relayed directly.
 When using other backends, the interface is emulated and only a subset of queries is possible.
 
 .. seealso::
 
-    MongoDB query docs: http://www.mongodb.org/display/DOCS/Querying
+    MongoDB query docs: https://docs.mongodb.org/manual/tutorial/query-documents/
 
 :meth:`Client.db_query` takes a dictionary query object, with keys from the TaskRecord key list,
 and values of either exact values to test, or MongoDB queries, which are dicts of The form:
@@ -155,5 +155,3 @@ and any request for results will result in a KeyError.  This obviously prevents
 later requests for results and task resubmission from functioning, but
 sometimes those nice features are not as useful as keeping Hub memory under
 control.
-
-

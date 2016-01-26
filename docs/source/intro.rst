@@ -66,7 +66,7 @@ the ``I`` in IPython.  The following are some example usage cases for IPython:
    excellent, hands-on oriented complement to the reference documentation
    presented here.
 
-.. __: http://minrk.github.com/scipy-tutorial-2011
+.. __: https://minrk.github.io/scipy-tutorial-2011/
 
 Architecture overview
 =====================
@@ -300,4 +300,4 @@ You are now ready to learn more about the :ref:`Direct
 <parallel_multiengine>` and :ref:`LoadBalanced <parallel_task>` interfaces to the
 controller.
 
-.. [ZeroMQ] ZeroMQ.  http://www.zeromq.org
+.. [ZeroMQ] http://zeromq.org/

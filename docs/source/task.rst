@@ -25,7 +25,7 @@ controller and four IPython engines. The simplest way of doing this is to use
 the :command:`ipcluster` command::
 
 	$ ipcluster start -n 4
-	
+
 For more detailed information about starting the controller and engines, see
 our :ref:`introduction <parallel_overview>` to using IPython for parallel computing.
 
@@ -41,7 +41,7 @@ a :class:`LoadBalancedView`, here called `lview`:
     In [1]: from ipyparallel import Client
 
     In [2]: rc = Client()
-    
+
 
 This form assumes that the controller was started on localhost with default
 configuration. If not, the location of the controller must be given as an
@@ -84,9 +84,9 @@ Parallel map
 To load-balance :meth:`map`,simply use a LoadBalancedView:
 
 .. sourcecode:: ipython
-    
+
     In [62]: lview.block = True
-    
+
     In [63]: serial_result = map(lambda x:x**10, range(32))
 
     In [64]: parallel_result = lview.map(lambda x:x**10, range(32))
@@ -118,7 +118,7 @@ Dependencies
 
 Often, pure atomic load-balancing is too primitive for your work. In these cases, you
 may want to associate some kind of `Dependency` that describes when, where, or whether
-a task can be run.  In IPython, we provide two types of dependencies: 
+a task can be run.  In IPython, we provide two types of dependencies:
 `Functional Dependencies`_ and `Graph Dependencies`_
 
 .. note::
@@ -131,14 +131,14 @@ Functional Dependencies
 -----------------------
 
 Functional dependencies are used to determine whether a given engine is capable of running
-a particular task.  This is implemented via a special :class:`Exception` class, 
-:class:`UnmetDependency`, found in `ipyparallel.error`.  Its use is very simple: 
+a particular task.  This is implemented via a special :class:`Exception` class,
+:class:`UnmetDependency`, found in `ipyparallel.error`.  Its use is very simple:
 if a task fails with an UnmetDependency exception, then the scheduler, instead of relaying
 the error up to the client like any other error, catches the error, and submits the task
 to a different engine.  This will repeat indefinitely, and a task will never be submitted
 to a given engine a second time.
 
-You can manually raise the :class:`UnmetDependency` yourself, but IPython has provided 
+You can manually raise the :class:`UnmetDependency` yourself, but IPython has provided
 some decorators for facilitating this behavior.
 
 There are two decorators and a class used for functional dependencies:
@@ -193,7 +193,7 @@ will be assigned to another engine. If the dependency returns *anything other th
     In [10]: def platform_specific(plat):
        ....:    import sys
        ....:    return sys.platform == plat
-    
+
     In [11]: @depend(platform_specific, 'darwin')
        ....: def mactask():
        ....:    do_mac_stuff()
@@ -201,7 +201,7 @@ will be assigned to another engine. If the dependency returns *anything other th
     In [12]: @depend(platform_specific, 'nt')
        ....: def wintask():
        ....:    do_windows_stuff()
-    
+
 In this case, any time you apply ``mactask``, it will only run on an OSX machine.
 ``@depend`` is just like ``apply``, in that it has a ``@depend(f,*args,**kwargs)``
 signature.
@@ -217,16 +217,16 @@ the :class:`dependent` object that the decorators use:
 
     In [13]: def mytask(*args):
        ....:    dostuff()
-    
+
     In [14]: mactask = dependent(mytask, platform_specific, 'darwin')
     # this is the same as decorating the declaration of mytask with @depend
     # but you can do it again:
-    
+
     In [15]: wintask = dependent(mytask, platform_specific, 'nt')
-    
+
     # in general:
     In [16]: t = dependent(f, g, *dargs, **dkwargs)
-    
+
     # is equivalent to:
     In [17]: @depend(g, *dargs, **dkwargs)
        ....: def t(a,b,c):
@@ -303,7 +303,7 @@ you can skip using Dependency objects, and just pass msg_ids or AsyncResult obje
 .. seealso::
 
     Some parallel workloads can be described as a `Directed Acyclic Graph
-    <http://en.wikipedia.org/wiki/Directed_acyclic_graph>`_, or DAG. See :ref:`DAG
+    <https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_, or DAG. See :ref:`DAG
     Dependencies <dag_dependencies>` for an example demonstrating how to use map a NetworkX DAG
     onto task dependencies.
 
@@ -355,7 +355,7 @@ a task that is pending - only those that have finished, either successful or uns
 Schedulers
 ==========
 
-There are a variety of valid ways to determine where jobs should be assigned in a 
+There are a variety of valid ways to determine where jobs should be assigned in a
 load-balancing situation.  In IPython, we support several standard schemes, and
 even make it easy to define your own.  The scheme can be selected via the ``scheme``
 argument to :command:`ipcontroller`, or in the :attr:`TaskScheduler.schemename` attribute
@@ -372,7 +372,7 @@ To select one of these schemes, simply do::
 lru: Least Recently Used
 
     Always assign work to the least-recently-used engine.  A close relative of
-    round-robin, it will be fair with respect to the number of tasks, agnostic 
+    round-robin, it will be fair with respect to the number of tasks, agnostic
     with respect to runtime of each task.
 
 plainrandom: Plain Random
@@ -382,7 +382,7 @@ plainrandom: Plain Random
 twobin: Two-Bin Random
 
     **Requires numpy**
-    
+
     Pick two engines at random, and use the LRU of the two. This is known to be better
     than plain random in many cases, but requires a small amount of computation.
 
@@ -395,7 +395,7 @@ leastload: Least Load
 weighted: Weighted Two-Bin Random
 
     **Requires numpy**
-    
+
     Pick two engines at random using the number of outstanding tasks as inverse weights,
     and use the one with the lower load.
 
@@ -442,13 +442,13 @@ load-balancing. This scheduler does not support any of the advanced features of 
 Disabled features when using the ZMQ Scheduler:
 
 * Engine unregistration
-    Task farming will be disabled if an engine unregisters.  
+    Task farming will be disabled if an engine unregisters.
     Further, if an engine is unregistered during computation, the scheduler may not recover.
 * Dependencies
     Since there is no Python logic inside the Scheduler, routing decisions cannot be made
     based on message content.
 * Early destination notification
-    The Python schedulers know which engine gets which task, and notify the Hub.  This 
+    The Python schedulers know which engine gets which task, and notify the Hub.  This
     allows graceful handling of Engines coming and going.  There is no way to know
     where ZeroMQ messages have gone, so there is no way to know what tasks are on which
     engine until they *finish*.  This makes recovery from engine shutdown very difficult.

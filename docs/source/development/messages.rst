@@ -248,7 +248,7 @@ Message type: ``task_destination``::
 In terms of message classes, the MUX scheduler and Task scheduler relay the exact same
 message types.  Their only difference lies in how the destination is selected.
 
-The `Namespace <http://gist.github.com/483294>`_ model suggests that execution be able to
+The Namespace model suggests that execution be able to
 use the model::
 
     ns.apply(f, *args, **kwargs)
@@ -394,4 +394,3 @@ This allows the controller to unpack and inspect the (always small) header,
 without spending time unpacking the content unless the message is bound for the
 controller. Buffers are added on to the end of the message, and can be any objects that
 present the buffer interface.
-

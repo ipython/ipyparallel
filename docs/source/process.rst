@@ -12,7 +12,7 @@ Because of this, there are many different possibilities.
 Broadly speaking, there are two ways of going about starting a controller and engines:
 
 * In an automated manner using the :command:`ipcluster` command.
-* In a more manual way using the :command:`ipcontroller` and 
+* In a more manual way using the :command:`ipcontroller` and
   :command:`ipengine` commands.
 
 This document describes both of these methods. We recommend that new users
@@ -62,7 +62,7 @@ Or you can set the same behavior as the default by adding the following line to 
     localhost by default. If you see Timeout errors on engines or clients, then the first
     thing you should check is the ip address the controller is listening on, and make sure
     that it is visible from the timing out machine.
-    
+
 .. seealso::
 
     Our `notes <parallel_security>`_ on security in the new parallel computing code.
@@ -74,10 +74,10 @@ hosts ``host1``-``hostn``. The following steps are then required:
    ``host0``.  The controller must be instructed to listen on an interface visible
    to the engine machines, via the ``ip`` command-line argument or ``HubFactory.ip``
    in :file:`ipcontroller_config.py`.
-2. Move the JSON file (:file:`ipcontroller-engine.json`) created by the 
+2. Move the JSON file (:file:`ipcontroller-engine.json`) created by the
    controller from ``host0`` to hosts ``host1``-``hostn``.
-3. Start the engines on hosts ``host1``-``hostn`` by running 
-   :command:`ipengine`.  This command has to be told where the JSON file 
+3. Start the engines on hosts ``host1``-``hostn`` by running
+   :command:`ipengine`.  This command has to be told where the JSON file
    (:file:`ipcontroller-engine.json`) is located.
 
 At this point, the controller and engines will be connected. By default, the JSON files
@@ -99,11 +99,11 @@ controller and engines in the following situations:
 
 1. When the controller and engines are all run on localhost. This is useful
    for testing or running on a multicore computer.
-2. When engines are started using the :command:`mpiexec` command that comes 
+2. When engines are started using the :command:`mpiexec` command that comes
    with most MPI [MPI]_ implementations
-3. When engines are started using the PBS [PBS]_ batch system 
+3. When engines are started using the PBS [PBS]_ batch system
    (or other `qsub` systems, such as SGE).
-4. When the controller is started on localhost and the engines are started on 
+4. When the controller is started on localhost and the engines are started on
    remote nodes using :command:`ssh`.
 5. When engines are started using the Windows HPC Server batch system.
 
@@ -119,7 +119,7 @@ Under the hood, :command:`ipcluster` just uses :command:`ipcontroller`
 and :command:`ipengine` to perform the steps described above.
 
 The simplest way to use ipcluster requires no configuration, and will
-launch a controller and a number of engines on the local machine. For instance, 
+launch a controller and a number of engines on the local machine. For instance,
 to start one controller and 4 engines on localhost, just do::
 
     $ ipcluster start -n 4
@@ -258,7 +258,7 @@ More details on using MPI with IPython can be found :ref:`here <parallelmpi>`.
 Using :command:`ipcluster` in PBS mode
 --------------------------------------
 
-The PBS mode uses the Portable Batch System (PBS) to start the engines. 
+The PBS mode uses the Portable Batch System (PBS) to start the engines.
 
 As usual, we will start by creating a fresh profile::
 
@@ -338,9 +338,9 @@ Once you have created these scripts, save them with names like
 .. sourcecode:: python
 
     c.PBSEngineSetLauncher.batch_template_file = "pbs.engine.template"
-    
+
     c.PBSControllerLauncher.batch_template_file = "pbs.controller.template"
-        
+
 
 Alternately, you can just define the templates as strings inside :file:`ipcluster_config`.
 
@@ -411,7 +411,7 @@ The controller's remote location and configuration can be specified:
     # c.SSHControllerLauncher.user = os.environ.get('USER','username')
 
     # Set the arguments to be passed to ipcontroller
-    # note that remotely launched ipcontroller will not get the contents of 
+    # note that remotely launched ipcontroller will not get the contents of
     # the local ipcontroller_config.py unless it resides on the *remote host*
     # in the location specified by the `profile-dir` argument.
     # c.SSHControllerLauncher.controller_args = ['--reuse', '--ip=*', '--profile-dir=/path/to/cd']
@@ -431,10 +431,10 @@ on that host.
   the value is the number of engines to run on that host.
 * on host3, the value is a tuple, where the number of engines is first, and the arguments
   to be passed to :command:`ipengine` are the second element.
-* on host4, a dictionary configures the engine. The dictionary can be used to specify 
-  the number of engines to be run on that host `n`, the engine arguments `engine_args`, 
-  as well as the engine command itself `engine_cmd`. This is particularly useful for 
-  virtual environments on heterogeneous clusters where the location of the python 
+* on host4, a dictionary configures the engine. The dictionary can be used to specify
+  the number of engines to be run on that host `n`, the engine arguments `engine_args`,
+  as well as the engine command itself `engine_cmd`. This is particularly useful for
+  virtual environments on heterogeneous clusters where the location of the python
   executable might vary from host to host.
 
 For engines without explicitly specified arguments, the default arguments are set in
@@ -462,8 +462,8 @@ unnecessary, and can be skipped by setting these to empty lists:
     c.SSHLauncher.to_send = []
     c.SSHLauncher.to_fetch = []
 
-If our default guesses about paths don't work for you, or other files 
-should be moved, you can manually specify these lists as tuples of (local_path, 
+If our default guesses about paths don't work for you, or other files
+should be moved, you can manually specify these lists as tuples of (local_path,
 remote_path) for to_send, and (remote_path, local_path) for to_fetch.  If you do
 specify these lists explicitly, IPython *will not* automatically send connection files,
 so you must include this yourself if they should still be sent/retrieved.
@@ -477,9 +477,9 @@ which makes deploying IPython on EC2 quite simple.  The starcluster plugin uses
 :command:`ipcluster` with the SGE launchers to distribute engines across the
 EC2 cluster.  See their `ipcluster plugin documentation`_ for more information.
 
-.. _StarCluster: http://web.mit.edu/starcluster
+.. _StarCluster: http://star.mit.edu/cluster
 .. _Amazon EC2: http://aws.amazon.com/ec2/
-.. _ipcluster plugin documentation: http://web.mit.edu/starcluster/docs/latest/plugins/ipython.html
+.. _ipcluster plugin documentation: http://star.mit.edu/cluster/docs/latest/plugins/ipython.html
 
 
 Using the :command:`ipcontroller` and :command:`ipengine` commands
@@ -498,7 +498,7 @@ local machine, do the following.
 First start the controller::
 
     $ ipcontroller
-    
+
 Next, start however many instances of the engine you want using (repeatedly)
 the command::
 
@@ -508,8 +508,8 @@ The engines should start and automatically connect to the controller using the
 JSON files in :file:`IPYTHONDIR/profile_default/security`. You are now ready to use the
 controller and engines from IPython.
 
-.. warning:: 
-    
+.. warning::
+
     The order of the above operations may be important.  You *must*
     start the controller before the engines, unless you are reusing connection
     information (via ``--reuse``), in which case ordering is not important.
@@ -530,11 +530,11 @@ slightly more complicated, but the underlying ideas are the same:
 1. Start the controller on a host using :command:`ipcontroller`. The controller must be
    instructed to listen on an interface visible to the engine machines, via the ``ip``
    command-line argument or ``HubFactory.ip`` in :file:`ipcontroller_config.py`::
-   
+
         $ ipcontroller --ip=192.168.1.16
-   
+
    .. sourcecode:: python
-   
+
         # in ipcontroller_config.py
         HubFactory.ip = '192.168.1.16'
 
@@ -556,8 +556,8 @@ The ``file`` flag works like this::
     $ ipengine --file=/path/to/my/ipcontroller-engine.json
 
 .. note::
-    
-    If the controller's and engine's hosts all have a shared file system  
+
+    If the controller's and engine's hosts all have a shared file system
     (:file:`IPYTHONDIR/profile_<name>/security` is the same on all of them), then things
     will just work!
 
@@ -573,7 +573,7 @@ use SSH tunnels to connect engines to the controller.
     This does not work in all cases.  Manual tunnels may be an option, but are
     highly inconvenient. Support for manual tunnels will be improved.
 
-You can instruct all engines to use ssh, by specifying the ssh server in 
+You can instruct all engines to use ssh, by specifying the ssh server in
 :file:`ipcontroller-engine.json`:
 
 .. I know this is really JSON, but the example is a subset of Python:
@@ -614,7 +614,7 @@ the engines.
 1. start the controller, listening on an ip-address visible to the engine machines::
 
     [controller.host] $ ipcontroller --ip=192.168.1.16
-    
+
     [IPControllerApp] Using existing profile dir: u'/Users/me/.ipython/profile_default'
     [IPControllerApp] Hub listening on tcp://192.168.1.16:63320 for registration.
     [IPControllerApp] Hub using DB backend: 'ipyparallel.controller.dictdb.DictDB'
@@ -707,7 +707,7 @@ Ports and addresses
 
 In many cases, you will want to configure the Controller's network identity.  By default,
 the Controller listens only on loopback, which is the most secure but often impractical.
-To instruct the controller to listen on a specific interface, you can set the 
+To instruct the controller to listen on a specific interface, you can set the
 :attr:`HubFactory.ip` trait.  To listen on all interfaces, simply specify:
 
 .. sourcecode:: python
@@ -731,7 +731,7 @@ through the login node, an example :file:`ipcontroller_config.py` might contain:
     # engines on the same node will use loopback, while engines
     # from other nodes will use an external IP
     c.HubFactory.ip = '*'
-    
+
     # you typically only need to specify the location when there are extra
     # interfaces that may not be visible to peer nodes (e.g. VM interfaces)
     c.HubFactory.location = '10.0.1.5'
@@ -740,10 +740,10 @@ through the login node, an example :file:`ipcontroller_config.py` might contain:
     hostname = socket.gethostname()
     # alternate choices for hostname include `socket.getfqdn()`
     # or `socket.gethostname() + '.local'`
-    
+
     ex_ip = socket.gethostbyname_ex(hostname)[-1][-1]
     c.HubFactory.location = ex_ip
-    
+
     # now instruct clients to use the login node for SSH tunnels:
     c.HubFactory.ssh_server = 'login.mycluster.net'
 
@@ -779,7 +779,7 @@ data types.
 
 .. seealso::
 
-    MongoDB `BSON doc <http://www.mongodb.org/display/DOCS/BSON>`_
+    MongoDB `BSON doc <http://bsonspec.org/>`_
 
 To use one of these backends, you must set the :attr:`HubFactory.db_class` trait:
 
@@ -788,13 +788,13 @@ To use one of these backends, you must set the :attr:`HubFactory.db_class` trait
     # for a simple dict-based in-memory implementation, use dictdb
     # This is the default and the fastest, since it doesn't involve the filesystem
     c.HubFactory.db_class = 'ipyparallel.controller.dictdb.DictDB'
-    
+
     # To use MongoDB:
     c.HubFactory.db_class = 'ipyparallel.controller.mongodb.MongoDB'
-    
+
     # and SQLite:
     c.HubFactory.db_class = 'ipyparallel.controller.sqlitedb.SQLiteDB'
-    
+
     # You can use NoDB to disable the database altogether, in case you don't need
     # to reuse tasks or results, and want to keep memory consumption under control.
     c.HubFactory.db_class = 'ipyparallel.controller.dictdb.NoDB'
@@ -808,20 +808,20 @@ which is a UUID, and thus different every time.
 
     # To keep persistent task history in MongoDB:
     c.MongoDB.database = 'tasks'
-    
+
     # and in SQLite:
     c.SQLiteDB.table = 'tasks'
 
 
 Since MongoDB servers can be running remotely or configured to listen on a particular port,
-you can specify any arguments you may need to the PyMongo `Connection 
+you can specify any arguments you may need to the PyMongo `Connection
 <http://api.mongodb.org/python/1.9/api/pymongo/connection.html#pymongo.connection.Connection>`_:
 
 .. sourcecode:: python
 
     # positional args to pymongo.Connection
     c.MongoDB.connection_args = []
-    
+
     # keyword args to pymongo.Connection
     c.MongoDB.connection_kwargs = {}
 
@@ -869,7 +869,7 @@ Engine:
 .. sourcecode:: python
 
     c.IPEngineApp.startup_script = u'/path/to/my/startup.py'
-    
+
     c.IPEngineApp.startup_command = 'import numpy, scipy, mpi4py'
 
 These commands/files will be run again, after each
@@ -883,8 +883,8 @@ in some scratch directory.  This can be set with:
 
 
 
-.. [MongoDB] MongoDB database http://www.mongodb.org
+.. [MongoDB] MongoDB database https://www.mongodb.org/
 
-.. [PBS] Portable Batch System http://www.openpbs.org
+.. [PBS] Portable Batch System http://www.mcs.anl.gov/research/projects/openpbs/
 
-.. [SSH] SSH-Agent http://en.wikipedia.org/wiki/ssh-agent
+.. [SSH] SSH-Agent https://en.wikipedia.org/wiki/Ssh-agent

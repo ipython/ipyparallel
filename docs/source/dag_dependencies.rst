@@ -5,7 +5,7 @@ DAG Dependencies
 ================
 
 Often, parallel workflow is described in terms of a `Directed Acyclic Graph
-<http://en.wikipedia.org/wiki/Directed_acyclic_graph>`_ or DAG.  A popular library
+<https://en.wikipedia.org/wiki/Directed_acyclic_graph>`_ or DAG.  A popular library
 for working with Graphs is NetworkX_.  Here, we will walk through a demo mapping
 a nx DAG to task dependencies.
 
@@ -174,4 +174,4 @@ will be at the top, and quick, small tasks will be at the bottom.
     were four engines). Edges denote dependencies.
 
 
-.. _NetworkX: http://networkx.lanl.gov/
+.. _NetworkX: https://networkx.github.io/
