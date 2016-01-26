@@ -13,7 +13,7 @@ We have various example scripts and notebooks for using ipyparallel in our
 Some of these are covered in more detail in the :ref:`examples
 <parallel_examples>` section.
 
-.. __: http://nbviewer.ipython.org/github/ipython/ipython/blob/master/examples/Parallel%20Computing/Index.ipynb
+.. __: http://nbviewer.jupyter.org/github/ipython/ipyparallel/blob/master/examples/Index.ipynb
 
 Introduction
 ============
@@ -92,15 +92,11 @@ that must be installed.  For more information, see our
 IPython engine
 ---------------
 
-The IPython engine is a Python instance that takes Python commands over a
-network connection. Eventually, the IPython engine will be a full IPython
-interpreter, but for now, it is a regular Python interpreter. The engine
-can also handle incoming and outgoing Python objects sent over a network
-connection.  When multiple engines are started, parallel and distributed
-computing becomes possible. An important feature of an IPython engine is
-that it blocks while user code is being executed. Read on for how the
-IPython controller solves this problem to expose a clean asynchronous API
-to the user.
+The IPython engine is an extension of the IPython kernel for Jupyter.
+The engine listens for requests over the network, runs code, and returns results.
+IPython parallel extends the :ref:`Jupyter messaging protocol <messaging>`
+to support native Python object serialization.
+When multiple engines are started, parallel and distributed computing becomes possible.
 
 IPython controller
 ------------------
@@ -112,7 +108,7 @@ and clients can connect. The controller is composed of a :class:`Hub` and a coll
 same machine as the Hub, but can be run anywhere from local threads or on remote machines.
 
 The controller also provides a single point of contact for users who wish to
-utilize the engines connected to the controller. There are different ways of
+access the engines connected to the controller. There are different ways of
 working with a controller. In IPython, all of these models are implemented via
 the :meth:`.View.apply` method, after
 constructing :class:`.View` objects to represent subsets of engines. The two
@@ -166,9 +162,9 @@ Security
 IPython uses ZeroMQ for networking, which has provided many advantages, but
 one of the setbacks is its utter lack of security [ZeroMQ]_. By default, no IPython
 connections are encrypted, but open ports only listen on localhost. The only
-source of security for IPython is via ssh-tunnel. IPython supports both shell
-(`openssh`) and `paramiko` based tunnels for connections.  There is a key necessary
-to submit requests, but due to the lack of encryption, it does not provide
+source of encryption for IPython is via ssh-tunnel. IPython supports both shell
+(`openssh`) and `paramiko` based tunnels for connections.  There is a key used to
+authenticate requests, but due to the lack of encryption, it does not provide
 significant security if loopback traffic is compromised.
 
 In our architecture, the controller is the only process that listens on
@@ -260,12 +256,12 @@ everything is working correctly, try the following commands:
 
 .. sourcecode:: ipython
 
-	In [1]: from ipyparallel import Client
+	In [1]: import ipyparallel as ipp
 
-	In [2]: c = Client()
+	In [2]: c = ipp.Client()
 
 	In [4]: c.ids
-	Out[4]: set([0, 1, 2, 3])
+	Out[4]: [0, 1, 2, 3]
 
 	In [5]: c[:].apply_sync(lambda : "Hello, World")
 	Out[5]: [ 'Hello, World', 'Hello, World', 'Hello, World', 'Hello, World' ]

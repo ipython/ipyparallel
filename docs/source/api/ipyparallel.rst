@@ -20,6 +20,8 @@ Classes
 .. autoclass:: LoadBalancedView
     :members:
 
+.. autoclass:: ViewExecutor
+    :members:
 
 Decorators
 ----------
