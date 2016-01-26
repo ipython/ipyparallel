@@ -31,7 +31,7 @@ Some IPython-parallel extensions to the IPython kernel have been moved to the ip
 - ipykernel Python serialization is now in :mod:`ipyparallel.serialize`
 - apply_request message handling is implememented in a Kernel subclass,
   rather than the base ipykernel Kernel.
-
+- Add :command:`ipcluster nbextension enable|disable` to toggle the clusters tab in Jupyter notebook
 
 4.1
 ---

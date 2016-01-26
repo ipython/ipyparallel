@@ -18,6 +18,9 @@ or::
 
     conda install ipyparallel
 
+And if you want the IPython clusters tab extension in your Jupyter Notebook dashboard::
+
+    ipcluster nbextension enable
 
 Contents
 --------

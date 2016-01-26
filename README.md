@@ -8,11 +8,15 @@ Install ipyparallel:
 
     pip install ipyparallel
 
-To install the `IPython Clusters` tab in Jupyter Notebook, add this to your `jupyter_notebook_config.py`:
+To enable the `IPython Clusters` tab in Jupyter Notebook:
 
-```python
-c.NotebookApp.server_extensions.append('ipyparallel.nbextension')
-```
+    ipcluster nbextension enable
+
+
+To disable it again:
+
+    ipcluster nbextension disable
+
 
 See the [documentation on configuring the notebook server](https://jupyter-notebook.readthedocs.org/en/latest/public_server.html)
 to find your config or setup your initial `jupyter_notebook_config.py`.

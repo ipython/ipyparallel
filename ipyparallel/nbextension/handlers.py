@@ -13,15 +13,17 @@ from notebook.utils import url_path_join as ujoin
 from notebook.base.handlers import IPythonHandler
 from notebook.nbextensions import install_nbextension
 
-
 from .clustermanager import ClusterManager
 
+
 static = os.path.join(os.path.dirname(__file__), 'static')
+
 
 class ClusterHandler(IPythonHandler):
     @property
     def cluster_manager(self):
         return self.settings['cluster_manager']
+
 
 class MainClusterHandler(ClusterHandler):
 
@@ -70,6 +72,7 @@ default_handlers = [
 
 def load_jupyter_server_extension(nbapp):
     """Load the nbserver extension"""
+    nbapp.log.info("Loading IPython parallel extension")
     windows = sys.platform.startswith('win')
     install_nbextension(static, destination='ipyparallel', symlink=not windows, user=True)
     webapp = nbapp.web_app
