@@ -33,7 +33,7 @@ exec(compile(open('../../ipyparallel/_version.py').read(), '../../ipyparallel/_v
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-#needs_sphinx = '1.0'
+needs_sphinx = '1.3'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -100,7 +100,7 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = ['winhpc.rst']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
@@ -318,6 +318,5 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'python': ('http://docs.python.org/3/', None),
-                       'ipython': ('http://ipython.org/ipython-doc/dev/', None),}
-
+intersphinx_mapping = {'python': ('https://docs.python.org/3/', None),
+                       'ipython': ('https://ipython.org/ipython-doc/dev/', None),}

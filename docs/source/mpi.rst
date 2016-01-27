@@ -106,7 +106,7 @@ distributed array. Save the following text in a file called :file:`psum.py`:
 Now, start an IPython cluster::
 
     $ ipcluster start --profile=mpi -n 4
-    
+
 .. note::
 
     It is assumed here that the mpi profile has been set up, as described :ref:`here
@@ -146,9 +146,7 @@ manner using our :func:`psum` function:
 Any Python code that makes calls to MPI can be used in this manner, including
 compiled C, C++ and Fortran libraries that have been exposed to Python.
 
-.. [MPI] Message Passing Interface.  http://www-unix.mcs.anl.gov/mpi/
+.. [MPI] Message Passing Interface.  http://www-unix.mcs.anl.gov/research/projects/mpi/
 .. [mpi4py] MPI for Python. mpi4py: http://mpi4py.scipy.org/
 .. [OpenMPI] Open MPI. http://www.open-mpi.org/
-.. [PyTrilinos] PyTrilinos. http://trilinos.sandia.gov/packages/pytrilinos/
-
-
+.. [PyTrilinos] PyTrilinos. https://trilinos.org/

@@ -78,7 +78,7 @@ IPython on Windows:
 
 * Python 2.6 or 2.7 (http://www.python.org)
 * pywin32 (http://sourceforge.net/projects/pywin32/)
-* PyReadline (https://launchpad.net/pyreadline)
+* PyReadline (https://ipython.org/pyreadline.html)
 * pyzmq (http://github.com/zeromq/pyzmq/downloads)
 * IPython (http://ipython.org)
 

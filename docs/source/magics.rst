@@ -45,7 +45,7 @@ specified by the :attr:`targets` attribute of the :class:`DirectView` instance:
     Out [1:68]: array([ 1.10815921,  0.05110369])
     Out [2:68]: array([ 0.74625527, -0.37475081])
     Out [3:68]: array([ 0.72931905,  0.07159743])
-    
+
     In [29]: %px print 'hi'
     Parallel execution on engine(s): all
     [stdout:0] hi
@@ -60,13 +60,13 @@ Since engines are IPython as well, you can even run magics remotely:
 
     In [28]: %px %pylab inline
     Parallel execution on engine(s): all
-    [stdout:0] 
+    [stdout:0]
     Populating the interactive namespace from numpy and matplotlib
-    [stdout:1] 
+    [stdout:1]
     Populating the interactive namespace from numpy and matplotlib
-    [stdout:2] 
+    [stdout:2]
     Populating the interactive namespace from numpy and matplotlib
-    [stdout:3] 
+    [stdout:3]
     Populating the interactive namespace from numpy and matplotlib
 
 And once in pylab mode with the inline backend,
@@ -105,20 +105,20 @@ independent of the defaults for the View.
 
     In [6]: %%px --targets ::2
        ...: print "I am even"
-       ...: 
+       ...:
     Parallel execution on engine(s): [0, 2]
     [stdout:0] I am even
     [stdout:2] I am even
 
     In [7]: %%px --targets 1
        ...: print "I am number 1"
-       ...: 
+       ...:
     Parallel execution on engine(s): 1
     I am number 1
 
     In [8]: %%px
        ...: print "still 'all' by default"
-       ...: 
+       ...:
     Parallel execution on engine(s): all
     [stdout:0] still 'all' by default
     [stdout:1] still 'all' by default
@@ -129,7 +129,7 @@ independent of the defaults for the View.
        ...: import time
        ...: time.sleep(1)
        ...: time.time()
-       ...: 
+       ...:
     Async parallel execution on engine(s): all
     Out[9]: <AsyncResult: execute>
 
@@ -187,10 +187,10 @@ just as is done when %px is blocking:
 .. sourcecode:: ipython
 
     In [39]: dv.block = False
-    
+
     In [40]: %px print 'hi'
     Async parallel execution on engine(s): all
-    
+
     In [41]: %pxresult
     [stdout:0] hi
     [stdout:1] hi
@@ -358,24 +358,24 @@ depending on where they live and where you are:
 
     In [51]: %px %connect_info
     Parallel execution on engine(s): all
-    [stdout:0] 
+    [stdout:0]
     {
-      "stdin_port": 60387, 
-      "ip": "127.0.0.1", 
-      "hb_port": 50835, 
-      "key": "eee2dd69-7dd3-4340-bf3e-7e2e22a62542", 
-      "shell_port": 55328, 
+      "stdin_port": 60387,
+      "ip": "127.0.0.1",
+      "hb_port": 50835,
+      "key": "eee2dd69-7dd3-4340-bf3e-7e2e22a62542",
+      "shell_port": 55328,
       "iopub_port": 58264
     }
 
     Paste the above JSON into a file, and connect with:
         $> ipython <app> --existing <file>
     or, if you are local, you can connect with just:
-        $> ipython <app> --existing kernel-60125.json 
+        $> ipython <app> --existing kernel-60125.json
     or even just:
-        $> ipython <app> --existing 
+        $> ipython <app> --existing
     if this is the most recent IPython session you have started.
-    [stdout:1] 
+    [stdout:1]
     {
       "stdin_port": 61869,
     ...
@@ -384,5 +384,3 @@ depending on where they live and where you are:
 
     ``%qtconsole`` will call :func:`bind_kernel` on an engine if it hasn't been done already,
     so you can often skip that first step.
-
-

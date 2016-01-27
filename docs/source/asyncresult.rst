@@ -18,7 +18,7 @@ Beyond multiprocessing's AsyncResult
 
     The :class:`~.AsyncResult` object provides a superset of the interface in
     :py:class:`multiprocessing.pool.AsyncResult`.  See the
-    `official Python documentation <http://docs.python.org/library/multiprocessing#multiprocessing.pool.AsyncResult>`_
+    `official Python documentation <https://docs.python.org/library/multiprocessing#multiprocessing.pool.AsyncResult>`_
     for more on the basics of this interface.
 
 Our AsyncResult objects add a number of convenient features for working with

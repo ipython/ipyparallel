@@ -11,7 +11,7 @@ interface for executing code remotely.  This doc is to help users of IPython.ker
 transition their codes to the new code.
 
 .. _0MQ: http://zeromq.org
-.. _Tornado: https://github.com/facebook/tornado
+.. _Tornado: https://github.com/tornadoweb/tornado
 
 
 Processes
@@ -49,18 +49,18 @@ To create a new client, and set up the default direct and load-balanced objects:
 
     # old
     In [1]: from IPython.kernel import client as kclient
-    
+
     In [2]: mec = kclient.MultiEngineClient()
 
     In [3]: tc = kclient.TaskClient()
-    
-    # new 
+
+    # new
     In [1]: from ipyparallel import Client
-    
+
     In [2]: rc = Client()
 
     In [3]: dview = rc[:]
-    
+
     In [4]: lbview = rc.load_balanced_view()
 
 Apply
@@ -75,7 +75,7 @@ is no longer a string of Python code, but rather a Python function.
 * remote References
 
 The flags for execution have also changed.  Previously, there was only `block` denoting whether
-to wait for results.  This remains, but due to the addition of fully non-copying sends of 
+to wait for results.  This remains, but due to the addition of fully non-copying sends of
 arrays and buffers, there is also a `track` flag, which instructs PyZMQ to produce a :class:`MessageTracker` that will let you know when it is safe again to edit arrays in-place.
 
 The result of a non-blocking call to `apply` is now an :doc:`AsyncResult object <asyncresult>`.
@@ -94,14 +94,14 @@ methods all behave in much the same way as they did on a MultiEngineClient.
 
     # old
     In [2]: mec.execute('a=5', targets=[0,1,2])
-    
+
     # new
     In [2]: view.execute('a=5', targets=[0,1,2])
     # or
     In [2]: rc[0,1,2].execute('a=5')
-    
 
-This extends to any method that communicates with the engines. 
+
+This extends to any method that communicates with the engines.
 
 Requests of the Hub (queue status, etc.) are no-longer asynchronous, and do not take a `block`
 argument.
@@ -115,12 +115,12 @@ argument.
 
     dview.apply(lambda : globals().keys())
 
-* :meth:`push_function` and :meth:`push_serialized` are removed, as :meth:`push` handles 
+* :meth:`push_function` and :meth:`push_serialized` are removed, as :meth:`push` handles
   functions without issue.
- 
+
 .. seealso::
 
-    :ref:`Our Direct Interface doc <parallel_multiengine>` for a simple tutorial with the 
+    :ref:`Our Direct Interface doc <parallel_multiengine>` for a simple tutorial with the
     DirectView.
 
 
@@ -142,7 +142,7 @@ The load-balanced interface is provided by the :class:`LoadBalancedView` class, 
 .. sourcecode:: ipython
 
     In [10]: lbview = rc.load_balanced_view()
-    
+
     # load-balancing can also be restricted to a subset of engines:
     In [10]: lbview = rc.load_balanced_view([1,2,3])
 
@@ -163,11 +163,11 @@ engine, and another resides on the client.  You might construct a task that look
                 push=dict(B=B),
                 pull='C'
                 )
-    
+
     In [11]: tid = tc.run(st)
-    
+
     In [12]: tr = tc.get_task_result(tid)
-    
+
     In [13]: C = tc['C']
 
 In the new code, this is simpler:
@@ -175,11 +175,11 @@ In the new code, this is simpler:
 .. sourcecode:: ipython
 
     In [10]: import numpy
-    
+
     In [11]: from ipyparallel import Reference
-    
+
     In [12]: ar = lbview.apply(numpy.dot, Reference('A'), B)
-    
+
     In [13]: C = ar.get()
 
 Note the use of ``Reference`` This is a convenient representation of an object that exists
@@ -197,7 +197,7 @@ the engine beyond the duration of the task.
 
 .. seealso::
 
-    :ref:`Our Task Interface doc <parallel_task>` for a simple tutorial with the 
+    :ref:`Our Task Interface doc <parallel_task>` for a simple tutorial with the
     LoadBalancedView.
 
 
@@ -241,5 +241,3 @@ result.
 .. seealso::
 
     :doc:`AsyncResult details <asyncresult>`
-
-
