@@ -5,18 +5,17 @@
 
 from __future__ import division
 
-import time
 from datetime import datetime
+import os
+import time
 
-import zmq
-
-import ipyparallel as parallel
+from IPython import get_ipython
 from ipyparallel.client import client as clientmod
 from ipyparallel import error
-from ipyparallel import AsyncResult, AsyncHubResult
-from ipyparallel import LoadBalancedView, DirectView
+from ipyparallel import AsyncHubResult
+from ipyparallel import DirectView
 
-from .clienttest import ClusterTestCase, segfault, wait, add_engines
+from .clienttest import ClusterTestCase, wait, add_engines
 
 def setup():
     add_engines(4, total=True)
@@ -206,13 +205,19 @@ class TestClient(ClusterTestCase):
 
     def test_shutdown(self):
         ids = self.client.ids
-        id0 = ids[0]
+        id0 = ids[-1]
+        pid = self.client[id0].apply_sync(os.getpid)
+        
         self.client.shutdown(id0, block=True)
-        while id0 in self.client.ids:
+        
+        for i in range(150):
+            # give the engine 15 seconds to die
+            if id0 not in self.client.ids:
+                break
             time.sleep(0.1)
-        
+        self.assertNotIn(id0, self.client.ids)
         self.assertRaises(IndexError, lambda : self.client[id0])
-        
+    
     def test_result_status(self):
         pass
         # to be written
