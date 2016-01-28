@@ -1137,7 +1137,9 @@ class Client(HasTraits):
         If no job is specified, will wait for all outstanding jobs to complete.
         """
         if jobs is None:
-            ar = AsyncResult(self, list(self._futures.values()), owner=False)
+            # get futures for results
+            futures = [ f for f in self._futures.values() if hasattr(f, 'output') ]
+            ar = AsyncResult(self, futures, owner=False)
         else:
             ar = self._asyncresult_from_jobs(jobs, owner=False)
         return ar.wait_interactive(interval=interval, timeout=timeout)
