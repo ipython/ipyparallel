@@ -13,7 +13,6 @@ from subprocess import check_call, CalledProcessError, PIPE
 import zmq
 
 from traitlets.config.application import catch_config_error
-from traitlets.config.loader import Config
 from IPython.core.application import BaseIPythonApplication
 from IPython.core.profiledir import ProfileDir
 from ipython_genutils.importstring import import_item
@@ -197,7 +196,7 @@ class IPClusterStop(BaseParallelApplication):
         elif os.name=='nt':
             try:
                 # kill the whole tree
-                p = check_call(['taskkill', '-pid', str(pid), '-t', '-f'], stdout=PIPE,stderr=PIPE)
+                check_call(['taskkill', '-pid', str(pid), '-t', '-f'], stdout=PIPE,stderr=PIPE)
             except (CalledProcessError, OSError):
                 self.log.error("Stopping cluster failed, assuming already dead.",
                     exc_info=True)
@@ -566,7 +565,35 @@ class IPClusterStart(IPClusterEngines):
         finally:
             self.remove_pid_file()
 
-base='ipyparallel.apps.ipclusterapp.IPCluster'
+
+class IPClusterNBExtension(BaseIPythonApplication):
+    """Enable/disable ipcluster tab extension in Jupyter notebook"""
+    
+    name = 'ipcluster-nbextension'
+    
+    description = """Enable/disable IPython clusters tab in Jupyter notebook"""
+    
+    examples = """
+    ipcluster nbextension enable
+    ipcluster nbextension disable
+    """
+    
+    def start(self):
+        from ipyparallel.nbextension.install import install_server_extension
+        if len(self.extra_args) != 1:
+            self.exit("Must specify 'enable' or 'disable'")
+        action = self.extra_args[0].lower()
+        if action == 'enable':
+            print("Enabling IPython clusters tab")
+            install_server_extension(enable=True)
+        elif action == 'disable':
+            print("Disabling IPython clusters tab")
+            install_server_extension(enable=False)
+        else:
+            self.exit("Must specify 'enable' or 'disable', not '%s'" % action)
+
+
+base = 'ipyparallel.apps.ipclusterapp.IPCluster'
 
 class IPClusterApp(BaseIPythonApplication):
     name = u'ipcluster'
@@ -577,6 +604,7 @@ class IPClusterApp(BaseIPythonApplication):
                 'start' : (base+'Start', start_help),
                 'stop' : (base+'Stop', stop_help),
                 'engines' : (base+'Engines', engines_help),
+                'nbextension': (base+'NBExtension', IPClusterNBExtension.description)
     }
 
     # no aliases or flags for parent App
