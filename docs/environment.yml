@@ -1,0 +1,4 @@
+name: rtd
+dependencies:
+- python=3
+- ipykernel
