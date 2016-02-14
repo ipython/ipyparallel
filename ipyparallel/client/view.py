@@ -11,7 +11,7 @@ from contextlib import contextmanager
 
 import zmq
 
-from .. import serialize
+from .. import serialize, canning
 from traitlets import (
     HasTraits, Any, Bool, List, Dict, Set, Instance, CFloat, Integer
 )
@@ -491,18 +491,18 @@ class DirectView(View):
         
         adds support for closures, etc.
         
-        This calls ipyparallel.serialize.use_dill() here and on each engine.
+        This calls ipyparallel.canning.use_dill() here and on each engine.
         """
-        serialize.use_dill()
-        return self.apply(serialize.use_dill)
+        canning.use_dill()
+        return self.apply(canning.use_dill)
 
     def use_cloudpickle(self):
         """Expand serialization support with cloudpickle.
         
-        This calls ipyparallel.serialize.use_cloudpickle() here and on each engine.
+        This calls ipyparallel.canning.use_cloudpickle() here and on each engine.
         """
-        serialize.use_cloudpickle()
-        return self.apply(serialize.use_cloudpickle)
+        canning.use_cloudpickle()
+        return self.apply(canning.use_cloudpickle)
 
 
     @sync_results
