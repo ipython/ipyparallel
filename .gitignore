@@ -6,9 +6,8 @@ docs/man/*.gz
 docs/source/api/generated
 docs/source/config/options
 docs/source/interactive/magics-generated.txt
-docs/gh-pages
-IPython/html/notebook/static/mathjax
-IPython/html/static/style/*.map
+examples/daVinci Word Count/*.txt
+examples/testdill.py
 *.py[co]
 __pycache__
 *.egg-info

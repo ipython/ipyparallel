@@ -15,25 +15,30 @@ from __future__ import print_function
 import sys
 from ipyparallel import Client, error
 import time
-import BeautifulSoup # this isn't necessary, but it helps throw the dependency error earlier
+import bs4 # this isn't necessary, but it helps throw the dependency error earlier
+
+try:
+    raw_input
+except NameError:
+    raw_input = input
 
 def fetchAndParse(url, data=None):
-    import urllib2
-    import urlparse
-    import BeautifulSoup
-    links = []
+    import requests
     try:
-        page = urllib2.urlopen(url, data=data)
-    except Exception:
-        return links
-    else:
-        if page.headers.type == 'text/html':
-            doc = BeautifulSoup.BeautifulSoup(page.read())
-            for node in doc.findAll('a'):
-                href = node.get('href', None)
-                if href:
-                    links.append(urlparse.urljoin(url, href))
-        return links
+        from urllib.parse import urljoin
+    except ImportError:
+        from urlparse import urljoin
+    import bs4
+    links = []
+    r = requests.get(url, data=data)
+    r.raise_for_status()
+    if 'text/html' in r.headers.get('content-type'):
+        doc = bs4.BeautifulSoup(r.text, "html.parser")
+        for node in doc.findAll('a'):
+            href = node.get('href', None)
+            if href:
+                links.append(urljoin(url, href))
+    return links
 
 class DistributedSpider(object):
 
@@ -59,7 +64,7 @@ class DistributedSpider(object):
                 self.linksWorking[url] = self.view.apply(fetchAndParse, url)
 
     def onVisitDone(self, links, url):
-        print(url, ':')
+        print(url + ':')
         self.linksDone[url] = None
         del self.linksWorking[url]
         for link in links:
@@ -73,7 +78,7 @@ class DistributedSpider(object):
             time.sleep(self.pollingDelay)
 
     def synchronize(self):
-        for url, ar in self.linksWorking.items():
+        for url, ar in list(self.linksWorking.items()):
             # Calling get_task_result with block=False will return None if the
             # task is not done yet.  This provides a simple way of polling.
             try:
@@ -83,7 +88,7 @@ class DistributedSpider(object):
             except Exception as e:
                 self.linksDone[url] = None
                 del self.linksWorking[url]
-                print(url, ':', e.traceback)
+                print('%s: %s' % (url, e))
             else:
                 self.onVisitDone(links, url)
 

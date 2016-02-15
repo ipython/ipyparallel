@@ -35,6 +35,3 @@ def phistogram(view, a, bins=10, rng=None, normed=False):
         total_hist = total_hist/numpy.sum(total_hist,dtype=float)
     return total_hist, lower_edges
 
-
-    
-    
