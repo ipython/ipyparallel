@@ -6,6 +6,7 @@ This only works for a local cluster, because the filenames are local paths.
 from __future__ import division
 
 
+import io
 import os
 import time
 import urllib
@@ -16,12 +17,9 @@ from wordfreq import print_wordfreq, wordfreq
 
 from ipyparallel import Client, Reference
 
-try: #python2
-    from urllib import urlretrieve
-except ImportError: #python3
-    from urllib.request import urlretrieve
+import requests
 
-davinci_url = "http://www.gutenberg.org/cache/epub/5000/pg5000.txt"
+davinci_url = "http://www.gutenberg.org/files/5000/5000-8.txt"
 
 def pwordfreq(view, fnames):
     """Parallel word frequency counter.
@@ -47,15 +45,18 @@ if __name__ == '__main__':
     rc = Client()
     
     view = rc[:]
+    view.apply_sync(os.chdir, os.getcwd())
 
     if not os.path.exists('davinci.txt'):
         # download from project gutenberg
         print("Downloading Da Vinci's notebooks from Project Gutenberg")
-        urlretrieve(davinci_url, 'davinci.txt')
+        r = requests.get(davinci_url)
+        with io.open('davinci.txt', 'w', encoding='utf8') as f:
+            f.write(r.text)
         
     # Run the serial version
     print("Serial word frequency count:")
-    text = open('davinci.txt').read()
+    text = io.open('davinci.txt', encoding='latin1').read()
     tic = time.time()
     freqs = wordfreq(text)
     toc = time.time()
@@ -72,7 +73,7 @@ if __name__ == '__main__':
     block = nlines//n
     for i in range(n):
         chunk = lines[i*block:i*(block+1)]
-        with open('davinci%i.txt'%i, 'w') as f:
+        with io.open('davinci%i.txt'%i, 'w', encoding='utf8') as f:
             f.write('\n'.join(chunk))
     
     try: #python2

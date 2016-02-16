@@ -92,8 +92,7 @@ def main(nodes, edges):
     print("submitting %i tasks with %i dependencies"%(nodes,edges))
     results = submit_jobs(view, G, jobs)
     print("waiting for results")
-    view.wait()
-    print("done")
+    client.wait_interactive()
     for node in G:
         md = results[node].metadata
         start = date2num(md.started)
@@ -101,7 +100,8 @@ def main(nodes, edges):
         pos[node] = (start, runtime)
         colors[node] = md.engine_id
     validate_tree(G, results)
-    nx.draw(G, pos, node_list=colors.keys(), node_color=colors.values(), cmap=gist_rainbow,
+    nx.draw(G, pos, node_list=list(colors.keys()), node_color=list(colors.values()),
+            cmap=gist_rainbow,
             with_labels=False)
     x,y = zip(*pos.values())
     xmin,ymin = map(min, (x,y))
@@ -110,7 +110,7 @@ def main(nodes, edges):
     yscale = ymax-ymin
     plt.xlim(xmin-xscale*.1,xmax+xscale*.1)
     plt.ylim(ymin-yscale*.1,ymax+yscale*.1)
-    return G,results
+    return G, results
 
 if __name__ == '__main__':
     from matplotlib import pyplot as plt

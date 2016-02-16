@@ -23,7 +23,7 @@ def print_wordfreq(freqs, n=10):
     
     words, counts = freqs.keys(), freqs.values()
     items = zip(counts, words)
-    items.sort(reverse=True)
+    items = sorted(items, reverse=True)
     for (count, word) in items[:n]:
         print(word, count)
 
@@ -65,5 +65,5 @@ def tagcloud(worddict, n=10, minsize=25, maxsize=50, minalpha=0.5, maxalpha=1.0)
         ax.text(xpos, ypos, word.lower(), alpha=alpha, fontsize=size)
     ax.autoscale_view()
     return ax
-    
-    
+
+

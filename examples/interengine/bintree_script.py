@@ -78,7 +78,9 @@ data = list(range(1000))
 view.scatter('data', data)
 
 # perform cumulative sum via allreduce
-view.execute("data_sum = com.allreduce(add, data, flat=False)")
+print("reducing")
+ar = view.execute("data_sum = com.allreduce(add, data, flat=False)", block=False)
+ar.wait_interactive()
 print("allreduce sum of data on all engines:", view['data_sum'])
 
 # perform cumulative sum *without* final broadcast

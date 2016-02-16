@@ -21,10 +21,10 @@ from __future__ import print_function
 
 import time
 
-import ipyparallel as parallel
+import ipyparallel as ipp
 
 # create client & view
-rc = parallel.Client()
+rc = ipp.Client()
 dv = rc[:]
 v = rc.load_balanced_view()
 
@@ -33,7 +33,7 @@ dv.scatter('id', rc.ids, flatten=True)
 print("Engine IDs: ", dv['id'])
 
 # create a Reference to `id`. This will be a different value on each engine
-ref = parallel.Reference('id')
+ref = ipp.Reference('id')
 print("sleeping for `id` seconds on each engine")
 tic = time.time()
 ar = dv.apply(time.sleep, ref)

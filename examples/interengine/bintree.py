@@ -8,15 +8,14 @@ Provides parallel [all]reduce functionality
 """
 from __future__ import print_function
 
-import cPickle as pickle
+from functools import reduce
 import re
 import socket
-import uuid
 
 import zmq
 
 from ipyparallel.util import disambiguate_url
-
+from ipyparallel.serialize import serialize_object, deserialize_object
 
 #----------------------------------------------------------------------------
 # bintree-related construction/printing helpers
@@ -52,8 +51,8 @@ def bintree(ids, parent=None):
     else:
         ids = ids[1:]
         n = len(ids)
-        left = bintree(ids[:n/2], parent=root)
-        right = bintree(ids[n/2:], parent=root)
+        left = bintree(ids[:n//2], parent=root)
+        right = bintree(ids[n//2:], parent=root)
         parents.update(left)
         parents.update(right)
     return parents
@@ -127,7 +126,7 @@ class BinaryTreeCommunicator(object):
             self.pub = self._ctx.socket(zmq.PUB)
         else:
             self.sub = self._ctx.socket(zmq.SUB)
-            self.sub.setsockopt(zmq.SUBSCRIBE, b'')
+            self.sub.SUBSCRIBE = b''
         self.downstream = self._ctx.socket(zmq.PULL)
         self.upstream = self._ctx.socket(zmq.PUSH)
         
@@ -166,7 +165,7 @@ class BinaryTreeCommunicator(object):
         """
         
         # count the number of children we have
-        self.nchildren = btree.values().count(self.id)
+        self.nchildren = list(btree.values()).count(self.id)
         
         if self.root:
             return # root only binds
@@ -186,11 +185,11 @@ class BinaryTreeCommunicator(object):
         
         Can be extended for more efficient/noncopying serialization of numpy arrays, etc.
         """
-        return [pickle.dumps(obj)]
+        return serialize_object(obj)
     
-    def unserialize(self, msg):
+    def deserialize(self, msg):
         """inverse of serialize"""
-        return pickle.loads(msg[0])
+        return deserialize_object(msg)[0]
     
     def publish(self, value):
         assert self.root
@@ -198,18 +197,18 @@ class BinaryTreeCommunicator(object):
     
     def consume(self):
         assert not self.root
-        return self.unserialize(self.sub.recv_multipart())
+        return self.deserialize(self.sub.recv_multipart())
 
     def send_upstream(self, value, flags=0):
         assert not self.root
-        self.upstream.send_multipart(self.serialize(value), flags=flags|zmq.NOBLOCK)
+        self.upstream.send_multipart(self.serialize(value), flags=flags)
     
     def recv_downstream(self, flags=0, timeout=2000.):
         # wait for a message, so we won't block if there was a bug
         self.downstream_poller.poll(timeout)
         
-        msg = self.downstream.recv_multipart(zmq.NOBLOCK|flags)
-        return self.unserialize(msg)
+        msg = self.downstream.recv_multipart(flags)
+        return self.deserialize(msg)
     
     def reduce(self, f, value, flat=True, all=False):
         """parallel reduce on binary tree

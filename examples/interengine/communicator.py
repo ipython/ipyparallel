@@ -15,9 +15,8 @@ class EngineCommunicator(object):
         
         # configure sockets
         self.identity = identity or bytes(uuid.uuid4())
-        print(self.identity)
-        self.socket.setsockopt(zmq.IDENTITY, self.identity)
-        self.sub.setsockopt(zmq.SUBSCRIBE, b'')
+        self.socket.IDENTITY = self.identity
+        self.sub.SUBSCRIBE = b''
         
         # bind to ports
         port = self.socket.bind_to_random_port(interface)

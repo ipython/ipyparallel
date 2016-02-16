@@ -18,9 +18,8 @@ import sys
 import json
 import zmq
 
-from IPython.kernel.zmq.session import Session
-from IPython.utils.py3compat import str_to_bytes
-from jupyter_client.connect import find_connection_file
+from jupyter_client.session import Session
+from ipykernel.connect import find_connection_file
 
 def main(connection_file):
     """watch iopub channel, and print messages"""
@@ -34,19 +33,19 @@ def main(connection_file):
     iopub_port = cfg['iopub']
     iopub_url = "%s:%s"%(reg_url, iopub_port)
 
-    session = Session(key=str_to_bytes(cfg['key']))
+    session = Session(key=cfg['key'].encode('ascii'))
     sub = ctx.socket(zmq.SUB)
 
     # This will subscribe to all messages:
-    sub.setsockopt(zmq.SUBSCRIBE, b'')
+    sub.SUBSCRIBE = b''
     # replace with b'' with b'engine.1.stdout' to subscribe only to engine 1's stdout
     # 0MQ subscriptions are simple 'foo*' matches, so 'engine.1.' subscribes
     # to everything from engine 1, but there is no way to subscribe to
     # just stdout from everyone.
     # multiple calls to subscribe will add subscriptions, e.g. to subscribe to
     # engine 1's stderr and engine 2's stdout:
-    # sub.setsockopt(zmq.SUBSCRIBE, b'engine.1.stderr')
-    # sub.setsockopt(zmq.SUBSCRIBE, b'engine.2.stdout')
+    # sub.SUBSCRIBE = b'engine.1.stderr'
+    # sub.SUBSCRIBE = b'engine.2.stdout'
     sub.connect(iopub_url)
     while True:
         try:
@@ -54,13 +53,20 @@ def main(connection_file):
         except KeyboardInterrupt:
             return
         # ident always length 1 here
-        topic = idents[0]
+        topic = idents[0].decode('utf8', 'replace')
         if msg['msg_type'] == 'stream':
             # stdout/stderr
             # stream names are in msg['content']['name'], if you want to handle
             # them differently
             print("%s: %s" % (topic, msg['content']['text']))
-        elif msg['msg_type'] == 'pyerr':
+        elif msg['msg_type'] == 'error':
+            # Python traceback
+            c = msg['content']
+            print(topic + ':')
+            for line in c['traceback']:
+                # indent lines
+                print('    ' + line)
+        elif msg['msg_type'] == 'error':
             # Python traceback
             c = msg['content']
             print(topic + ':')
@@ -70,8 +76,10 @@ def main(connection_file):
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        cf = sys.argv[1]
+        pattern = sys.argv[1]
     else:
         # This gets the security file for the default profile:
-        cf = find_connection_file('ipcontroller-client.json')
+        pattern = 'ipcontroller-client.json'
+    cf = find_connection_file(pattern)
+    print("Using connection file %s" % cf)
     main(cf)
