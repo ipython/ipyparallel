@@ -6,6 +6,19 @@ Changes in IPython Parallel
 5.0
 ---
 
+5.0.1
+*****
+
+`5.0.1 on GitHub <https://github.com/ipython/ipyparallel/milestones/5.0.1>`__
+
+- Fix imports in :meth:`use_cloudpickle`, :meth:`use_dill`.
+- Various typos and documentation updates to catch up with 5.0.
+
+
+5.0.0
+*****
+
+
 `5.0 on GitHub <https://github.com/ipython/ipyparallel/milestones/5.0>`__
 
 The highlight of ipyparallel 5.0 is that the Client has been reorganized a bit to use Futures.
