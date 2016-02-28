@@ -338,7 +338,9 @@ class HubFactory(RegistrationFactory):
         self.hub = Hub(loop=loop, session=self.session, monitor=sub, heartmonitor=self.heartmonitor,
                 query=q, notifier=n, resubmit=r, db=self.db,
                 engine_info=self.engine_info, client_info=self.client_info,
-                log=self.log, registration_timeout=self.registration_timeout)
+                log=self.log, registration_timeout=self.registration_timeout,
+                parent=self,
+                )
 
 
 class Hub(SessionFactory):
@@ -380,6 +382,7 @@ class Hub(SessionFactory):
     incoming_registrations=Dict()
     registration_timeout=Integer()
     _idcounter=Integer(0)
+    distributed_scheduler = Any()
 
     # objects from constructor:
     query=Instance(ZMQStream, allow_none=True)
@@ -437,6 +440,7 @@ class Hub(SessionFactory):
                                 'registration_request' : self.register_engine,
                                 'unregistration_request' : self.unregister_engine,
                                 'connection_request': self.connection_request,
+                                'become_distributed_request': self.become_distributed,
         }
 
         # ignore resubmit replies
@@ -510,7 +514,6 @@ class Hub(SessionFactory):
         else:
             self.log.error("Unrecognized monitor topic: %r", switch)
 
-
     @util.log_errors
     def dispatch_query(self, msg):
         """Route registration requests and queries from clients."""
@@ -536,20 +539,22 @@ class Hub(SessionFactory):
         self.log.info("client::client %r requested %r", client_id, msg_type)
         handler = self.query_handlers.get(msg_type, None)
         try:
-            assert handler is not None, "Bad Message Type: %r" % msg_type
+            if handler is None:
+                raise KeyError("Bad Message Type: %r" % msg_type)
         except:
             content = error.wrap_exception()
             self.log.error("Bad Message Type: %r", msg_type, exc_info=True)
             self.session.send(self.query, "hub_error", ident=client_id,
                     content=content, parent=msg)
             return
-
-        else:
+        
+        try:
             handler(idents, msg)
-
-    def dispatch_db(self, msg):
-        """"""
-        raise NotImplementedError
+        except Exception:
+            content = error.wrap_exception()
+            self.log.error("Error handling request: %r", msg_type, exc_info=True)
+            self.session.send(self.query, "hub_error", ident=client_id,
+                    content=content, parent=msg)
 
     #---------------------------------------------------------------------------
     # handler methods (1 per event)
@@ -1437,4 +1442,24 @@ class Hub(SessionFactory):
         self.session.send(self.query, "db_reply", content=content,
                                             parent=msg, ident=client_id,
                                             buffers=buffers)
+
+    def become_distributed(self, client_id, msg):
+        """Start a dask.distributed Scheduler."""
+        if self.distributed_scheduler is None:
+            self.log.info("Becoming dask.distributed scheduler")
+            from distributed import Scheduler
+            kwargs = msg['content'].get('scheduler_kwargs', {})
+            port = msg['content'].get('port', 0)
+            kwargs['loop'] = self.loop
+            self.distributed_scheduler = scheduler = Scheduler(**kwargs)
+            f = scheduler.start(port)
+        content = {
+            'status': 'ok',
+            'ip': self.distributed_scheduler.ip,
+            'port': self.distributed_scheduler.port,
+        }
+        self.log.info("dask.distributed scheduler running at {ip}:{port}".format(**content))
+        self.session.send(self.query, "become_distributed_reply", content=content,
+            parent=msg, ident=client_id,
+        )
 

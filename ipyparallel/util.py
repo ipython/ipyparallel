@@ -17,22 +17,15 @@ except ImportError:
     SIGKILL=None
 from types import FunctionType
 
-try:
-    import cPickle
-    pickle = cPickle
-except:
-    cPickle = None
-    import pickle
-
 import zmq
 from zmq.log import handlers
 
 from traitlets.log import get_logger
 from decorator import decorator
 
-from traitlets.config.application import Application
 from jupyter_client.localinterfaces import localhost, is_public_ip, public_ips
 from ipython_genutils.py3compat import string_types, iteritems, itervalues
+from IPython import get_ipython
 
 
 #-----------------------------------------------------------------------------
@@ -408,3 +401,28 @@ def int_keys(dikt):
                 raise KeyError("already have key %r" % nk)
             dikt[nk] = dikt.pop(k)
     return dikt
+
+
+def become_distributed_worker(ip, port, **kwargs):
+    """Task function for becoming a distributed Worker
+
+    Parameters
+    ----------
+
+    ip: str
+        The IP address of the Scheduler.
+    port: int
+        The port of the Scheduler.
+    **kwargs:
+        Any additional keyword arguments will be passed to the Worker constructor.
+    """
+    shell = get_ipython()
+    kernel = shell.kernel
+    if getattr(kernel, 'distributed_worker', None) is not None:
+        kernel.log.info("Distributed worker already running")
+        return
+    from distributed import Worker
+    w = Worker(ip, port, **kwargs)
+    shell.user_ns['distributed_worker'] = kernel.distributed_worker = w
+    w.start(0)
+

@@ -633,7 +633,8 @@ class Client(HasTraits):
             self._update_engines(dict(content['engines']))
         else:
             self._connected = False
-            raise Exception("Failed to connect!")
+            tb = '\n'.join(content.get('traceback', []))
+            raise Exception("Failed to connect! %s" % tb)
         
         self._start_io_thread()
     
@@ -1260,6 +1261,56 @@ class Client(HasTraits):
 
         if error:
             raise error
+
+    def become_distributed(self, targets='all', port=0, scheduler_args=None, worker_args=None):
+        """Turn the IPython cluster into a dask.distributed cluster
+
+        Parameters
+        ----------
+
+        targets: target spec (default: all)
+            Which engines to turn into distributed workers.
+        port: int (default: random)
+            Which port
+        scheduler_args: dict
+            Additional keyword arguments (e.g. ip) are passed to the distributed.Scheduler constructor.
+        worker_args: dict
+            Additional keyword arguments (e.g. threads) are passed to the distributed.Worker constructor.
+
+        Returns
+        -------
+
+        executor: distributed.Executor
+            A distributed.Executor connected to the distributed cluster.
+        """
+        import distributed
+
+        dview = self.direct_view(targets)
+
+        if scheduler_args is None:
+            scheduler_args = {}
+        else:
+            scheduler_args = dict(scheduler_args) # copy
+        if worker_args is None:
+            worker_args = {}
+        else:
+            worker_args = dict(worker_args) # copy
+
+        # Start a Scheduler on the Hub:
+        reply = self._send_recv(self._query_socket, 'become_distributed_request')
+        if reply['content']['status'] != 'ok':
+            raise self._unwrap_exception(reply['content'])
+        distributed_info = reply['content']
+
+        # Start a Worker on the selected engines:
+        dview = self.direct_view(targets)
+        worker_args['ip'] = distributed_info['ip']
+        worker_args['port'] = distributed_info['port']
+
+        # Finally, return an Executor connected to the Scheduler
+        dview.apply_sync(util.become_distributed_worker, **worker_args)
+        executor = distributed.Executor('{ip}:{port}'.format(**distributed_info))
+        return executor
 
     #--------------------------------------------------------------------------
     # Execution related methods
