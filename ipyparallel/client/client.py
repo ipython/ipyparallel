@@ -1262,7 +1262,7 @@ class Client(HasTraits):
         if error:
             raise error
 
-    def become_distributed(self, targets='all', port=0, scheduler_args=None, worker_args=None):
+    def become_distributed(self, targets='all', port=0, scheduler_args=None, **worker_args):
         """Turn the IPython cluster into a dask.distributed cluster
 
         Parameters
@@ -1273,9 +1273,9 @@ class Client(HasTraits):
         port: int (default: random)
             Which port
         scheduler_args: dict
-            Additional keyword arguments (e.g. ip) are passed to the distributed.Scheduler constructor.
-        worker_args: dict
-            Additional keyword arguments (e.g. threads) are passed to the distributed.Worker constructor.
+            Keyword arguments (e.g. ip) to pass to the distributed.Scheduler constructor.
+        **worker_args:
+            Any additional keyword arguments (e.g. ncores) are passed to the distributed.Worker constructor.
 
         Returns
         -------
@@ -1291,10 +1291,6 @@ class Client(HasTraits):
             scheduler_args = {}
         else:
             scheduler_args = dict(scheduler_args) # copy
-        if worker_args is None:
-            worker_args = {}
-        else:
-            worker_args = dict(worker_args) # copy
 
         # Start a Scheduler on the Hub:
         reply = self._send_recv(self._query_socket, 'become_distributed_request')
