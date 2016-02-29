@@ -1313,6 +1313,25 @@ class Client(HasTraits):
         executor = distributed.Executor('{ip}:{port}'.format(**distributed_info))
         return executor
 
+    def stop_distributed(self, targets='all'):
+        """Stop the distributed Scheduler and Workers started by become_distributed.
+
+        Parameters
+        ----------
+
+        targets: target spec (default: all)
+            Which engines to turn into distributed workers.
+        """
+        dview = self.direct_view(targets)
+
+        # Start a Scheduler on the Hub:
+        reply = self._send_recv(self._query_socket, 'stop_distributed_request')
+        if reply['content']['status'] != 'ok':
+            raise self._unwrap_exception(reply['content'])
+
+        # Finally, stop all the Workers on the engines
+        dview.apply_sync(util.stop_distributed_worker)
+
     #--------------------------------------------------------------------------
     # Execution related methods
     #--------------------------------------------------------------------------

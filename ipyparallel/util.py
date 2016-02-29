@@ -17,6 +17,7 @@ except ImportError:
     SIGKILL=None
 from types import FunctionType
 
+from tornado.ioloop import IOLoop
 import zmq
 from zmq.log import handlers
 
@@ -429,3 +430,16 @@ def become_distributed_worker(ip, port, nanny=False, **kwargs):
     shell.user_ns['distributed_worker'] = kernel.distributed_worker = w
     w.start(0)
 
+
+def stop_distributed_worker():
+    """Task function for stopping the the distributed worker on an engine."""
+    shell = get_ipython()
+    kernel = shell.kernel
+    if getattr(kernel, 'distributed_worker', None) is None:
+        kernel.log.info("Distributed worker already stopped.")
+        return
+    w = kernel.distributed_worker
+    kernel.distributed_worker = None
+    if shell.user_ns.get('distributed_worker', None) is w:
+        shell.user_ns.pop('distributed_worker', None)
+    IOLoop.current().add_callback(lambda : w.terminate(None))

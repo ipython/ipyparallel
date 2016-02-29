@@ -441,6 +441,7 @@ class Hub(SessionFactory):
                                 'unregistration_request' : self.unregister_engine,
                                 'connection_request': self.connection_request,
                                 'become_distributed_request': self.become_distributed,
+                                'stop_distributed_request': self.stop_distributed,
         }
 
         # ignore resubmit replies
@@ -1460,6 +1461,20 @@ class Hub(SessionFactory):
         }
         self.log.info("dask.distributed scheduler running at {ip}:{port}".format(**content))
         self.session.send(self.query, "become_distributed_reply", content=content,
+            parent=msg, ident=client_id,
+        )
+
+
+    def stop_distributed(self, client_id, msg):
+        """Start a dask.distributed Scheduler."""
+        if self.distributed_scheduler is not None:
+            self.log.info("Stopping dask.distributed scheduler")
+            self.distributed_scheduler.close()
+            self.distributed_scheduler = None
+        else:
+            self.log.info("No dask.distributed scheduler running.")
+        content = {'status': 'ok'}
+        self.session.send(self.query, "stop_distributed_reply", content=content,
             parent=msg, ident=client_id,
         )
 
