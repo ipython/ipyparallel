@@ -1446,9 +1446,9 @@ class Hub(SessionFactory):
     def become_distributed(self, client_id, msg):
         """Start a dask.distributed Scheduler."""
         if self.distributed_scheduler is None:
-            self.log.info("Becoming dask.distributed scheduler")
+            kwargs = msg['content'].get('scheduler_args', {})
+            self.log.info("Becoming dask.distributed scheduler: %s", kwargs)
             from distributed import Scheduler
-            kwargs = msg['content'].get('scheduler_kwargs', {})
             port = msg['content'].get('port', 0)
             kwargs['loop'] = self.loop
             self.distributed_scheduler = scheduler = Scheduler(**kwargs)

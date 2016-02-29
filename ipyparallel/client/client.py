@@ -1296,7 +1296,9 @@ class Client(HasTraits):
             scheduler_args = dict(scheduler_args) # copy
 
         # Start a Scheduler on the Hub:
-        reply = self._send_recv(self._query_socket, 'become_distributed_request')
+        reply = self._send_recv(self._query_socket, 'become_distributed_request',
+            {'scheduler_args': scheduler_args},
+        )
         if reply['content']['status'] != 'ok':
             raise self._unwrap_exception(reply['content'])
         distributed_info = reply['content']
