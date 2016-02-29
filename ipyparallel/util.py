@@ -403,7 +403,7 @@ def int_keys(dikt):
     return dikt
 
 
-def become_distributed_worker(ip, port, **kwargs):
+def become_distributed_worker(ip, port, nanny=False, **kwargs):
     """Task function for becoming a distributed Worker
 
     Parameters
@@ -419,10 +419,13 @@ def become_distributed_worker(ip, port, **kwargs):
     shell = get_ipython()
     kernel = shell.kernel
     if getattr(kernel, 'distributed_worker', None) is not None:
-        kernel.log.info("Distributed worker already running")
+        kernel.log.info("Distributed worker is already running.")
         return
-    from distributed import Worker
-    w = Worker(ip, port, **kwargs)
+    from distributed import Worker, Nanny
+    if nanny:
+        w = Nanny(ip, port, **kwargs)
+    else:
+        w = Worker(ip, port, **kwargs)
     shell.user_ns['distributed_worker'] = kernel.distributed_worker = w
     w.start(0)
 

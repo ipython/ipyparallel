@@ -1262,7 +1262,7 @@ class Client(HasTraits):
         if error:
             raise error
 
-    def become_distributed(self, targets='all', port=0, scheduler_args=None, **worker_args):
+    def become_distributed(self, targets='all', port=0, nanny=False, scheduler_args=None, **worker_args):
         """Turn the IPython cluster into a dask.distributed cluster
 
         Parameters
@@ -1272,6 +1272,9 @@ class Client(HasTraits):
             Which engines to turn into distributed workers.
         port: int (default: random)
             Which port
+        nanny: bool (default: False)
+            Whether to start workers as subprocesses instead of in the engine process.
+            Using a nanny allows restarting the worker processes via ``executor.restart``.
         scheduler_args: dict
             Keyword arguments (e.g. ip) to pass to the distributed.Scheduler constructor.
         **worker_args:
@@ -1299,9 +1302,9 @@ class Client(HasTraits):
         distributed_info = reply['content']
 
         # Start a Worker on the selected engines:
-        dview = self.direct_view(targets)
         worker_args['ip'] = distributed_info['ip']
         worker_args['port'] = distributed_info['port']
+        worker_args['nanny'] = nanny
 
         # Finally, return an Executor connected to the Scheduler
         dview.apply_sync(util.become_distributed_worker, **worker_args)
