@@ -17,22 +17,16 @@ except ImportError:
     SIGKILL=None
 from types import FunctionType
 
-try:
-    import cPickle
-    pickle = cPickle
-except:
-    cPickle = None
-    import pickle
-
+from tornado.ioloop import IOLoop
 import zmq
 from zmq.log import handlers
 
 from traitlets.log import get_logger
 from decorator import decorator
 
-from traitlets.config.application import Application
 from jupyter_client.localinterfaces import localhost, is_public_ip, public_ips
 from ipython_genutils.py3compat import string_types, iteritems, itervalues
+from IPython import get_ipython
 
 
 #-----------------------------------------------------------------------------
@@ -408,3 +402,44 @@ def int_keys(dikt):
                 raise KeyError("already have key %r" % nk)
             dikt[nk] = dikt.pop(k)
     return dikt
+
+
+def become_distributed_worker(ip, port, nanny=False, **kwargs):
+    """Task function for becoming a distributed Worker
+
+    Parameters
+    ----------
+
+    ip: str
+        The IP address of the Scheduler.
+    port: int
+        The port of the Scheduler.
+    **kwargs:
+        Any additional keyword arguments will be passed to the Worker constructor.
+    """
+    shell = get_ipython()
+    kernel = shell.kernel
+    if getattr(kernel, 'distributed_worker', None) is not None:
+        kernel.log.info("Distributed worker is already running.")
+        return
+    from distributed import Worker, Nanny
+    if nanny:
+        w = Nanny(ip, port, **kwargs)
+    else:
+        w = Worker(ip, port, **kwargs)
+    shell.user_ns['distributed_worker'] = kernel.distributed_worker = w
+    w.start(0)
+
+
+def stop_distributed_worker():
+    """Task function for stopping the the distributed worker on an engine."""
+    shell = get_ipython()
+    kernel = shell.kernel
+    if getattr(kernel, 'distributed_worker', None) is None:
+        kernel.log.info("Distributed worker already stopped.")
+        return
+    w = kernel.distributed_worker
+    kernel.distributed_worker = None
+    if shell.user_ns.get('distributed_worker', None) is w:
+        shell.user_ns.pop('distributed_worker', None)
+    IOLoop.current().add_callback(lambda : w.terminate(None))

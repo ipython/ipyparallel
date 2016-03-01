@@ -633,7 +633,8 @@ class Client(HasTraits):
             self._update_engines(dict(content['engines']))
         else:
             self._connected = False
-            raise Exception("Failed to connect!")
+            tb = '\n'.join(content.get('traceback', []))
+            raise Exception("Failed to connect! %s" % tb)
         
         self._start_io_thread()
     
@@ -1260,6 +1261,76 @@ class Client(HasTraits):
 
         if error:
             raise error
+
+    def become_distributed(self, targets='all', port=0, nanny=False, scheduler_args=None, **worker_args):
+        """Turn the IPython cluster into a dask.distributed cluster
+
+        Parameters
+        ----------
+
+        targets: target spec (default: all)
+            Which engines to turn into distributed workers.
+        port: int (default: random)
+            Which port
+        nanny: bool (default: False)
+            Whether to start workers as subprocesses instead of in the engine process.
+            Using a nanny allows restarting the worker processes via ``executor.restart``.
+        scheduler_args: dict
+            Keyword arguments (e.g. ip) to pass to the distributed.Scheduler constructor.
+        **worker_args:
+            Any additional keyword arguments (e.g. ncores) are passed to the distributed.Worker constructor.
+
+        Returns
+        -------
+
+        executor: distributed.Executor
+            A distributed.Executor connected to the distributed cluster.
+        """
+        import distributed
+
+        dview = self.direct_view(targets)
+
+        if scheduler_args is None:
+            scheduler_args = {}
+        else:
+            scheduler_args = dict(scheduler_args) # copy
+
+        # Start a Scheduler on the Hub:
+        reply = self._send_recv(self._query_socket, 'become_distributed_request',
+            {'scheduler_args': scheduler_args},
+        )
+        if reply['content']['status'] != 'ok':
+            raise self._unwrap_exception(reply['content'])
+        distributed_info = reply['content']
+
+        # Start a Worker on the selected engines:
+        worker_args['ip'] = distributed_info['ip']
+        worker_args['port'] = distributed_info['port']
+        worker_args['nanny'] = nanny
+
+        # Finally, return an Executor connected to the Scheduler
+        dview.apply_sync(util.become_distributed_worker, **worker_args)
+        executor = distributed.Executor('{ip}:{port}'.format(**distributed_info))
+        return executor
+
+    def stop_distributed(self, targets='all'):
+        """Stop the distributed Scheduler and Workers started by become_distributed.
+
+        Parameters
+        ----------
+
+        targets: target spec (default: all)
+            Which engines to turn into distributed workers.
+        """
+        dview = self.direct_view(targets)
+
+        # Start a Scheduler on the Hub:
+        reply = self._send_recv(self._query_socket, 'stop_distributed_request')
+        if reply['content']['status'] != 'ok':
+            raise self._unwrap_exception(reply['content'])
+
+        # Finally, stop all the Workers on the engines
+        dview.apply_sync(util.stop_distributed_worker)
 
     #--------------------------------------------------------------------------
     # Execution related methods
