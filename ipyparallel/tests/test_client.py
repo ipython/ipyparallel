@@ -11,11 +11,9 @@ import time
 
 from IPython import get_ipython
 from ipyparallel.client import client as clientmod
-from ipyparallel import error
-from ipyparallel import AsyncHubResult
-from ipyparallel import DirectView
+from ipyparallel import error, AsyncHubResult, DirectView, Reference
 
-from .clienttest import ClusterTestCase, wait, add_engines
+from .clienttest import ClusterTestCase, wait, add_engines, skip_without
 
 def setup():
     add_engines(4, total=True)
@@ -527,3 +525,20 @@ class TestClient(ClusterTestCase):
         ar = self.client[-1].apply_async(lambda : 1)
         self.client.wait_interactive()
         self.assertEqual(self.client.outstanding, set())
+    
+    @skip_without('distributed')
+    def test_become_distributed(self):
+        executor = self.client.become_distributed()
+        reprs = self.client[:].apply_sync(repr, Reference('distributed_worker'))
+        for r in reprs:
+            self.assertIn("Worker", r)
+
+        squares = executor.map(lambda x: x * x, range(10))
+        tot = executor.submit(sum, squares)
+        self.assertEqual(tot.result(), 285)
+
+        # cleanup
+        self.client.stop_distributed()
+        ar = self.client[:].apply_async(lambda x: x, Reference('distributed_worker'))
+        self.assertRaisesRemote(NameError, ar.get)
+

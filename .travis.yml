@@ -12,7 +12,7 @@ cache:
 before_install:
     - git clone --quiet --depth 1 https://github.com/minrk/travis-wheels travis-wheels
 install:
-    - pip install -f travis-wheels/wheelhouse . coveralls
+    - pip install -f travis-wheels/wheelhouse . distributed coveralls
 script:
     - iptest --coverage xml ipyparallel.tests -- -vsx
 after_success:
