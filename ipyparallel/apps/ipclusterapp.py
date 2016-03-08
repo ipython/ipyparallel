@@ -320,8 +320,9 @@ class IPClusterEngines(BaseParallelApplication):
         return launcher
 
     def engines_started_ok(self):
-        self.log.info("Engines appear to have started successfully")
-        self.early_shutdown = 0
+        if self.engine_launcher.running:
+            self.log.info("Engines appear to have started successfully")
+            self.early_shutdown = 0
     
     def start_engines(self):
         # Some EngineSetLaunchers ignore `n` and use their own engine count, such as SSH:
