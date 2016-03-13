@@ -3,6 +3,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+from jupyter_core.paths import jupyter_config_dir
 from traitlets.config.manager import BaseJSONConfigManager
 from notebook.services.config import ConfigManager as FrontendConfigManager
 
@@ -13,7 +14,7 @@ def install_server_extension(enable=True):
     Toggle with enable=True/False.
     """
     # server-side
-    server = BaseJSONConfigManager()
+    server = BaseJSONConfigManager(config_dir=jupyter_config_dir())
     server_cfg = server.get('jupyter_notebook_config')
     app_cfg = server_cfg.get('NotebookApp', {})
     server_extensions = app_cfg.get('server_extensions', [])
