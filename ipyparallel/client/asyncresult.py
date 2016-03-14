@@ -218,12 +218,11 @@ class AsyncResult(Future):
                     raise r
             else:
                 results = error.collect_exceptions(results, self._fname)
+            self._success = True
             self.set_result(self._reconstruct_result(results))
         except Exception as e:
-            self.set_exception(e)
             self._success = False
-        else:
-            self._success = True
+            self.set_exception(e)
     
     def _finalize_result(self,f):
         if self.owner:
