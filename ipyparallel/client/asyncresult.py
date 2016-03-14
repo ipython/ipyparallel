@@ -761,12 +761,11 @@ class AsyncHubResult(AsyncResult):
                         self.set_result(r)
                 else:
                     results = error.collect_exceptions(results, self._fname)
+                self._success = True
                 self.set_result(self._reconstruct_result(results))
             except Exception as e:
-                self.set_exception(e)
                 self._success = False
-            else:
-                self._success = True
+                self.set_exception(e)
             finally:
                 if self.owner:
                     [self._client.metadata.pop(mid) for mid in self.msg_ids]
