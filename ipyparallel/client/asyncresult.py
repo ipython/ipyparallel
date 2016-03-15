@@ -115,6 +115,7 @@ class AsyncResult(Future):
         # on completion of my constituents, trigger my own resolution
         self._result_future.add_done_callback(self._resolve_result)
         self._output_future.add_done_callback(self._resolve_output)
+        self.add_done_callback(self._finalize_result)
 
     def __repr__(self):
         if self._ready:
@@ -217,17 +218,17 @@ class AsyncResult(Future):
                     raise r
             else:
                 results = error.collect_exceptions(results, self._fname)
+            self._success = True
             self.set_result(self._reconstruct_result(results))
         except Exception as e:
-            self.set_exception(e)
             self._success = False
-        else:
-            self._success = True
-        finally:
-            if self.owner:
-                [ self._client.results.pop(mid, None) for mid in self.msg_ids ]
-            self._ready = True
-            self._ready_event.set()
+            self.set_exception(e)
+    
+    def _finalize_result(self,f):
+        if self.owner:
+            [ self._client.results.pop(mid, None) for mid in self.msg_ids ]
+        self._ready = True
+        self._ready_event.set()
 
     def successful(self):
         """Return whether the call completed without raising an exception.
@@ -760,12 +761,11 @@ class AsyncHubResult(AsyncResult):
                         self.set_result(r)
                 else:
                     results = error.collect_exceptions(results, self._fname)
+                self._success = True
                 self.set_result(self._reconstruct_result(results))
             except Exception as e:
-                self.set_exception(e)
                 self._success = False
-            else:
-                self._success = True
+                self.set_exception(e)
             finally:
                 if self.owner:
                     [self._client.metadata.pop(mid) for mid in self.msg_ids]
