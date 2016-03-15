@@ -9,8 +9,6 @@ import imp
 import warnings
 from contextlib import contextmanager
 
-import zmq
-
 from .. import serialize
 from traitlets import (
     HasTraits, Any, Bool, List, Dict, Set, Instance, CFloat, Integer
@@ -493,7 +491,6 @@ class DirectView(View):
         
         This calls ipyparallel.serialize.use_dill() here and on each engine.
         """
-        print(serialize)
         serialize.use_dill()
         return self.apply(serialize.use_dill)
 
@@ -552,7 +549,7 @@ class DirectView(View):
                                     ident=ident)
             futures.append(future)
         if track:
-            trackers = [f.tracker for f in futures]
+            trackers = [_.tracker for _ in futures]
         else:
             trackers = []
         if isinstance(targets, int):
