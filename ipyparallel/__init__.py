@@ -50,8 +50,13 @@ def bind_kernel(**kwargs):
             pass
         else:
             return app.bind_kernel(**kwargs)
-    
+
     raise RuntimeError("bind_kernel be called from an IPEngineApp instance")
-    
+
+
+def register_joblib_backend(name='ipyparallel', make_default=False):
+    """Register the default ipyparallel backend for joblib."""
+    from .joblib import register
+    return register(name=name, make_default=make_default)
 
 

@@ -1,10 +1,9 @@
 
 from nose import SkipTest
 
-from ipyparallel.client import client as clientmod
-from ipyparallel import error, AsyncHubResult, DirectView, Reference
-
-from .clienttest import ClusterTestCase, wait, add_engines, skip_without
+# from ipyparallel import error, AsyncHubResult, DirectView, Reference
+import ipyparallel as ipp
+from .clienttest import ClusterTestCase
 
 try:
     import joblib
@@ -27,7 +26,7 @@ class TestJobLib(ClusterTestCase):
     
     def test_import_joblib_registers(self):
         """import ipyparallel.joblib registers backend"""
-        import ipyparallel.joblib
+        ipp.register_joblib_backend()
         p = Parallel(backend='ipyparallel')
         self.assertIs(p.backend_factory, IPythonParallelBackend)
     

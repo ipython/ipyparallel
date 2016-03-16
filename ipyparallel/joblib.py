@@ -2,7 +2,8 @@
 
 To enable the default view as a backend for joblib::
 
-    import ipyparallel.joblib
+    import ipyparallel as ipp
+    ipp.register_joblib_backend()
 
 Or to enable a particular View you have already set up::
 
@@ -29,6 +30,3 @@ def register(name='ipyparallel', make_default=False):
     See joblib.parallel.register_parallel_backend for details.
     """
     return register_parallel_backend(name, IPythonParallelBackend, make_default=make_default)
-
-# importing ipyparallel.joblib sets up the default `ipyparallel` backend
-register()
