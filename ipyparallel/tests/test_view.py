@@ -801,7 +801,6 @@ class TestView(ClusterTestCase):
     
     def test_return_namedtuple(self):
         def namedtuplify(x, y):
-            from ipyparallel.tests.test_view import point
             return point(x, y)
         
         view = self.client[-1]
@@ -842,4 +841,23 @@ class TestView(ClusterTestCase):
             return 'IPython' in globals()
         
         assert view.apply_sync(find_ipython)
+    
+    @skip_without('cloudpickle')
+    def test_use_cloudpickle(self):
+        view = self.client[:]
+        view['_a'] = 'engine'
+        sys.modules['__main__']._a = 'client'
+        @interactive
+        def get_a():
+            return _a
+        
+        a_list = view.apply_sync(get_a)
+        self.assertEqual(a_list, ['engine'] * len(view))
 
+        view.use_cloudpickle()
+        a_list = view.apply_sync(get_a)
+        self.assertEqual(a_list, ['client'] * len(view))
+
+        view.use_pickle()
+        a_list = view.apply_sync(get_a)
+        self.assertEqual(a_list, ['engine'] * len(view))
