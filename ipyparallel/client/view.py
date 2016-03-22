@@ -3,7 +3,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-from __future__ import print_function
+from __future__ import absolute_import, print_function
 
 import imp
 import warnings
@@ -1099,6 +1099,28 @@ class LoadBalancedView(View):
 
         pf = ParallelFunction(self, f, block=block, chunksize=chunksize, ordered=ordered)
         return pf.map(*sequences)
+
+    def register_joblib_backend(self, name='ipyparallel', make_default=False):
+        """Register this View as a joblib parallel backend
+
+        To make this the default backend, set make_default=True.
+
+        Use with::
+
+            p = Parallel(backend='ipyparallel')
+            ...
+
+        See joblib docs for details
+
+        Requires joblib >= 0.10
+
+        .. versionadded:: 5.1
+        """
+        from joblib.parallel import register_parallel_backend
+        from ._joblib import IPythonParallelBackend
+        register_parallel_backend(name,
+            lambda : IPythonParallelBackend(view=self),
+            make_default=make_default)
 
 from concurrent.futures import Executor
 

@@ -125,6 +125,8 @@ extras_require = setuptools_args['extras_require'] = {
 
 tests_require = setuptools_args['tests_require'] = [
     'nose',
+    'ipython[test]',
+    'mock',
 ]
 
 if 'setuptools' in sys.modules:
