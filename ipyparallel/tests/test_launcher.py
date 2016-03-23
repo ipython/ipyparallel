@@ -124,6 +124,9 @@ class TestMPIControllerLauncher(ControllerLauncherTest, TestCase):
 class TestPBSControllerLauncher(BatchTest, ControllerLauncherTest, TestCase):
     launcher_class = launcher.PBSControllerLauncher
 
+class TestSlurmControllerLauncher(BatchTest, ControllerLauncherTest, TestCase):
+    launcher_class = launcher.SlurmControllerLauncher
+
 class TestSGEControllerLauncher(BatchTest, ControllerLauncherTest, TestCase):
     launcher_class = launcher.SGEControllerLauncher
 
@@ -152,6 +155,9 @@ class TestMPIEngineSetLauncher(EngineSetLauncherTest, TestCase):
 
 class TestPBSEngineSetLauncher(BatchTest, EngineSetLauncherTest, TestCase):
     launcher_class = launcher.PBSEngineSetLauncher
+
+class TestSlurmEngineSetLauncher(BatchTest, EngineSetLauncherTest, TestCase):
+    launcher_class = launcher.SlurmEngineSetLauncher
 
 class TestSGEEngineSetLauncher(BatchTest, EngineSetLauncherTest, TestCase):
     launcher_class = launcher.SGEEngineSetLauncher
