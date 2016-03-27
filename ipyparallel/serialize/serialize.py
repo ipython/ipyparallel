@@ -9,13 +9,19 @@ try:
 except:
     cPickle = None
     import pickle
+_stdlib_pickle = pickle
+
+try:
+    PICKLE_PROTOCOL = pickle.DEFAULT_PROTOCOL
+except AttributeError:
+    PICKLE_PROTOCOL = pickle.HIGHEST_PROTOCOL
 
 from itertools import chain
 
 from ipython_genutils.py3compat import PY3, buffer_to_bytes_py2
 from .canning import (
     can, uncan, can_sequence, uncan_sequence, CannedObject,
-    istype, sequence_types, PICKLE_PROTOCOL,
+    istype, sequence_types,
 )
 from jupyter_client.session import MAX_ITEMS, MAX_BYTES
 

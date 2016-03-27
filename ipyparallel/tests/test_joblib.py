@@ -34,15 +34,7 @@ class TestJobLib(ClusterTestCase):
             p = Parallel(backend='ipyparallel')
             assert p._backend._view.client is self.client
         
-        # FIXME: add View.use_pickle to undo use_cloudpickle
-        def _restore_default_pickle():
-            import pickle
-            from ipyparallel.serialize import canning, serialize
-            canning.pickle = serialize.pickle = pickle
-            canning.can_map[canning.FunctionType] = canning.CannedFunction
-        
-        _restore_default_pickle()
-        self.client[:].apply_sync(_restore_default_pickle)
+        self.client[:].use_pickle()
     
     def test_register_backend(self):
         view = self.client.load_balanced_view()

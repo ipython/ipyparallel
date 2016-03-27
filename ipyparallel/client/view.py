@@ -502,6 +502,14 @@ class DirectView(View):
         serialize.use_cloudpickle()
         return self.apply(serialize.use_cloudpickle)
 
+    def use_pickle(self):
+        """Restore
+        
+        This reverts changes to serialization caused by `use_dill|.cloudpickle`.
+        """
+        serialize.use_pickle()
+        return self.apply(serialize.use_pickle)
+
 
     @sync_results
     @save_ids

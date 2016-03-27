@@ -5,14 +5,8 @@
 # Distributed under the terms of the Modified BSD License.
 
 import copy
-import logging
 import sys
 from types import FunctionType
-
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
 
 from ipython_genutils import py3compat
 from ipython_genutils.importstring import import_item
@@ -20,7 +14,6 @@ from ipython_genutils.py3compat import string_types, iteritems, buffer_to_bytes,
 
 from . import codeutil  # This registers a hook when it's imported
 
-from traitlets.config import Application
 from traitlets.log import get_logger
 
 if py3compat.PY3:
@@ -29,11 +22,6 @@ if py3compat.PY3:
 else:
     from types import ClassType
     class_type = (type, ClassType)
-
-try:
-    PICKLE_PROTOCOL = pickle.DEFAULT_PROTOCOL
-except AttributeError:
-    PICKLE_PROTOCOL = pickle.HIGHEST_PROTOCOL
 
 def _get_cell_type(a=None):
     """the type of a closure cell doesn't seem to be importable,
@@ -73,24 +61,14 @@ def use_dill():
     
     adds support for object methods and closures to serialization.
     """
-    # import dill causes most of the magic
     import dill
     
-    # dill doesn't work with cPickle,
-    # tell the two relevant modules to use plain pickle
-    
-    global pickle
-    pickle = dill
-
-    try:
-        from . import serialize
-    except ImportError:
-        pass
-    else:
-        serialize.pickle = dill
+    from . import serialize
+    serialize.pickle = dill
     
     # disable special function handling, let dill take care of it
     can_map.pop(FunctionType, None)
+
 
 def use_cloudpickle():
     """use cloudpickle to expand serialization support
@@ -99,18 +77,23 @@ def use_cloudpickle():
     """
     import cloudpickle
     
-    global pickle
-    pickle = cloudpickle
-
-    try:
-        from . import serialize
-    except ImportError:
-        pass
-    else:
-        serialize.pickle = cloudpickle
+    from . import serialize
+    serialize.pickle = cloudpickle
     
     # disable special function handling, let cloudpickle take care of it
     can_map.pop(FunctionType, None)
+
+
+def use_pickle():
+    """revert to using stdlib pickle
+    
+    Reverts custom serialization enabled by use_dill|cloudpickle.
+    """
+    from . import serialize
+    serialize.pickle = serialize._stdlib_pickle
+    
+    # restore special function handling
+    can_map[FunctionType] = _original_can_map[FunctionType]
 
 
 #-------------------------------------------------------------------------------
@@ -269,7 +252,8 @@ class CannedArray(CannedObject):
             self.pickled = True
         if self.pickled:
             # just pickle it
-            self.buffers = [pickle.dumps(obj, PICKLE_PROTOCOL)]
+            from . import serialize
+            self.buffers = [serialize.pickle.dumps(obj, serialize.PICKLE_PROTOCOL)]
         else:
             # ensure contiguous
             obj = ascontiguousarray(obj, dtype=None)
@@ -279,8 +263,9 @@ class CannedArray(CannedObject):
         from numpy import frombuffer
         data = self.buffers[0]
         if self.pickled:
+            from . import serialize
             # we just pickled it
-            return pickle.loads(buffer_to_bytes_py2(data))
+            return serialize.pickle.loads(buffer_to_bytes_py2(data))
         else:
             if not py3compat.PY3 and isinstance(data, memoryview):
                 # frombuffer doesn't accept memoryviews on Python 2,
