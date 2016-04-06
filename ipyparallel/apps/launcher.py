@@ -1118,7 +1118,7 @@ class BatchSystemLauncher(BaseLauncher):
             self.batch_template = self.default_template
             # add jobarray or queue lines to user-specified template
             # note that this is *only* when user did not specify a template.
-            self._insert_queue_in_script()
+            self._insert_options_in_script()
             self._insert_job_array_in_script()
         script_as_string = self.formatter.format(self.batch_template, **self.context)
         self.log.debug('Writing batch script: %s', self.batch_file)
@@ -1126,7 +1126,7 @@ class BatchSystemLauncher(BaseLauncher):
             f.write(script_as_string)
         os.chmod(self.batch_file, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
 
-    def _insert_queue_in_script(self):
+    def _insert_options_in_script(self):
         """Inserts a queue if required into the batch script.
         """
         if self.queue and not self.queue_regexp.search(self.batch_template):
@@ -1213,6 +1213,92 @@ class PBSEngineSetLauncher(PBSLauncher, BatchClusterAppMixin):
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """%(' '.join(map(pipes.quote,ipengine_cmd_argv))))
 
+#Slurm is very similar to PBS
+
+class SlurmLauncher(BatchSystemLauncher):
+    """A BatchSystemLauncher subclass for slurm."""
+
+    submit_command = List(['sbatch'], config=True,
+        help="The slurm submit command ['sbatch']")
+    delete_command = List(['scancel'], config=True,
+        help="The slurm delete command ['scancel']")
+    job_id_regexp = CRegExp(r'\d+', config=True,
+        help="Regular expresion for identifying the job ID [r'\d+']")
+
+    account = Unicode(u"", config=True,
+        help="Slurm account to be used")
+    #Note: from the man page:
+    #'Acceptable time formats include "minutes", "minutes:seconds",
+    # "hours:minutes:seconds", "days-hours", "days-hours:minutes"
+    # and "days-hours:minutes:seconds".
+    timelimit = Any(u"", config=True,
+        help="Slurm timelimit to be used")
+
+    def _account_changed(self, name, old, new):
+        self.context[name] = new
+
+    def _timelimit_changed(self, name, old, new):
+        self.context[name] = new
+
+    batch_file = Unicode(u'')
+
+    job_array_regexp = CRegExp('#SBATCH\W+--ntasks[\w\d\-\$]+')
+    job_array_template = Unicode('''#SBATCH --ntasks={n}''')
+
+    queue_regexp = CRegExp('#SBATCH\W+--partition\W+\$?\w+')
+    queue_regexp = CRegExp('#SBATCH\W+(?:--partition|-p)\W+\$?\w+')
+    queue_template = Unicode('#SBATCH --partition={queue}')
+
+    account_regexp = CRegExp('#SBATCH\W+(?:--account|-A)\W+\$?\w+')
+    account_template = Unicode('#SBATCH --account={account}')
+
+    timelimit_regexp = CRegExp('#SBATCH\W+(?:--time|-t)\W+\$?\w+')
+    timelimit_template = Unicode('#SBATCH --time={timelimit}')
+
+    def _insert_options_in_script(self):
+        """insert 'partition' (slurm name for queue), 'account' and 'timeout'
+
+        If necessary
+        """
+        if self.queue and not self.queue_regexp.search(self.batch_template):
+            self.log.debug("adding slurm queue settings to batch script")
+            firstline, rest = self.batch_template.split('\n',1)
+            self.batch_template = u'\n'.join([firstline, self.queue_template, rest])
+
+        if self.account and not self.account_regexp.search(self.batch_template):
+            self.log.debug("adding slurm account settings to batch script")
+            firstline, rest = self.batch_template.split('\n',1)
+            self.batch_template = u'\n'.join([firstline, self.account_template, rest])
+
+        if self.timelimit and not self.timelimit_regexp.search(self.batch_template):
+            self.log.debug("adding slurm time limit settings to batch script")
+            firstline, rest = self.batch_template.split('\n',1)
+            self.batch_template = u'\n'.join([firstline, self.timelimit_template, rest])
+
+
+class SlurmControllerLauncher(SlurmLauncher, BatchClusterAppMixin):
+    """Launch a controller using Slurm."""
+    batch_file_name = Unicode(u'slurm_controller.sbatch', config=True,
+        help="batch file name for the controller job.")
+    default_template= Unicode("""#!/bin/sh
+#SBATCH --job-name=ipy-controller-{cluster_id}
+#SBATCH --ntasks=1
+%s --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+"""%(' '.join(map(pipes.quote, ipcontroller_cmd_argv))))
+
+    def start(self):
+        """Start the controller by profile or profile_dir."""
+        return super(SlurmControllerLauncher, self).start(1)
+
+
+class SlurmEngineSetLauncher(SlurmLauncher, BatchClusterAppMixin):
+    """Launch Engines using Slurm"""
+    batch_file_name = Unicode(u'slurm_engine.sbatch', config=True,
+        help="batch file name for the engine(s) job.")
+    default_template= Unicode(u"""#!/bin/sh
+#SBATCH --job-name=ipy-engine-{cluster_id}
+srun %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+""" % (' '.join(map(pipes.quote, ipengine_cmd_argv))))
 
 #SGE is very similar to PBS
 
@@ -1361,7 +1447,7 @@ class HTCondorLauncher(BatchSystemLauncher):
             self.batch_template = '\n'.join([self.batch_template,
                 self.job_array_template])
 
-    def _insert_queue_in_script(self):
+    def _insert_options_in_script(self):
         """AFAIK, HTCondor doesn't have a concept of multiple queues that can be
         specified in the script.
         """
@@ -1455,6 +1541,11 @@ pbs_launchers = [
     PBSControllerLauncher,
     PBSEngineSetLauncher,
 ]
+slurm_launchers = [
+    SlurmLauncher,
+    SlurmControllerLauncher,
+    SlurmEngineSetLauncher,
+]
 sge_launchers = [
     SGELauncher,
     SGEControllerLauncher,
@@ -1470,5 +1561,6 @@ htcondor_launchers = [
     HTCondorControllerLauncher,
     HTCondorEngineSetLauncher,
 ]
-all_launchers = local_launchers + mpi_launchers + ssh_launchers + winhpc_launchers\
-                + pbs_launchers + sge_launchers + lsf_launchers + htcondor_launchers
+all_launchers = local_launchers + mpi_launchers + ssh_launchers + winhpc_launchers +\
+                pbs_launchers + slurm_launchers + sge_launchers + lsf_launchers +\
+                htcondor_launchers
