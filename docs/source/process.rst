@@ -35,7 +35,7 @@ the ``ip`` argument on the command-line, or the ``HubFactory.ip`` configurable i
 If your machines are on a trusted network, you can safely instruct the controller to listen
 on all interfaces with::
 
-    $> ipcontroller --ip=*
+    $> ipcontroller --ip="*"
 
 
 Or you can set the same behavior as the default by adding the following line to your :file:`ipcontroller_config.py`:
