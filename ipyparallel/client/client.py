@@ -1430,7 +1430,7 @@ class Client(HasTraits):
     # construct a View object
     #--------------------------------------------------------------------------
 
-    def load_balanced_view(self, targets=None):
+    def load_balanced_view(self, targets=None, **flags):
         """construct a DirectView object.
 
         If no arguments are specified, create a LoadBalancedView
@@ -1441,12 +1441,14 @@ class Client(HasTraits):
 
         targets: list,slice,int,etc. [default: use all engines]
             The subset of engines across which to load-balance execution
+        flags: passed to LoadBalancedView
         """
         if targets == 'all':
             targets = None
         if targets is not None:
             targets = self._build_targets(targets)[1]
-        return LoadBalancedView(client=self, socket=self._task_socket, targets=targets)
+        return LoadBalancedView(client=self, socket=self._task_socket, targets=targets,
+                                **flags)
     
     def executor(self, targets=None):
         """Construct a PEP-3148 Executor with a LoadBalancedView
@@ -1465,7 +1467,7 @@ class Client(HasTraits):
         """
         return self.load_balanced_view(targets).executor
 
-    def direct_view(self, targets='all'):
+    def direct_view(self, targets='all', **flags):
         """construct a DirectView object.
 
         If no targets are specified, create a DirectView using all engines.
@@ -1482,6 +1484,7 @@ class Client(HasTraits):
 
         targets: list,slice,int,etc. [default: use all engines]
             The engines to use for the View
+        flags: passed to DirectView
         """
         single = isinstance(targets, int)
         # allow 'all' to be lazily evaluated at each execution
@@ -1489,7 +1492,8 @@ class Client(HasTraits):
             targets = self._build_targets(targets)[1]
         if single:
             targets = targets[0]
-        return DirectView(client=self, socket=self._mux_socket, targets=targets)
+        return DirectView(client=self, socket=self._mux_socket, targets=targets,
+                          **flags)
 
     #--------------------------------------------------------------------------
     # Query methods
