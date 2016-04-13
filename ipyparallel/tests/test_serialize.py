@@ -204,3 +204,20 @@ def test_class_inheritance():
     D2 = d['D']
     nt.assert_equal(D2.a, D.a)
     nt.assert_equal(D2.b, D.b)
+
+@dec.skip_without('numpy')
+def test_pickle_threshold():
+    import numpy
+    from numpy.testing.utils import assert_array_equal
+    A = numpy.ones((5, 5))
+    bufs = serialize_object(A, 1024)
+    nt.assert_equal(len(bufs), 1)
+    B, _ = deserialize_object(bufs)
+    assert_array_equal(A, B)
+
+    A = numpy.ones((512, 512))
+    bufs = serialize_object(A, 1024)
+    nt.assert_equal(len(bufs), 2)
+    B, _ = deserialize_object(bufs)
+    assert_array_equal(A, B)
+

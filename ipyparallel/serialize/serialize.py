@@ -39,7 +39,8 @@ def _extract_buffers(obj, threshold=MAX_BYTES):
     buffers = []
     if isinstance(obj, CannedObject) and obj.buffers:
         for i,buf in enumerate(obj.buffers):
-            if len(buf) > threshold:
+            nbytes = buf.nbytes if isinstance(buf, memoryview) else len(buf)
+            if nbytes > threshold:
                 # buffer larger than threshold, prevent pickling
                 obj.buffers[i] = None
                 buffers.append(buf)
