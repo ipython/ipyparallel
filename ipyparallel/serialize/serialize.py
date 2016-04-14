@@ -33,13 +33,28 @@ if PY3:
 # Serialization Functions
 #-----------------------------------------------------------------------------
 
+def _nbytes(buf):
+    """Return byte-size of a memoryview or buffer"""
+    if isinstance(buf, memoryview):
+        if PY3:
+            # py3 introduces nbytes attribute
+            return buf.nbytes
+        else:
+            # compute nbytes on py2
+            size = buf.itemsize
+            for dim in buf.shape:
+                size *= dim
+            return size
+    else:
+        # not a memoryview, raw bytes/ py2 buffer
+        return len(buf)
 
 def _extract_buffers(obj, threshold=MAX_BYTES):
     """extract buffers larger than a certain threshold"""
     buffers = []
     if isinstance(obj, CannedObject) and obj.buffers:
-        for i,buf in enumerate(obj.buffers):
-            nbytes = buf.nbytes if isinstance(buf, memoryview) else len(buf)
+        for i, buf in enumerate(obj.buffers):
+            nbytes = _nbytes(buf)
             if nbytes > threshold:
                 # buffer larger than threshold, prevent pickling
                 obj.buffers[i] = None
