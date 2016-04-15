@@ -1,3 +1,4 @@
+# coding: utf-8
 """The IPython ZMQ-based parallel computing interface."""
 
 # Copyright (c) IPython Development Team.
@@ -59,4 +60,18 @@ def register_joblib_backend(name='ipyparallel', make_default=False):
     from .joblib import register
     return register(name=name, make_default=make_default)
 
+
+# nbextension installation (requires notebook ≥ 4.2)
+def _jupyter_server_extension_paths():
+    return [{
+        'module': 'ipyparallel.nbextension'
+    }]
+
+def _jupyter_nbextension_paths():
+    return [{
+        'section': 'tree',
+        'src': 'nbextension/static',
+        'dest': 'ipyparallel',
+        'require': 'ipyparallel/main',
+    }]
 
