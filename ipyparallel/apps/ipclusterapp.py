@@ -574,7 +574,14 @@ class IPClusterNBExtension(BaseIPythonApplication):
     
     name = 'ipcluster-nbextension'
     
-    description = """Enable/disable IPython clusters tab in Jupyter notebook"""
+    description = """Enable/disable IPython clusters tab in Jupyter notebook
+    
+    for Jupyter Notebook ≥ 4.2, you can use the new nbextension API:
+    
+    jupyter serverextension enable --py ipyparallel
+    jupyter nbextension install --py ipyparallel
+    jupyter nbextension enable --py ipyparallel
+    """
     
     examples = """
     ipcluster nbextension enable
