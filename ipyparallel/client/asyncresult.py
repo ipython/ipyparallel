@@ -10,6 +10,10 @@ import time
 from concurrent.futures import Future
 from datetime import datetime
 from threading import Event
+try:
+    from queue import Queue
+except ImportError: # py2
+    from Queue import Queue
 
 from decorator import decorator
 from tornado.gen import multi_future
@@ -39,6 +43,7 @@ def check_ready(f, self, *args, **kwargs):
     return f(self, *args, **kwargs)
 
 _metadata_keys = []
+_FOREVER = int(1e8) # a long time because some infinite timeouts are uninterruptible
 
 class AsyncResult(Future):
     """Class for representing results of non-blocking calls.
@@ -119,9 +124,9 @@ class AsyncResult(Future):
 
     def __repr__(self):
         if self._ready:
-            return "<%s: finished>"%(self.__class__.__name__)
+            return "<%s: %s:finished>" % (self.__class__.__name__, self._fname)
         else:
-            return "<%s: %s>"%(self.__class__.__name__,self._fname)
+            return "<%s: %s>" % (self.__class__.__name__, self._fname)
     
     def __dir__(self):
         keys = dir(self.__class__)
@@ -362,7 +367,14 @@ class AsyncResult(Future):
         except (error.TimeoutError, KeyError):
             raise AttributeError("%r object has no attribute %r"%(
                     self.__class__.__name__, key))
-
+    
+    @staticmethod
+    def _wait_for_child(child, evt, timeout=_FOREVER):
+        """Wait for a child to be done"""
+        evt.clear()
+        child.add_done_callback(lambda f: evt.set())
+        evt.wait(timeout)
+    
     # asynchronous iterator:
     def __iter__(self):
         if self._single_result:
@@ -371,10 +383,12 @@ class AsyncResult(Future):
             rlist = self.get(0)
         except error.TimeoutError:
             # wait for each result individually
-            
+            evt = Event()
             for child in self._children:
-                ar = AsyncResult(self._client, child, self._fname)
-                yield ar.get()
+                self._wait_for_child(child, evt=evt)
+                results = child.result()
+                error.collect_exceptions(results, self._fname)
+                yield results
         else:
             # already done
             for r in rlist:
@@ -657,7 +671,23 @@ class AsyncMapResult(AsyncResult):
         it = self._ordered_iter if self.ordered else self._unordered_iter
         for r in it():
             yield r
-
+    
+    def _yield_child_results(self, child):
+        """Yield results from a child
+        
+        for use in iterator methods
+        """
+        rlist = child.result()
+        error.collect_exceptions(rlist, self._fname)
+        try:
+            for r in rlist:
+                yield r
+        except TypeError:
+            # flattened, not a list
+            # this could get broken by flattened data that returns iterables
+            # but most calls to map do not expose the `flatten` argument
+            yield rlist
+    
     # asynchronous ordered iterator:
     def _ordered_iter(self):
         """iterator for results *as they arrive*, preserving submission order."""
@@ -665,17 +695,11 @@ class AsyncMapResult(AsyncResult):
             rlist = self.get(0)
         except error.TimeoutError:
             # wait for each result individually
+            evt = Event()
             for child in self._children:
-                ar = AsyncResult(self._client, child, self._fname)
-                rlist = ar.get()
-                try:
-                    for r in rlist:
-                        yield r
-                except TypeError:
-                    # flattened, not a list
-                    # this could get broken by flattened data that returns iterables
-                    # but most calls to map do not expose the `flatten` argument
-                    yield rlist
+                self._wait_for_child(child, evt=evt)
+                for r in self._yield_child_results(child):
+                    yield r
         else:
             # already done
             for r in rlist:
@@ -687,31 +711,14 @@ class AsyncMapResult(AsyncResult):
         try:
             rlist = self.get(0)
         except error.TimeoutError:
-            pending = set(self.msg_ids)
-            while pending:
-                try:
-                    self._client.wait(pending, 1e-3)
-                except error.TimeoutError:
-                    # ignore timeout error, because that only means
-                    # *some* jobs are outstanding
-                    pass
-                # update ready set with those no longer outstanding:
-                ready = pending.difference(self._client.outstanding)
-                # update pending to exclude those that are finished
-                pending = pending.difference(ready)
-                while ready:
-                    msg_id = ready.pop()
-                    child = self._children[self.msg_ids.index(msg_id)]
-                    ar = AsyncResult(self._client, child, self._fname)
-                    rlist = ar.get()
-                    try:
-                        for r in rlist:
-                            yield r
-                    except TypeError:
-                        # flattened, not a list
-                        # this could get broken by flattened data that returns iterables
-                        # but most calls to map do not expose the `flatten` argument
-                        yield rlist
+            queue = Queue()
+            for child in self._children:
+                child.add_done_callback(queue.put)
+            for i in range(len(self)):
+                # use very-large timeout because no-timeout is not interruptible
+                child = queue.get(timeout=_FOREVER)
+                for r in self._yield_child_results(child):
+                    yield r
         else:
             # already done
             for r in rlist:
