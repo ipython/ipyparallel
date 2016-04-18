@@ -272,7 +272,7 @@ class IPControllerApp(BaseParallelApplication):
         for key in ('key', 'registration', 'pack', 'unpack', 'signature_scheme'):
             assert ccfg[key] == ecfg[key], "mismatch between engine and client info: %r" % key
         
-        xport,addr = ccfg['interface'].split('://')
+        xport, ip = ccfg['interface'].split('://')
         
         c.HubFactory.client_transport = xport
         c.HubFactory.client_ip = ip
