@@ -574,7 +574,14 @@ class IPClusterNBExtension(BaseIPythonApplication):
     
     name = 'ipcluster-nbextension'
     
-    description = """Enable/disable IPython clusters tab in Jupyter notebook"""
+    description = """Enable/disable IPython clusters tab in Jupyter notebook
+    
+    for Jupyter Notebook ≥ 4.2, you can use the new nbextension API:
+    
+    jupyter serverextension enable --py ipyparallel
+    jupyter nbextension install --py ipyparallel
+    jupyter nbextension enable --py ipyparallel
+    """
     
     examples = """
     ipcluster nbextension enable
@@ -582,16 +589,16 @@ class IPClusterNBExtension(BaseIPythonApplication):
     """
     
     def start(self):
-        from ipyparallel.nbextension.install import install_server_extension
+        from ipyparallel.nbextension.install import install_extensions
         if len(self.extra_args) != 1:
             self.exit("Must specify 'enable' or 'disable'")
         action = self.extra_args[0].lower()
         if action == 'enable':
             print("Enabling IPython clusters tab")
-            install_server_extension(enable=True)
+            install_extensions(enable=True)
         elif action == 'disable':
             print("Disabling IPython clusters tab")
-            install_server_extension(enable=False)
+            install_extensions(enable=False)
         else:
             self.exit("Must specify 'enable' or 'disable', not '%s'" % action)
 
