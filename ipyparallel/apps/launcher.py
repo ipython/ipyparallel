@@ -1227,6 +1227,10 @@ class SlurmLauncher(BatchSystemLauncher):
 
     account = Unicode(u"", config=True,
         help="Slurm account to be used")
+
+    qos = Unicode(u"", config=True,
+        help="Slurm QoS to be used")
+
     #Note: from the man page:
     #'Acceptable time formats include "minutes", "minutes:seconds",
     # "hours:minutes:seconds", "days-hours", "days-hours:minutes"
@@ -1234,32 +1238,40 @@ class SlurmLauncher(BatchSystemLauncher):
     timelimit = Any(u"", config=True,
         help="Slurm timelimit to be used")
 
+    options = Unicode(u"", config=True,
+        help="Extra Slurm options")
+
     def _account_changed(self, name, old, new):
+        self.context[name] = new
+
+    def _qos_changed(self, name, old, new):
         self.context[name] = new
 
     def _timelimit_changed(self, name, old, new):
         self.context[name] = new
 
+    def _options_changed(self, name, old, new):
+        self.context[name] = new
+
     batch_file = Unicode(u'')
 
-    job_array_regexp = CRegExp('#SBATCH\W+--ntasks[\w\d\-\$]+')
+    job_array_regexp = CRegExp('#SBATCH\W+(?:--ntasks|-n)[\w\d\-\$]+')
     job_array_template = Unicode('''#SBATCH --ntasks={n}''')
 
-    queue_regexp = CRegExp('#SBATCH\W+--partition\W+\$?\w+')
     queue_regexp = CRegExp('#SBATCH\W+(?:--partition|-p)\W+\$?\w+')
     queue_template = Unicode('#SBATCH --partition={queue}')
 
     account_regexp = CRegExp('#SBATCH\W+(?:--account|-A)\W+\$?\w+')
     account_template = Unicode('#SBATCH --account={account}')
 
+    qos_regexp = CRegExp('#SBATCH\W+--qos\W+\$?\w+')
+    qos_template = Unicode('#SBATCH --qos={qos}')
+
     timelimit_regexp = CRegExp('#SBATCH\W+(?:--time|-t)\W+\$?\w+')
     timelimit_template = Unicode('#SBATCH --time={timelimit}')
 
     def _insert_options_in_script(self):
-        """insert 'partition' (slurm name for queue), 'account' and 'timeout'
-
-        If necessary
-        """
+        """Insert 'partition' (slurm name for queue), 'account', 'time' and other options if necessary"""
         if self.queue and not self.queue_regexp.search(self.batch_template):
             self.log.debug("adding slurm queue settings to batch script")
             firstline, rest = self.batch_template.split('\n',1)
@@ -1269,6 +1281,11 @@ class SlurmLauncher(BatchSystemLauncher):
             self.log.debug("adding slurm account settings to batch script")
             firstline, rest = self.batch_template.split('\n',1)
             self.batch_template = u'\n'.join([firstline, self.account_template, rest])
+
+        if self.qos and not self.qos_regexp.search(self.batch_template):
+            self.log.debug("adding Slurm qos settings to batch script")
+            firstline, rest = self.batch_template.split('\n', 1)
+            self.batch_template = u'\n'.join([firstline, self.qos_template, rest])
 
         if self.timelimit and not self.timelimit_regexp.search(self.batch_template):
             self.log.debug("adding slurm time limit settings to batch script")
