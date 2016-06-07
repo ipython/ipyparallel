@@ -21,6 +21,7 @@ from IPython.utils.path import expand_path
 from IPython.utils.process import check_pid
 from ipython_genutils import py3compat
 from ipython_genutils.py3compat import unicode_type
+from .._version import __version__
 
 from traitlets import Unicode, Bool, Instance, Dict
 
@@ -72,12 +73,14 @@ base_flags.update(base_ip_flags)
 class BaseParallelApplication(BaseIPythonApplication):
     """The base Application for ipyparallel apps
     
-    Principle extensions to BaseIPyythonApplication:
+    Primary extensions to BaseIPythonApplication:
     
     * work_dir
     * remote logging via pyzmq
     * IOLoop instance
     """
+
+    version = __version__
 
     crash_handler_class = ParallelCrashHandler
     
