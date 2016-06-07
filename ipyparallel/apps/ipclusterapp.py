@@ -26,6 +26,7 @@ from .baseapp import (
     PIDFileError,
     base_flags, base_aliases
 )
+from .._version import __version__
 from .daemonize import daemonize
 
 
@@ -587,6 +588,7 @@ class IPClusterNBExtension(BaseIPythonApplication):
     ipcluster nbextension enable
     ipcluster nbextension disable
     """
+    version = __version__
     
     def start(self):
         from ipyparallel.nbextension.install import install_extensions
@@ -609,6 +611,7 @@ class IPClusterApp(BaseIPythonApplication):
     name = u'ipcluster'
     description = _description
     examples = _main_examples
+    version = __version__
 
     subcommands = {
                 'start' : (base+'Start', start_help),
