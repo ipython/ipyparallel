@@ -45,6 +45,7 @@ extensions = [
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
+    'IPython.sphinxext.ipython_console_highlighting',
 ]
 
 # Add any paths that contain templates here, relative to this directory.

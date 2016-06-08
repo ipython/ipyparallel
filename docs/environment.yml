@@ -2,3 +2,5 @@ name: rtd
 dependencies:
 - python=3
 - ipykernel
+- sphinx>=1.3
+
