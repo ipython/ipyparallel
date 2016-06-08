@@ -8,7 +8,7 @@ Changes in IPython Parallel
 ---
 
 dask, joblib
-************
+~~~~~~~~~~~~
 
 IPython Parallel 5.1 adds integration with other parallel computing tools,
 such as `dask.distributed <https://distributed.readthedocs.io>`_ and `joblib <https://pythonhosted.org/joblib>`__.
@@ -27,7 +27,7 @@ To register IPython Parallel as the backend for joblib::
 
 
 nbextensions
-************
+~~~~~~~~~~~~
 
 IPython parallel now supports the notebook-4.2 API for enabling server extensions,
 to provide the IPython clusters tab::
@@ -43,14 +43,12 @@ though you can still use the more convenient single-call::
 which does all three steps above.
 
 Slurm support
-*************
+~~~~~~~~~~~~~
 
 `Slurm <https://computing.llnl.gov/tutorials/linux_clusters>`_ support is added to ipcluster.
 
-More details on point releases:
-
 5.1.0
-*****
+~~~~~
 
 `5.1.0 on GitHub <https://github.com/ipython/ipyparallel/milestones/5.1>`__
 
@@ -58,7 +56,7 @@ More details on point releases:
 ---
 
 5.0.1
-*****
+~~~~~
 
 `5.0.1 on GitHub <https://github.com/ipython/ipyparallel/milestones/5.0.1>`__
 
@@ -67,7 +65,7 @@ More details on point releases:
 
 
 5.0.0
-*****
+~~~~~
 
 `5.0 on GitHub <https://github.com/ipython/ipyparallel/milestones/5.0>`__
 
