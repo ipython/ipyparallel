@@ -3,7 +3,7 @@
 Messaging for Parallel Computing
 ================================
 
-This is an extension of the :ref:`messaging <messaging>` doc. Diagrams of the connections
+This is an extension of the :ref:`messaging <jupyterclient:messaging>` doc. Diagrams of the connections
 can be found in the :ref:`parallel connections <parallel_connections>` doc.
 
 
@@ -84,7 +84,7 @@ Heartbeat
 *********
 
 The hub uses a heartbeat system to monitor engines, and track when they become
-unresponsive. As described in :ref:`messaging <messaging>`, and shown in :ref:`connections
+unresponsive. As described in :ref:`messaging <jupyterclient:messaging>`, and shown in :ref:`connections
 <parallel_connections>`.
 
 Notification (``PUB``)

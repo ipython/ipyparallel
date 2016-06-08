@@ -94,7 +94,7 @@ IPython engine
 
 The IPython engine is an extension of the IPython kernel for Jupyter.
 The engine listens for requests over the network, runs code, and returns results.
-IPython parallel extends the :ref:`Jupyter messaging protocol <messaging>`
+IPython parallel extends the :ref:`Jupyter messaging protocol <jupyterclient:messaging>`
 to support native Python object serialization.
 When multiple engines are started, parallel and distributed computing becomes possible.
 
