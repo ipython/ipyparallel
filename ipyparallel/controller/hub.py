@@ -849,7 +849,8 @@ class Hub(SessionFactory):
             self.unregister_engine(ident='shutdown_reply',
                                    msg=dict(content=dict(id=eid, queue=uuid)))
 
-        self.save_iopub_message(topics, msg)
+        if msg_type not in ('status', 'shutdown_reply', ):
+            self.save_iopub_message(topics, msg)
 
     def save_iopub_message(self, topics, msg):
         """save an iopub message into the db"""
@@ -879,8 +880,6 @@ class Hub(SessionFactory):
             d['execute_input'] = content['code']
         elif msg_type in ('display_data', 'execute_result'):
             d[msg_type] = content
-        elif msg_type in ('status', 'shutdown_reply', ):
-            pass
         elif msg_type == 'data_pub':
             self.log.info("ignored data_pub message for %s" % msg_id)
         else:
