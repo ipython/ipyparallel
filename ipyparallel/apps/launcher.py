@@ -214,14 +214,14 @@ class ControllerMixin(ClusterAppMixin):
     controller_cmd = List(ipcontroller_cmd_argv, config=True,
         help="""Popen command to launch ipcontroller.""")
     # Command line arguments to ipcontroller.
-    controller_args = List(['--log-to-file','--log-level=%i' % logging.INFO], config=True,
+    controller_args = List(['--log-level=%i' % logging.INFO], config=True,
         help="""command-line args to pass to ipcontroller""")
 
 class EngineMixin(ClusterAppMixin):
     engine_cmd = List(ipengine_cmd_argv, config=True,
         help="""command to launch the Engine.""")
     # Command line arguments for ipengine.
-    engine_args = List(['--log-to-file','--log-level=%i' % logging.INFO], config=True,
+    engine_args = List(['--log-level=%i' % logging.INFO], config=True,
         help="command-line arguments to pass to ipengine"
     )
 
@@ -1195,7 +1195,7 @@ class PBSControllerLauncher(PBSLauncher, BatchClusterAppMixin):
     default_template= Unicode("""#!/bin/sh
 #PBS -V
 #PBS -N ipcontroller
-%s --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+%s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """%(' '.join(map(pipes.quote, ipcontroller_cmd_argv))))
 
     def start(self):
@@ -1300,7 +1300,7 @@ class SlurmControllerLauncher(SlurmLauncher, BatchClusterAppMixin):
     default_template= Unicode("""#!/bin/sh
 #SBATCH --job-name=ipy-controller-{cluster_id}
 #SBATCH --ntasks=1
-%s --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+%s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """%(' '.join(map(pipes.quote, ipcontroller_cmd_argv))))
 
     def start(self):
@@ -1335,7 +1335,7 @@ class SGEControllerLauncher(SGELauncher, BatchClusterAppMixin):
     default_template= Unicode(u"""#$ -V
 #$ -S /bin/sh
 #$ -N ipcontroller
-%s --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+%s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """%(' '.join(map(pipes.quote, ipcontroller_cmd_argv))))
 
     def start(self):
@@ -1400,7 +1400,7 @@ class LSFControllerLauncher(LSFLauncher, BatchClusterAppMixin):
     #BSUB -J ipcontroller
     #BSUB -oo ipcontroller.o.%%J
     #BSUB -eo ipcontroller.e.%%J
-    %s --log-to-file --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
+    %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
     """%(' '.join(map(pipes.quote,ipcontroller_cmd_argv))))
 
     def start(self):
@@ -1481,7 +1481,7 @@ universe        = vanilla
 executable      = ipcontroller
 # by default we expect a shared file system
 transfer_executable = False
-arguments       = --log-to-file '--profile-dir={profile_dir}' --cluster-id='{cluster_id}'
+arguments       = '--profile-dir={profile_dir}' --cluster-id='{cluster_id}'
 """)
 
     def start(self):
@@ -1498,7 +1498,7 @@ universe        = vanilla
 executable      = ipengine
 # by default we expect a shared file system
 transfer_executable = False
-arguments       = "--log-to-file '--profile-dir={profile_dir}' '--cluster-id={cluster_id}'"
+arguments       = " '--profile-dir={profile_dir}' '--cluster-id={cluster_id}'"
 """)
 
 
@@ -1513,7 +1513,7 @@ class IPClusterLauncher(LocalProcessLauncher):
     ipcluster_cmd = List(ipcluster_cmd_argv, config=True,
         help="Popen command for ipcluster")
     ipcluster_args = List(
-        ['--clean-logs=True', '--log-to-file', '--log-level=%i'%logging.INFO], config=True,
+        ['--clean-logs=True', '--log-level=%i' % logging.INFO], config=True,
         help="Command line arguments to pass to ipcluster.")
     ipcluster_subcommand = Unicode('start')
     profile = Unicode('default')

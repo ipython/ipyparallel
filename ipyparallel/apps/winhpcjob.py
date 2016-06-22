@@ -252,7 +252,7 @@ class IPControllerTask(WinHPCTask):
 
     task_name = Unicode('IPController', config=True)
     controller_cmd = List(['ipcontroller.exe'], config=True)
-    controller_args = List(['--log-to-file', '--log-level=40'], config=True)
+    controller_args = List(['--log-level=40'], config=True)
     # I don't want these to be configurable
     std_out_file_path = Unicode('', config=False)
     std_err_file_path = Unicode('', config=False)
@@ -280,7 +280,7 @@ class IPEngineTask(WinHPCTask):
 
     task_name = Unicode('IPEngine', config=True)
     engine_cmd = List(['ipengine.exe'], config=True)
-    engine_args = List(['--log-to-file', '--log-level=40'], config=True)
+    engine_args = List(['--log-level=40'], config=True)
     # I don't want these to be configurable
     std_out_file_path = Unicode('', config=False)
     std_err_file_path = Unicode('', config=False)
@@ -303,18 +303,4 @@ class IPEngineTask(WinHPCTask):
     def command_line(self):
         return ' '.join(self.engine_cmd + self.engine_args)
 
-
-# j = WinHPCJob(None)
-# j.job_name = 'IPCluster'
-# j.username = 'GNET\\bgranger'
-# j.requested_nodes = 'GREEN'
-#
-# t = WinHPCTask(None)
-# t.task_name = 'Controller'
-# t.command_line = r"\\blue\domainusers$\bgranger\Python\Python25\Scripts\ipcontroller.exe --log-to-file -p default --log-level 10"
-# t.work_directory = r"\\blue\domainusers$\bgranger\.ipython\cluster_default"
-# t.std_out_file_path = 'controller-out.txt'
-# t.std_err_file_path = 'controller-err.txt'
-# t.environment_variables['PYTHONPATH'] = r"\\blue\domainusers$\bgranger\Python\Python25\Lib\site-packages"
-# j.add_task(t)
 
