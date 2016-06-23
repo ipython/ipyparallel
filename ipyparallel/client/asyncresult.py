@@ -387,7 +387,7 @@ class AsyncResult(Future):
             for child in self._children:
                 self._wait_for_child(child, evt=evt)
                 results = child.result()
-                error.collect_exceptions(results, self._fname)
+                error.collect_exceptions([results], self._fname)
                 yield results
         else:
             # already done
