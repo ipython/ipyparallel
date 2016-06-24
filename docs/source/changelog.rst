@@ -47,6 +47,13 @@ Slurm support
 
 `Slurm <https://computing.llnl.gov/tutorials/linux_clusters>`_ support is added to ipcluster.
 
+5.1.1
+~~~~~
+
+5.1.1 fixes iteration through AsyncResults, which was broken in some instances by 5.0.
+
+`5.1.1 on GitHub <https://github.com/ipython/ipyparallel/milestones/5.1.1>`__
+
 5.1.0
 ~~~~~
 
