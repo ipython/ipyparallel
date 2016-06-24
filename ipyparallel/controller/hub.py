@@ -426,7 +426,7 @@ class Hub(SessionFactory):
                                 b'tracktask': self.save_task_destination,
                                 b'incontrol': _passer,
                                 b'outcontrol': _passer,
-                                b'iopub': self.save_iopub_message,
+                                b'iopub': self.monitor_iopub_message,
         }
 
         self.query_handlers = {'queue_request': self.queue_status,
@@ -833,15 +833,27 @@ class Hub(SessionFactory):
 
     #--------------------- IOPub Traffic ------------------------------
 
-    def save_iopub_message(self, topics, msg):
-        """save an iopub message into the db"""
-        # print (topics)
+    def monitor_iopub_message(self, topics, msg):
+        '''intercept iopub traffic so events can be acted upon'''
         try:
             msg = self.session.deserialize(msg, content=True)
         except Exception:
             self.log.error("iopub::invalid IOPub message", exc_info=True)
             return
 
+        msg_type = msg['header']['msg_type']
+        if msg_type == 'shutdown_reply':
+            session = msg['header']['session']
+            eid = self.by_ident.get(session, None)
+            uuid = self.engines[eid].uuid
+            self.unregister_engine(ident='shutdown_reply',
+                                   msg=dict(content=dict(id=eid, queue=uuid)))
+
+        if msg_type not in ('status', 'shutdown_reply', ):
+            self.save_iopub_message(topics, msg)
+
+    def save_iopub_message(self, topics, msg):
+        """save an iopub message into the db"""
         parent = msg['parent_header']
         if not parent:
             self.log.debug("iopub::IOPub message lacks parent: %r", msg)
@@ -862,15 +874,12 @@ class Hub(SessionFactory):
             name = content['name']
             s = '' if rec is None else rec[name]
             d[name] = s + content['text']
-
         elif msg_type == 'error':
             d['error'] = content
         elif msg_type == 'execute_input':
             d['execute_input'] = content['code']
         elif msg_type in ('display_data', 'execute_result'):
             d[msg_type] = content
-        elif msg_type == 'status':
-            pass
         elif msg_type == 'data_pub':
             self.log.info("ignored data_pub message for %s" % msg_id)
         else:
@@ -985,6 +994,11 @@ class Hub(SessionFactory):
         content=dict(id=eid, uuid=uuid)
         self.dead_engines.add(uuid)
         
+        #stop the heartbeats
+        self.hearts.pop(uuid, None)
+        self.heartmonitor.responses.discard(uuid)
+        self.heartmonitor.hearts.discard(uuid)
+
         self.loop.add_timeout(
             self.loop.time() + self.registration_timeout,
             lambda : self._handle_stranded_msgs(eid, uuid),
