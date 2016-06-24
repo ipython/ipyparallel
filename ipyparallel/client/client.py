@@ -1307,9 +1307,11 @@ class Client(HasTraits):
         worker_args['ip'] = distributed_info['ip']
         worker_args['port'] = distributed_info['port']
         worker_args['nanny'] = nanny
+        # set default ncores=1, since that's how an IPython cluster is typically set up.
+        worker_args.setdefault('ncores', 1)
+        dview.apply_sync(util.become_distributed_worker, **worker_args)
 
         # Finally, return an Executor connected to the Scheduler
-        dview.apply_sync(util.become_distributed_worker, **worker_args)
         executor = distributed.Executor('{ip}:{port}'.format(**distributed_info))
         return executor
 
