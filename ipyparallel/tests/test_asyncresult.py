@@ -91,6 +91,16 @@ class AsyncResultTest(ClusterTestCase):
         for r in ar:
             self.assertEqual(r, 0.125)
     
+    def test_iter_error(self):
+        amr = self.client[:].map_async(lambda x: 1/(x-2), range(5))
+        # iterating through failing AMR should raise RemoteError
+        self.assertRaisesRemote(ZeroDivisionError, list, amr)
+        # so should get
+        self.assertRaisesRemote(ZeroDivisionError, amr.get)
+        amr.wait(10)
+        # test iteration again after everything is local
+        self.assertRaisesRemote(ZeroDivisionError, list, amr)
+    
     def test_getattr(self):
         ar = self.client[:].apply_async(wait, 0.5)
         self.assertEqual(ar.engine_id, [None] * len(ar))

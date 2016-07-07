@@ -386,9 +386,9 @@ class AsyncResult(Future):
             evt = Event()
             for child in self._children:
                 self._wait_for_child(child, evt=evt)
-                results = child.result()
-                error.collect_exceptions([results], self._fname)
-                yield results
+                result = child.result()
+                error.collect_exceptions([result], self._fname)
+                yield result
         else:
             # already done
             for r in rlist:
@@ -678,15 +678,11 @@ class AsyncMapResult(AsyncResult):
         for use in iterator methods
         """
         rlist = child.result()
+        if not isinstance(rlist, list):
+            rlist = [rlist]
         error.collect_exceptions(rlist, self._fname)
-        try:
-            for r in rlist:
-                yield r
-        except TypeError:
-            # flattened, not a list
-            # this could get broken by flattened data that returns iterables
-            # but most calls to map do not expose the `flatten` argument
-            yield rlist
+        for r in rlist:
+            yield r
     
     # asynchronous ordered iterator:
     def _ordered_iter(self):
