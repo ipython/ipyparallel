@@ -1113,7 +1113,10 @@ class Client(HasTraits):
         False : timeout reached, some msg_ids still outstanding
         """
         if jobs is None:
-            theids = self.outstanding
+            if not self.outstanding:
+                return True
+            # make a copy, so that we aren't passing a mutable collection to _futures_for_msgs
+            theids = set(self.outstanding)
         else:
             if isinstance(jobs, string_types + (int, AsyncResult)):
                 jobs = [jobs]
@@ -1126,8 +1129,8 @@ class Client(HasTraits):
                     theids.update(job.msg_ids)
                     continue
                 theids.add(job)
-        if not theids.intersection(self.outstanding):
-            return True
+            if not theids.intersection(self.outstanding):
+                return True
         
         futures = self._futures_for_msgs(theids)
         return self._await_futures(futures, timeout)
