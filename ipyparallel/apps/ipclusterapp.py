@@ -626,7 +626,9 @@ class IPClusterApp(BaseIPythonApplication):
 
     def start(self):
         if self.subapp is None:
-            print("No subcommand specified. Must specify one of: %s"%(self.subcommands.keys()))
+            keys = ', '.join("'{}'".format(key) for
+                             key in self.subcommands.keys())
+            print("No subcommand specified. Must specify one of: %s" % keys)
             print()
             self.print_description()
             self.print_subcommands()
@@ -638,4 +640,3 @@ launch_new_instance = IPClusterApp.launch_instance
 
 if __name__ == '__main__':
     launch_new_instance()
-
