@@ -290,7 +290,7 @@ class IPClusterEngines(BaseParallelApplication):
 
     early_shutdown = Integer(30, config=True, help="The timeout (in seconds)")
     _stopping = False
-    
+
     aliases = Dict(engine_aliases)
     flags = Dict(engine_flags)
 
@@ -325,7 +325,7 @@ class IPClusterEngines(BaseParallelApplication):
         if self.engine_launcher.running:
             self.log.info("Engines appear to have started successfully")
             self.early_shutdown = 0
-    
+
     def start_engines(self):
         # Some EngineSetLaunchers ignore `n` and use their own engine count, such as SSH:
         n = getattr(self.engine_launcher, 'engine_count', self.n)
@@ -343,21 +343,21 @@ class IPClusterEngines(BaseParallelApplication):
         if self.early_shutdown and not self._stopping:
             self.log.error("""
             Engines shutdown early, they probably failed to connect.
-            
+
             Check the engine log files for output.
-            
+
             If your controller and engines are not on the same machine, you probably
             have to instruct the controller to listen on an interface other than localhost.
-            
+
             You can set this by adding "--ip='*'" to your ControllerLauncher.controller_args.
-            
+
             Be sure to read our security docs before instructing your controller to listen on
             a public interface.
             """)
             self.stop_launchers()
-        
+
         return self.engines_stopped(r)
-    
+
     def engines_stopped(self, r):
         return self.loop.stop()
 
@@ -402,7 +402,7 @@ class IPClusterEngines(BaseParallelApplication):
         if self.daemonize:
             if os.name=='posix':
                 daemonize()
-        
+
         self.loop.add_callback(self.start_engines)
         # Now write the new pid file AFTER our new forked pid is active.
         # self.write_pid_file()
@@ -443,7 +443,7 @@ class IPClusterStart(IPClusterEngines):
 
     delay = CFloat(1., config=True,
         help="delay (in s) between starting the controller and the engines")
-    
+
     controller_ip = Unicode(config=True, help="Set the IP address of the controller.")
     controller_launcher = Any(config=True, help="Deprecated, use controller_launcher_class")
     def _controller_launcher_changed(self, name, old, new):
@@ -459,7 +459,7 @@ class IPClusterStart(IPClusterEngines):
 
         Each launcher class has its own set of configuration options, for making sure
         it will work in your environment.
-        
+
         Note that using a batch launcher for the controller *does not* put it
         in the same batch job as the engines, so they will still start separately.
 
@@ -498,11 +498,11 @@ class IPClusterStart(IPClusterEngines):
         if self.controller_ip:
             self.controller_launcher.controller_args.append('--ip=%s' % self.controller_ip)
         self.engine_launcher = self.build_launcher(self.engine_launcher_class, 'EngineSet')
-    
+
     def engines_stopped(self, r):
         """prevent parent.engines_stopped from stopping everything on engine shutdown"""
         pass
-    
+
     def start_controller(self):
         self.log.info("Starting Controller with %s", self.controller_launcher_class)
         self.controller_launcher.on_stop(self.stop_launchers)
@@ -550,7 +550,7 @@ class IPClusterStart(IPClusterEngines):
         if self.daemonize:
             if os.name=='posix':
                 daemonize()
-        
+
         def start():
             self.start_controller()
             self.loop.add_timeout(self.loop.time() + self.delay, self.start_engines)
@@ -572,24 +572,31 @@ class IPClusterStart(IPClusterEngines):
 
 class IPClusterNBExtension(BaseIPythonApplication):
     """Enable/disable ipcluster tab extension in Jupyter notebook"""
-    
+
     name = 'ipcluster-nbextension'
-    
+
     description = """Enable/disable IPython clusters tab in Jupyter notebook
-    
+
     for Jupyter Notebook >= 4.2, you can use the new nbextension API:
-    
+
     jupyter serverextension enable --py ipyparallel
     jupyter nbextension install --py ipyparallel
     jupyter nbextension enable --py ipyparallel
     """
-    
+
     examples = """
     ipcluster nbextension enable
     ipcluster nbextension disable
     """
     version = __version__
-    
+    user = Bool(False, "Apply the operation only for the given user").tag(
+        config=True)
+    # flags = {}
+    flags = Dict(dict(user= (
+        {'IPClusterNBExtension': {'user': True}},
+        "Apply the operation only for the given user",
+    )))
+
     def start(self):
         from ipyparallel.nbextension.install import install_extensions
         if len(self.extra_args) != 1:
@@ -597,10 +604,10 @@ class IPClusterNBExtension(BaseIPythonApplication):
         action = self.extra_args[0].lower()
         if action == 'enable':
             print("Enabling IPython clusters tab")
-            install_extensions(enable=True)
+            install_extensions(enable=True, user=self.user)
         elif action == 'disable':
             print("Disabling IPython clusters tab")
-            install_extensions(enable=False)
+            install_extensions(enable=False, user=self.user)
         else:
             self.exit("Must specify 'enable' or 'disable', not '%s'" % action)
 

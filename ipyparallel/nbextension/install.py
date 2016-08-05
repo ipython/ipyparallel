@@ -8,23 +8,23 @@ from traitlets.config.manager import BaseJSONConfigManager
 from notebook.services.config import ConfigManager as FrontendConfigManager
 
 
-def install_extensions(enable=True):
+def install_extensions(enable=True, user=False):
     """Register ipyparallel clusters tab as notebook extensions
-    
+
     Toggle with enable=True/False.
     """
     from distutils.version import LooseVersion as V
     import notebook
-    
+
     if V(notebook.__version__) < V('4.2'):
         return _install_extension_nb41(enable)
-    
+
     from notebook.nbextensions import install_nbextension_python, enable_nbextension, disable_nbextension
     from notebook.serverextensions import toggle_serverextension_python
-    toggle_serverextension_python('ipyparallel.nbextension')
-    install_nbextension_python('ipyparallel')
+    toggle_serverextension_python('ipyparallel.nbextension', user=user)
+    install_nbextension_python('ipyparallel', user=True)
     if enable:
-        enable_nbextension('tree', 'ipyparallel/main')
+        enable_nbextension('tree', 'ipyparallel/main', user=user)
     else:
         disable_nbextension('tree', 'ipyparallel/main')
 
@@ -49,7 +49,7 @@ def _install_extension_nb41(enable=True):
                 'server_extensions': server_extensions,
             }
         })
-    
+
     # frontend config (*way* easier because it's a dict)
     frontend = FrontendConfigManager()
     frontend.update('tree', {
