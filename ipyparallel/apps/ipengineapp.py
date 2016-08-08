@@ -36,7 +36,7 @@ from ipyparallel.util import disambiguate_ip_address
 
 from ipython_genutils.py3compat import cast_bytes
 from traitlets import Unicode, Dict, List, Float, Instance
-
+from ipykernel import iostream
 
 #-----------------------------------------------------------------------------
 # Module level variables
