@@ -36,7 +36,7 @@ from ipyparallel.util import disambiguate_ip_address
 
 from ipython_genutils.py3compat import cast_bytes
 from traitlets import Unicode, Dict, List, Float, Instance
-
+from ipykernel import iostream
 
 #-----------------------------------------------------------------------------
 # Module level variables
@@ -254,7 +254,13 @@ class IPEngineApp(BaseParallelApplication):
         app.shell_port = app._bind_socket(kernel.shell_streams[0], app.shell_port)
         app.log.debug("shell ROUTER Channel on port: %i", app.shell_port)
         
-        app.iopub_port = app._bind_socket(kernel.iopub_socket, app.iopub_port)
+        if hasattr(kernel.iopub_socket, 'socket'):
+            assert(isinstance(kernel.iopub_socket, iostream.IOPubThread))
+            app.iopub_port = app._bind_socket(kernel.iopub_socket.socket,
+                                              app.iopub_port)
+        else:
+            app.iopub_port = app._bind_socket(kernel.iopub_socket,
+                                              app.iopub_port)
         app.log.debug("iopub PUB Channel on port: %i", app.iopub_port)
         
         kernel.stdin_socket = self.engine.context.socket(zmq.ROUTER)
