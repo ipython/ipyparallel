@@ -589,13 +589,10 @@ class IPClusterNBExtension(BaseIPythonApplication):
     ipcluster nbextension disable
     """
     version = __version__
-    user = Bool(False, "Apply the operation only for the given user").tag(
+    user = Bool(False, help="Apply the operation only for the given user").tag(
         config=True)
-    # flags = {}
-    flags = Dict(dict(user= (
-        {'IPClusterNBExtension': {'user': True}},
-        "Apply the operation only for the given user",
-    )))
+    flags = Dict({'user': ({'IPClusterNBExtension': {'user': True}},
+                           'Apply the operation only for the given user')})
 
     def start(self):
         from ipyparallel.nbextension.install import install_extensions

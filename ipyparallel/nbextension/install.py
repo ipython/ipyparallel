@@ -22,7 +22,7 @@ def install_extensions(enable=True, user=False):
     from notebook.nbextensions import install_nbextension_python, enable_nbextension, disable_nbextension
     from notebook.serverextensions import toggle_serverextension_python
     toggle_serverextension_python('ipyparallel.nbextension', user=user)
-    install_nbextension_python('ipyparallel', user=True)
+    install_nbextension_python('ipyparallel', user=user)
     if enable:
         enable_nbextension('tree', 'ipyparallel/main', user=user)
     else:
