@@ -17,9 +17,16 @@ To disable it again:
 
     ipcluster nbextension disable
 
-
 See the [documentation on configuring the notebook server](https://jupyter-notebook.readthedocs.org/en/latest/public_server.html)
 to find your config or setup your initial `jupyter_notebook_config.py`.
+
+### Jupyterhub Install
+
+To install for all users on Jupyterhub, as root:
+
+    jupyter nbextension install --sys-prefix --py ipyparallel
+    jupyter nbextension enable --sys-prefix --py ipyparallel
+    jupyter serverextension enable --sys-prefix --py ipyparallel
 
 ## Run
 
