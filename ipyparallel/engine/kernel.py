@@ -3,7 +3,7 @@
 import sys
 from datetime import datetime
 
-from ipython_genutils.py3compat import cast_bytes, cast_unicode_py2
+from ipython_genutils.py3compat import cast_bytes, cast_unicode_py2, unicode_type, safe_unicode
 from traitlets import Integer, Type
 
 from ipykernel.ipkernel import IPythonKernel
@@ -24,8 +24,7 @@ class IPythonParallelKernel(IPythonKernel):
         base = "engine.%s" % self.engine_id
 
         return cast_bytes("%s.%s" % (base, topic))
-        
-    
+
     def __init__(self, **kwargs):
         super(IPythonParallelKernel, self).__init__(**kwargs)
         # add apply_request, in anticipation of upstream deprecation
@@ -35,7 +34,7 @@ class IPythonParallelKernel(IPythonKernel):
         self.shell.configurables.append(data_pub)
         data_pub.session = self.session
         data_pub.pub_socket = self.iopub_socket
-    
+
     def init_metadata(self, parent):
         """init metadata dict, for execute/apply_reply"""
         return {
@@ -165,21 +164,33 @@ class IPythonParallelKernel(IPythonKernel):
                 item_threshold=self.session.item_threshold,
             )
 
-        except:
+        except BaseException as e:
             # invoke IPython traceback formatting
             shell.showtraceback()
-            # FIXME - fish exception info out of shell, possibly left there by
-            # run_code.  We'll need to clean up this logic later.
-            reply_content = {}
-            if shell._reply_content is not None:
-                reply_content.update(shell._reply_content)
-                # reset after use
-                shell._reply_content = None
+            reply_content = {
+                'traceback': [],
+                'ename': unicode_type(type(e).__name__),
+                'evalue': safe_unicode(e),
+            }
+            # get formatted traceback, which ipykernel recorded
+            if hasattr(shell, '_last_traceback'):
+                # ipykernel 4.4
+                reply_content['traceback'] = shell._last_traceback or []
+            elif hasattr(shell, '_reply_content'):
+                # ipykernel <= 4.3
+                if shell._reply_content and 'traceback' in shell._reply_content:
+                    reply_content['traceback'] = shell._reply_content['traceback']
+            else:
+                self.log.warning("Didn't find a traceback where I expected to")
+            shell._last_traceback = None
+            e_info = dict(engine_uuid=self.ident, engine_id=self.int_id, method='apply')
+            reply_content['engine_info'] = e_info
 
             self.send_response(self.iopub_socket, u'error', reply_content,
                                 ident=self._topic('error'))
             self.log.info("Exception in apply request:\n%s", '\n'.join(reply_content['traceback']))
             result_buf = []
+            reply_content['status'] = 'error'
         else:
             reply_content = {'status' : 'ok'}
 
