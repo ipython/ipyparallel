@@ -28,7 +28,7 @@ to find your config or setup your initial `jupyter_notebook_config.py`.
 
 ### JupyterHub Install
 
-To install for all users on Jupyterhub, as root:
+To install for all users on JupyterHub, as root:
 
     jupyter nbextension install --sys-prefix --py ipyparallel
     jupyter nbextension enable --sys-prefix --py ipyparallel
