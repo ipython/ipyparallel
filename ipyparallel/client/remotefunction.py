@@ -172,7 +172,6 @@ class ParallelFunction(RemoteFunction):
     chunksize = None
     ordered = None
     mapObject = None
-    _mapping = False
 
     def __init__(self, view, f, dist='b', block=None, chunksize=None, ordered=True, **flags):
         super(ParallelFunction, self).__init__(view, f, block=block, **flags)
@@ -183,8 +182,11 @@ class ParallelFunction(RemoteFunction):
         self.mapObject = mapClass()
     
     @sync_view_results
-    def __call__(self, *sequences):
+    def __call__(self, *sequences, **kwargs):
         client = self.view.client
+        _mapping = kwargs.pop('__ipp_mapping', False)
+        if kwargs:
+            raise TypeError("Unexpected keyword arguments: %s" % kwargs)
         
         lens = []
         maxlen = minlen = -1
@@ -209,7 +211,7 @@ class ParallelFunction(RemoteFunction):
             return []
         
         # check that the length of sequences match
-        if not self._mapping and minlen != maxlen:
+        if not _mapping and minlen != maxlen:
             msg = 'all sequences must have equal length, but have %s' % lens
             raise ValueError(msg)
         
@@ -243,7 +245,7 @@ class ParallelFunction(RemoteFunction):
             if sum([len(arg) for arg in args]) == 0:
                 continue
 
-            if self._mapping:
+            if _mapping:
                 if sys.version_info[0] >= 3:
                     f = lambda f, *sequences: list(map(f, *sequences))
                 else:
@@ -280,12 +282,6 @@ class ParallelFunction(RemoteFunction):
         That means it can take generators (will be cast to lists locally),
         and mismatched sequence lengths will be padded with None.
         """
-        # set _mapping as a flag for use inside self.__call__
-        self._mapping = True
-        try:
-            ret = self(*sequences)
-        finally:
-            self._mapping = False
-        return ret
+        return self(*sequences, __ipp_mapping=True)
 
 __all__ = ['remote', 'parallel', 'RemoteFunction', 'ParallelFunction']
