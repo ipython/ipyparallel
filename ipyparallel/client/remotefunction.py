@@ -12,6 +12,7 @@ from decorator import decorator
 
 from . import map as Map
 from .asyncresult import AsyncMapResult
+from IPython.utils.signatures import signature
 
 #-----------------------------------------------------------------------------
 # Functions and Decorators
@@ -112,6 +113,22 @@ class RemoteFunction(object):
         self.func = f
         self.block=block
         self.flags=flags
+
+        # copy function attributes for nicer inspection
+        # of decorated functions
+        self.__name__ = getname(f)
+        if getattr(f, '__doc__', None):
+            self.__doc__ = '{} wrapping:\n{}'.format(
+                self.__class__.__name__, f.__doc__,
+            )
+        if getattr(f, '__signature__', None):
+            self.__signature__ = f.__signature__
+        else:
+            try:
+                self.__signature__ = signature(f)
+            except Exception:
+                # no signature, but that's okay
+                pass
 
     def __call__(self, *args, **kwargs):
         block = self.view.block if self.block is None else self.block
