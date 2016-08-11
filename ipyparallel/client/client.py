@@ -5,6 +5,8 @@
 
 from __future__ import print_function
 
+import collections
+from concurrent.futures import Future
 import os
 import json
 from threading import Thread, Event, current_thread
@@ -20,7 +22,6 @@ pjoin = os.path.join
 import zmq
 from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
-from tornado.concurrent import Future
 from tornado.gen import multi_future
 
 from traitlets.config.configurable import MultipleInstanceError
@@ -219,6 +220,11 @@ class Metadata(dict):
             dict.__setitem__(self, key, value)
         else:
             raise KeyError(key)
+
+
+def _is_future(f):
+    """light duck-typing check for Futures"""
+    return hasattr(f, 'add_done_callback')
 
 
 class Client(HasTraits):
@@ -1112,13 +1118,15 @@ class Client(HasTraits):
         True : when all msg_ids are done
         False : timeout reached, some msg_ids still outstanding
         """
+        futures = []
         if jobs is None:
             if not self.outstanding:
                 return True
             # make a copy, so that we aren't passing a mutable collection to _futures_for_msgs
             theids = set(self.outstanding)
         else:
-            if isinstance(jobs, string_types + (int, AsyncResult)):
+            if isinstance(jobs, string_types + (int, AsyncResult)) \
+            or not isinstance(jobs, collections.Iterable):
                 jobs = [jobs]
             theids = set()
             for job in jobs:
@@ -1128,11 +1136,14 @@ class Client(HasTraits):
                 elif isinstance(job, AsyncResult):
                     theids.update(job.msg_ids)
                     continue
+                elif _is_future(job):
+                    futures.append(job)
+                    continue
                 theids.add(job)
-            if not theids.intersection(self.outstanding):
+            if not futures and not theids.intersection(self.outstanding):
                 return True
         
-        futures = self._futures_for_msgs(theids)
+        futures.extend(self._futures_for_msgs(theids))
         return self._await_futures(futures, timeout)
     
     def wait_interactive(self, jobs=None, interval=1., timeout=-1.):
