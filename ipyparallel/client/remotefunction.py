@@ -12,6 +12,7 @@ from decorator import decorator
 
 from . import map as Map
 from .asyncresult import AsyncMapResult
+from IPython.utils.signatures import signature
 
 #-----------------------------------------------------------------------------
 # Functions and Decorators
@@ -113,6 +114,22 @@ class RemoteFunction(object):
         self.block=block
         self.flags=flags
 
+        # copy function attributes for nicer inspection
+        # of decorated functions
+        self.__name__ = getname(f)
+        if getattr(f, '__doc__', None):
+            self.__doc__ = '{} wrapping:\n{}'.format(
+                self.__class__.__name__, f.__doc__,
+            )
+        if getattr(f, '__signature__', None):
+            self.__signature__ = f.__signature__
+        else:
+            try:
+                self.__signature__ = signature(f)
+            except Exception:
+                # no signature, but that's okay
+                pass
+
     def __call__(self, *args, **kwargs):
         block = self.view.block if self.block is None else self.block
         with self.view.temp_flags(block=block, **self.flags):
@@ -155,7 +172,6 @@ class ParallelFunction(RemoteFunction):
     chunksize = None
     ordered = None
     mapObject = None
-    _mapping = False
 
     def __init__(self, view, f, dist='b', block=None, chunksize=None, ordered=True, **flags):
         super(ParallelFunction, self).__init__(view, f, block=block, **flags)
@@ -166,8 +182,11 @@ class ParallelFunction(RemoteFunction):
         self.mapObject = mapClass()
     
     @sync_view_results
-    def __call__(self, *sequences):
+    def __call__(self, *sequences, **kwargs):
         client = self.view.client
+        _mapping = kwargs.pop('__ipp_mapping', False)
+        if kwargs:
+            raise TypeError("Unexpected keyword arguments: %s" % kwargs)
         
         lens = []
         maxlen = minlen = -1
@@ -192,7 +211,7 @@ class ParallelFunction(RemoteFunction):
             return []
         
         # check that the length of sequences match
-        if not self._mapping and minlen != maxlen:
+        if not _mapping and minlen != maxlen:
             msg = 'all sequences must have equal length, but have %s' % lens
             raise ValueError(msg)
         
@@ -226,7 +245,7 @@ class ParallelFunction(RemoteFunction):
             if sum([len(arg) for arg in args]) == 0:
                 continue
 
-            if self._mapping:
+            if _mapping:
                 if sys.version_info[0] >= 3:
                     f = lambda f, *sequences: list(map(f, *sequences))
                 else:
@@ -263,12 +282,6 @@ class ParallelFunction(RemoteFunction):
         That means it can take generators (will be cast to lists locally),
         and mismatched sequence lengths will be padded with None.
         """
-        # set _mapping as a flag for use inside self.__call__
-        self._mapping = True
-        try:
-            ret = self(*sequences)
-        finally:
-            self._mapping = False
-        return ret
+        return self(*sequences, __ipp_mapping=True)
 
 __all__ = ['remote', 'parallel', 'RemoteFunction', 'ParallelFunction']
