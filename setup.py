@@ -123,13 +123,14 @@ install_requires = setuptools_args['install_requires'] = [
 extras_require = setuptools_args['extras_require'] = {
     ':python_version == "2.7"': ['futures'],
     'nbext': ["notebook"],
+    'test': [
+        'nose',
+        'ipython[test]',
+        'testpath',
+        'mock',
+    ],
 }
 
-tests_require = setuptools_args['tests_require'] = [
-    'nose',
-    'ipython[test]',
-    'mock',
-]
 
 if 'setuptools' in sys.modules:
     setup_args.update(setuptools_args)
