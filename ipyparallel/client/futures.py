@@ -4,7 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 from threading import Event
-from tornado.concurrent import Future
+from concurrent.futures import Future
 
 class MessageFuture(Future):
     """Future class to wrap async messages"""

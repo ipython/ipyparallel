@@ -5,9 +5,13 @@
 
 from __future__ import division
 
+from concurrent.futures import Future
 from datetime import datetime
 import os
+from threading import Thread
 import time
+
+from tornado.concurrent import Future as TornadoFuture
 
 from IPython import get_ipython
 from ipyparallel.client import client as clientmod
@@ -525,7 +529,21 @@ class TestClient(ClusterTestCase):
         ar = self.client[-1].apply_async(lambda : 1)
         self.client.wait_interactive()
         self.assertEqual(self.client.outstanding, set())
-    
+
+    def test_await_future(self):
+        f = Future()
+        tf = TornadoFuture()
+        def finish_later():
+            time.sleep(0.1)
+            f.set_result('future')
+            tf.set_result('tornado')
+        Thread(target=finish_later).start()
+        assert self.client.wait([f, tf])
+        assert f.done()
+        assert tf.done()
+        assert f.result() == 'future'
+        assert tf.result() == 'tornado'
+
     @skip_without('distributed')
     def test_become_distributed(self):
         executor = self.client.become_distributed()
