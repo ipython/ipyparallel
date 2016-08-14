@@ -100,11 +100,12 @@ the result using a 2D matrix in Matplotlib.
 The overall idea of the calculation is simple: each IPython engine will
 compute the two digit counts for the digits in a single file. Then in a final
 step the counts from each engine will be added up. To perform this
-calculation, we will need two top-level functions from :file:`pidigits.py`:
+calculation, we will need two top-level functions from :file:`pidigits.py`,
+:func:`compute_two_digit_freqs` and :func:`reduce_freqs`:
 
 .. literalinclude:: ../../examples/pi/pidigits.py
    :language: python
-   :lines: 47-62
+   :lines: 52-67
 
 We will also use the :func:`plot_two_digit_freqs` function to plot the
 results. The code to run this calculation in parallel is contained in
