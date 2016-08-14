@@ -41,12 +41,12 @@ def bind_kernel(engineapp):
 
 
 def test_bind_kernel():
-    setattr(ipengineapp.IPEngineApp, 'kernel', None)
-    setattr(ipengineapp.IPEngineApp, 'engine',
-            MagicMock(spec=ipengineapp.EngineFactory))
-    app = ipengineapp.IPEngineApp()
-    app.kernel_app = None
+    class MockIPEngineApp(ipengineapp.IPEngineApp):
+        kernel = None
+        engine = MagicMock(spec=ipengineapp.EngineFactory)
 
+    app = MockIPEngineApp()
+    app.kernel_app = None
     app.kernel = MagicMock(spec=IPythonKernel)
     app.kernel.shell_streams = [zmqstream.ZMQStream(
         socket=create_autospec(spec=zmq.Socket, spec_set=True, instance=True),
@@ -57,19 +57,25 @@ def test_bind_kernel():
         io_loop=create_autospec(spec=ioloop.IOLoop, spect_set=True,
                                 instance=True))
 
-    # testing the case iopub_socket is replaced with IOPubThread
-    app.kernel.iopub_socket = iostream.IOPubThread(create_autospec(
-        spec=zmq.Socket, spec_set=False, instance=True))
-    assert(isinstance(app.kernel.iopub_socket, iostream.IOPubThread))
-    bind_kernel(app)
-    assert(app.kernel.iopub_socket.socket.bind_to_random_port.called and
-           app.kernel.iopub_socket.socket.bind_to_random_port.call_count == 1)
-
     # testing the case iopub_socket is not replaced with IOPubThread
-    app.kernel_app = None
-    app.kernel.iopub_socket = create_autospec(spec=zmq.Socket, spec_set=False,
-                                              instance=True)
+    iopub_socket = create_autospec(
+            spec=zmq.Socket, spec_set=False, instance=True)
+    app.kernel.iopub_socket = iopub_socket
     assert(isinstance(app.kernel.iopub_socket, zmq.Socket))
     bind_kernel(app)
     assert(app.kernel.iopub_socket.bind_to_random_port.called and
            app.kernel.iopub_socket.bind_to_random_port.call_count == 1)
+
+    # testing the case iopub_socket is replaced with IOPubThread
+    class TestIOPubThread(iostream.IOPubThread):
+        socket = None
+
+    iopub_socket.reset_mock()
+    app.kernel_app = None
+    app.kernel.iopub_socket = create_autospec(
+            spec=TestIOPubThread, spec_set=True, instance=True)
+    app.kernel.iopub_socket.socket = iopub_socket
+    assert(isinstance(app.kernel.iopub_socket, iostream.IOPubThread))
+    bind_kernel(app)
+    assert(app.kernel.iopub_socket.socket.bind_to_random_port.called and
+           app.kernel.iopub_socket.socket.bind_to_random_port.call_count == 1)
