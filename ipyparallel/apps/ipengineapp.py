@@ -254,13 +254,12 @@ class IPEngineApp(BaseParallelApplication):
         app.shell_port = app._bind_socket(kernel.shell_streams[0], app.shell_port)
         app.log.debug("shell ROUTER Channel on port: %i", app.shell_port)
         
-        if hasattr(kernel.iopub_socket, 'socket'):
-            assert(isinstance(kernel.iopub_socket, iostream.IOPubThread))
-            app.iopub_port = app._bind_socket(kernel.iopub_socket.socket,
-                                              app.iopub_port)
-        else:
-            app.iopub_port = app._bind_socket(kernel.iopub_socket,
-                                              app.iopub_port)
+        iopub_socket = kernel.iopub_socket
+        # ipykernel 4.3 iopub_socket is an IOThread wrapper:
+        if hasattr(iopub_socket, 'socket'):
+            iopub_socket = iopub_socket.socket
+        
+        app.iopub_port = app._bind_socket(iopub_socket, app.iopub_port)
         app.log.debug("iopub PUB Channel on port: %i", app.iopub_port)
         
         kernel.stdin_socket = self.engine.context.socket(zmq.ROUTER)
