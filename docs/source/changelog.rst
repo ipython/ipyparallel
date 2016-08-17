@@ -4,6 +4,18 @@ Changes in IPython Parallel
 ===========================
 
 
+5.2
+---
+
+- Fix compatibility with changes in ipykernel 4.3, 4.4
+- Improve inspection of ``@remote`` decorated functions
+- :meth:`Client.wait` accepts any Future.
+- Add ``--user`` flag to :command:`ipcluster nbextension`
+- Default to one core per worker in :meth:`Client.become_distributed`.
+  Override by specifying `ncores` keyword-argument.
+- Subprocess logs are no longer sent to files by default in :command:`ipcluster`.
+
+
 5.1
 ---
 
