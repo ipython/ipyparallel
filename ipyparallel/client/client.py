@@ -385,8 +385,10 @@ class Client(HasTraits):
                 short = compress_user(url_file)
                 if not os.path.exists(url_file):
                     print("Waiting for connection file: %s" % short)
-                    for i in range(30):
-                        time.sleep(1)
+                    waiting_time = 0.
+                    while waiting_time < timeout:
+                        time.sleep(min(timeout-waiting_time, 1))
+                        waiting_time += 1
                         if os.path.exists(url_file):
                             break
                 if not os.path.exists(url_file):
@@ -477,7 +479,8 @@ class Client(HasTraits):
 
         if self._ssh:
             from zmq.ssh import tunnel
-            tunnel.tunnel_connection(self._query_socket, cfg['registration'], sshserver, **ssh_kwargs)
+            tunnel.tunnel_connection(self._query_socket, cfg['registration'], sshserver,
+                                     timeout=timeout, **ssh_kwargs)
         else:
             self._query_socket.connect(cfg['registration'])
 
