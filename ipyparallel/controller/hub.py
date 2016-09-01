@@ -440,7 +440,7 @@ class Hub(SessionFactory):
                                 'registration_request' : self.register_engine,
                                 'unregistration_request' : self.unregister_engine,
                                 'connection_request': self.connection_request,
-                                'become_distributed_request': self.become_distributed,
+                                'become_dask_request': self.become_dask,
                                 'stop_distributed_request': self.stop_distributed,
         }
 
@@ -1458,7 +1458,7 @@ class Hub(SessionFactory):
                                             parent=msg, ident=client_id,
                                             buffers=buffers)
 
-    def become_distributed(self, client_id, msg):
+    def become_dask(self, client_id, msg):
         """Start a dask.distributed Scheduler."""
         if self.distributed_scheduler is None:
             kwargs = msg['content'].get('scheduler_args', {})
@@ -1474,7 +1474,7 @@ class Hub(SessionFactory):
             'port': self.distributed_scheduler.port,
         }
         self.log.info("dask.distributed scheduler running at {ip}:{port}".format(**content))
-        self.session.send(self.query, "become_distributed_reply", content=content,
+        self.session.send(self.query, "become_dask_reply", content=content,
             parent=msg, ident=client_id,
         )
 

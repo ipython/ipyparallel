@@ -545,8 +545,8 @@ class TestClient(ClusterTestCase):
         assert tf.result() == 'tornado'
 
     @skip_without('distributed')
-    def test_become_distributed(self):
-        executor = self.client.become_distributed()
+    def test_become_dask(self):
+        executor = self.client.become_dask()
         reprs = self.client[:].apply_sync(repr, Reference('distributed_worker'))
         for r in reprs:
             self.assertIn("Worker", r)
