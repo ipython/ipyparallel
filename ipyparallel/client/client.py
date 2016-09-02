@@ -1279,14 +1279,14 @@ class Client(HasTraits):
         if error:
             raise error
 
-    def become_distributed(self, targets='all', port=0, nanny=False, scheduler_args=None, **worker_args):
+    def become_dask(self, targets='all', port=0, nanny=False, scheduler_args=None, **worker_args):
         """Turn the IPython cluster into a dask.distributed cluster
 
         Parameters
         ----------
 
         targets: target spec (default: all)
-            Which engines to turn into distributed workers.
+            Which engines to turn into dask workers.
         port: int (default: random)
             Which port
         nanny: bool (default: False)
@@ -1301,7 +1301,7 @@ class Client(HasTraits):
         -------
 
         executor: distributed.Executor
-            A distributed.Executor connected to the distributed cluster.
+            A dask.distributed.Executor connected to the dask cluster.
         """
         import distributed
 
@@ -1313,7 +1313,7 @@ class Client(HasTraits):
             scheduler_args = dict(scheduler_args) # copy
 
         # Start a Scheduler on the Hub:
-        reply = self._send_recv(self._query_socket, 'become_distributed_request',
+        reply = self._send_recv(self._query_socket, 'become_dask_request',
             {'scheduler_args': scheduler_args},
         )
         if reply['content']['status'] != 'ok':
@@ -1326,20 +1326,21 @@ class Client(HasTraits):
         worker_args['nanny'] = nanny
         # set default ncores=1, since that's how an IPython cluster is typically set up.
         worker_args.setdefault('ncores', 1)
-        dview.apply_sync(util.become_distributed_worker, **worker_args)
+        dview.apply_sync(util.become_dask_worker, **worker_args)
 
         # Finally, return an Executor connected to the Scheduler
         executor = distributed.Executor('{ip}:{port}'.format(**distributed_info))
         return executor
 
-    def stop_distributed(self, targets='all'):
-        """Stop the distributed Scheduler and Workers started by become_distributed.
+
+    def stop_dask(self, targets='all'):
+        """Stop the distributed Scheduler and Workers started by become_dask.
 
         Parameters
         ----------
 
         targets: target spec (default: all)
-            Which engines to turn into distributed workers.
+            Which engines to stop dask workers on.
         """
         dview = self.direct_view(targets)
 
@@ -1350,7 +1351,11 @@ class Client(HasTraits):
 
         # Finally, stop all the Workers on the engines
         dview.apply_sync(util.stop_distributed_worker)
-
+    
+    # aliases:
+    become_distributed = become_dask
+    stop_distributed = stop_dask
+    
     #--------------------------------------------------------------------------
     # Execution related methods
     #--------------------------------------------------------------------------

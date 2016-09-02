@@ -4,6 +4,12 @@ Changes in IPython Parallel
 ===========================
 
 
+5.3
+---
+
+- Rename :meth:`Client.become_distributed` to :meth:`Client.become_dask`.
+  :meth:`become_distributed` remains as an alias.
+
 5.2
 ---
 
