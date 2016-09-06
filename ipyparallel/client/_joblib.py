@@ -5,7 +5,7 @@
 from __future__ import absolute_import
 
 import ipyparallel as ipp
-from joblib._parallel_backends import ParallelBackendBase, AutoBatchingMixin
+from joblib.parallel import ParallelBackendBase, AutoBatchingMixin
 
 class IPythonParallelBackend(AutoBatchingMixin, ParallelBackendBase):
 
