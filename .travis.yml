@@ -1,6 +1,7 @@
 # http://travis-ci.org/#!/ipython/ipyparallel
 language: python
 python:
+    - "nightly"
     - 3.5
     - 3.4
     - 3.3
@@ -16,3 +17,6 @@ script:
     - iptest --coverage xml ipyparallel.tests -- -vsx
 after_success:
     - codecov
+matrix:
+    allow_failures:
+        - python: "nightly"
