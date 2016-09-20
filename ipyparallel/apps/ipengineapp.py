@@ -138,7 +138,7 @@ class IPEngineApp(BaseParallelApplication):
         security directory of the cluster directory.  This location is
         resolved using the `profile` or `profile_dir` options.""",
         )
-    wait_for_url_file = Float(5, config=True,
+    wait_for_url_file = Float(10, config=True,
         help="""The maximum number of seconds to wait for url_file to exist.
         This is useful for batch-systems and shared-filesystems where the
         controller and engine are started at the same time and it
