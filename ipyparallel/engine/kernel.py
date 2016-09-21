@@ -3,7 +3,7 @@
 import sys
 from datetime import datetime
 
-from ipython_genutils.py3compat import cast_bytes, cast_unicode_py2, unicode_type, safe_unicode
+from ipython_genutils.py3compat import cast_bytes, cast_unicode_py2, unicode_type, safe_unicode, string_types
 from traitlets import Integer, Type
 
 from ipykernel.ipkernel import IPythonKernel
@@ -16,6 +16,7 @@ class IPythonParallelKernel(IPythonKernel):
     """Extend IPython kernel for parallel computing"""
     engine_id = Integer(-1)
     msg_types = getattr(IPythonKernel, 'msg_types', []) + ['apply_request']
+    control_msg_types = getattr(IPythonKernel, 'control_msg_types', []) + ['abort_request', 'clear_request']
     _execute_sleep = 0
     data_pub_class = Type(ZMQDataPublisher)
     
@@ -195,3 +196,31 @@ class IPythonParallelKernel(IPythonKernel):
             reply_content = {'status' : 'ok'}
 
         return reply_content, result_buf
+
+    # Control messages for msgspec extensions:
+
+    def abort_request(self, stream, ident, parent):
+        """abort a specific msg by id"""
+        self.log.warn("abort_request is deprecated in kernel_base. It os only part of IPython parallel")
+        msg_ids = parent['content'].get('msg_ids', None)
+        if isinstance(msg_ids, string_types):
+            msg_ids = [msg_ids]
+        if not msg_ids:
+            self._abort_queues()
+        for mid in msg_ids:
+            self.aborted.add(str(mid))
+
+        content = dict(status='ok')
+        reply_msg = self.session.send(stream, 'abort_reply', content=content,
+                parent=parent, ident=ident)
+        self.log.debug("%s", reply_msg)
+
+
+    def clear_request(self, stream, idents, parent):
+        """Clear our namespace."""
+        self.log.warn("clear_request is deprecated in kernel_base. It os only part of IPython parallel")
+        self.shell.reset(False)
+        content = dict(status='ok')
+        self.session.send(stream, 'clear_reply', ident=idents, parent=parent,
+                content = content)
+
