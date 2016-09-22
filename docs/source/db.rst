@@ -69,9 +69,9 @@ result_header   dict            header for result
 result_content  dict            content for result
 result_buffers  list(bytes)     buffers containing serialized request objects
 queue           str             The name of the queue for the task ('mux' or 'task')
-pyin            str             Python input source
-pyout           dict            Python output (pyout message content)
-pyerr           dict            Python traceback (pyerr message content)
+execute_input   str             Python input source
+execute_result  dict            Python output (execute_result message content)
+error           dict            Python traceback (error message content)
 stdout          str             Stream of stdout data
 stderr          str             Stream of stderr data
 

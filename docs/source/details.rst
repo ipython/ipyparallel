@@ -88,8 +88,8 @@ What is sendable?
 -----------------
 
 If IPython doesn't know what to do with an object, it will pickle it. There is a short list of
-objects that are not pickled: ``buffers``, ``str/bytes`` objects, and ``numpy``
-arrays. These are handled specially by IPython in order to prevent the copying of data. Sending
+objects that are not pickled: ``buffers/memoryviews``, ``bytes`` objects, and ``numpy``
+arrays. These are handled specially by IPython in order to prevent extra in-memory copies of data. Sending
 bytes or numpy arrays will result in exactly zero in-memory copies of your data (unless the data
 is very small).
 
@@ -102,7 +102,7 @@ Closures
 ********
 
 Just about anything in Python is pickleable. The one notable exception is objects (generally
-functions) with *closures*. Closures can be a complicated topic, but the basic principal is that
+functions) with *closures*. Closures can be a complicated topic, but the basic principle is that
 functions that refer to variables in their parent scope have closures.
 
 An example of a function that uses a closure:
@@ -154,6 +154,16 @@ of the global namespace:
     # is equivalent to
     In [11]: view.pull('a')
 
+
+You can send functions with closures if you enable using dill or cloudpickle:
+
+.. sourcecode:: ipython
+
+    In [10]: rc[:].use_cloudpickle()
+
+which will use a more advanced pickling library, which covers things like closures.
+
+
 Running Code
 ============
 
@@ -202,8 +212,10 @@ targets : int,list of ints, 'all', None [default view.targets]
     if int:
         Run on single engine
 
-Note that :class:`LoadBalancedView` uses targets to restrict possible destinations.
-LoadBalanced calls will always execute in just one location.
+.. note::
+
+    :class:`LoadBalancedView` uses targets to restrict possible destinations.
+    LoadBalanced calls will always execute in just one location.
 
 flags only in LoadBalancedViews:
 
@@ -212,7 +224,7 @@ after : Dependency or collection of msg_ids
     Specify a list of msg_ids as a time-based dependency.
     This job will only be run *after* the dependencies
     have been met.
-    
+
 follow : Dependency or collection of msg_ids
     Only for load-balanced execution (targets=None)
     Specify a list of msg_ids as a location-based dependency.
@@ -492,7 +504,7 @@ completed
     When execution finished on the engine
 received
     When the result arrived on the Client
-    
+
     note that it is not known when the result arrived in 0MQ on the client, only when it
     arrived in Python via :meth:`Client.spin`, so in interactive use, this may not be
     strictly informative.
@@ -506,10 +518,13 @@ engine_uuid
 
 output of the call
 
-pyerr
+error
     Python exception, if there was one
-pyout
-    Python output
+execute_input
+    The code (str) that was executed
+execute_result
+    Python output of an execute request (not apply),
+    as a Jupyter message dictionary.
 stderr
     stderr stream
 stdout
