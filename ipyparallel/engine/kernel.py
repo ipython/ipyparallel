@@ -201,7 +201,7 @@ class IPythonParallelKernel(IPythonKernel):
 
     def abort_request(self, stream, ident, parent):
         """abort a specific msg by id"""
-        self.log.warn("abort_request is deprecated in kernel_base. It os only part of IPython parallel")
+        self.log.warn("abort_request is deprecated in kernel_base. It is only part of IPython parallel")
         msg_ids = parent['content'].get('msg_ids', None)
         if isinstance(msg_ids, string_types):
             msg_ids = [msg_ids]
@@ -218,7 +218,7 @@ class IPythonParallelKernel(IPythonKernel):
 
     def clear_request(self, stream, idents, parent):
         """Clear our namespace."""
-        self.log.warn("clear_request is deprecated in kernel_base. It os only part of IPython parallel")
+        self.log.warn("clear_request is deprecated in kernel_base. It is only part of IPython parallel")
         self.shell.reset(False)
         content = dict(status='ok')
         self.session.send(stream, 'clear_reply', ident=idents, parent=parent,
