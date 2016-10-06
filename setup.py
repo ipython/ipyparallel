@@ -80,7 +80,7 @@ setup_args = dict(
     description     = "Interactive Parallel Computing with IPython",
     long_description= """Use multiple instances of IPython in parallel, interactively.
     
-    See https://ipyparallel.readthedocs.org for more info.
+    See https://ipyparallel.readthedocs.io for more info.
     """,
     author          = 'IPython Development Team',
     author_email    = 'ipython-dev@scipy.org',

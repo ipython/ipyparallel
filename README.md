@@ -23,7 +23,7 @@ To disable it again:
 
     ipcluster nbextension disable
 
-See the [documentation on configuring the notebook server](https://jupyter-notebook.readthedocs.org/en/latest/public_server.html)
+See the [documentation on configuring the notebook server](https://jupyter-notebook.readthedocs.io/en/latest/public_server.html)
 to find your config or setup your initial `jupyter_notebook_config.py`.
 
 ### JupyterHub Install
@@ -51,4 +51,4 @@ ar = rc[:].apply_async(os.getpid)
 pid_map = ar.get_dict()
 ```
 
-See [the docs](https://ipyparallel.readthedocs.org) for more info.
+See [the docs](https://ipyparallel.readthedocs.io) for more info.
