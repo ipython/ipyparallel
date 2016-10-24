@@ -16,6 +16,7 @@ from tornado.concurrent import Future as TornadoFuture
 from IPython import get_ipython
 from ipyparallel.client import client as clientmod
 from ipyparallel import error, AsyncHubResult, DirectView, Reference
+from ipyparallel.util import utc
 
 from .clienttest import ClusterTestCase, wait, add_engines, skip_without
 
@@ -297,7 +298,7 @@ class TestClient(ClusterTestCase):
         for rec in recs:
             recdict[rec['msg_id']] = rec
         
-        latest = datetime(1984,1,1)
+        latest = datetime(1984,1,1).replace(tzinfo=utc)
         for msg_id in hist:
             rec = recdict[msg_id]
             newt = rec['submitted']

@@ -50,6 +50,8 @@ from traitlets.config.configurable import LoggingConfigurable
 from ipython_genutils.py3compat import iteritems, itervalues
 from traitlets import Dict, Unicode, Integer, Float
 
+from ..util import ensure_timezone
+
 filters = {
  '$lt' : lambda a,b: a < b,
  '$gt' : lambda a,b: b > a,
@@ -202,10 +204,13 @@ class DictDB(BaseDB):
             )
     
     def _check_dates(self, rec):
-        for key in ('submitted', 'started', 'completed'):
+        for key in ('submitted', 'started', 'completed', 'received'):
             value = rec.get(key, None)
             if value is not None and not isinstance(value, datetime):
                 raise ValueError("%s must be None or datetime, not %r" % (key, value))
+            if isinstance(value, datetime) and value.tzinfo is None:
+                self.log.warning("Timestamps should always have timezones: %s=%s", key, value)
+                rec[key] = ensure_timezone(value)
     
     # public API methods:
 

@@ -13,7 +13,6 @@ from threading import Thread, Event, current_thread
 import time
 import types
 import warnings
-from datetime import datetime
 from getpass import getpass
 from pprint import pprint
 
@@ -667,7 +666,7 @@ class Client(HasTraits):
         msg_meta = msg['metadata']
         content = msg['content']
         md = {'msg_id' : parent['msg_id'],
-              'received' : datetime.now(),
+              'received' : util.utcnow(),
               'engine_uuid' : msg_meta.get('engine', None),
               'follow' : msg_meta.get('follow', []),
               'after' : msg_meta.get('after', []),
@@ -959,7 +958,7 @@ class Client(HasTraits):
         if asyncresult:
             future.output = output
             futures.append(output)
-            output.metadata['submitted'] = datetime.now()
+            output.metadata['submitted'] = util.utcnow()
         
         def cleanup(f):
             """Purge caches on Future resolution"""
@@ -1446,7 +1445,7 @@ class Client(HasTraits):
                 # save for later, in case of engine death
                 self._outstanding_dict[ident].add(msg_id)
         self.history.append(msg_id)
-        self.metadata[msg_id]['submitted'] = datetime.now()
+        self.metadata[msg_id]['submitted'] = util.utcnow()
 
         return future
 

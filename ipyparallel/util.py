@@ -10,6 +10,7 @@ import stat
 import socket
 import sys
 import warnings
+from datetime import datetime
 from signal import signal, SIGINT, SIGABRT, SIGTERM
 try:
     from signal import SIGKILL
@@ -17,12 +18,22 @@ except ImportError:
     SIGKILL=None
 from types import FunctionType
 
+from dateutil.tz import tzlocal
+
+try:
+    import datetime.timezone
+    utc = datetime.timezone.utc
+except ImportError:
+    from dateutil.tz import tzutc
+    utc = tzutc()
+
+from decorator import decorator
 from tornado.ioloop import IOLoop
 import zmq
 from zmq.log import handlers
 
 from traitlets.log import get_logger
-from decorator import decorator
+
 
 from jupyter_client.localinterfaces import localhost, is_public_ip, public_ips
 from ipython_genutils.py3compat import string_types, iteritems, itervalues
@@ -443,3 +454,35 @@ def stop_distributed_worker():
     if shell.user_ns.get('distributed_worker', None) is w:
         shell.user_ns.pop('distributed_worker', None)
     IOLoop.current().add_callback(lambda : w.terminate(None))
+
+
+def ensure_timezone(dt):
+    """Ensure a datetime object has a timezone
+    
+    If it doesn't have one, attach the local timezone.
+    """
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=tzlocal())
+    else:
+        return dt
+
+
+def compare_datetimes(a, b):
+    """Compare two datetime objects
+    
+    If one has a timezone and the other doesn't,
+    treat the naïve datetime as local time to avoid errors.
+    
+    Returns the timedelta
+    """
+    if a.tzinfo is None and b.tzinfo is not None:
+        a = a.replace(tzinfo=tzlocal())
+    elif a.tzinfo is not None and b.tzinfo is None:
+        b = b.replace(tzinfo=tzlocal())
+    return a - b
+
+
+def utcnow():
+    """Timezone-aware UTC timestamp"""
+    return datetime.utcnow().replace(tzinfo=utc)
+

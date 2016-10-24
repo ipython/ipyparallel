@@ -1,20 +1,7 @@
-"""Tests for db backends
+"""Tests for db backends"""
 
-Authors:
-
-* Min RK
-"""
-
-#-------------------------------------------------------------------------------
-#  Copyright (C) 2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-# Imports
-#-------------------------------------------------------------------------------
+# Copyright (c) IPython Development Team.
+# Distributed under the terms of the Modified BSD License.
 
 from __future__ import division
 
@@ -26,18 +13,15 @@ import time
 from datetime import datetime, timedelta
 from unittest import TestCase
 
-from ipyparallel import error
+from ipyparallel import util
 from ipyparallel.controller.dictdb import DictDB
 from ipyparallel.controller.sqlitedb import SQLiteDB
-from ipyparallel.controller.hub import init_record, empty_record
+from ipyparallel.controller.hub import init_record
 
 from IPython.testing import decorators as dec
 from jupyter_client.session import Session
 
-
-#-------------------------------------------------------------------------------
-# TestCases
-#-------------------------------------------------------------------------------
+from ipyparallel.util import utc
 
 
 def setup():
@@ -88,8 +72,7 @@ class TaskDBTest:
         return dt - timedelta(microseconds=extra)
     
     def test_update_record(self):
-        now = self._round_to_millisecond(datetime.now())
-        # 
+        now = self._round_to_millisecond(util.utcnow())
         msg_id = self.db.get_history()[-1]
         rec1 = self.db.get_record(msg_id)
         data = {'stdout': 'hello there', 'completed' : now}
@@ -115,12 +98,12 @@ class TaskDBTest:
         after = self.db.find_records({'submitted' : {'$gte' : tic}})
         self.assertEqual(len(before)+len(after),len(hist))
         for b in before:
-            self.assertTrue(b['submitted'] < tic)
+            self.assertLess(b['submitted'], tic)
         for a in after:
-            self.assertTrue(a['submitted'] >= tic)
+            self.assertGreaterEqual(a['submitted'], tic)
         same = self.db.find_records({'submitted' : tic})
         for s in same:
-            self.assertTrue(s['submitted'] == tic)
+            self.assertEqual(s['submitted'], tic)
     
     def test_find_records_keys(self):
         """test extracting subset of record keys"""
@@ -154,7 +137,7 @@ class TaskDBTest:
     
     def test_get_history(self):
         msg_ids = self.db.get_history()
-        latest = datetime(1984,1,1)
+        latest = datetime(1984,1,1).replace(tzinfo=utc)
         for msg_id in msg_ids:
             rec = self.db.get_record(msg_id)
             newt = rec['submitted']
@@ -168,7 +151,7 @@ class TaskDBTest:
         msg_id = self.db.get_history()[-1]
         rec = self.db.get_record(msg_id)
         self.assertTrue(isinstance(rec['submitted'], datetime))
-        self.db.update_record(msg_id, dict(completed=datetime.now()))
+        self.db.update_record(msg_id, dict(completed=util.utcnow()))
         rec = self.db.get_record(msg_id)
         self.assertTrue(isinstance(rec['completed'], datetime))
 
@@ -300,9 +283,10 @@ class TestSQLiteBackend(TaskDBTest, TestCase):
         location, fname = os.path.split(temp_db)
         log = logging.getLogger('test')
         log.setLevel(logging.CRITICAL)
-        return SQLiteDB(location=location, fname=fname, log=log)
+        return SQLiteDB(location=location, filename=fname, log=log)
     
     def tearDown(self):
+        self.db._db.commit()
         self.db._db.close()
 
 
