@@ -66,6 +66,11 @@ filters = {
  '$exists' : lambda a,b: (b and a is not None) or (a is None and not b)
 }
 
+def _add_tz(obj):
+    if isinstance(obj, datetime):
+        obj = ensure_timezone(obj)
+    return obj
+
 
 class CompositeFilter(object):
     """Composite filter for matching multiple properties."""
@@ -74,8 +79,8 @@ class CompositeFilter(object):
         self.tests = []
         self.values = []
         for key, value in iteritems(dikt):
-            self.tests.append(filters[key])
-            self.values.append(value)
+            self.tests.append(_add_tz(filters[key]))
+            self.values.append(_add_tz(value))
 
     def __call__(self, value):
         for test,check in zip(self.tests, self.values):
@@ -143,7 +148,7 @@ class DictDB(BaseDB):
             if isinstance(v, dict):
                 tests[k] = CompositeFilter(v)
             else:
-                tests[k] = lambda o: o==v
+                tests[k] = lambda o: _add_tz(o) == _add_tz(v)
 
         for rec in itervalues(self._records):
             if self._match_one(rec, tests):
