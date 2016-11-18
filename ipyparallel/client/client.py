@@ -29,7 +29,6 @@ from IPython.core.profiledir import ProfileDir, ProfileDirError
 
 from IPython.utils.capture import RichOutput
 from IPython.utils.coloransi import TermColors
-from jupyter_client.jsonutil import extract_dates, parse_date
 from jupyter_client.localinterfaces import localhost, is_local_ip
 from IPython.paths import get_ipython_dir
 from IPython.utils.path import compress_user
@@ -679,7 +678,7 @@ class Client(HasTraits):
         if 'date' in parent:
             md['submitted'] = parent['date']
         if 'started' in msg_meta:
-            md['started'] = parse_date(msg_meta['started'])
+            md['started'] = util._parse_date(msg_meta['started'])
         if 'date' in header:
             md['completed'] = header['date']
         return md
@@ -1677,8 +1676,8 @@ class Client(HasTraits):
         for msg_id in sorted(theids):
             if msg_id in content['completed']:
                 rec = content[msg_id]
-                parent = extract_dates(rec['header'])
-                header = extract_dates(rec['result_header'])
+                parent = util.extract_dates(rec['header'])
+                header = util.extract_dates(rec['result_header'])
                 rcontent = rec['result_content']
                 iodict = rec['io']
                 if isinstance(rcontent, str):
@@ -1693,7 +1692,7 @@ class Client(HasTraits):
                 )
                 md.update(self._extract_metadata(md_msg))
                 if rec.get('received'):
-                    md['received'] = parse_date(rec['received'])
+                    md['received'] = util._parse_date(rec['received'])
                 md.update(iodict)
                 
                 if rcontent['status'] == 'ok':
@@ -1995,10 +1994,10 @@ class Client(HasTraits):
             # unpack datetime objects
             for hkey in ('header', 'result_header'):
                 if hkey in rec:
-                    rec[hkey] = extract_dates(rec[hkey])
+                    rec[hkey] = util.extract_dates(rec[hkey])
             for dtkey in ('submitted', 'started', 'completed', 'received'):
                 if dtkey in rec:
-                    rec[dtkey] = parse_date(rec[dtkey])
+                    rec[dtkey] = util._parse_date(rec[dtkey])
             # relink buffers
             if has_bufs:
                 blen = buffer_lens[i]

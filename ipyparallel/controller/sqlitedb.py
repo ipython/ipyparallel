@@ -20,11 +20,11 @@ from dateutil.parser import parse as dateutil_parse
 from zmq.eventloop import ioloop
 
 from traitlets import Unicode, Instance, List, Dict
-from jupyter_client.jsonutil import date_default, extract_dates, squash_dates
+from jupyter_client.jsonutil import date_default, squash_dates
 from ipython_genutils.py3compat import iteritems, buffer_to_bytes
 
 from .dictdb import BaseDB
-from ..util import ensure_timezone
+from ..util import ensure_timezone, extract_dates
 
 #-----------------------------------------------------------------------------
 # SQLite operators, adapters, and converters
