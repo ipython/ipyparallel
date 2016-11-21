@@ -10,6 +10,7 @@ import stat
 import socket
 import sys
 import warnings
+from datetime import datetime
 from signal import signal, SIGINT, SIGABRT, SIGTERM
 try:
     from signal import SIGKILL
@@ -17,12 +18,23 @@ except ImportError:
     SIGKILL=None
 from types import FunctionType
 
+from dateutil.parser import parse as dateutil_parse
+from dateutil.tz import tzlocal
+
+try:
+    import datetime.timezone
+    utc = datetime.timezone.utc
+except ImportError:
+    from dateutil.tz import tzutc
+    utc = tzutc()
+
+from decorator import decorator
 from tornado.ioloop import IOLoop
 import zmq
 from zmq.log import handlers
 
 from traitlets.log import get_logger
-from decorator import decorator
+
 
 from jupyter_client.localinterfaces import localhost, is_public_ip, public_ips
 from ipython_genutils.py3compat import string_types, iteritems, itervalues
@@ -443,3 +455,95 @@ def stop_distributed_worker():
     if shell.user_ns.get('distributed_worker', None) is w:
         shell.user_ns.pop('distributed_worker', None)
     IOLoop.current().add_callback(lambda : w.terminate(None))
+
+
+def ensure_timezone(dt):
+    """Ensure a datetime object has a timezone
+    
+    If it doesn't have one, attach the local timezone.
+    """
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=tzlocal())
+    else:
+        return dt
+
+
+# extract_dates forward-port from jupyter_client 5.0
+# timestamp formats
+ISO8601 = "%Y-%m-%dT%H:%M:%S.%f"
+ISO8601_PAT = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d{1,6})?(Z|([\+\-]\d{2}:?\d{2}))?$")
+
+def _ensure_tzinfo(dt):
+    """Ensure a datetime object has tzinfo
+    
+    If no tzinfo is present, add tzlocal
+    """
+    if not dt.tzinfo:
+        # No more naïve datetime objects!
+        warnings.warn(u"Interpreting naïve datetime as local %s. Please add timezone info to timestamps." % dt,
+            DeprecationWarning,
+            stacklevel=4)
+        dt = dt.replace(tzinfo=tzlocal())
+    return dt
+
+
+def _parse_date(s):
+    """parse an ISO8601 date string
+    
+    If it is None or not a valid ISO8601 timestamp,
+    it will be returned unmodified.
+    Otherwise, it will return a datetime object.
+    """
+    if s is None:
+        return s
+    m = ISO8601_PAT.match(s)
+    if m:
+        dt = dateutil_parse(s)
+        return _ensure_tzinfo(dt)
+    return s
+
+def extract_dates(obj):
+    """extract ISO8601 dates from unpacked JSON"""
+    if isinstance(obj, dict):
+        new_obj = {} # don't clobber
+        for k,v in iteritems(obj):
+            new_obj[k] = extract_dates(v)
+        obj = new_obj
+    elif isinstance(obj, (list, tuple)):
+        obj = [ extract_dates(o) for o in obj ]
+    elif isinstance(obj, string_types):
+        obj = _parse_date(obj)
+    return obj
+
+def compare_datetimes(a, b):
+    """Compare two datetime objects
+    
+    If one has a timezone and the other doesn't,
+    treat the naïve datetime as local time to avoid errors.
+    
+    Returns the timedelta
+    """
+    if a.tzinfo is None and b.tzinfo is not None:
+        a = a.replace(tzinfo=tzlocal())
+    elif a.tzinfo is not None and b.tzinfo is None:
+        b = b.replace(tzinfo=tzlocal())
+    return a - b
+
+
+def utcnow():
+    """Timezone-aware UTC timestamp"""
+    return datetime.utcnow().replace(tzinfo=utc)
+
+def _patch_jupyter_client_dates():
+    """Monkeypatch juptyer_client.extract_dates to be nondestructive wrt timezone info"""
+    import jupyter_client
+    from distutils.version import LooseVersion as V
+    if V(jupyter_client.__version__) < V('5.0'):
+        from jupyter_client import session
+        if hasattr(session, '_save_extract_dates'):
+            return
+        session._save_extract_dates = session.extract_dates
+        session.extract_dates = extract_dates
+
+# FIXME: remove patch when we require jupyter_client 5.0
+_patch_jupyter_client_dates()

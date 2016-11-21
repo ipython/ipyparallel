@@ -50,6 +50,8 @@ from traitlets.config.configurable import LoggingConfigurable
 from ipython_genutils.py3compat import iteritems, itervalues
 from traitlets import Dict, Unicode, Integer, Float
 
+from ..util import ensure_timezone
+
 filters = {
  '$lt' : lambda a,b: a < b,
  '$gt' : lambda a,b: b > a,
@@ -64,6 +66,11 @@ filters = {
  '$exists' : lambda a,b: (b and a is not None) or (a is None and not b)
 }
 
+def _add_tz(obj):
+    if isinstance(obj, datetime):
+        obj = ensure_timezone(obj)
+    return obj
+
 
 class CompositeFilter(object):
     """Composite filter for matching multiple properties."""
@@ -72,8 +79,8 @@ class CompositeFilter(object):
         self.tests = []
         self.values = []
         for key, value in iteritems(dikt):
-            self.tests.append(filters[key])
-            self.values.append(value)
+            self.tests.append(_add_tz(filters[key]))
+            self.values.append(_add_tz(value))
 
     def __call__(self, value):
         for test,check in zip(self.tests, self.values):
@@ -141,7 +148,7 @@ class DictDB(BaseDB):
             if isinstance(v, dict):
                 tests[k] = CompositeFilter(v)
             else:
-                tests[k] = lambda o: o==v
+                tests[k] = lambda o: _add_tz(o) == _add_tz(v)
 
         for rec in itervalues(self._records):
             if self._match_one(rec, tests):
@@ -202,10 +209,13 @@ class DictDB(BaseDB):
             )
     
     def _check_dates(self, rec):
-        for key in ('submitted', 'started', 'completed'):
+        for key in ('submitted', 'started', 'completed', 'received'):
             value = rec.get(key, None)
             if value is not None and not isinstance(value, datetime):
                 raise ValueError("%s must be None or datetime, not %r" % (key, value))
+            if isinstance(value, datetime) and value.tzinfo is None:
+                self.log.warning("Timestamps should always have timezones: %s=%s", key, value)
+                rec[key] = ensure_timezone(value)
     
     # public API methods:
 

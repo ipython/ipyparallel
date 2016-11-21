@@ -351,7 +351,7 @@ help="""select the task scheduler scheme  [default: Python LRU]
             md = dict(
                 status=u'error',
                 engine=engine.decode('ascii'),
-                date=datetime.now(),
+                date=util.utcnow(),
             )
             msg = self.session.msg('apply_reply', content, parent=parent, metadata=md)
             raw_reply = list(map(zmq.Message, self.session.serialize(msg, ident=idents)))

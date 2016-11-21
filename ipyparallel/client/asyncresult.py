@@ -22,6 +22,7 @@ from zmq import MessageTracker
 
 from IPython.core.display import clear_output, display, display_pretty
 from ipyparallel import error
+from ipyparallel.util import utcnow, compare_datetimes
 from ipython_genutils.py3compat import string_types
 
 from .futures import MessageFuture
@@ -415,7 +416,7 @@ class AsyncResult(Future):
         end : one or more datetime objects (e.g. ar.received)
         start_key : callable
             Function to call on `start` to extract the relevant
-            entry [defalt: min]
+            entry [default: min]
         end_key : callable
             Function to call on `end` to extract the relevant
             entry [default: max]
@@ -434,7 +435,7 @@ class AsyncResult(Future):
             # handle single_result AsyncResults, where ar.stamp is single object,
             # not a list
             end = end_key(end)
-        return (end - start).total_seconds()
+        return compare_datetimes(end, start).total_seconds()
         
     @property
     def progress(self):
@@ -451,13 +452,13 @@ class AsyncResult(Future):
         if self.ready():
             return self.wall_time
         
-        now = submitted = datetime.now()
+        now = submitted = utcnow()
         for msg_id in self.msg_ids:
             if msg_id in self._client.metadata:
                 stamp = self._client.metadata[msg_id]['submitted']
                 if stamp and stamp < submitted:
                     submitted = stamp
-        return (now-submitted).total_seconds()
+        return compare_datetimes(now, submitted).total_seconds()
     
     @property
     @check_ready
@@ -468,7 +469,7 @@ class AsyncResult(Future):
         """
         t = 0
         for md in self._metadata:
-            t += (md['completed'] - md['started']).total_seconds()
+            t += compare_datetimes(md['completed'], md['started']).total_seconds()
         return t
     
     @property

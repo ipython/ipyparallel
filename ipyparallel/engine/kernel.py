@@ -1,7 +1,6 @@
 """IPython kernel for parallel computing"""
 
 import sys
-from datetime import datetime
 
 from ipython_genutils.py3compat import cast_bytes, cast_unicode_py2, unicode_type, safe_unicode, string_types
 from traitlets import Integer, Type
@@ -9,6 +8,7 @@ from traitlets import Integer, Type
 from ipykernel.ipkernel import IPythonKernel
 from ipykernel.jsonutil import json_clean
 from ipyparallel.serialize import serialize_object, unpack_apply_message
+from ipyparallel.util import utcnow
 from .datapub import ZMQDataPublisher
 
 
@@ -39,7 +39,7 @@ class IPythonParallelKernel(IPythonKernel):
     def init_metadata(self, parent):
         """init metadata dict, for execute/apply_reply"""
         return {
-            'started': datetime.now(),
+            'started': utcnow(),
             'dependencies_met' : True,
             'engine' : self.ident,
         }

@@ -16,12 +16,15 @@ try:
 except ImportError:
     sqlite3 = None
 
+from dateutil.parser import parse as dateutil_parse
 from zmq.eventloop import ioloop
 
 from traitlets import Unicode, Instance, List, Dict
-from .dictdb import BaseDB
-from jupyter_client.jsonutil import date_default, extract_dates, squash_dates
+from jupyter_client.jsonutil import date_default, squash_dates
 from ipython_genutils.py3compat import iteritems, buffer_to_bytes
+
+from .dictdb import BaseDB
+from ..util import ensure_timezone, extract_dates
 
 #-----------------------------------------------------------------------------
 # SQLite operators, adapters, and converters
@@ -79,6 +82,14 @@ def _convert_bufs(bs):
         return []
     else:
         return pickle.loads(bytes(bs))
+
+def _adapt_timestamp(dt):
+    """Adapt datetime to text"""
+    return ensure_timezone(dt).isoformat()
+
+def _convert_timestamp(s):
+    """Adapt text timestamp to datetime"""
+    return ensure_timezone(dateutil_parse(s))
 
 #-----------------------------------------------------------------------------
 # SQLiteDB class
@@ -220,6 +231,8 @@ class SQLiteDB(BaseDB):
         sqlite3.register_converter('dict', _convert_dict)
         sqlite3.register_adapter(list, _adapt_bufs)
         sqlite3.register_converter('bufs', _convert_bufs)
+        sqlite3.register_adapter(datetime, _adapt_timestamp)
+        sqlite3.register_converter('timestamp', _convert_timestamp)
         # connect to the db
         dbfile = os.path.join(self.location, self.filename)
         self._db = sqlite3.connect(dbfile, detect_types=sqlite3.PARSE_DECLTYPES,

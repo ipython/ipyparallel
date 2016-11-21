@@ -13,14 +13,13 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
 
 import zmq
 from zmq.eventloop.zmqstream import ZMQStream
 
 # internal:
 from ipython_genutils.importstring import import_item
-from jupyter_client.jsonutil import extract_dates
+from ..util import extract_dates
 from jupyter_client.localinterfaces import localhost
 from ipython_genutils.py3compat import cast_bytes, unicode_type, iteritems, buffer_to_bytes_py2
 from traitlets import (
@@ -78,7 +77,7 @@ def init_record(msg):
         'content': msg['content'],
         'metadata': msg['metadata'],
         'buffers': msg['buffers'],
-        'submitted': header['date'],
+        'submitted': util.ensure_timezone(header['date']),
         'client_uuid' : None,
         'engine_uuid' : None,
         'started': None,
@@ -671,13 +670,13 @@ class Hub(SessionFactory):
         # update record anyway, because the unregistration could have been premature
         rheader = msg['header']
         md = msg['metadata']
-        completed = rheader['date']
+        completed = util.ensure_timezone(rheader['date'])
         started = extract_dates(md.get('started', None))
         result = {
             'result_header' : rheader,
             'result_metadata': md,
             'result_content': msg['content'],
-            'received': datetime.now(),
+            'received': util.utcnow(),
             'started' : started,
             'completed' : completed
         }
@@ -777,7 +776,7 @@ class Hub(SessionFactory):
                     self.completed[eid].append(msg_id)
                 if msg_id in self.tasks[eid]:
                     self.tasks[eid].remove(msg_id)
-            completed = header['date']
+            completed = util.ensure_timezone(header['date'])
             started = extract_dates(md.get('started', None))
             result = {
                 'result_header' : header,
@@ -785,7 +784,7 @@ class Hub(SessionFactory):
                 'result_content': msg['content'],
                 'started' : started,
                 'completed' : completed,
-                'received' : datetime.now(),
+                'received' : util.utcnow(),
                 'engine_uuid': engine_uuid,
             }
 
@@ -817,18 +816,10 @@ class Hub(SessionFactory):
         #     self.log.debug("task::task %r not listed as MIA?!"%(msg_id))
 
         self.tasks[eid].append(msg_id)
-        # self.pending[msg_id][1].update(received=datetime.now(),engine=(eid,engine_uuid))
         try:
             self.db.update_record(msg_id, dict(engine_uuid=engine_uuid))
         except Exception:
             self.log.error("DB Error saving task destination %r", msg_id, exc_info=True)
-
-
-    def mia_task_request(self, idents, msg):
-        raise NotImplementedError
-        client_id = idents[0]
-        # content = dict(mia=self.mia,status='ok')
-        # self.session.send('mia_reply', content=content, idents=client_id)
 
 
     #--------------------- IOPub Traffic ------------------------------
@@ -1030,9 +1021,9 @@ class Hub(SessionFactory):
             # build a fake header:
             header = {}
             header['engine'] = uuid
-            header['date'] = datetime.now()
+            header['date'] = util.utcnow()
             rec = dict(result_content=content, result_header=header, result_buffers=[])
-            rec['completed'] = header['date']
+            rec['completed'] = util.ensure_timezone(header['date'])
             rec['engine_uuid'] = uuid
             try:
                 self.db.update_record(msg_id, rec)

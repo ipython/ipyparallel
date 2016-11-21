@@ -118,6 +118,7 @@ install_requires = setuptools_args['install_requires'] = [
     'jupyter_client',
     'ipykernel',
     'tornado>=4',
+    'python-dateutil>=2.1',
 ]
 
 extras_require = setuptools_args['extras_require'] = {
