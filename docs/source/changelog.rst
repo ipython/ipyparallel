@@ -4,11 +4,20 @@ Changes in IPython Parallel
 ===========================
 
 
-5.3
+6.0
 ---
+
+Due to a compatibility change and semver, this is a major release. However, it is not a big release.
+The main compatibility change is that all timestamps are now timezone-aware UTC timestamps.
+This means you may see comparison errors if you have code that uses datetime objects without timezone info (so-called naïve datetime objects).
+
+Other fixes:
 
 - Rename :meth:`Client.become_distributed` to :meth:`Client.become_dask`.
   :meth:`become_distributed` remains as an alias.
+- import joblib from a public API instead of a private one
+  when using IPython Parallel as a joblib backend.
+- Compatibility fix in extensions for security changes in notebook 4.3
 
 5.2
 ---
