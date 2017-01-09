@@ -8,6 +8,10 @@ define([
 ], function(IPython, $, utils) {
     "use strict";
 
+    // use base utils.ajax in notebook >= 4.3
+    // for xsrf settings, etc.
+    var ajax = utils.ajax || $.ajax;
+
     var ClusterList = function (selector, options) {
         this.selector = selector;
         if (this.selector !== undefined) {
@@ -47,7 +51,7 @@ define([
             error : utils.log_ajax_error,
         };
         var url = utils.url_join_encode(this.base_url, 'clusters');
-        $.ajax(url, settings);
+        ajax(url, settings);
     };
 
 
@@ -136,7 +140,7 @@ define([
                     that.data.profile,
                     'start'
                 );
-                $.ajax(url, settings);
+                ajax(url, settings);
             }
         });
     };
@@ -178,7 +182,7 @@ define([
                 that.data.profile,
                 'stop'
             );
-            $.ajax(url, settings);
+            ajax(url, settings);
         });
     };
 
