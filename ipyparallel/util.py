@@ -1,3 +1,4 @@
+# coding: utf-8
 """Some generic utilities for dealing with classes, urls, and serialization."""
 
 # Copyright (c) IPython Development Team.
