@@ -4,6 +4,11 @@ Changes in IPython Parallel
 ===========================
 
 
+6.0.1
+-----
+
+Small encoding fix for Python 2.
+
 6.0
 ---
 
