@@ -4,6 +4,11 @@ Changes in IPython Parallel
 ===========================
 
 
+6.0.2
+-----
+
+Upload fixed sdist for 6.0.1.
+
 6.0.1
 -----
 
