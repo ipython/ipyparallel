@@ -46,6 +46,17 @@ class IPTestCommand(Command):
         iptest.run_iptest()
         sys.argv = old_argv
 
+from setuptools.command.bdist_egg import bdist_egg
+
+class bdist_egg_disabled(bdist_egg):
+    """Disabled version of bdist_egg
+
+    Prevents setup.py install performing setuptools' default easy_install,
+    which it should never ever do.
+    """
+    def run(self):
+        sys.exit("Aborting implicit building of eggs. Use `pip install .` to install from source.")
+
 #-----------------------------------------------------------------------------
 # get on with it
 #-----------------------------------------------------------------------------
@@ -53,7 +64,7 @@ class IPTestCommand(Command):
 import os
 from glob import glob
 
-from distutils.core import setup
+from setuptools import setup
 
 pjoin = os.path.join
 here = os.path.abspath(os.path.dirname(__file__))
@@ -74,7 +85,6 @@ with open(pjoin(here, name, '_version.py')) as f:
 setup_args = dict(
     name            = name,
     version         = version_ns['__version__'],
-    scripts         = glob(pjoin('scripts', '*')),
     packages        = packages,
     package_data    = package_data,
     description     = "Interactive Parallel Computing with IPython",
@@ -102,47 +112,37 @@ setup_args = dict(
     ],
     cmdclass        = {
         'test': IPTestCommand,
+        'bdist_egg': bdist_egg if 'bdist_egg' in sys.argv else bdist_egg_disabled,
     },
-)
-
-if 'develop' in sys.argv or any(bdist in sys.argv for bdist in ['bdist_wheel', 'bdist_egg']):
-    import setuptools
-
-setuptools_args = {}
-
-install_requires = setuptools_args['install_requires'] = [
-    'ipython_genutils',
-    'decorator',
-    'pyzmq>=13',
-    'ipython>=4',
-    'jupyter_client',
-    'ipykernel',
-    'tornado>=4',
-    'python-dateutil>=2.1',
-]
-
-extras_require = setuptools_args['extras_require'] = {
-    ':python_version == "2.7"': ['futures'],
-    'nbext': ["notebook"],
-    'test': [
-        'nose',
-        'ipython[test]',
-        'testpath',
-        'mock',
+    install_requires = [
+        'ipython_genutils',
+        'decorator',
+        'pyzmq>=13',
+        'ipython>=4',
+        'jupyter_client',
+        'ipykernel',
+        'tornado>=4',
+        'python-dateutil>=2.1',
     ],
-}
-
-
-if 'setuptools' in sys.modules:
-    setup_args.update(setuptools_args)
-    setup_args.pop('scripts')
-    setup_args['entry_points'] = {
+    extras_require = {
+        ':python_version == "2.7"': ['futures'],
+        'nbext': ["notebook"],
+        'test': [
+            'nose',
+            'ipython[test]',
+            'testpath',
+            'mock',
+        ],
+    },
+    entry_points = {
         'console_scripts': [
             'ipcluster = ipyparallel.apps.ipclusterapp:launch_new_instance',
             'ipcontroller = ipyparallel.apps.ipcontrollerapp:launch_new_instance',
             'ipengine = ipyparallel.apps.ipengineapp:launch_new_instance',
         ]
     }
+)
+
 
 if __name__ == '__main__':
     setup(**setup_args)
