@@ -177,6 +177,28 @@ def split_url(url):
     return proto,addr,s_port
 
 
+def is_ip(location):
+    """Is a location an ip?
+    
+    It could be a hostname.
+    """
+    return bool(re.match(location, '(\d+\.){3}\d+'))
+
+
+def ip_for_host(host):
+    """Get the ip address for a host
+    
+    If no ips can be found for the host,
+    the host is returned unmodified.
+    """
+    try:
+        return socket.gethostbyname_ex(host)[2][0]
+    except Exception as e:
+        warnings.warn("IPython could not determine IPs for %s: %s" % (host, e),
+            RuntimeWarning)
+        return host
+
+
 def disambiguate_ip_address(ip, location=None):
     """turn multi-ip interfaces '0.0.0.0' and '*' into a connectable address
     
@@ -187,8 +209,8 @@ def disambiguate_ip_address(ip, location=None):
     
     ip : IP address
         An IP address, or the special values 0.0.0.0, or *
-    location: IP address, optional
-        A public IP of the target machine.
+    location: IP address or hostname, optional
+        A public IP of the target machine, or its hostname.
         If location is an IP of the current machine,
         localhost will be returned,
         otherwise location will be returned.
@@ -196,8 +218,16 @@ def disambiguate_ip_address(ip, location=None):
     if ip in {'0.0.0.0', '*'}:
         if not location:
             # unspecified location, localhost is the only choice
-            ip = localhost()
-        elif is_public_ip(location):
+            return localhost()
+        elif not is_ip(location):
+            if location == socket.gethostname():
+                # hostname matches, use localhost
+                return localhost()
+            else:
+                # hostname doesn't match, but the machine can have a few names.
+                location = ip_for_host(location)
+
+        if is_public_ip(location):
             # location is a public IP on this machine, use localhost
             ip = localhost()
         elif not public_ips():
