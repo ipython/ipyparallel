@@ -4,6 +4,15 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
+try:
+    from functools import lru_cache
+except ImportError:
+    # py2 has no lru_cache decorator,
+    # use a no-op
+    def lru_cache(maxsize=0):
+        """no-op decorator when lru_cache is unavailable"""
+        return lambda f: f
+
 import logging
 import os
 import re
@@ -16,7 +25,7 @@ from signal import signal, SIGINT, SIGABRT, SIGTERM
 try:
     from signal import SIGKILL
 except ImportError:
-    SIGKILL=None
+    SIGKILL = None
 from types import FunctionType
 
 from dateutil.parser import parse as dateutil_parse
@@ -185,6 +194,7 @@ def is_ip(location):
     return bool(re.match(location, '(\d+\.){3}\d+'))
 
 
+@lru_cache()
 def ip_for_host(host):
     """Get the ip address for a host
     
