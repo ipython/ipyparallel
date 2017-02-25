@@ -43,7 +43,7 @@ Or you can set the same behavior as the default by adding the following line to 
 .. sourcecode:: python
 
     c.HubFactory.ip = '*'
-    # c.HubFactory.location = '10.0.1.1'
+    # c.HubFactory.location = 'controllerhost.tld'
 
 
 .. note::
@@ -51,10 +51,16 @@ Or you can set the same behavior as the default by adding the following line to 
     ``--ip=*`` instructs ZeroMQ to listen on all interfaces,
     but it does not contain the IP needed for engines / clients
     to know where the controller actually is.
-    This can be specified with ``--location=10.0.0.1``,
-    the specific IP address of the controller, as seen from engines and/or clients.
-    IPython tries to guess this value by default, but it will not always guess correctly.
+    This can be specified with the ``--location`` argument,
+    such as ``--location=10.0.0.1``, or ``--location=server.local``,
+    the specific IP address or hostname of the controller, as seen from engines and/or clients.
+    IPython uses ``socket.gethostname()`` for this value by default,
+    but it may not always be the right value.
     Check the ``location`` field in your connection files if you are having connection trouble.
+
+.. versionchanged:: 6.1
+
+    Support hostnames in location, in addition to ip addresses.
 
 .. note::
 
