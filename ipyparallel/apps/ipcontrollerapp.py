@@ -2,24 +2,10 @@
 # encoding: utf-8
 """
 The IPython controller application.
-
-Authors:
-
-* Brian Granger
-* MinRK
-
 """
 
-#-----------------------------------------------------------------------------
-#  Copyright (C) 2008  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-----------------------------------------------------------------------------
-
-#-----------------------------------------------------------------------------
-# Imports
-#-----------------------------------------------------------------------------
+# Copyright (c) IPython Development Team.
+# Distributed under the terms of the Modified BSD License.
 
 from __future__ import with_statement
 
@@ -30,6 +16,7 @@ import sys
 
 from multiprocessing import Process
 from signal import signal, SIGINT, SIGABRT, SIGTERM
+import socket
 
 import zmq
 from zmq.devices import ProcessMonitoredQueue
@@ -44,8 +31,7 @@ from ipyparallel.apps.baseapp import (
     catch_config_error,
 )
 from ipython_genutils.importstring import import_item
-from jupyter_client.localinterfaces import localhost, public_ips
-from traitlets import Instance, Unicode, Bool, List, Dict, TraitError
+from traitlets import Unicode, Bool, List, Dict, TraitError
 
 from jupyter_client.session import (
     Session, session_aliases, session_flags,
@@ -56,7 +42,7 @@ from ipyparallel.controller.hub import HubFactory
 from ipyparallel.controller.scheduler import TaskScheduler,launch_scheduler
 from ipyparallel.controller.dictdb import DictDB
 
-from ipyparallel.util import split_url, disambiguate_url, set_hwm
+from ipyparallel.util import disambiguate_url
 
 # conditional import of SQLiteDB / MongoDB backend class
 real_dbs = []
@@ -177,7 +163,7 @@ class IPControllerApp(BaseParallelApplication):
         processes. It should be of the form: [user@]server[:port]. The
         Controller's listening addresses must be accessible from the ssh server""",
     )
-    location = Unicode(u'', config=True,
+    location = Unicode(socket.gethostname(), config=True,
         help="""The external IP or domain name of the Controller, used for disambiguating
         engine and client connections.""",
     )
@@ -219,19 +205,6 @@ class IPControllerApp(BaseParallelApplication):
 
     def save_connection_dict(self, fname, cdict):
         """save a connection dict to json file."""
-        c = self.config
-        url = cdict['registration']
-        location = cdict['location']
-        
-        if not location:
-            if public_ips():
-                location = public_ips()[-1]
-            else:
-                self.log.warn("Could not identify this machine's IP, assuming %s."
-                " You may need to specify '--location=<external_ip_address>' to help"
-                " IPython decide when to connect via loopback." % localhost() )
-                location = localhost()
-            cdict['location'] = location
         fname = os.path.join(self.profile_dir.security_dir, fname)
         self.log.info("writing connection info to %s", fname)
         with open(fname, 'w') as f:

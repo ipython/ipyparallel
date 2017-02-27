@@ -341,7 +341,7 @@ class LocalControllerLauncher(LocalProcessLauncher, ControllerMixin):
 
 
 class LocalEngineLauncher(LocalProcessLauncher, EngineMixin):
-    """Launch a single engine as a regular externall process."""
+    """Launch a single engine as a regular external process."""
 
     def find_args(self):
         return self.engine_cmd + self.cluster_args + self.engine_args

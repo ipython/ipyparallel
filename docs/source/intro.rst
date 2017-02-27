@@ -201,7 +201,7 @@ circumstances:
       "url":"tcp:\/\/127.0.0.1:54424",
       "exec_key":"a361fe89-92fc-4762-9767-e2f0a05e3130",
       "ssh":"",
-      "location":"10.19.1.135"
+      "location":"yourmachine.local"
     }
 
 If, however, you are running the controller on a work node on a cluster, you will likely
@@ -218,7 +218,7 @@ on the cluster.  An example of ipcontroller-client.json, as created by::
       "url":"tcp:\/\/*:54424",
       "exec_key":"a361fe89-92fc-4762-9767-e2f0a05e3130",
       "ssh":"login.mycluster.com",
-      "location":"10.0.0.2"
+      "location":"yourmachine.local"
     }
 
 More details of how these JSON files are used are given below.
