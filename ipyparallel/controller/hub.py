@@ -448,20 +448,31 @@ class Hub(SessionFactory):
 
         self.log.info("hub::created hub")
     
-    @property
-    def _next_id(self):
-        """gemerate a new ID.
+    def new_engine_id(self, requested_id=None):
+        """generate a new engine integer id.
 
-        No longer reuse old ids, just count from 0."""
+        No longer reuse old ids, just count from 0.
+
+        If an id is requested and available, use that.
+        Otherwise, use the counter.
+        """
+        if (
+            requested_id is not None
+            and (
+                requested_id in self.dead_engines
+                or requested_id not in self.engines
+            )
+            and requested_id not in {
+                ec.id for ec in self.incoming_registrations.values()
+            }
+        ):
+            self._idcounter = max(requested_id + 1, self._idcounter)
+            if requested_id in self.dead_engines:
+                self.dead_engines.remove(requested_id)
+            return requested_id
         newid = self._idcounter
         self._idcounter += 1
         return newid
-        # newid = 0
-        # incoming = [id[0] for id in itervalues(self.incoming_registrations)]
-        # # print newid, self.ids, self.incoming_registrations
-        # while newid in self.ids or newid in incoming:
-        #     newid += 1
-        # return newid
     
     #-----------------------------------------------------------------------------
     # message validation
@@ -920,7 +931,7 @@ class Hub(SessionFactory):
             self.log.error("registration::queue not specified", exc_info=True)
             return
 
-        eid = self._next_id
+        eid = self.new_engine_id(content.get('id'))
 
         self.log.debug("registration::register_engine(%i, %r)", eid, uuid)
 
