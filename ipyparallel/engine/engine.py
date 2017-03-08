@@ -17,7 +17,8 @@ from zmq.eventloop import ioloop, zmqstream
 
 from jupyter_client.localinterfaces import localhost
 from traitlets import (
-    Instance, Dict, Integer, Type, Float, Unicode, CBytes, Bool
+    Instance, Dict, Integer, Type, Float, Unicode, CBytes, Bool,
+    default,
 )
 from ipython_genutils.py3compat import cast_bytes
 
@@ -66,7 +67,23 @@ class EngineFactory(RegistrationFactory):
     # not configurable:
     connection_info = Dict()
     user_ns = Dict()
-    id = Integer(allow_none=True)
+    id = Integer(None, allow_none=True, config=True,
+        help="""Request this engine ID.
+        
+        If run in MPI, will use the MPI rank.
+        Otherwise, let the Hub decide what our rank should be.
+        """
+    )
+    @default('id')
+    def _id_default(self):
+        try:
+            from mpi4py import MPI
+        except ImportError:
+            return None
+        if MPI.COMM_WORLD.size > 1:
+            self.log.debug("MPI rank = %i", MPI.COMM_WORLD.rank)
+            return MPI.COMM_WORLD.rank
+    
     registrar = Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
     kernel = Instance(Kernel, allow_none=True)
     hb_check_period=Integer()
@@ -143,8 +160,12 @@ class EngineFactory(RegistrationFactory):
 
 
         content = dict(uuid=self.ident)
+        if self.id is not None:
+            self.log.info("Requesting id: %i", self.id)
+            content['id'] = self.id
         self.registrar.on_recv(lambda msg: self.complete_registration(msg, connect, maybe_tunnel))
         # print (self.session.key)
+        
         self.session.send(self.registrar, "registration_request", content=content)
 
     def _report_ping(self, msg):
@@ -168,7 +189,9 @@ class EngineFactory(RegistrationFactory):
             return str(info["interface"] + ":%i" % info[key])
         
         if content['status'] == 'ok':
-            self.id = int(content['id'])
+            if self.id is not None and content['id'] != self.id:
+                self.log.warning("Did not get the requested id: %i != %i", content['id'], self.id)
+            self.id = content['id']
 
             # launch heartbeat
             # possibly forward hb ports with tunnels
