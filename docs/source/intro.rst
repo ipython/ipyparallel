@@ -18,22 +18,22 @@ Some of these are covered in more detail in the :ref:`examples
 Introduction
 ============
 
-This section gives an overview of IPython's sophisticated and powerful
+This section gives an overview of IPython's
 architecture for parallel and distributed computing. This architecture
-abstracts out parallelism in a very general way, which enables IPython to
-support many different styles of parallelism including:
+abstracts out parallelism in a general way, enabling IPython to
+support many different styles of parallelism, including:
 
-* Single program, multiple data (SPMD) parallelism.
-* Multiple program, multiple data (MPMD) parallelism.
-* Message passing using MPI.
-* Task farming.
-* Data parallel.
-* Combinations of these approaches.
-* Custom user defined approaches.
+* Single program, multiple data (SPMD) parallelism
+* Multiple program, multiple data (MPMD) parallelism
+* Message passing using MPI
+* Task farming
+* Data parallel
+* Combinations of these approaches
+* Custom user-defined approaches
 
 Most importantly, IPython enables all types of parallel applications to
-be developed, executed, debugged and monitored *interactively*. Hence,
-the ``I`` in IPython.  The following are some example usage cases for IPython:
+be developed, executed, debugged, and monitored *interactively*. Hence,
+the ``I`` in IPython.  The following are some example use cases for IPython:
 
 * Quickly parallelize algorithms that are embarrassingly parallel
   using a number of simple approaches.  Many simple things can be
@@ -44,7 +44,7 @@ the ``I`` in IPython.  The following are some example usage cases for IPython:
 
 * Analyze and visualize large datasets (that could be remote and/or
   distributed) interactively using IPython and tools like
-  matplotlib/TVTK.
+  matplotlib.
 
 * Develop, test and debug new parallel algorithms
   (that may use MPI) interactively.
@@ -60,13 +60,14 @@ the ``I`` in IPython.  The following are some example usage cases for IPython:
 
 .. tip::
 
-   At the SciPy 2011 conference in Austin, Min Ragan-Kelley presented a
+   At the SciPy 2014 conference in Austin, Min Ragan-Kelley presented a
    complete 4-hour tutorial on the use of these features, and all the materials
    for the tutorial are now `available online`__.  That tutorial provides an
    excellent, hands-on oriented complement to the reference documentation
    presented here.
 
-.. __: https://minrk.github.io/scipy-tutorial-2011/
+.. __: https://github.com/minrk/IPython-parallel-tutorial/blob/master/Index.ipynb
+
 
 Architecture overview
 =====================
@@ -77,25 +78,23 @@ Architecture overview
 
 The IPython architecture consists of four components:
 
-* The IPython engine.
-* The IPython hub.
-* The IPython schedulers.
-* The controller client.
+* The IPython engine
+* The IPython hub
+* The IPython schedulers
+* The IPython client
 
-These components live in the :mod:`ipyparallel` package and are
-installed with IPython.  They do, however, have additional dependencies
-that must be installed.  For more information, see our
-:ref:`installation documentation <install_index>`.
+These components live in the :mod:`ipyparallel` package,
+which can be installed with :command:`pip` or :command:`conda`.
 
 .. TODO: include zmq in install_index
 
 IPython engine
----------------
+--------------
 
 The IPython engine is an extension of the IPython kernel for Jupyter.
 The engine listens for requests over the network, runs code, and returns results.
 IPython parallel extends the :ref:`Jupyter messaging protocol <jupyterclient:messaging>`
-to support native Python object serialization.
+to support native Python object serialization and add some additional commands.
 When multiple engines are started, parallel and distributed computing becomes possible.
 
 IPython controller
@@ -104,8 +103,8 @@ IPython controller
 The IPython controller processes provide an interface for working with a set of engines.
 At a general level, the controller is a collection of processes to which IPython engines
 and clients can connect. The controller is composed of a :class:`Hub` and a collection of
-:class:`Schedulers`. These Schedulers are typically run in separate processes but on the
-same machine as the Hub, but can be run anywhere from local threads or on remote machines.
+:class:`Schedulers`. These Schedulers are typically run in separate processes on the
+same machine as the Hub.
 
 The controller also provides a single point of contact for users who wish to
 access the engines connected to the controller. There are different ways of
@@ -114,9 +113,9 @@ the :meth:`.View.apply` method, after
 constructing :class:`.View` objects to represent subsets of engines. The two
 primary models for interacting with engines are:
 
-* A **Direct** interface, where engines are addressed explicitly.
-* A **LoadBalanced** interface, where the Scheduler is trusted with assigning work to
-  appropriate engines.
+* A **Direct** interface, where engines are addressed explicitly
+* A **LoadBalanced** interface, where the Scheduler is entrusted with assigning work to
+  appropriate engines
 
 Advanced users can readily extend the View models to enable other
 styles of parallelism.
@@ -159,8 +158,8 @@ views:
 Security
 --------
 
-IPython uses ZeroMQ for networking, which has provided many advantages, but
-one of the setbacks is its utter lack of security [ZeroMQ]_. By default, no IPython
+IPython uses ZeroMQ for networking, and does not yet support ZeroMQ's encryption and authentication.
+By default, no IPython
 connections are encrypted, but open ports only listen on localhost. The only
 source of encryption for IPython is via ssh-tunnel. IPython supports both shell
 (`openssh`) and `paramiko` based tunnels for connections.  There is a key used to
@@ -175,10 +174,10 @@ engines.
 
 To connect and authenticate to the controller an engine or client needs
 some information that the controller has stored in a JSON file.
-Thus, the JSON files need to be copied to a location where
+The JSON files may need to be copied to a location where
 the clients and engines can find them. Typically, this is the
 :file:`~/.ipython/profile_default/security` directory on the host where the
-client/engine is running (which could be a different host than the controller).
+client/engine is running, which could be on a different filesystemx than the controller.
 Once the JSON files are copied over, everything should work fine.
 
 Currently, there are two JSON files that the controller creates:
@@ -232,7 +231,7 @@ can be found :ref:`here <parallelsecurity>`.
     every time you make a tunnel, you open a localhost port on the connecting
     machine that points to the Controller. If localhost on the Controller's
     machine, or the machine of any client or engine, is untrusted, then your
-    Controller is insecure. There is no way around this with ZeroMQ.
+    Controller is insecure.
 
 
 
@@ -243,12 +242,12 @@ To use IPython for parallel computing, you need to start one instance of the
 controller and one or more instances of the engine. Initially, it is best to
 simply start a controller and engines on a single host using the
 :command:`ipcluster` command. To start a controller and 4 engines on your
-localhost, just do::
+local machine::
 
     $ ipcluster start -n 4
 
 More details about starting the IPython controller and engines can be found
-:ref:`here <parallel_process>`
+:ref:`here <parallel_process>`.
 
 Once you have started the IPython controller and one or more engines, you
 are ready to use the engines to do something useful. To make sure
@@ -260,11 +259,11 @@ everything is working correctly, try the following commands:
 
 	In [2]: c = ipp.Client()
 
-	In [4]: c.ids
-	Out[4]: [0, 1, 2, 3]
+	In [3]: c.ids
+	Out[3]: [0, 1, 2, 3]
 
-	In [5]: c[:].apply_sync(lambda : "Hello, World")
-	Out[5]: [ 'Hello, World', 'Hello, World', 'Hello, World', 'Hello, World' ]
+	In [4]: c[:].apply_sync(lambda : "Hello, World")
+	Out[4]: [ 'Hello, World', 'Hello, World', 'Hello, World', 'Hello, World' ]
 
 
 When a client is created with no arguments, the client tries to find the corresponding JSON file
