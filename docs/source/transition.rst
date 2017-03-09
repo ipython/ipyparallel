@@ -124,7 +124,7 @@ argument.
     DirectView.
 
 
-The other major difference is the use of :meth:`apply`. When remote work is simply functions,
+The other major difference is the use of :meth:`apply`. When remote work is comprised of functions,
 the natural return value is the actual Python objects. It is no longer the recommended pattern
 to use stdout as your results, due to stream decoupling and the asynchronous nature of how the
 stdout streams are handled in the new system.
@@ -133,7 +133,7 @@ Task to LoadBalancedView
 ========================
 
 Load-Balancing has changed more than Multiplexing.  This is because there is no longer a notion
-of a StringTask or a MapTask, there are simply Python functions to call.  Tasks are now
+of a StringTask or a MapTask, there are Python functions to call.  Tasks are now
 simpler, because they are no longer composites of push/execute/pull/clear calls, they are
 a single function that takes arguments, and returns objects.
 
@@ -233,7 +233,7 @@ There are still some things that behave the same as IPython.kernel:
     In [6]: ar.r
     Out[6]: [5, 5]
 
-The ``.r`` or ``.result`` property simply calls :meth:`get`, waiting for and returning the
+The ``.r`` or ``.result`` property calls :meth:`get`, waiting for and returning the
 result.
 
 .. seealso::

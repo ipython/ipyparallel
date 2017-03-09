@@ -124,7 +124,7 @@ less than linear scaling (16x) because the controller is also running on one of
 the cores.
 
 To emphasize the interactive nature of IPython, we now show how the
-calculation can also be run by simply typing the commands from
+calculation can also be run by typing the commands from
 :file:`parallelpi.py` interactively into IPython:
 
 .. sourcecode:: ipython
@@ -132,7 +132,7 @@ calculation can also be run by simply typing the commands from
     In [1]: import ipyparallel as ipp
 
     # The Client allows us to use the engines interactively.
-    # We simply pass Client the name of the cluster profile we
+    # We pass Client the name of the cluster profile we
     # are using.
     In [2]: c = ipp.Client(profile='mycluster')
     In [3]: v = c[:]

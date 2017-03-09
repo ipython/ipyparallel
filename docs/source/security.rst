@@ -102,7 +102,7 @@ information for connecting to the controller, possibly including the address of 
 ssh-server through with the client is to tunnel. The Client object then creates tunnels
 using either [OpenSSH]_ or [Paramiko]_, depending on the platform. If users do not wish to
 use OpenSSH or Paramiko, or the tunneling utilities are insufficient, then they may
-construct the tunnels themselves, and simply connect clients and engines as if the
+construct the tunnels themselves, and connect clients and engines as if the
 controller were on loopback on the connecting machine.
 
 
@@ -125,7 +125,7 @@ There is exactly one shared key per cluster - it must be the same everywhere. Ty
 the controller creates this key, and stores it in the private connection files
 `ipython-{engine|client}.json`. These files are typically stored in the
 `~/.ipython/profile_<name>/security` directory, and are maintained as readable only by the
-owner, just as is common practice with a user's keys in their `.ssh` directory.
+owner, as is common practice with a user's keys in their `.ssh` directory.
 
 .. warning::
 
@@ -158,7 +158,7 @@ untrusted local network. If the attacker does have access to the Controller's po
 the attack is prevented by the capabilities based client authentication of the execution
 key. The relevant authentication information is encoded into the JSON file that clients
 must present to gain access to the IPython controller. By limiting the distribution of
-those keys, a user can grant access to only authorized persons, just as with SSH keys.
+those keys, a user can grant access to only authorized persons, as with SSH keys.
 
 It is highly unlikely that an execution key could be guessed by an attacker
 in a brute force guessing attack. A given instance of the IPython controller

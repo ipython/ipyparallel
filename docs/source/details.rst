@@ -43,7 +43,7 @@ The following will fail:
     <ipython-input-12-c3e7afeb3075> in setter(a)
     RuntimeError: array is not writeable
 
-If you do need to edit the array in-place, just remember to copy the array if it's read-only.
+If you do need to edit the array in-place, remember to copy the array if it's read-only.
 The :attr:`ndarray.flags.writeable` flag will tell you if you can write to an array.
 
 .. sourcecode:: ipython
@@ -144,7 +144,7 @@ outer function, then there will not be a closure, and the generated function wil
 
 `g1` and `g2` *will* be sendable with IPython, and will treat the engine's namespace as
 globals().  The :meth:`pull` method is implemented based on this principle.  If we did not
-provide pull, you could implement it yourself with `apply`, by simply returning objects out
+provide pull, you could implement it yourself with `apply`, by returning objects out
 of the global namespace:
 
 .. sourcecode:: ipython
@@ -215,7 +215,7 @@ targets : int,list of ints, 'all', None [default view.targets]
 .. note::
 
     :class:`LoadBalancedView` uses targets to restrict possible destinations.
-    LoadBalanced calls will always execute in just one location.
+    LoadBalanced calls will always execute on exactly one engine.
 
 flags only in LoadBalancedViews:
 
@@ -240,10 +240,10 @@ timeout : float/int or None
 execute and run
 ---------------
 
-For executing strings of Python code, :class:`DirectView` 's also provide an :meth:`execute` and
-a :meth:`run` method, which rather than take functions and arguments, take simple strings.
-`execute` simply takes a string of Python code to execute, and sends it to the Engine(s). `run`
-is the same as `execute`, but for a *file*, rather than a string. It is simply a wrapper that
+For executing strings of Python code, :class:`DirectView`s also provide an :meth:`execute` and
+a :meth:`run` method, which rather than take functions and arguments, take Python strings.
+`execute` takes a string of Python code to execute, and sends it to the Engine(s). `run`
+is the same as `execute`, but for a *file* rather than a string. It is a wrapper that
 does something very similar to ``execute(open(f).read())``.
 
 .. note::
@@ -270,7 +270,7 @@ Creating a DirectView
 
 DirectViews can be created in two ways, by index access to a client, or by a client's
 :meth:`view` method.  Index access to a Client works in a few ways.  First, you can create
-DirectViews to single engines simply by accessing the client by engine id:
+DirectViews to single engines by accessing the client by engine id:
 
 .. sourcecode:: ipython
 
@@ -340,7 +340,7 @@ Or to see the hostname of the machine they are on:
 Data movement via DirectView
 ****************************
 
-Since a Python namespace is just a :class:`dict`, :class:`DirectView` objects provide
+Since a Python namespace is a :class:`dict`, :class:`DirectView` objects provide
 dictionary-style access by key and methods such as :meth:`get` and
 :meth:`update` for convenience. This make the remote namespaces of the engines
 appear as a local dictionary. Underneath, these methods call :meth:`apply`:
@@ -457,7 +457,7 @@ should never raise an error.
 result is done, :meth:`successful` will tell you whether the call completed without raising an
 exception.
 
-If you actually want the result of the call, you can use :meth:`get`. Initially, :meth:`get`
+If you want the result of the call, you can use :meth:`get`. Initially, :meth:`get`
 behaves just like :meth:`wait`, in that it will block until the result is ready, or until a
 timeout is met. However, unlike :meth:`wait`, :meth:`get` will raise a :exc:`TimeoutError` if
 the timeout is reached and the result is still not ready. If the result arrives before the
@@ -479,13 +479,13 @@ Extended interface
 
 
 Other extensions of the AsyncResult interface include convenience wrappers for :meth:`get`.
-AsyncResults have a property, :attr:`result`, with the short alias :attr:`r`, which simply call
+AsyncResults have a property, :attr:`result`, with the short alias :attr:`r`, which call
 :meth:`get`. Since our object is designed for representing *parallel* results, it is expected
 that many calls (any of those submitted via DirectView) will map results to engine IDs. We
 provide a :meth:`get_dict`, which is also a wrapper on :meth:`get`, which returns a dictionary
 of the individual results, keyed by engine ID.
 
-You can also prevent a submitted job from actually executing, via the AsyncResult's
+You can also prevent a submitted job from executing, via the AsyncResult's
 :meth:`abort` method. This will instruct engines to not execute the job when it arrives.
 
 The larger extension of the AsyncResult API is the :attr:`metadata` attribute.  The metadata
@@ -581,7 +581,7 @@ jobs
 
 abort
 
-    Sometimes you may want to prevent a job you have submitted from actually running. The method
+    Sometimes you may want to prevent a job you have submitted from running. The method
     for this is :meth:`abort`. It takes a container of msg_ids, and instructs the Engines to not
     run the jobs if they arrive. The jobs will then fail with an AbortedTask error.
 
@@ -600,8 +600,8 @@ Synchronization
 ===============
 
 Since the Client is a synchronous object, events do not automatically trigger in your
-interactive session - you must poll the 0MQ sockets for incoming messages.  Note that 
-this polling *does not* actually make any network requests.  It simply performs a `select`
+interactive session - you must poll the 0MQ sockets for incoming messages.  Note that
+this polling *does not* make any network requests.  It performs a `select`
 operation, to check if messages are already in local memory, waiting to be handled.
 
 The method that handles incoming messages is :meth:`spin`. This method flushes any waiting

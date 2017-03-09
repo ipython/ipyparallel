@@ -182,7 +182,7 @@ which adjusts how the outputs of multiple engines are presented.
 
 If you are using %px in non-blocking mode, you won't get output.
 You can use %pxresult to display the outputs of the latest command,
-just as is done when %px is blocking:
+as is done when %px is blocking:
 
 .. sourcecode:: ipython
 
@@ -197,7 +197,7 @@ just as is done when %px is blocking:
     [stdout:2] hi
     [stdout:3] hi
 
-%pxresult simply calls :meth:`.AsyncResult.display_outputs` on the most recent request.
+%pxresult calls :meth:`.AsyncResult.display_outputs` on the most recent request.
 It accepts the same output-grouping arguments as %%px, so you can use it to view
 a result in different ways.
 
@@ -351,7 +351,7 @@ Then, if your engines are local, you can start a qtconsole right on the engine(s
 
 Careful with this one, because if your view is of 16 engines it will start 16 QtConsoles!
 
-Or you can view just the connection info, and work out the right way to connect to the engines,
+Or you can view the connection info and work out the right way to connect to the engines,
 depending on where they live and where you are:
 
 .. sourcecode:: ipython
@@ -370,7 +370,7 @@ depending on where they live and where you are:
 
     Paste the above JSON into a file, and connect with:
         $> ipython <app> --existing <file>
-    or, if you are local, you can connect with just:
+    or, if you are local, you can connect with:
         $> ipython <app> --existing kernel-60125.json
     or even just:
         $> ipython <app> --existing

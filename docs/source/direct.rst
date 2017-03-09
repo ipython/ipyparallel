@@ -73,7 +73,7 @@ constructed via list-access to the client:
 Quick and easy parallelism
 ==========================
 
-In many cases, you simply want to call a Python function on a sequence of
+In many cases, you want to call a Python function on a sequence of
 objects, but *in parallel*. IPython Parallel provides a simple way
 of accomplishing this: using the DirectView's :meth:`~DirectView.map` method.
 
@@ -83,7 +83,7 @@ Parallel map
 Python's builtin :func:`map` functions allows a function to be applied to a
 sequence element-by-element. This type of code is typically trivial to
 parallelize. In fact, since IPython's interface is all about functions anyway,
-you can just use the builtin :func:`map` with a :class:`RemoteFunction`, or a 
+you can use the builtin :func:`map` with a :class:`RemoteFunction`, or a 
 DirectView's :meth:`map` method:
 
 .. sourcecode:: ipython
@@ -406,7 +406,7 @@ Other things to look at
 Remote function decorators
 --------------------------
 
-Remote functions are just like normal functions, but when they are called
+Remote functions are like normal functions, but when they are called
 they execute on one or more engines rather than locally. IPython provides
 two decorators for producing parallel functions.
 

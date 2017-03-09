@@ -240,7 +240,7 @@ Getting Started
 
 To use IPython for parallel computing, you need to start one instance of the
 controller and one or more instances of the engine. Initially, it is best to
-simply start a controller and engines on a single host using the
+start a controller and engines on a single host using the
 :command:`ipcluster` command. To start a controller and 4 engines on your
 local machine::
 

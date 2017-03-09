@@ -140,8 +140,8 @@ Cost
 ====
 
 The advantage of the database backends is, of course, that large amounts of
-data can be stored that won't fit in memory.  The basic DictDB 'backend' is actually
-to just store all of this information in a Python dictionary.  This is very fast,
+data can be stored that won't fit in memory.  The basic DictDB 'backend'
+stores all of this information in a Python dictionary.  This is very fast,
 but will run out of memory quickly if you move a lot of data around, or your
 cluster is to run for a long time.
 
@@ -149,8 +149,8 @@ Unfortunately, the DB backends (SQLite and MongoDB) right now are rather slow,
 and can still consume large amounts of resources, particularly if large tasks
 or results are being created at a high frequency.
 
-For this reason, we have added :class:`~.NoDB`,a dummy backend that doesn't
-actually store any information. When you use this database, nothing is stored,
+For this reason, we have added :class:`~.NoDB`, a dummy backend that doesn't
+store any information. When you use this database, nothing is stored,
 and any request for results will result in a KeyError.  This obviously prevents
 later requests for results and task resubmission from functioning, but
 sometimes those nice features are not as useful as keeping Hub memory under

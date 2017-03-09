@@ -69,7 +69,7 @@ be constructed via the client's :meth:`load_balanced_view` method:
 Quick and easy parallelism
 ==========================
 
-In many cases, you simply want to apply a Python function to a sequence of
+In many cases, you want to apply a Python function to a sequence of
 objects, but *in parallel*. Like the direct interface, these can be
 implemented via the task interface. The exact same tools can perform these
 actions in load-balanced ways as well as multiplexed ways: a parallel version
@@ -81,7 +81,7 @@ the task interface.
 Parallel map
 ------------
 
-To load-balance :meth:`map`, simply use a LoadBalancedView:
+To load-balance :meth:`map`, use a LoadBalancedView:
 
 .. sourcecode:: ipython
 
@@ -97,7 +97,7 @@ To load-balance :meth:`map`, simply use a LoadBalancedView:
 Parallel function decorator
 ---------------------------
 
-Parallel functions are just like normal function, but they can be called on
+Parallel functions are just like normal functions, but they can be called on
 sequences and *in parallel*. The direct interface provides a decorator
 that turns any Python function into a parallel function:
 
@@ -203,7 +203,7 @@ will be assigned to another engine. If the dependency returns *anything other th
        ....:    do_windows_stuff()
 
 In this case, any time you apply ``mactask``, it will only run on an OSX machine.
-``@ipp.depend`` is just like ``apply``, in that it has a ``@ipp.depend(f,*args,**kwargs)``
+``@ipp.depend`` is like ``apply``, in that it has a ``@ipp.depend(f,*args,**kwargs)``
 signature.
 
 dependents
@@ -237,7 +237,7 @@ Graph Dependencies
 
 Sometimes you want to restrict the time and/or location to run a given task as a function
 of the time and/or location of other tasks. This is implemented via a subclass of
-:class:`set`, called a :class:`Dependency`. A Dependency is just a set of `msg_ids`
+:class:`set`, called a :class:`Dependency`. A Dependency is a set of `msg_ids`
 corresponding to tasks, and a few attributes to guide how to decide when the Dependency
 has been met.
 
@@ -282,8 +282,8 @@ timeout
     Dependencies only work within the task scheduler. You cannot instruct a load-balanced
     task to run after a job submitted via the MUX interface.
 
-The simplest form of Dependencies is with `all=True,success=True,failure=False`. In these cases,
-you can skip using Dependency objects, and just pass msg_ids or AsyncResult objects as the
+The simplest form of Dependencies is with `all=True, success=True, failure=False`. In these cases,
+you can skip using Dependency objects, and pass msg_ids or AsyncResult objects as the
 `follow` and `after` keywords to :meth:`client.apply`:
 
 .. sourcecode:: ipython
@@ -346,7 +346,7 @@ Resubmit
 
 Sometimes you may want to re-run a task. This could be because it failed for some reason, and
 you have fixed the error, or because you want to restore the cluster to an interrupted state.
-For this, the :class:`Client` has a :meth:`rc.resubmit` method.  This simply takes one or more
+For this, the :class:`Client` has a :meth:`rc.resubmit` method.  This takes one or more
 msg_ids, and returns an :class:`AsyncHubResult` for the result(s).  You cannot resubmit
 a task that is pending - only those that have finished, either successful or unsuccessful.
 
@@ -363,7 +363,7 @@ of a controller config object.
 
 The built-in routing schemes:
 
-To select one of these schemes, simply do::
+To select one of these schemes::
 
     $ ipcontroller --scheme=<schemename>
     for instance:
