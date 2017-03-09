@@ -55,9 +55,9 @@ To create a new client, and set up the default direct and load-balanced objects:
     In [3]: tc = kclient.TaskClient()
 
     # new
-    In [1]: from ipyparallel import Client
+    In [1]: import ipyparallel as ipp
 
-    In [2]: rc = Client()
+    In [2]: rc = ipp.Client()
 
     In [3]: dview = rc[:]
 
@@ -176,9 +176,7 @@ In the new code, this is simpler:
 
     In [10]: import numpy
 
-    In [11]: from ipyparallel import Reference
-
-    In [12]: ar = lbview.apply(numpy.dot, Reference('A'), B)
+    In [12]: ar = lbview.apply(numpy.dot, ipp.Reference('A'), B)
 
     In [13]: C = ar.get()
 

@@ -5,6 +5,7 @@
 from __future__ import print_function
 
 import heapq
+import ipyparallel as ipp
 from ipyparallel.error import RemoteError
 
 def mergesort(list_of_lists, key=None):
@@ -81,7 +82,7 @@ def remote_iterator(view,name):
     view.execute('it%s=iter(%s)'%(name,name), block=True)
     while True:
         try:
-            result = view.apply_sync(next, Reference('it'+name))
+            result = view.apply_sync(next, ipp.Reference('it'+name))
         # This causes the StopIteration exception to be raised.
         except RemoteError as e:
             if e.ename == 'StopIteration':
@@ -94,8 +95,7 @@ def remote_iterator(view,name):
 # Main, interactive testing
 if __name__ == '__main__':
 
-    from ipyparallel import Client, Reference
-    rc = Client()
+    rc = ipp.Client()
     view = rc[:]
     print('Engine IDs:', rc.ids)
 

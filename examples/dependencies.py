@@ -1,9 +1,9 @@
-from ipyparallel import *
+import ipyparallel as ipp
 
-client = Client()
+client = ipp.Client()
 
 # this will only run on machines that can import numpy:
-@require('numpy')
+@ipp.require('numpy')
 def norm(A):
     from numpy.linalg import norm
     return norm(A,2)
@@ -24,7 +24,7 @@ def getpid():
 pid0 = client[0].apply_sync(getpid)
 
 # this will depend on the pid being that of target 0:
-@depend(checkpid, pid0)
+@ipp.depend(checkpid, pid0)
 def getpid2():
     import os
     return os.getpid()

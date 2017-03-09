@@ -324,9 +324,9 @@ apply it to each element of an array of integers in parallel using the
 
 .. sourcecode:: ipython
 
-    In [1]: from ipyparallel import *
+    In [1]: import ipyparallel as ipp
 
-    In [2]: c = Client(profile='mycluster')
+    In [2]: c = ipp.Client(profile='mycluster')
 
     In [3]: view = c[:]
 

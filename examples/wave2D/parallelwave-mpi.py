@@ -28,7 +28,7 @@ import time
 from numpy import exp, zeros, newaxis, sqrt
 
 from IPython.external import argparse
-from ipyparallel import Client, Reference
+import ipyparallel as ipp
 
 def setup_partitioner(index, num_procs, gnum_cells, parts):
     """create a partitioner in the engine namespace"""
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     final_test = True
 
     # create the Client
-    rc = Client(profile=ns.profile)
+    rc = ipp.Client(profile=ns.profile)
     num_procs = len(rc.ids)
 
     if partition is None:
@@ -148,11 +148,11 @@ if __name__ == '__main__':
     # setup remote partitioner
     # note that Reference means that the argument passed to setup_partitioner will be the
     # object named 'my_id' in the engine's namespace
-    view.apply_sync(setup_partitioner, Reference('my_id'), num_procs, grid, partition)
+    view.apply_sync(setup_partitioner, ipp.Reference('my_id'), num_procs, grid, partition)
     # wait for initial communication to complete
     view.execute('mpi.barrier()')
     # setup remote solvers
-    view.apply_sync(setup_solver, I,f,c,bc,Lx,Ly,partitioner=Reference('partitioner'), dt=0,implementation=impl)
+    view.apply_sync(setup_solver, I,f,c,bc,Lx,Ly,partitioner=ipp.Reference('partitioner'), dt=0,implementation=impl)
 
     # lambda for calling solver.solve:
     _solve = lambda *args, **kwargs: solver.solve(*args, **kwargs)
@@ -174,7 +174,7 @@ if __name__ == '__main__':
 
     impl['inner'] = 'vectorized'
     # setup new solvers
-    view.apply_sync(setup_solver, I,f,c,bc,Lx,Ly,partitioner=Reference('partitioner'), dt=0,implementation=impl)
+    view.apply_sync(setup_solver, I,f,c,bc,Lx,Ly,partitioner=ipp.Reference('partitioner'), dt=0,implementation=impl)
     view.execute('mpi.barrier()')
 
     # run again with numpy vectorized inner-implementation

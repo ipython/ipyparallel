@@ -110,14 +110,14 @@ def require(*objects, **mapping):
     
     ::
     
-        In [1]: @require('numpy')
+        In [1]: @ipp.require('numpy')
            ...: def norm(a):
            ...:     return numpy.linalg.norm(a,2)
     
     ::
     
         In [2]: foo = lambda x: x*x
-        In [3]: @require(foo)
+        In [3]: @ipp.require(foo)
            ...: def bar(a):
            ...:     return foo(1-a)
     """

@@ -28,7 +28,7 @@ import time
 from numpy import exp, zeros, newaxis, sqrt
 
 from IPython.external import argparse
-from ipyparallel import Client, Reference
+import ipyparallel as ipp
 
 def setup_partitioner(comm, addrs, index, num_procs, gnum_cells, parts):
     """create a partitioner in the engine namespace"""
@@ -102,7 +102,7 @@ if __name__ == '__main__':
     final_test = True
 
     # create the Client
-    rc = Client(profile=ns.profile)
+    rc = ipp.Client(profile=ns.profile)
     num_procs = len(rc.ids)
 
     if partition is None:
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     # setup remote partitioner
     # note that Reference means that the argument passed to setup_partitioner will be the
     # object named 'com' in the engine's namespace
-    view.apply_sync(setup_partitioner, Reference('com'), peers, Reference('my_id'), num_procs, grid, partition)
+    view.apply_sync(setup_partitioner, ipp.Reference('com'), peers, ipp.Reference('my_id'), num_procs, grid, partition)
     time.sleep(1)
     # convenience lambda to call solver.solve:
     _solve = lambda *args, **kwargs: solver.solve(*args, **kwargs)
@@ -166,7 +166,7 @@ if __name__ == '__main__':
     if ns.scalar:
         impl['inner'] = 'scalar'
         # setup remote solvers
-        view.apply_sync(setup_solver, I,f,c,bc,Lx,Ly, partitioner=Reference('partitioner'), dt=0,implementation=impl)
+        view.apply_sync(setup_solver, I,f,c,bc,Lx,Ly, partitioner=ipp.Reference('partitioner'), dt=0,implementation=impl)
 
         # run first with element-wise Python operations for each cell
         t0 = time.time()
@@ -184,7 +184,7 @@ if __name__ == '__main__':
     # run again with faster numpy-vectorized inner implementation:
     impl['inner'] = 'vectorized'
     # setup remote solvers
-    view.apply_sync(setup_solver, I,f,c,bc,Lx,Ly,partitioner=Reference('partitioner'), dt=0,implementation=impl)
+    view.apply_sync(setup_solver, I,f,c,bc,Lx,Ly,partitioner=ipp.Reference('partitioner'), dt=0,implementation=impl)
 
     t0 = time.time()
 

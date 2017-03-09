@@ -129,12 +129,12 @@ calculation can also be run by simply typing the commands from
 
 .. sourcecode:: ipython
 
-    In [1]: from ipyparallel import Client
+    In [1]: import ipyparallel as ipp
 
     # The Client allows us to use the engines interactively.
     # We simply pass Client the name of the cluster profile we
     # are using.
-    In [2]: c = Client(profile='mycluster')
+    In [2]: c = ipp.Client(profile='mycluster')
     In [3]: v = c[:]
 
     In [3]: c.ids

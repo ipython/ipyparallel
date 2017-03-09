@@ -38,9 +38,9 @@ a :class:`LoadBalancedView`, here called `lview`:
 
 .. sourcecode:: ipython
 
-    In [1]: from ipyparallel import Client
+    In [1]: import ipyparallel as ipp
 
-    In [2]: rc = Client()
+    In [2]: rc = ipp.Client()
 
 
 This form assumes that the controller was started on localhost with default
@@ -50,9 +50,9 @@ argument to the constructor:
 .. sourcecode:: ipython
 
     # for a visible LAN controller listening on an external port:
-    In [2]: rc = Client('tcp://192.168.1.16:10101')
+    In [2]: rc = ipp.Client('tcp://192.168.1.16:10101')
     # or to connect with a specific profile you have set up:
-    In [3]: rc = Client(profile='mpi')
+    In [3]: rc = ipp.Client(profile='mpi')
 
 For load-balanced execution, we will make use of a :class:`LoadBalancedView` object, which can
 be constructed via the client's :meth:`load_balanced_view` method:
@@ -73,7 +73,7 @@ In many cases, you simply want to apply a Python function to a sequence of
 objects, but *in parallel*. Like the multiengine interface, these can be
 implemented via the task interface. The exact same tools can perform these
 actions in load-balanced ways as well as multiplexed ways: a parallel version
-of :func:`map` and :func:`@parallel` function decorator. If one specifies the
+of :func:`map` and :func:`@ipp.parallel` function decorator. If one specifies the
 argument `balanced=True`, then they are dynamically load balanced. Thus, if the
 execution time per item varies significantly, you should use the versions in
 the task interface.
@@ -145,18 +145,18 @@ There are two decorators and a class used for functional dependencies:
 
 .. sourcecode:: ipython
 
-    In [9]: from ipyparallel import depend, require, dependent
+    In [9]: import ipyparallel as ipp
 
-@require
-********
+@ipp.require
+************
 
 The simplest sort of dependency is requiring that a Python module is available. The
-``@require`` decorator lets you define a function that will only run on engines where names
+``@ipp.require`` decorator lets you define a function that will only run on engines where names
 you specify are importable:
 
 .. sourcecode:: ipython
 
-    In [10]: @require('numpy', 'zmq')
+    In [10]: @ipp.require('numpy', 'zmq')
        ....: def myfunc():
        ....:     return dostuff()
 
@@ -169,20 +169,20 @@ You can also require specific objects, not just module names:
     def foo(a):
         return a*a
 
-    @parallel.require(foo)
+    @ipp.parallel.require(foo)
     def bar(b):
         return foo(b)
 
-    @parallel.require(bar)
+    @ipp.parallel.require(bar)
     def baz(c, d):
         return bar(c) - bar(d)
 
     view.apply_sync(baz, 4, 5)
 
-@depend
-*******
+@ipp.depend
+***********
 
-The ``@depend`` decorator lets you decorate any function with any *other* function to
+The ``@ipp.depend`` decorator lets you decorate any function with any *other* function to
 evaluate the dependency. The dependency function will be called at the start of the task,
 and if it returns ``False``, then the dependency will be considered unmet, and the task
 will be assigned to another engine. If the dependency returns *anything other than
@@ -194,16 +194,16 @@ will be assigned to another engine. If the dependency returns *anything other th
        ....:    import sys
        ....:    return sys.platform == plat
 
-    In [11]: @depend(platform_specific, 'darwin')
+    In [11]: @ipp.depend(platform_specific, 'darwin')
        ....: def mactask():
        ....:    do_mac_stuff()
 
-    In [12]: @depend(platform_specific, 'nt')
+    In [12]: @ipp.depend(platform_specific, 'nt')
        ....: def wintask():
        ....:    do_windows_stuff()
 
 In this case, any time you apply ``mactask``, it will only run on an OSX machine.
-``@depend`` is just like ``apply``, in that it has a ``@depend(f,*args,**kwargs)``
+``@ipp.depend`` is just like ``apply``, in that it has a ``@ipp.depend(f,*args,**kwargs)``
 signature.
 
 dependents
@@ -219,7 +219,7 @@ the :class:`dependent` object that the decorators use:
        ....:    dostuff()
 
     In [14]: mactask = dependent(mytask, platform_specific, 'darwin')
-    # this is the same as decorating the declaration of mytask with @depend
+    # this is the same as decorating the declaration of mytask with @ipp.depend
     # but you can do it again:
 
     In [15]: wintask = dependent(mytask, platform_specific, 'nt')
@@ -228,7 +228,7 @@ the :class:`dependent` object that the decorators use:
     In [16]: t = dependent(f, g, *dargs, **dkwargs)
 
     # is equivalent to:
-    In [17]: @depend(g, *dargs, **dkwargs)
+    In [17]: @ipp.depend(g, *dargs, **dkwargs)
        ....: def t(a,b,c):
        ....:     # contents of f
 

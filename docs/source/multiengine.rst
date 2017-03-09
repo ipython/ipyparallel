@@ -32,9 +32,9 @@ module and then create a :class:`.Client` instance:
 
 .. sourcecode:: ipython
 
-    In [1]: from ipyparallel import Client
+    In [1]: import ipyparallel as ipp
     
-    In [2]: rc = Client()
+    In [2]: rc = ipp.Client()
 
 This form assumes that the default connection information (stored in
 :file:`ipcontroller-client.json` found in :file:`IPYTHONDIR/profile_default/security`) is
@@ -44,9 +44,9 @@ file to the client machine, or enter its contents as arguments to the Client con
 .. sourcecode:: ipython
 
     # If you have copied the json connector file from the controller:
-    In [2]: rc = Client('/path/to/ipcontroller-client.json')
+    In [2]: rc = ipp.Client('/path/to/ipcontroller-client.json')
     # or to connect with a specific profile you have set up:
-    In [3]: rc = Client(profile='mpi')
+    In [3]: rc = ipp.Client(profile='mpi')
     
 
 To make sure there are engines connected to the controller, users can get a list
@@ -125,7 +125,7 @@ two decorators:
     In [11]: getpid()
     Out[11]: [12345, 12346, 12347, 12348]
 
-The ``@parallel`` decorator creates parallel functions, that break up an element-wise
+The ``@ipp.parallel`` decorator creates parallel functions, that break up an element-wise
 operations and distribute them, reconstructing the result.
 
 .. sourcecode:: ipython
@@ -145,7 +145,7 @@ operations and distribute them, reconstructing the result.
     In [17]: (C_local == C_remote).all()
     Out[17]: True
 
-Calling a ``@parallel`` function *does not* correspond to map. It is used for splitting
+Calling a ``@ipp.parallel`` function *does not* correspond to map. It is used for splitting
 element-wise operations that operate on a sequence or array.  For ``map`` behavior,
 parallel functions do have a map method.
 
@@ -514,24 +514,22 @@ this way. Note that the usual renaming of the import handle in the same line lik
 ignored remotely, while it executes locally. One could rename the remote handle with
 `%px plt = pyplot` though after the import.
 
-You can also specify imports via the ``@require`` decorator.  This is a decorator
+You can also specify imports via the ``@ipp.require`` decorator.  This is a decorator
 designed for use in Dependencies, but can be used to handle remote imports as well.
-Modules or module names passed to ``@require`` will be imported before the decorated
+Modules or module names passed to ``@ipp.require`` will be imported before the decorated
 function is called.  If they cannot be imported, the decorated function will never
 execute and will fail with an UnmetDependencyError. Failures of single Engines will
 be collected and raise a CompositeError, as demonstrated in the next section.
 
 .. sourcecode:: ipython
 
-    In [69]: from ipyparallel import require
-
-    In [70]: @require('re')
+    In [70]: @ipp.require('re')
        ....: def findall(pat, x):
        ....:     # re is guaranteed to be available
        ....:     return re.findall(pat, x)
           
     # you can also pass modules themselves, that you already have locally:
-    In [71]: @require(time)
+    In [71]: @ipp.require(time)
        ....: def wait(t):
        ....:     time.sleep(t)
        ....:     return t
@@ -591,11 +589,9 @@ If you want, you can even raise one of these original exceptions:
 
 .. sourcecode:: ipython
 
-    In [79]: from ipyparallel import CompositeError
-
     In [80]: try:
        ....:     dview.execute('1/0', block=True)
-       ....: except CompositeError, e:
+       ....: except ipp.CompositeError as e:
        ....:     e.raise_exception()
        ....: 
        ....: 
@@ -672,8 +668,7 @@ You can change this limit to suit your needs with:
 
 .. sourcecode:: ipython
 
-    In [20]: from ipyparallel import CompositeError
-    In [21]: CompositeError.tb_limit = 1
+    In [21]: ipp.CompositeError.tb_limit = 1
     In [22]: %px x=z
     [0:execute]: 
     ---------------------------------------------------------------------------

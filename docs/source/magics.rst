@@ -13,8 +13,8 @@ These magics will automatically become available when you create a Client:
 
 .. sourcecode:: ipython
 
-    In [1]: from ipyparallel import Client
-    In [2]: rc = Client()
+    In [1]: import ipyparallel as ipp
+    In [2]: rc = ipp.Client()
 
 The initially active View will have attributes ``targets='all', block=True``,
 which is a blocking view of all engines, evaluated at request time
@@ -341,7 +341,7 @@ the Engine to *also* bind its kernel, to listen for connections:
 
 .. sourcecode:: ipython
 
-    In [50]: %px from ipyparallel import bind_kernel; bind_kernel()
+    In [50]: %px import ipyparallel as ipp; ipp.bind_kernel()
 
 Then, if your engines are local, you can start a qtconsole right on the engine(s):
 

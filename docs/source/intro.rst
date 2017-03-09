@@ -273,14 +273,14 @@ you can use that with the Client.  This should cover most cases:
 
 .. sourcecode:: ipython
 
-    In [2]: c = Client(profile='myprofile')
+    In [2]: c = ipp.Client(profile='myprofile')
 
 If you have put the JSON file in a different location or it has a different name, create the
 client like this:
 
 .. sourcecode:: ipython
 
-    In [2]: c = Client('/path/to/my/ipcontroller-client.json')
+    In [2]: c = ipp.Client('/path/to/my/ipcontroller-client.json')
 
 Remember, a client needs to be able to see the Hub's ports to connect. So if they are on a
 different machine, you may need to use an ssh server to tunnel access to that machine,
@@ -288,7 +288,7 @@ then you would connect to it with:
 
 .. sourcecode:: ipython
 
-    In [2]: c = Client('/path/to/my/ipcontroller-client.json', sshserver='me@myhub.example.com')
+    In [2]: c = ipp.Client('/path/to/my/ipcontroller-client.json', sshserver='me@myhub.example.com')
 
 Where 'myhub.example.com' is the url or IP address of the machine on
 which the Hub process is running (or another machine that has direct access to the Hub's ports).

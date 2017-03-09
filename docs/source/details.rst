@@ -649,9 +649,9 @@ Decorators and RemoteFunctions
 
     TODO: write this section
 
-:func:`~ipyparallel.client.remotefunction.@parallel`
+:func:`~ipyparallel.client.remotefunction.parallel`
 
-:func:`~ipyparallel.client.remotefunction.@remote`
+:func:`~ipyparallel.client.remotefunction.remote`
 
 :class:`~ipyparallel.client.remotefunction.RemoteFunction`
 
@@ -664,8 +664,8 @@ Dependencies
 
     TODO: write this section
 
-:func:`~ipyparallel.controller.dependency.@depend`
+:func:`~ipyparallel.controller.dependency.depend`
 
-:func:`~ipyparallel.controller.dependency.@require`
+:func:`~ipyparallel.controller.dependency.require`
 
 :class:`~ipyparallel.controller.dependency.Dependency`

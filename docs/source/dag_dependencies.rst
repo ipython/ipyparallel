@@ -112,7 +112,7 @@ on which it depends:
 
 .. sourcecode:: ipython
 
-    In [5]: rc = Client()
+    In [5]: rc = ipp.Client()
     In [5]: view = rc.load_balanced_view()
 
     In [6]: results = {}

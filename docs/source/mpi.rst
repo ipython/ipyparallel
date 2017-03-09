@@ -118,9 +118,9 @@ manner using our :func:`psum` function:
 
 .. sourcecode:: ipython
 
-    In [1]: from ipyparallel import Client
+    In [1]: import ipyparallel as ipp
 
-    In [2]: c = Client(profile='mpi')
+    In [2]: c = ipp.Client(profile='mpi')
 
     In [3]: view = c[:]
 

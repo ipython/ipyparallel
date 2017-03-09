@@ -1,9 +1,9 @@
 import sys
 
-from ipyparallel import Client
+import ipyparallel as ipp
 
 
-rc = Client()
+rc = ipp.Client()
 rc.block=True
 view = rc[:]
 view.run('communicator.py')
