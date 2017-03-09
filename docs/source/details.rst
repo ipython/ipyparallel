@@ -263,7 +263,7 @@ DirectView
 ----------
 
 The :class:`.DirectView` is the class for the IPython :ref:`Multiplexing Interface
-<parallel_multiengine>`.
+<parallel_direct>`.
 
 Creating a DirectView
 *********************

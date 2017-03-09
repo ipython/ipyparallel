@@ -296,7 +296,7 @@ The SSH server may already be specified in ipcontroller-client.json, if the cont
 instructed at its launch time.
 
 You are now ready to learn more about the :ref:`Direct
-<parallel_multiengine>` and :ref:`LoadBalanced <parallel_task>` interfaces to the
+<parallel_direct>` and :ref:`LoadBalanced <parallel_task>` interfaces to the
 controller.
 
 .. [ZeroMQ] http://zeromq.org/

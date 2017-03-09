@@ -6,7 +6,7 @@ Using MPI with IPython
 
 Often, a parallel algorithm will require moving data between the engines. One
 way of accomplishing this is by doing a pull and then a push using the
-multiengine client. However, this will be slow as all the data has to go
+direct view. However, this will be slow as all the data has to go
 through the controller to the client and then back through the controller, to
 its final destination.
 

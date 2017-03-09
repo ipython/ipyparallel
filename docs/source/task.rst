@@ -5,7 +5,7 @@ The IPython task interface
 ==========================
 
 The task interface to the cluster presents the engines as a fault tolerant,
-dynamic load-balanced system of workers. Unlike the multiengine interface, in
+dynamic load-balanced system of workers. Unlike the direct interface, in
 the task interface the user have no direct access to individual engines. By
 allowing the IPython scheduler to assign work, this interface is simultaneously
 simpler and more powerful.
@@ -70,7 +70,7 @@ Quick and easy parallelism
 ==========================
 
 In many cases, you simply want to apply a Python function to a sequence of
-objects, but *in parallel*. Like the multiengine interface, these can be
+objects, but *in parallel*. Like the direct interface, these can be
 implemented via the task interface. The exact same tools can perform these
 actions in load-balanced ways as well as multiplexed ways: a parallel version
 of :func:`map` and :func:`@view.parallel` function decorator. If one specifies the
@@ -98,7 +98,7 @@ Parallel function decorator
 ---------------------------
 
 Parallel functions are just like normal function, but they can be called on
-sequences and *in parallel*. The multiengine interface provides a decorator
+sequences and *in parallel*. The direct interface provides a decorator
 that turns any Python function into a parallel function:
 
 .. sourcecode:: ipython

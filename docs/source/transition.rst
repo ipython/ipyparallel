@@ -120,7 +120,7 @@ argument.
 
 .. seealso::
 
-    :ref:`Our Direct Interface doc <parallel_multiengine>` for a simple tutorial with the
+    :ref:`Our Direct Interface doc <parallel_direct>` for a simple tutorial with the
     DirectView.
 
 
