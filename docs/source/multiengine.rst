@@ -4,10 +4,10 @@
 IPython's Direct interface
 ==========================
 
-The direct, or multiengine, interface represents one possible way of working with a set of
-IPython engines. The basic idea behind the multiengine interface is that the
+The direct interface represents one possible way of working with a set of
+IPython engines. The basic idea behind the direct interface is that the
 capabilities of each engine are directly and explicitly exposed to the user.
-Thus, in the multiengine interface, each engine is given an id that is used to
+Thus, in the direct interface, each engine is given an id that is used to
 identify the engine and give it work to do. This interface is very intuitive
 and is designed with interactive usage in mind, and is the best place for
 new users of IPython to begin.
@@ -24,20 +24,19 @@ the :command:`ipcluster` command::
 For more detailed information about starting the controller and engines, see
 our :ref:`introduction <parallel_overview>` to using IPython for parallel computing.
 
-Creating a ``DirectView`` instance
-==================================
+Creating a ``DirectView``
+=========================
 
 The first step is to import the IPython :mod:`ipyparallel`
-module and then create a :class:`.Client` instance:
+module and create a :class:`.Client`:
 
 .. sourcecode:: ipython
 
     In [1]: import ipyparallel as ipp
-    
     In [2]: rc = ipp.Client()
 
 This form assumes that the default connection information (stored in
-:file:`ipcontroller-client.json` found in :file:`IPYTHONDIR/profile_default/security`) is
+:file:`ipcontroller-client.json`, found in :file:`IPYTHONDIR/profile_default/security`) is
 accurate. If the controller was started on a remote machine, you must copy that connection
 file to the client machine, or enter its contents as arguments to the Client constructor:
 
@@ -74,8 +73,8 @@ constructed via list-access to the client:
 Quick and easy parallelism
 ==========================
 
-In many cases, you simply want to apply a Python function to a sequence of
-objects, but *in parallel*. The client interface provides a simple way
+In many cases, you simply want to call a Python function on a sequence of
+objects, but *in parallel*. IPython Parallel provides a simple way
 of accomplishing this: using the DirectView's :meth:`~DirectView.map` method.
 
 Parallel map
@@ -93,8 +92,8 @@ DirectView's :meth:`map` method:
     
     In [63]: parallel_result = dview.map_sync(lambda x: x**10, range(32))
 
-    In [67]: serial_result==parallel_result
-    Out[67]: True
+    In [64]: serial_result == parallel_result
+    Out[64]: True
 
 
 .. note::
@@ -106,77 +105,6 @@ DirectView's :meth:`map` method:
 .. seealso::
     
     :meth:`map` is implemented via :class:`ParallelFunction`.
-
-Remote function decorators
---------------------------
-
-Remote functions are just like normal functions, but when they are called,
-they execute on one or more engines, rather than locally. IPython provides
-two decorators:
-
-.. sourcecode:: ipython
-
-    In [10]: @dview.remote(block=True)
-       ....: def getpid():
-       ....:     import os
-       ....:     return os.getpid()
-       ....: 
-
-    In [11]: getpid()
-    Out[11]: [12345, 12346, 12347, 12348]
-
-The ``@ipp.parallel`` decorator creates parallel functions, that break up an element-wise
-operations and distribute them, reconstructing the result.
-
-.. sourcecode:: ipython
-
-    In [12]: import numpy as np
-    
-    In [13]: A = np.random.random((64,48))
-    
-    In [14]: @dview.parallel(block=True)
-       ....: def pmul(A,B):
-       ....:     return A*B
-    
-    In [15]: C_local = A*A
-    
-    In [16]: C_remote = pmul(A,A)
-    
-    In [17]: (C_local == C_remote).all()
-    Out[17]: True
-
-Calling a ``@ipp.parallel`` function *does not* correspond to map. It is used for splitting
-element-wise operations that operate on a sequence or array.  For ``map`` behavior,
-parallel functions do have a map method.
-
-====================    ============================    =============================
-call                    pfunc(seq)                      pfunc.map(seq)
-====================    ============================    =============================
-# of tasks              # of engines (1 per engine)     # of engines (1 per engine)
-# of remote calls       # of engines (1 per engine)     ``len(seq)``
-argument to remote      ``seq[i:j]`` (sub-sequence)     ``seq[i]`` (single element)
-====================    ============================    =============================
-
-A quick example to illustrate the difference in arguments for the two modes:
-
-.. sourcecode:: ipython
-
-    In [16]: @dview.parallel(block=True)
-       ....: def echo(x):
-       ....:     return str(x)
-       ....: 
-
-    In [17]: echo(range(5))
-    Out[17]: ['[0, 1]', '[2]', '[3]', '[4]']
-
-    In [18]: echo.map(range(5))
-    Out[18]: ['0', '1', '2', '3', '4']
-
-
-.. seealso::
-
-    See the :func:`~.remotefunction.parallel` and :func:`~.remotefunction.remote`
-    decorators for options.
 
 Calling Python functions
 ========================
@@ -200,20 +128,22 @@ signature:
 
     view.apply(f, *args, **kwargs)
 
-There are various ways to call functions with IPython, and these flags are set as
-attributes of the View.  The ``DirectView`` has just two of these flags:
+There are some controls to influence the behavior of `apply`, called flags.
+Views store the default values for these flags as attributes.
+The ``DirectView`` has these flags:
 
-dv.block : bool
+dv.block : bool, default: False
     whether to wait for the result, or return an :class:`AsyncResult` object
     immediately
-dv.track : bool
+dv.track : bool, default: False
     whether to instruct pyzmq to track when zeromq is done sending the message.
     This is primarily useful for non-copying sends of numpy arrays that you plan to
     edit in-place.  You need to know when it becomes safe to edit the buffer
     without corrupting the message.
+    There is a performance cost to enabling tracking,
+    so it is not recommended except for sending very large messages.
 dv.targets : int, list of ints
-    which targets this view is associated with.
-
+    The engines associated with this View.
 
 Creating a view is simple: index-access on a client creates a :class:`.DirectView`.
 
@@ -225,7 +155,7 @@ Creating a view is simple: index-access on a client creates a :class:`.DirectVie
     In [5]: view.apply<tab>
     view.apply  view.apply_async  view.apply_sync
 
-For convenience, you can set block temporarily for a single call with the extra sync/async methods.
+For convenience, you specify blocking behavior explicitly for a single call with the extra sync/async methods.
 
 Blocking execution
 ------------------
@@ -282,7 +212,7 @@ time through its :meth:`get` method.
     Docs on the :ref:`AsyncResult <parallel_asyncresult>` object.
 
 This allows you to quickly submit long running commands without blocking your
-local Python/IPython session:
+local IPython session:
 
 .. sourcecode:: ipython
     
@@ -328,11 +258,11 @@ local Python/IPython session:
     Note the import inside the function. This is a common model, to ensure
     that the appropriate modules are imported where the task is run. You can
     also manually import modules into the engine(s) namespace(s) via 
-    `view.execute('import numpy')`.
+    ``view.execute('import numpy')``.
 
 Often, it is desirable to wait until a set of :class:`AsyncResult` objects
 are done. For this, there is a the method :meth:`wait`. This method takes a
-tuple of :class:`AsyncResult` objects (or `msg_ids` or indices to the client's History),
+collection of :class:`AsyncResult` objects (or `msg_ids` or integer indices to the client's history),
 and blocks until all of the associated results are ready:
 
 .. sourcecode:: ipython
@@ -345,7 +275,7 @@ and blocks until all of the associated results are ready:
     # Wait until all of them are done
     In [74]: dview.wait(pr_list)
 
-    # Then, their results are ready using get() or the `.r` attribute
+    # Then, their results are ready using get()
     In [75]: pr_list[0].get()
     Out[75]: [2.9982571601867676, 2.9982588291168213, 2.9987530708312988, 2.9990990161895752]
 
@@ -396,7 +326,7 @@ Moving Python objects around
 ============================
 
 In addition to calling functions and executing code on engines, you can
-transfer Python objects to and from your IPython session and the engines. In
+transfer Python objects between your IPython session and the engines. In
 IPython, these operations are called :meth:`push` (sending an object to the
 engines) and :meth:`pull` (getting an object from the engines).
 
@@ -407,8 +337,8 @@ Here are some examples of how you use :meth:`push` and :meth:`pull`:
 
 .. sourcecode:: ipython
 
-    In [38]: dview.push(dict(a=1.03234,b=3453))
-    Out[38]: [None,None,None,None]
+    In [38]: dview.push(dict(a=1.03234, b=3453))
+    Out[38]: [None, None, None, None]
 
     In [39]: dview.pull('a')
     Out[39]: [ 1.03234, 1.03234, 1.03234, 1.03234]
@@ -416,11 +346,11 @@ Here are some examples of how you use :meth:`push` and :meth:`pull`:
     In [40]: dview.pull('b', targets=0)
     Out[40]: 3453
 
-    In [41]: dview.pull(('a','b'))
+    In [41]: dview.pull(('a', 'b'))
     Out[41]: [ [1.03234, 3453], [1.03234, 3453], [1.03234, 3453], [1.03234, 3453] ]
     
     In [42]: dview.push(dict(c='speed'))
-    Out[42]: [None,None,None,None]
+    Out[42]: [None, None, None, None]
 
 In non-blocking mode :meth:`push` and :meth:`pull` also return
 :class:`AsyncResult` objects:
@@ -436,14 +366,14 @@ In non-blocking mode :meth:`push` and :meth:`pull` also return
 Dictionary interface
 --------------------
 
-Since a Python namespace is just a :class:`dict`, :class:`DirectView` objects provide
+Since a Python namespace is a :class:`dict`, :class:`DirectView` objects provide
 dictionary-style access by key and methods such as :meth:`get` and
 :meth:`update` for convenience. This make the remote namespaces of the engines
 appear as a local dictionary. Underneath, these methods call :meth:`apply`:
 
 .. sourcecode:: ipython
 
-    In [51]: dview['a']=['foo','bar']
+    In [51]: dview['a'] = ['foo', 'bar']
 
     In [52]: dview['a']
     Out[52]: [ ['foo', 'bar'], ['foo', 'bar'], ['foo', 'bar'], ['foo', 'bar'] ]
@@ -473,6 +403,78 @@ between engines, MPI, pyzmq, or some other direct interconnect should be used.
 Other things to look at
 =======================
 
+Remote function decorators
+--------------------------
+
+Remote functions are just like normal functions, but when they are called
+they execute on one or more engines rather than locally. IPython provides
+two decorators for producing parallel functions.
+
+The first is ``@remote``, which calls the function on every engine of a view.
+
+.. sourcecode:: ipython
+
+    In [10]: @dview.remote(block=True)
+       ....: def getpid():
+       ....:     import os
+       ....:     return os.getpid()
+       ....: 
+
+    In [11]: getpid()
+    Out[11]: [12345, 12346, 12347, 12348]
+
+The ``@parallel`` decorator creates parallel functions, that break up an element-wise
+operations and distribute them, reconstructing the result.
+
+.. sourcecode:: ipython
+
+    In [12]: import numpy as np
+    
+    In [13]: A = np.random.random((64,48))
+    
+    In [14]: @dview.parallel(block=True)
+       ....: def pmul(A,B):
+       ....:     return A*B
+    
+    In [15]: C_local = A*A
+    
+    In [16]: C_remote = pmul(A,A)
+    
+    In [17]: (C_local == C_remote).all()
+    Out[17]: True
+
+Calling a ``@parallel`` function *does not* correspond to map. It is used for splitting
+element-wise operations that operate on a sequence or array.  For ``map`` behavior,
+parallel functions have a map *method*.
+
+====================    ============================    =============================
+call                    pfunc(seq)                      pfunc.map(seq)
+====================    ============================    =============================
+# of tasks              # of engines (1 per engine)     # of engines (1 per engine)
+# of remote calls       # of engines (1 per engine)     ``len(seq)``
+argument to remote      ``seq[i:j]`` (sub-sequence)     ``seq[i]`` (single element)
+====================    ============================    =============================
+
+A quick example to illustrate the difference in arguments for the two modes:
+
+.. sourcecode:: ipython
+
+    In [16]: @dview.parallel(block=True)
+       ....: def echo(x):
+       ....:     return str(x)
+
+    In [17]: echo(range(5))
+    Out[17]: ['[0, 1]', '[2]', '[3]', '[4]']
+
+    In [18]: echo.map(range(5))
+    Out[18]: ['0', '1', '2', '3', '4']
+
+
+.. seealso::
+
+    See the :func:`~.remotefunction.parallel` and :func:`~.remotefunction.remote`
+    decorators for options.
+
 How to do parallel list comprehensions
 --------------------------------------
 
@@ -495,8 +497,8 @@ basic effect using :meth:`scatter` and :meth:`gather`:
 Remote imports
 --------------
 
-Sometimes you will want to import packages both in your interactive session
-and on your remote engines.  This can be done with the :class:`ContextManager`
+Sometimes you may want to import packages both in your interactive session
+and on your remote engines.  This can be done with the context manager
 created by a DirectView's :meth:`sync_imports` method:
 
 .. sourcecode:: ipython
@@ -510,12 +512,12 @@ sync_imports also takes a `local` boolean flag that defaults to True, which spec
 whether the local imports should also be performed.  However, support for `local=False`
 has not been implemented, so only packages that can be imported locally will work
 this way. Note that the usual renaming of the import handle in the same line like in
-`import matplotlib.pyplot as plt' does not work on the remote engine, the `as plt` is 
+`import matplotlib.pyplot as plt` does not work on the remote engine, the `as plt` is 
 ignored remotely, while it executes locally. One could rename the remote handle with
 `%px plt = pyplot` though after the import.
 
 You can also specify imports via the ``@ipp.require`` decorator.  This is a decorator
-designed for use in Dependencies, but can be used to handle remote imports as well.
+designed for use in dependencies, but can be used to handle remote imports as well.
 Modules or module names passed to ``@ipp.require`` will be imported before the decorated
 function is called.  If they cannot be imported, the decorated function will never
 execute and will fail with an UnmetDependencyError. Failures of single Engines will
@@ -546,13 +548,13 @@ be collected and raise a CompositeError, as demonstrated in the next section.
 Parallel exceptions
 -------------------
 
-In the multiengine interface, parallel commands can raise Python exceptions,
-just like serial commands. But it is a little subtle, because a single
-parallel command can actually raise multiple exceptions (one for each engine
+Parallel commands can raise Python exceptions,
+just like serial commands. This is complicated by the fact that a single
+parallel command can raise multiple exceptions (one for each engine
 the command was run on). To express this idea, we have a
-:exc:`CompositeError` exception class that will be raised in most cases. The
+:exc:`CompositeError` exception class that will be raised when there are mulitple errors. The
 :exc:`CompositeError` class is a special type of exception that wraps one or
-more other types of exceptions. Here is how it works:
+more other exceptions. Here is how it works:
 
 .. sourcecode:: ipython
 
@@ -600,9 +602,8 @@ If you want, you can even raise one of these original exceptions:
     ----> 1 1/0
     ZeroDivisionError: integer division or modulo by zero
 
-If you are working in IPython, you can simple type ``%debug`` after one of
-these :exc:`CompositeError` exceptions is raised, and inspect the exception
-instance:
+If you are working in IPython, you can type ``%debug`` after one of
+these :exc:`CompositeError` exceptions is raised and inspect the exception:
 
 .. sourcecode:: ipython
 
@@ -660,8 +661,8 @@ instance:
     ZeroDivisionError: integer division or modulo by zero
 
 
-Since you might have 100 engines, you probably don't want to see 100 tracebacks
-for a simple NameError because of a typo.
+If you have 100 engines, you probably don't want to see 100 identical tracebacks
+for a NameError because of a small typo.
 For this reason, CompositeError truncates the list of exceptions it will print
 to :attr:`CompositeError.tb_limit` (default is five).
 You can change this limit to suit your needs with:
@@ -679,7 +680,7 @@ You can change this limit to suit your needs with:
     ... 3 more exceptions ...
 
 
-All of this same error handling magic even works in non-blocking mode:
+All of this same error handling magic works the same in non-blocking mode:
 
 .. sourcecode:: ipython
 
@@ -695,3 +696,4 @@ All of this same error handling magic even works in non-blocking mode:
     ZeroDivisionError: integer division or modulo by zero
     
     ... 3 more exceptions ...
+

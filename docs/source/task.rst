@@ -73,7 +73,7 @@ In many cases, you simply want to apply a Python function to a sequence of
 objects, but *in parallel*. Like the multiengine interface, these can be
 implemented via the task interface. The exact same tools can perform these
 actions in load-balanced ways as well as multiplexed ways: a parallel version
-of :func:`map` and :func:`@ipp.parallel` function decorator. If one specifies the
+of :func:`map` and :func:`@view.parallel` function decorator. If one specifies the
 argument `balanced=True`, then they are dynamically load balanced. Thus, if the
 execution time per item varies significantly, you should use the versions in
 the task interface.
@@ -81,7 +81,7 @@ the task interface.
 Parallel map
 ------------
 
-To load-balance :meth:`map`,simply use a LoadBalancedView:
+To load-balance :meth:`map`, simply use a LoadBalancedView:
 
 .. sourcecode:: ipython
 
@@ -169,11 +169,11 @@ You can also require specific objects, not just module names:
     def foo(a):
         return a*a
 
-    @ipp.parallel.require(foo)
+    @ipp.require(foo)
     def bar(b):
         return foo(b)
 
-    @ipp.parallel.require(bar)
+    @ipp.require(bar)
     def baz(c, d):
         return bar(c) - bar(d)
 
