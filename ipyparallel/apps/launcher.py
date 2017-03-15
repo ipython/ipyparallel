@@ -490,7 +490,7 @@ class MPIEngineSetLauncher(MPILauncher, EngineMixin):
     # than *some* having `program_args` and others `controller_args`
     @property
     def program(self):
-        return self.engine_cmd
+        return self.engine_cmd + ['--mpi']
 
     @property
     def program_args(self):

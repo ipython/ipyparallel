@@ -78,7 +78,11 @@ aliases = dict(
 )
 aliases.update(base_aliases)
 aliases.update(session_aliases)
-flags = {}
+flags = {
+    'mpi': ({
+        'EngineFactory': {'use_mpi': True},
+    }, "enable MPI integration"),
+}
 flags.update(base_flags)
 flags.update(session_flags)
 

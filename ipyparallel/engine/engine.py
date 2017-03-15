@@ -29,6 +29,12 @@ from ipyparallel.util import disambiguate_url
 from .kernel import IPythonParallelKernel as Kernel
 from ipykernel.kernelapp import IPKernelApp
 
+DEFAULT_MPI_INIT = """
+from mpi4py import MPI
+mpi_rank = MPI.COMM_WORLD.Get_rank()
+mpi_size = MPI.COMM_WORLD.Get_size()
+"""
+
 class EngineFactory(RegistrationFactory):
     """IPython engine"""
 
@@ -58,6 +64,17 @@ class EngineFactory(RegistrationFactory):
     paramiko=Bool(sys.platform == 'win32', config=True,
         help="""Whether to use paramiko instead of openssh for tunnels.""")
     
+    use_mpi = Bool(False, config=True,
+        help="""Enable MPI integration.
+        
+        If set, MPI rank will be requested for my rank,
+        and additionally `mpi_init` will be executed in the interactive shell.
+        """
+    )
+    init_mpi = Unicode(DEFAULT_MPI_INIT, config=True,
+        help="""Code to execute in the user namespace when initializing MPI"""
+    )
+    
     @property
     def tunnel_mod(self):
         from zmq.ssh import tunnel
@@ -76,10 +93,9 @@ class EngineFactory(RegistrationFactory):
     )
     @default('id')
     def _id_default(self):
-        try:
-            from mpi4py import MPI
-        except ImportError:
+        if not self.use_mpi:
             return None
+        from mpi4py import MPI
         if MPI.COMM_WORLD.size > 1:
             self.log.debug("MPI rank = %i", MPI.COMM_WORLD.rank)
             return MPI.COMM_WORLD.rank
@@ -277,6 +293,8 @@ class EngineFactory(RegistrationFactory):
             
             # FIXME: This is a hack until IPKernelApp and IPEngineApp can be fully merged
             app = IPKernelApp(parent=self, shell=self.kernel.shell, kernel=self.kernel, log=self.log)
+            if self.use_mpi and self.init_mpi:
+                app.exec_lines.insert(0, self.init_mpi)
             app.init_profile_dir()
             app.init_code()
             
