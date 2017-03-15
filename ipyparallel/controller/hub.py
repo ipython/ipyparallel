@@ -1001,9 +1001,9 @@ class Hub(SessionFactory):
         )
 
         # cleanup mappings
-        self.by_ident.pop(uuid)
-        self.engines.pop(eid)
-        self.keytable.pop(eid)
+        self.by_ident.pop(uuid, None)
+        self.engines.pop(eid, None)
+        self.keytable.pop(eid, None)
 
         self._save_engine_state()
 
