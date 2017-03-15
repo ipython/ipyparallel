@@ -57,41 +57,6 @@ ipengine --ip=192.168.0.1 --port=1000     # connect to hub at ip and port
 ipengine --log-to-file --log-level=DEBUG  # log to a file with DEBUG verbosity
 """
 
-#-----------------------------------------------------------------------------
-# MPI configuration
-#-----------------------------------------------------------------------------
-
-mpi4py_init = """from mpi4py import MPI as mpi
-mpi.size = mpi.COMM_WORLD.Get_size()
-mpi.rank = mpi.COMM_WORLD.Get_rank()
-"""
-
-
-pytrilinos_init = """from PyTrilinos import Epetra
-class SimpleStruct:
-pass
-mpi = SimpleStruct()
-mpi.rank = 0
-mpi.size = 0
-"""
-
-class MPI(Configurable):
-    """Configurable for MPI initialization"""
-    use = Unicode('', config=True,
-        help='How to enable MPI (mpi4py, pytrilinos, or empty string to disable).'
-        )
-
-    def _use_changed(self, name, old, new):
-        # load default init script if it's not set
-        if not self.init_script:
-            self.init_script = self.default_inits.get(new, '')
-
-    init_script = Unicode('', config=True,
-        help="Initialization code for MPI")
-
-    default_inits = Dict({'mpi4py' : mpi4py_init, 'pytrilinos':pytrilinos_init},
-        config=True)
-
 
 #-----------------------------------------------------------------------------
 # Main application
@@ -110,13 +75,14 @@ aliases = dict(
     location = 'EngineFactory.location',
 
     timeout = 'EngineFactory.timeout',
-
-    mpi = 'MPI.use',
-
 )
 aliases.update(base_aliases)
 aliases.update(session_aliases)
-flags = {}
+flags = {
+    'mpi': ({
+        'EngineFactory': {'use_mpi': True},
+    }, "enable MPI integration"),
+}
 flags.update(base_flags)
 flags.update(session_flags)
 
@@ -125,7 +91,7 @@ class IPEngineApp(BaseParallelApplication):
     name = 'ipengine'
     description = _description
     examples = _examples
-    classes = List([ZMQInteractiveShell, ProfileDir, Session, EngineFactory, Kernel, MPI])
+    classes = List([ZMQInteractiveShell, ProfileDir, Session, EngineFactory, Kernel])
 
     startup_script = Unicode(u'', config=True,
         help='specify a script to be run at startup')
@@ -341,25 +307,9 @@ class IPEngineApp(BaseParallelApplication):
             handler.setLevel(self.log_level)
             self.log.addHandler(handler)
     
-    def init_mpi(self):
-        global mpi
-        self.mpi = MPI(parent=self)
-
-        mpi_import_statement = self.mpi.init_script
-        if mpi_import_statement:
-            try:
-                self.log.info("Initializing MPI:")
-                self.log.info(mpi_import_statement)
-                exec(mpi_import_statement, globals())
-            except:
-                mpi = None
-        else:
-            mpi = None
-
     @catch_config_error
     def initialize(self, argv=None):
         super(IPEngineApp, self).initialize(argv)
-        self.init_mpi()
         self.init_engine()
         self.forward_logging()
     

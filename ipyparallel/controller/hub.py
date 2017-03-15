@@ -376,7 +376,6 @@ class Hub(SessionFactory):
     tasks=Dict() # pending msg_ids submitted as tasks, keyed by client_id
     completed=Dict() # completed msg_ids keyed by engine_id
     all_completed=Set() # completed msg_ids keyed by engine_id
-    dead_engines=Set() # completed msg_ids keyed by engine_id
     unassigned=Set() # set of task msg_ds not yet assigned a destination
     incoming_registrations=Dict()
     registration_timeout=Integer()
@@ -448,20 +447,28 @@ class Hub(SessionFactory):
 
         self.log.info("hub::created hub")
     
-    @property
-    def _next_id(self):
-        """gemerate a new ID.
+    def new_engine_id(self, requested_id=None):
+        """generate a new engine integer id.
 
-        No longer reuse old ids, just count from 0."""
+        No longer reuse old ids, just count from 0.
+
+        If an id is requested and available, use that.
+        Otherwise, use the counter.
+        """
+        if requested_id is not None:
+            if requested_id in self.engines:
+                self.log.warning("Engine id %s in use by engine with uuid=%s",
+                     requested_id, self.engines[requested_id].uuid)
+            elif requested_id in {
+                ec.id for ec in self.incoming_registrations.values()
+            }:
+                self.log.warning("Engine id %s registration already pending", requested_id)
+            else:
+                self._idcounter = max(requested_id + 1, self._idcounter)
+                return requested_id
         newid = self._idcounter
         self._idcounter += 1
         return newid
-        # newid = 0
-        # incoming = [id[0] for id in itervalues(self.incoming_registrations)]
-        # # print newid, self.ids, self.incoming_registrations
-        # while newid in self.ids or newid in incoming:
-        #     newid += 1
-        # return newid
     
     #-----------------------------------------------------------------------------
     # message validation
@@ -580,7 +587,7 @@ class Hub(SessionFactory):
         self.log.debug("heartbeat::handle_heart_failure(%r)", heart)
         eid = self.hearts.get(heart, None)
         uuid = self.engines[eid].uuid
-        if eid is None or self.keytable[eid] in self.dead_engines:
+        if eid is None:
             self.log.info("heartbeat::ignoring heart failure %r (not an engine or already dead)", heart)
         else:
             self.unregister_engine(heart, dict(content=dict(id=eid, queue=uuid)))
@@ -906,7 +913,6 @@ class Hub(SessionFactory):
         content = dict(status='ok')
         jsonable = {}
         for k,v in iteritems(self.keytable):
-            if v not in self.dead_engines:
                 jsonable[str(k)] = v
         content['engines'] = jsonable
         self.session.send(self.query, 'connection_reply', content, parent=msg, ident=client_id)
@@ -920,7 +926,7 @@ class Hub(SessionFactory):
             self.log.error("registration::queue not specified", exc_info=True)
             return
 
-        eid = self._next_id
+        eid = self.new_engine_id(content.get('id'))
 
         self.log.debug("registration::register_engine(%i, %r)", eid, uuid)
 
@@ -983,7 +989,6 @@ class Hub(SessionFactory):
         
         uuid = self.keytable[eid]
         content=dict(id=eid, uuid=uuid)
-        self.dead_engines.add(uuid)
         
         #stop the heartbeats
         self.hearts.pop(uuid, None)
@@ -994,8 +999,12 @@ class Hub(SessionFactory):
             self.loop.time() + self.registration_timeout,
             lambda : self._handle_stranded_msgs(eid, uuid),
         )
-        ############## TODO: HANDLE IT ################
-        
+
+        # cleanup mappings
+        self.by_ident.pop(uuid, None)
+        self.engines.pop(eid, None)
+        self.keytable.pop(eid, None)
+
         self._save_engine_state()
 
         if self.notifier:
@@ -1088,9 +1097,8 @@ class Hub(SessionFactory):
         self.log.debug("save engine state to %s" % self.engine_state_file)
         state = {}
         engines = {}
-        for eid, ec in iteritems(self.engines):
-            if ec.uuid not in self.dead_engines:
-                engines[eid] = ec.uuid
+        for eid, ec in self.engines.items():
+            engines[eid] = ec.uuid
         
         state['engines'] = engines
         
@@ -1247,7 +1255,6 @@ class Hub(SessionFactory):
         """Resubmit one or more tasks."""
         parent = msg
         def finish(reply):
-            print("finishing resubmit")
             self.session.send(self.query, 'resubmit_reply', content=reply, ident=client_id, parent=parent)
 
         content = msg['content']
