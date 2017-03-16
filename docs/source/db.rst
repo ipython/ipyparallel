@@ -10,16 +10,21 @@ Enabling a DB Backend
 The IPython Hub can store all task requests and results in a database.
 Currently supported backends are: MongoDB, SQLite, and an in-memory DictDB.
 
-This database behavior is optional due to its potential :ref:`db_cost`,
-so you must enable one, either at the command-line::
+The default is to store recent tasks in a dictionary in memory,
+which deletes old values if it gets too big, and only survives
+as long as the controller is running.
 
-    $> ipcontroller --dictb # or --mongodb or --sqlitedb
+Using a real database is optional due to its potential :ref:`db_cost`.
+You can enable one, either at the command-line::
+
+    $> ipcontroller --sqlitedb # or --mongodb or --nodb
 
 or in your :file:`ipcontroller_config.py`:
 
 .. sourcecode:: python
 
-    c.HubFactory.db_class = "DictDB"
+    c.HubFactory.db_class = "NoDB"
+    c.HubFactory.db_class = "DictDB" # default
     c.HubFactory.db_class = "MongoDB"
     c.HubFactory.db_class = "SQLiteDB"
 
