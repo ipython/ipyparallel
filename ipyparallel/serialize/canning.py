@@ -5,6 +5,7 @@
 # Distributed under the terms of the Modified BSD License.
 
 import copy
+import functools
 import sys
 from types import FunctionType
 
@@ -212,6 +213,59 @@ class CannedFunction(CannedObject):
         newFunc = FunctionType(self.code, g, self.__name__, defaults, closure)
         return newFunc
 
+
+class CannedPartial(CannedObject):
+    def __init__(self, f):
+        self._check_type(f)
+        self.func = can(f.func)
+        self.args = [ can(a) for a in f.args ]
+        self.keywords = { k: can(v) for k,v in f.keywords.items() }
+        self.buffers = []
+        self.arg_buffer_counts = []
+        self.keyword_buffer_counts = {}
+        # consolidate buffers
+        for canned_arg in self.args:
+            if not isinstance(canned_arg, CannedObject):
+                self.arg_buffer_counts.append(0)
+                continue
+            self.arg_buffer_counts.append(len(canned_arg.buffers))
+            self.buffers.extend(canned_arg.buffers)
+            canned_arg.buffers = []
+        for key in sorted(self.keywords):
+            canned_kwarg = self.keywords[key]
+            if not isinstance(canned_kwarg, CannedObject):
+                continue
+            self.keyword_buffer_counts[key] = len(canned_kwarg.buffers)
+            self.buffers.extend(canned_kwarg.buffers)
+            canned_kwarg.buffers = []
+
+    def _check_type(self, obj):
+        if not isinstance(obj, functools.partial):
+            raise ValueError("Not a functools.partial: %r" % obj)
+
+    def get_object(self, g=None):
+        if g is None:
+            g = {}
+        if self.buffers:
+            # reconstitute buffers
+            for canned_arg, buf_count in zip(self.args, self.arg_buffer_counts):
+                if not buf_count:
+                    continue
+                canned_arg.buffers = self.buffers[:buf_count]
+                self.buffers = self.buffers[buf_count:]
+            for key in sorted(self.keyword_buffer_counts):
+                buf_count = self.keyword_buffer_counts[key]
+                canned_kwarg = self.keywords[key]
+                canned_kwarg.buffers = self.buffers[:buf_count]
+                self.buffers = self.buffers[buf_count:]
+            assert len(self.buffers) == 0
+
+        args = [ uncan(a, g) for a in self.args ]
+        keywords = { k: uncan(v, g) for k,v in self.keywords.items() }
+        func = uncan(self.func, g)
+        return functools.partial(func, *args, **keywords)
+
+
 class CannedClass(CannedObject):
 
     def __init__(self, cls):
@@ -236,6 +290,7 @@ class CannedClass(CannedObject):
     def get_object(self, g=None):
         parents = tuple(uncan(p, g) for p in self.parents)
         return type(self.name, parents, uncan_dict(self._canned_dict, g=g))
+
 
 class CannedArray(CannedObject):
     def __init__(self, obj):
@@ -422,6 +477,7 @@ def can_dependent(obj):
 can_map = {
     'numpy.ndarray' : CannedArray,
     FunctionType : CannedFunction,
+    functools.partial : CannedPartial,
     bytes : CannedBytes,
     memoryview : CannedMemoryView,
     cell_type : CannedCell,
