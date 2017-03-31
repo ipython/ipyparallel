@@ -591,7 +591,7 @@ class AsyncResult(Future):
                     get_ipython()
                 except NameError:
                     # displaypub is meaningless outside IPython
-                    return 
+                    continue
                 
                 if outputs or execute_result is not None:
                     _raw_text('[output:%i]' % eid)
