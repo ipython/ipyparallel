@@ -20,7 +20,7 @@ class TestLoadBalancedView(ClusterTestCase):
         ClusterTestCase.setUp(self)
         self.view = self.client.load_balanced_view()
 
-    @pytest.mark.crash
+    @pytest.mark.xfail
     def test_z_crash_task(self):
         """test graceful handling of engine death (balanced)"""
         # self.add_engines(1)

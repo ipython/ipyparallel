@@ -12,10 +12,10 @@ from collections import namedtuple
 from tempfile import NamedTemporaryFile
 
 import zmq
-from nose.plugins.attrib import attr
 
 import pytest
 
+from IPython import get_ipython
 from IPython.utils.io import capture_output
 from ipython_genutils.py3compat import unicode_type
 
@@ -30,6 +30,7 @@ from .clienttest import ClusterTestCase, crash, wait, skip_without
 
 point = namedtuple("point", "x y")
 
+@pytest.mark.usefixtures('ipython')
 class TestView(ClusterTestCase):
     
     def setUp(self):
@@ -39,7 +40,7 @@ class TestView(ClusterTestCase):
             time.sleep(2)
         super(TestView, self).setUp()
 
-    @attr('crash')
+    @pytest.mark.xfail
     def test_z_crash_mux(self):
         """test graceful handling of engine death (direct)"""
         # self.add_engines(1)
