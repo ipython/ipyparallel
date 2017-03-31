@@ -118,6 +118,7 @@ setup_args = dict(
         'ipython_genutils',
         'decorator',
         'pyzmq>=13',
+        'traitlets>=4.3',
         'ipython>=4',
         'jupyter_client',
         'ipykernel',
