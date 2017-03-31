@@ -57,6 +57,10 @@ ipcluster engines -h  # show the help string for the engines subcmd
 _start_examples = """
 ipython profile create mycluster --parallel # create mycluster profile
 ipcluster start --profile=mycluster --n=4   # start mycluster with 4 nodes
+
+# args to `ipcluster start` after `--` are passed through to the controller
+# see `ipcontroller -h` for options
+ipcluster start -- --sqlitedb
 """
 
 _stop_examples = """
@@ -507,6 +511,8 @@ class IPClusterStart(IPClusterEngines):
             controller_args.append('--ip=%s' % self.controller_ip)
         if self.controller_location:
             controller_args.append('--location=%s' % self.controller_location)
+        if self.extra_args:
+            controller_args.extend(self.extra_args)
         self.engine_launcher = self.build_launcher(self.engine_launcher_class, 'EngineSet')
 
     def engines_stopped(self, r):
