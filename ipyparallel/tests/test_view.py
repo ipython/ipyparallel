@@ -310,10 +310,10 @@ class TestView(ClusterTestCase):
 
     @skip_without('pandas')
     def test_push_pull_timeseries(self):
-        """push/pull pandas.TimeSeries"""
+        """push/pull pandas.Series"""
         import pandas
         
-        ts = pandas.TimeSeries(list(range(10)))
+        ts = pandas.Series(list(range(10)))
         
         view = self.client[-1]
         
