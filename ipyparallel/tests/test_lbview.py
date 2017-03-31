@@ -138,10 +138,10 @@ class TestLoadBalancedView(ClusterTestCase):
         self.minimum_engines(3)
         view = self.view
         def fail():
-            assert False
+            raise ValueError("Failed!")
         for r in range(len(self.client)-1):
             with view.temp_flags(retries=r):
-                self.assertRaisesRemote(AssertionError, view.apply_sync, fail)
+                self.assertRaisesRemote(ValueError, view.apply_sync, fail)
 
         with view.temp_flags(retries=len(self.client), timeout=0.1):
             self.assertRaisesRemote(error.TaskTimeout, view.apply_sync, fail)
@@ -152,9 +152,9 @@ class TestLoadBalancedView(ClusterTestCase):
         def fail():
             import time
             time.sleep(0.25)
-            assert False
+            raise ValueError("Failed!")
         with view.temp_flags(retries=1, timeout=0.01):
-            self.assertRaisesRemote(AssertionError, view.apply_sync, fail)
+            self.assertRaisesRemote(ValueError, view.apply_sync, fail)
 
     def test_invalid_dependency(self):
         view = self.view
