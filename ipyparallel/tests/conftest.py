@@ -22,3 +22,11 @@ def ipython():
     shell = TerminalInteractiveShell.instance(config=config)
     return shell
 
+@pytest.fixture()
+def ipython_activated(request, ipython):
+    """Activate IPython's builtin hooks
+    
+    for the duration of the test scope.
+    """
+    with ipython.builtin_trap:
+        yield ipython
