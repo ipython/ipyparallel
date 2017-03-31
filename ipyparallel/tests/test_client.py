@@ -11,6 +11,7 @@ import os
 from threading import Thread
 import time
 
+import pytest
 from tornado.concurrent import Future as TornadoFuture
 
 from IPython import get_ipython
@@ -20,6 +21,7 @@ from ipyparallel.util import utc
 
 from .clienttest import ClusterTestCase, wait, add_engines, skip_without
 
+@pytest.mark.usefixtures('ipython')
 class TestClient(ClusterTestCase):
     
     engine_count = 4
@@ -510,17 +512,26 @@ class TestClient(ClusterTestCase):
         # the hub results
         hist = self.client.hub_history()
         self.assertEqual(len(hist), 0, msg="hub history not empty")
-    
+
+    def test_activate_on_init(self):
+        ip = get_ipython()
+        magics = ip.magics_manager.magics
+        with ip.builtin_trap:
+            c = self.connect_client()
+        self.assertTrue('px' in magics['line'])
+        self.assertTrue('px' in magics['cell'])
+        c.close()
+
     def test_activate(self):
         ip = get_ipython()
         magics = ip.magics_manager.magics
-        self.assertTrue('px' in magics['line'])
-        self.assertTrue('px' in magics['cell'])
-        v0 = self.client.activate(-1, '0')
+        with ip.builtin_trap:
+            v0 = self.client.activate(-1, '0')
         self.assertTrue('px0' in magics['line'])
         self.assertTrue('px0' in magics['cell'])
         self.assertEqual(v0.targets, self.client.ids[-1])
-        v0 = self.client.activate('all', 'all')
+        with ip.builtin_trap:
+            v0 = self.client.activate('all', 'all')
         self.assertTrue('pxall' in magics['line'])
         self.assertTrue('pxall' in magics['cell'])
         self.assertEqual(v0.targets, 'all')
