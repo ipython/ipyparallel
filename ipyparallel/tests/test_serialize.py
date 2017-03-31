@@ -6,8 +6,9 @@
 import pickle
 from collections import namedtuple
 
+import pytest
+
 from ipyparallel.serialize import serialize_object, deserialize_object
-from IPython.testing import decorators as dec
 from ipyparallel import interactive
 from ipyparallel.serialize.canning import CannedArray, CannedClass
 
@@ -73,7 +74,7 @@ def test_roundtrip_memoryview():
     assert remainder == []
     assert v2.tobytes() == b
 
-@dec.skip_without('numpy')
+pytest.mark.importskip('numpy')
 def test_numpy():
     from numpy.testing.utils import assert_array_equal
     for shape in SHAPES:
@@ -87,7 +88,7 @@ def test_numpy():
             assert A.dtype == B.dtype
             assert_array_equal(A,B)
 
-@dec.skip_without('numpy')
+pytest.mark.importskip('numpy')
 def test_recarray():
     from numpy.testing.utils import assert_array_equal
     for shape in SHAPES:
@@ -104,7 +105,7 @@ def test_recarray():
             assert A.dtype == B.dtype
             assert_array_equal(A,B)
 
-@dec.skip_without('numpy')
+pytest.mark.importskip('numpy')
 def test_numpy_in_seq():
     from numpy.testing.utils import assert_array_equal
     for shape in SHAPES:
@@ -120,7 +121,7 @@ def test_numpy_in_seq():
             assert A.dtype == B.dtype
             assert_array_equal(A,B)
 
-@dec.skip_without('numpy')
+pytest.mark.importskip('numpy')
 def test_numpy_in_dict():
     from numpy.testing.utils import assert_array_equal
     for shape in SHAPES:
@@ -203,7 +204,7 @@ def test_class_inheritance():
     assert D2.a == D.a
     assert D2.b == D.b
 
-@dec.skip_without('numpy')
+pytest.mark.importskip('numpy')
 def test_pickle_threshold():
     import numpy
     from numpy.testing.utils import assert_array_equal

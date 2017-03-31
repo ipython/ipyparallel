@@ -9,16 +9,16 @@ import logging
 import os
 import tempfile
 import time
-
 from datetime import datetime, timedelta
 from unittest import TestCase
+
+import pytest
 
 from ipyparallel import util
 from ipyparallel.controller.dictdb import DictDB
 from ipyparallel.controller.sqlitedb import SQLiteDB
 from ipyparallel.controller.hub import init_record
 
-from IPython.testing import decorators as dec
 from jupyter_client.session import Session
 
 from ipyparallel.util import utc
@@ -277,7 +277,7 @@ class TestSQLiteBackend(TaskDBTest, TestCase):
         self.temp_db = tempfile.NamedTemporaryFile(suffix='.db').name
         super(TestSQLiteBackend, self).setUp()
 
-    @dec.skip_without('sqlite3')
+    @pytest.mark.importskip('sqlite3')
     def create_db(self):
         location, fname = os.path.split(self.temp_db)
         log = logging.getLogger('test')

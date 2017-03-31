@@ -19,7 +19,6 @@ from traitlets.config import Config
 
 from ipyparallel.apps import launcher
 
-from IPython.testing import decorators as dec
 from ipython_genutils.py3compat import string_types
 
 

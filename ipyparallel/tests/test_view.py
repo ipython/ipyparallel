@@ -14,7 +14,8 @@ from tempfile import NamedTemporaryFile
 import zmq
 from nose.plugins.attrib import attr
 
-from IPython.testing import decorators as dec
+import pytest
+
 from IPython.utils.io import capture_output
 from ipython_genutils.py3compat import unicode_type
 
@@ -238,24 +239,6 @@ class TestView(ClusterTestCase):
         self.assertEqual(gathered, x)
         
 
-    @dec.known_failure_py3
-    @skip_without('numpy')
-    def test_push_numpy_nocopy(self):
-        import numpy
-        view = self.client[:]
-        a = numpy.arange(64)
-        view['A'] = a
-        @interactive
-        def check_writeable(x):
-            return x.flags.writeable
-        
-        for flag in view.apply_sync(check_writeable, pmod.Reference('A')):
-            self.assertFalse(flag, "array is writeable, push shouldn't have pickled it")
-        
-        view.push(dict(B=a))
-        for flag in view.apply_sync(check_writeable, pmod.Reference('B')):
-            self.assertFalse(flag, "array is writeable, push shouldn't have pickled it")
-    
     @skip_without('numpy')
     def test_apply_numpy(self):
         """view.apply(f, ndarray)"""
@@ -415,7 +398,6 @@ class TestView(ClusterTestCase):
             self.assertFalse(view.block)
         self.assertTrue(view.block)
     
-    @dec.known_failure_py3
     def test_importer(self):
         view = self.client[-1]
         view.clear(block=True)
@@ -675,7 +657,7 @@ class TestView(ClusterTestCase):
         self.assertEqual(io.stdout.count('by zero'), count, io.stdout)
         self.assertEqual(io.stdout.count(':execute'), count, io.stdout)
     
-    @dec.skipif_not_matplotlib
+    @pytest.mark.importskip('matplotlib')
     def test_magic_pylab(self):
         """%pylab works on engines"""
         view = self.client[-1]

@@ -6,7 +6,6 @@ import time
 
 from IPython import get_ipython
 from IPython.core.interactiveshell import InteractiveShell
-from IPython.testing import decorators as dec
 from IPython.utils.io import capture_output
 
 import pytest
@@ -286,7 +285,7 @@ class TestParallelMagics(ClusterTestCase):
                 ip.magic('pxresult')
             self.assertIn(str(data[name]), io.stdout)
         
-    @dec.skipif_not_matplotlib
+    @pytest.mark.importskip('matplotlib')
     def test_px_pylab(self):
         """%pylab works on engines"""
         ip = get_ipython()
