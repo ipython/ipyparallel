@@ -427,18 +427,19 @@ class Client(HasTraits):
         
         if location is not None and addr == localhost():
             # location specified, and connection is expected to be local
-            if not is_local_ip(location) and not sshserver:
+            location_ip = util.ip_for_host(location)
+            if not is_local_ip(location_ip) and not sshserver:
                 # load ssh from JSON *only* if the controller is not on
                 # this machine
                 sshserver=cfg['ssh']
-            if not is_local_ip(location) and not sshserver:
+            if not is_local_ip(location_ip) and not sshserver:
                 # warn if no ssh specified, but SSH is probably needed
                 # This is only a warning, because the most likely cause
                 # is a local Controller on a laptop whose IP is dynamic
                 warnings.warn("""
             Controller appears to be listening on localhost, but not on this machine.
             If this is true, you should specify Client(...,sshserver='you@%s')
-            or instruct your controller to listen on an external IP."""%location,
+            or instruct your controller to listen on an external IP.""" % location,
                 RuntimeWarning)
         elif not sshserver:
             # otherwise sync with cfg
