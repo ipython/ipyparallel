@@ -18,7 +18,7 @@ def mongo_conn(request):
     try:
         from pymongo import MongoClient
     except ImportError:
-        raise SkipTest()
+        pytest.skip("Requires mongodb")
 
     conn_kwargs = {}
     if 'DB_IP' in os.environ:
@@ -44,10 +44,9 @@ class TestMongoBackend(test_db.TaskDBTest, TestCase):
     """MongoDB backend tests"""
 
     def create_db(self):
-        from ipyparallel.controller.mongodb import MongoDB
         try:
+            from ipyparallel.controller.mongodb import MongoDB
             return MongoDB(database='iptestdb', _connection=c)
         except Exception:
-            raise
             pytest.skip("Couldn't connect to mongodb")
 

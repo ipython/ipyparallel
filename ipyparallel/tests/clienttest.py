@@ -1,24 +1,11 @@
-"""base class for parallel client tests
+"""base class for parallel client tests"""
 
-Authors:
-
-* Min RK
-"""
-
-#-------------------------------------------------------------------------------
-#  Copyright (C) 2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-------------------------------------------------------------------------------
 from __future__ import print_function
 
 import sys
-import tempfile
 import time
 
 import pytest
-from nose import SkipTest
 
 import zmq
 from zmq.tests import BaseZMQTestCase
@@ -88,12 +75,12 @@ def skip_without(*names):
     """skip a test if some names are not importable"""
     @decorator
     def skip_without_names(f, *args, **kwargs):
-        """decorator to skip tests in the absence of numpy."""
+        """decorator to skip tests in the absence of numpy, etc."""
         for name in names:
             try:
                 __import__(name)
             except ImportError:
-                raise SkipTest
+                pytest.skip("Test requires %s" % name)
         return f(*args, **kwargs)
     return skip_without_names
 

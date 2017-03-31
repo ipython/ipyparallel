@@ -274,12 +274,12 @@ class TestDictBackend(TaskDBTest, TestCase):
 class TestSQLiteBackend(TaskDBTest, TestCase):
     
     def setUp(self):
-        super(TestSQLiteBackend, self).setUp()
         self.temp_db = tempfile.NamedTemporaryFile(suffix='.db').name
+        super(TestSQLiteBackend, self).setUp()
 
     @dec.skip_without('sqlite3')
     def create_db(self):
-        location, fname = os.path.split(temp_db)
+        location, fname = os.path.split(self.temp_db)
         log = logging.getLogger('test')
         log.setLevel(logging.CRITICAL)
         return SQLiteDB(location=location, filename=fname, log=log)

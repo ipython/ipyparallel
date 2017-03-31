@@ -4,9 +4,8 @@
 import sys
 import time
 
+import pytest
 import zmq
-from nose import SkipTest
-from nose.plugins.attrib import attr
 
 import ipyparallel  as pmod
 from ipyparallel import error
@@ -21,7 +20,7 @@ class TestLoadBalancedView(ClusterTestCase):
         ClusterTestCase.setUp(self)
         self.view = self.client.load_balanced_view()
 
-    @attr('crash')
+    @pytest.mark.crash
     def test_z_crash_task(self):
         """test graceful handling of engine death (balanced)"""
         # self.add_engines(1)

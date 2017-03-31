@@ -1,8 +1,7 @@
 """Test CLI application behavior"""
 import sys
 from subprocess import check_output
-
-import nose.tools as nt
+import types
 
 import ipyparallel
 from ipyparallel.apps import ipengineapp
@@ -10,11 +9,11 @@ from ipykernel.ipkernel import IPythonKernel
 from ipykernel import kernelapp, iostream
 from zmq.eventloop import zmqstream, ioloop
 import zmq
-import types
-if sys.version_info.major == 2:
-    from mock import patch, MagicMock, create_autospec
-elif sys.version_info.major == 3:
+
+try:
     from unittest.mock import patch, MagicMock, create_autospec
+except ImportError: # py2
+    from mock import patch, MagicMock, create_autospec
 
 
 def _get_output(cmd):

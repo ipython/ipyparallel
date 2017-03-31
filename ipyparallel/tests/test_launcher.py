@@ -2,22 +2,8 @@
 
 Doesn't actually start any subprocesses, but goes through the motions of constructing
 objects, which should test basic config.
-
-Authors:
-
-* Min RK
 """
 
-#-------------------------------------------------------------------------------
-#  Copyright (C) 2013 The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-# Imports
-#-------------------------------------------------------------------------------
 
 import logging
 import os
@@ -27,7 +13,7 @@ import tempfile
 
 from unittest import TestCase
 
-from nose import SkipTest
+import pytest
 
 from traitlets.config import Config
 
@@ -94,7 +80,7 @@ class BatchTest:
 class SSHTest:
     """Tests for SSH launchers"""
     def test_cluster_id_arg(self):
-        raise SkipTest("SSH Launchers don't support cluster ID")
+        pytest.skip("SSH Launchers don't support cluster ID")
     
     def test_remote_profile_dir(self):
         cfg = Config()
@@ -172,7 +158,7 @@ class TestSSHEngineSetLauncher(EngineSetLauncherTest, TestCase):
     launcher_class = launcher.SSHEngineSetLauncher
     
     def test_cluster_id_arg(self):
-        raise SkipTest("SSH Launchers don't support cluster ID")
+        pytest.skip("SSH Launchers don't support cluster ID")
 
 class TestSSHProxyEngineSetLauncher(SSHTest, LauncherTest, TestCase):
     launcher_class = launcher.SSHProxyEngineSetLauncher
