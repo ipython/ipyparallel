@@ -20,6 +20,7 @@ from tornado.gen import multi_future
 import zmq
 from zmq import MessageTracker
 
+from IPython import get_ipython
 from IPython.core.display import clear_output, display, display_pretty
 from ipyparallel import error
 from ipyparallel.util import utcnow, compare_datetimes
@@ -499,9 +500,8 @@ class AsyncResult(Future):
     
     def _republish_displaypub(self, content, eid):
         """republish individual displaypub content dicts"""
-        try:
-            ip = get_ipython()
-        except NameError:
+        ip = get_ipython()
+        if ip is None:
             # displaypub is meaningless outside IPython
             return
         md = content['metadata'] or {}
@@ -525,10 +525,7 @@ class AsyncResult(Future):
     def _display_single_result(self):
         self._display_stream(self.stdout)
         self._display_stream(self.stderr, file=sys.stderr)
-        
-        try:
-            get_ipython()
-        except NameError:
+        if get_ipython() is None:
             # displaypub is meaningless outside IPython
             return
         
@@ -587,9 +584,7 @@ class AsyncResult(Future):
                 self._display_stream(stdout, '[stdout:%i] ' % eid)
                 self._display_stream(stderr, '[stderr:%i] ' % eid, file=sys.stderr)
                 
-                try:
-                    get_ipython()
-                except NameError:
+                if get_ipython() is None:
                     # displaypub is meaningless outside IPython
                     continue
                 
@@ -606,14 +601,12 @@ class AsyncResult(Future):
             # republish stdout:
             for eid,stdout in zip(targets, stdouts):
                 self._display_stream(stdout, '[stdout:%i] ' % eid)
-        
+
             # republish stderr:
             for eid,stderr in zip(targets, stderrs):
                 self._display_stream(stderr, '[stderr:%i] ' % eid, file=sys.stderr)
-        
-            try:
-                get_ipython()
-            except NameError:
+
+            if get_ipython() is None:
                 # displaypub is meaningless outside IPython
                 return
             

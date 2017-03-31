@@ -516,8 +516,7 @@ class TestClient(ClusterTestCase):
     def test_activate_on_init(self):
         ip = get_ipython()
         magics = ip.magics_manager.magics
-        with ip.builtin_trap:
-            c = self.connect_client()
+        c = self.connect_client()
         self.assertTrue('px' in magics['line'])
         self.assertTrue('px' in magics['cell'])
         c.close()
@@ -525,13 +524,11 @@ class TestClient(ClusterTestCase):
     def test_activate(self):
         ip = get_ipython()
         magics = ip.magics_manager.magics
-        with ip.builtin_trap:
-            v0 = self.client.activate(-1, '0')
+        v0 = self.client.activate(-1, '0')
         self.assertTrue('px0' in magics['line'])
         self.assertTrue('px0' in magics['cell'])
         self.assertEqual(v0.targets, self.client.ids[-1])
-        with ip.builtin_trap:
-            v0 = self.client.activate('all', 'all')
+        v0 = self.client.activate('all', 'all')
         self.assertTrue('pxall' in magics['line'])
         self.assertTrue('pxall' in magics['cell'])
         self.assertEqual(v0.targets, 'all')

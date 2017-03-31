@@ -27,6 +27,7 @@ from traitlets.config.configurable import MultipleInstanceError
 from IPython.core.application import BaseIPythonApplication
 from IPython.core.profiledir import ProfileDir, ProfileDirError
 
+from IPython import get_ipython
 from IPython.utils.capture import RichOutput
 from IPython.utils.coloransi import TermColors
 from jupyter_client.localinterfaces import localhost, is_local_ip
@@ -142,9 +143,8 @@ class ExecuteReply(RichOutput):
         if not text_out:
             return
         
-        try:
-            ip = get_ipython()
-        except NameError:
+        ip = get_ipython()
+        if ip is None:
             colors = "NoColor"
         else:
             colors = ip.colors
@@ -500,9 +500,8 @@ class Client(HasTraits):
         
         # last step: setup magics, if we are in IPython:
         
-        try:
-            ip = get_ipython()
-        except NameError:
+        ip = get_ipython()
+        if ip is None:
             return
         else:
             if 'px' not in ip.magics_manager.magics:
