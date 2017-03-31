@@ -14,7 +14,7 @@ install:
     - pip install --upgrade setuptools pip
     - pip install --pre --upgrade .[test] distributed joblib codecov
 script:
-    - iptest --coverage xml ipyparallel.tests -- -vsx
+    - pytest --maxfail=3 --cov ipyparallel -vsx ipyparallel/tests
 after_success:
     - codecov
 matrix:

@@ -42,7 +42,7 @@ class TestProcessLauncher(LocalProcessLauncher):
             s = 'The process was already started and has state: %r' % self.state
             raise ProcessStateError(s)
 
-# nose setup/teardown
+# global setup/teardown
 
 def setup():
     
