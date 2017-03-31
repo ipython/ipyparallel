@@ -5,13 +5,10 @@
 
 from __future__ import division
 
-
 import ipyparallel as ipp
 
 from .clienttest import ClusterTestCase, add_engines
 
-def setup():
-    add_engines(2, total=True)
 
 class TestRemoteFunctions(ClusterTestCase):
     

@@ -30,8 +30,6 @@ from ipyparallel.tests import add_engines
 
 from .clienttest import ClusterTestCase, generate_output
 
-def setup():
-    add_engines(3, total=True)
 
 class TestParallelMagics(ClusterTestCase):
     

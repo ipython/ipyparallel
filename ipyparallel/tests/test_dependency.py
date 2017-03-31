@@ -13,9 +13,6 @@ from ipyparallel.util import interactive
 from ipyparallel.tests import add_engines
 from .clienttest import ClusterTestCase
 
-def setup():
-    add_engines(1, total=True)
-
 @ipp.require('time')
 def wait(n):
     time.sleep(n)

@@ -1,20 +1,5 @@
 # -*- coding: utf-8 -*-
-"""test LoadBalancedView objects
-
-Authors:
-
-* Min RK
-"""
-#-------------------------------------------------------------------------------
-#  Copyright (C) 2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-# Imports
-#-------------------------------------------------------------------------------
+"""test LoadBalancedView objects"""
 
 import sys
 import time
@@ -29,9 +14,6 @@ from ipyparallel import error
 from ipyparallel.tests import add_engines
 
 from .clienttest import ClusterTestCase, crash, wait, skip_without
-
-def setup():
-    add_engines(3, total=True)
 
 class TestLoadBalancedView(ClusterTestCase):
 

@@ -27,9 +27,6 @@ from ipyparallel.tests import add_engines
 
 from .clienttest import ClusterTestCase, crash, wait, skip_without
 
-def setup():
-    add_engines(3, total=True)
-
 point = namedtuple("point", "x y")
 
 class TestView(ClusterTestCase):

@@ -17,6 +17,7 @@ import sys
 import tempfile
 import time
 
+import pytest
 from nose import SkipTest
 
 import zmq
@@ -100,9 +101,10 @@ def skip_without(*names):
 # Classes
 #-------------------------------------------------------------------------------
 
-
+@pytest.mark.usefixtures("cluster")
 class ClusterTestCase(BaseZMQTestCase):
     timeout = 10
+    engine_count = 2
     
     def add_engines(self, n=1, block=True):
         """add multiple engines to our cluster"""
@@ -115,7 +117,6 @@ class ClusterTestCase(BaseZMQTestCase):
         self.engines.extend(add_engines(n, total=True))
         if block:
             self.wait_on_engines()
-            
     
     def wait_on_engines(self, timeout=5):
         """wait for our engines to connect."""
@@ -166,6 +167,8 @@ class ClusterTestCase(BaseZMQTestCase):
     
     def setUp(self):
         BaseZMQTestCase.setUp(self)
+        add_engines(self.engine_count, total=True)
+
         self.client = self.connect_client()
         # start every test with clean engine namespaces:
         self.client.clear(block=True)

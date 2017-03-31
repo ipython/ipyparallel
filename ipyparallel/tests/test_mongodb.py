@@ -6,18 +6,17 @@
 import os
 
 from unittest import TestCase
-
-from nose import SkipTest
+import pytest
 
 from . import test_db
 
 c = None
 
-def setup():
+@pytest.fixture(scope='module')
+def mongo_conn(request):
     global c
-
     try:
-        from pymongo import Connection
+        from pymongo import MongoClient
     except ImportError:
         raise SkipTest()
 
@@ -32,14 +31,15 @@ def setup():
         conn_kwargs['port'] = int(os.environ['DB_PORT'])
     
     try:
-        c = Connection(**conn_kwargs)
+        c = MongoClient(**conn_kwargs)
     except Exception:
-        c=None
-
-def teardown(self):
+        c = None
     if c is not None:
-        c.drop_database('iptestdb')
+        request.addfinalizer(lambda : c.drop_database('iptestdb'))
+    return c
 
+
+@pytest.mark.usefixture('mongo_conn')
 class TestMongoBackend(test_db.TaskDBTest, TestCase):
     """MongoDB backend tests"""
 
@@ -48,5 +48,6 @@ class TestMongoBackend(test_db.TaskDBTest, TestCase):
         try:
             return MongoDB(database='iptestdb', _connection=c)
         except Exception:
-            raise SkipTest("Couldn't connect to mongodb")
+            raise
+            pytest.skip("Couldn't connect to mongodb")
 

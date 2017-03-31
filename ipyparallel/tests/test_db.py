@@ -24,11 +24,6 @@ from jupyter_client.session import Session
 from ipyparallel.util import utc
 
 
-def setup():
-    global temp_db
-    temp_db = tempfile.NamedTemporaryFile(suffix='.db').name
-
-
 class TaskDBTest:
     def setUp(self):
         self.session = Session()
@@ -277,6 +272,10 @@ class TestDictBackend(TaskDBTest, TestCase):
         self.assertEqual(len(self.db.get_history()), 79)
 
 class TestSQLiteBackend(TaskDBTest, TestCase):
+    
+    def setUp(self):
+        super(TestSQLiteBackend, self).setUp()
+        self.temp_db = tempfile.NamedTemporaryFile(suffix='.db').name
 
     @dec.skip_without('sqlite3')
     def create_db(self):
@@ -284,15 +283,12 @@ class TestSQLiteBackend(TaskDBTest, TestCase):
         log = logging.getLogger('test')
         log.setLevel(logging.CRITICAL)
         return SQLiteDB(location=location, filename=fname, log=log)
-    
+
     def tearDown(self):
         self.db._db.commit()
         self.db._db.close()
+        try:
+            os.remove(self.temp_db)
+        except:
+            pass
 
-
-def teardown():
-    """cleanup task db file after all tests have run"""
-    try:
-        os.remove(temp_db)
-    except:
-        pass

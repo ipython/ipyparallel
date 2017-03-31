@@ -20,10 +20,9 @@ from ipyparallel.util import utc
 
 from .clienttest import ClusterTestCase, wait, add_engines, skip_without
 
-def setup():
-    add_engines(4, total=True)
-
 class TestClient(ClusterTestCase):
+    
+    engine_count = 4
     
     def test_ids(self):
         n = len(self.client.ids)
