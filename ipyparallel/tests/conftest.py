@@ -23,7 +23,7 @@ def ipython():
     return shell
 
 @pytest.fixture()
-def ipython_activated(request, ipython):
+def ipython_interactive(request, ipython):
     """Activate IPython's builtin hooks
     
     for the duration of the test scope.

@@ -18,7 +18,7 @@ from . import add_engines
 from .clienttest import ClusterTestCase, generate_output
 
 
-@pytest.mark.usefixtures('ipython_activated')
+@pytest.mark.usefixtures('ipython_interactive')
 class TestParallelMagics(ClusterTestCase):
     
     def test_px_blocking(self):
