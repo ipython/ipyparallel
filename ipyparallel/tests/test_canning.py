@@ -1,4 +1,4 @@
-
+from binascii import b2a_hex
 from functools import partial
 import os
 import pickle
@@ -81,7 +81,7 @@ def test_can_partial():
 
 def test_can_partial_buffers():
     def foo(arg1, arg2, kwarg1, kwarg2):
-        return '%s%s%s%s' % (arg1, arg2, kwarg1.hex(), kwarg2)
+        return '%s%s%s%s' % (arg1, arg2, b2a_hex(bytes(kwarg1)), kwarg2)
 
     buf1 = os.urandom(1024 * 1024)
     buf2 = memoryview(os.urandom(1024 * 1024))
