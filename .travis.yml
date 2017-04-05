@@ -13,6 +13,7 @@ cache:
 install:
     - pip install --upgrade setuptools pip
     - pip install --pre --upgrade .[test] distributed joblib codecov
+    - 'pip install --only-binary :all: matplotlib || echo "no matplotlib"'
 script:
     - pytest --maxfail=3 --cov ipyparallel -vsx ipyparallel/tests
 after_success:
