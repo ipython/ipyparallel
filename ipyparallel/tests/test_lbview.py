@@ -1,27 +1,11 @@
 # -*- coding: utf-8 -*-
-"""test LoadBalancedView objects
-
-Authors:
-
-* Min RK
-"""
-#-------------------------------------------------------------------------------
-#  Copyright (C) 2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-# Imports
-#-------------------------------------------------------------------------------
+"""test LoadBalancedView objects"""
 
 import sys
 import time
 
+import pytest
 import zmq
-from nose import SkipTest
-from nose.plugins.attrib import attr
 
 import ipyparallel  as pmod
 from ipyparallel import error
@@ -30,16 +14,13 @@ from ipyparallel.tests import add_engines
 
 from .clienttest import ClusterTestCase, crash, wait, skip_without
 
-def setup():
-    add_engines(3, total=True)
-
 class TestLoadBalancedView(ClusterTestCase):
 
     def setUp(self):
         ClusterTestCase.setUp(self)
         self.view = self.client.load_balanced_view()
 
-    @attr('crash')
+    @pytest.mark.xfail
     def test_z_crash_task(self):
         """test graceful handling of engine death (balanced)"""
         # self.add_engines(1)
@@ -157,10 +138,10 @@ class TestLoadBalancedView(ClusterTestCase):
         self.minimum_engines(3)
         view = self.view
         def fail():
-            assert False
+            raise ValueError("Failed!")
         for r in range(len(self.client)-1):
             with view.temp_flags(retries=r):
-                self.assertRaisesRemote(AssertionError, view.apply_sync, fail)
+                self.assertRaisesRemote(ValueError, view.apply_sync, fail)
 
         with view.temp_flags(retries=len(self.client), timeout=0.1):
             self.assertRaisesRemote(error.TaskTimeout, view.apply_sync, fail)
@@ -171,9 +152,9 @@ class TestLoadBalancedView(ClusterTestCase):
         def fail():
             import time
             time.sleep(0.25)
-            assert False
+            raise ValueError("Failed!")
         with view.temp_flags(retries=1, timeout=0.01):
-            self.assertRaisesRemote(AssertionError, view.apply_sync, fail)
+            self.assertRaisesRemote(ValueError, view.apply_sync, fail)
 
     def test_invalid_dependency(self):
         view = self.view

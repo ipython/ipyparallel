@@ -3,7 +3,7 @@ try:
 except ImportError:
     import mock
 
-from nose import SkipTest
+import pytest
 
 import ipyparallel as ipp
 from .clienttest import ClusterTestCase, add_engines
@@ -23,7 +23,7 @@ def neg(x):
 class TestJobLib(ClusterTestCase):
     def setUp(self):
         if not have_joblib:
-            raise SkipTest("Requires joblib >= 0.10")
+            pytest.skip("Requires joblib >= 0.10")
         super(TestJobLib, self).setUp()
         add_engines(1, total=True)
 

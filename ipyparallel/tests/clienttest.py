@@ -1,23 +1,11 @@
-"""base class for parallel client tests
+"""base class for parallel client tests"""
 
-Authors:
-
-* Min RK
-"""
-
-#-------------------------------------------------------------------------------
-#  Copyright (C) 2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-------------------------------------------------------------------------------
 from __future__ import print_function
 
 import sys
-import tempfile
 import time
 
-from nose import SkipTest
+import pytest
 
 import zmq
 from zmq.tests import BaseZMQTestCase
@@ -87,12 +75,12 @@ def skip_without(*names):
     """skip a test if some names are not importable"""
     @decorator
     def skip_without_names(f, *args, **kwargs):
-        """decorator to skip tests in the absence of numpy."""
+        """decorator to skip tests in the absence of numpy, etc."""
         for name in names:
             try:
                 __import__(name)
             except ImportError:
-                raise SkipTest
+                pytest.skip("Test requires %s" % name)
         return f(*args, **kwargs)
     return skip_without_names
 
@@ -100,9 +88,10 @@ def skip_without(*names):
 # Classes
 #-------------------------------------------------------------------------------
 
-
+@pytest.mark.usefixtures("cluster")
 class ClusterTestCase(BaseZMQTestCase):
     timeout = 10
+    engine_count = 2
     
     def add_engines(self, n=1, block=True):
         """add multiple engines to our cluster"""
@@ -115,7 +104,6 @@ class ClusterTestCase(BaseZMQTestCase):
         self.engines.extend(add_engines(n, total=True))
         if block:
             self.wait_on_engines()
-            
     
     def wait_on_engines(self, timeout=5):
         """wait for our engines to connect."""
@@ -166,6 +154,8 @@ class ClusterTestCase(BaseZMQTestCase):
     
     def setUp(self):
         BaseZMQTestCase.setUp(self)
+        add_engines(self.engine_count, total=True)
+
         self.client = self.connect_client()
         # start every test with clean engine namespaces:
         self.client.clear(block=True)

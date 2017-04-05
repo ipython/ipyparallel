@@ -15,6 +15,7 @@ from traitlets import (
 )
 from decorator import decorator
 
+from IPython import get_ipython
 from ipyparallel import util
 from ipyparallel.controller.dependency import Dependency, dependent
 from ipython_genutils.py3compat import string_types, iteritems, PY3
@@ -821,12 +822,9 @@ class DirectView(View):
         """
         
         from ipyparallel.client.magics import ParallelMagics
-        
-        try:
-            # This is injected into __builtins__.
-            ip = get_ipython()
-        except NameError:
-            print("The IPython parallel magics (%px, etc.) only work within IPython.")
+        ip = get_ipython()
+        if ip is None:
+            warnings.warn("The IPython parallel magics (%px, etc.) only work within IPython.")
             return
         
         M = ParallelMagics(ip, self, suffix)

@@ -1,38 +1,23 @@
 # -*- coding: utf-8 -*-
-"""Test Parallel magics
-
-Authors:
-
-* Min RK
-"""
-#-------------------------------------------------------------------------------
-#  Copyright (C) 2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-#-------------------------------------------------------------------------------
-
-#-------------------------------------------------------------------------------
-# Imports
-#-------------------------------------------------------------------------------
+"""Test Parallel magics"""
 
 import re
 import time
 
-
-from IPython.testing import decorators as dec
+from IPython import get_ipython
+from IPython.core.interactiveshell import InteractiveShell
 from IPython.utils.io import capture_output
 
-import ipyparallel  as pmod
+import pytest
+
+import ipyparallel as ipp
 from ipyparallel import AsyncResult
 
-from ipyparallel.tests import add_engines
-
+from . import add_engines
 from .clienttest import ClusterTestCase, generate_output
 
-def setup():
-    add_engines(3, total=True)
 
+@pytest.mark.usefixtures('ipython_interactive')
 class TestParallelMagics(ClusterTestCase):
     
     def test_px_blocking(self):
@@ -300,9 +285,9 @@ class TestParallelMagics(ClusterTestCase):
                 ip.magic('pxresult')
             self.assertIn(str(data[name]), io.stdout)
         
-    @dec.skipif_not_matplotlib
     def test_px_pylab(self):
         """%pylab works on engines"""
+        pytest.importorskip('matplotlib')
         ip = get_ipython()
         v = self.client[-1]
         v.block = True
@@ -347,7 +332,7 @@ class TestParallelMagics(ClusterTestCase):
             with capture_output(display=False) as io:
                 try:
                     ip.run_cell_magic("px", "--targets all", cell)
-                except pmod.RemoteError:
+                except ipp.RemoteError:
                     pass
             self.assertIn('engine(s): all', io.stdout)
             self.assertEqual(view.targets, rc.ids)
@@ -365,7 +350,7 @@ class TestParallelMagics(ClusterTestCase):
             with capture_output(display=False) as io:
                 try:
                     ip.run_cell_magic("px", "--block", cell)
-                except pmod.RemoteError:
+                except ipp.RemoteError:
                     pass
             self.assertNotIn('Async', io.stdout)
             self.assertEqual(view.block, False)

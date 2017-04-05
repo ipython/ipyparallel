@@ -9,8 +9,6 @@ import tempfile
 import time
 from subprocess import Popen, PIPE, STDOUT
 
-import nose
-
 from IPython.paths import get_ipython_dir
 from ipyparallel import Client, error
 from ipyparallel.apps.launcher import (LocalProcessLauncher,
@@ -32,7 +30,7 @@ class TestProcessLauncher(LocalProcessLauncher):
             # Store stdout & stderr to show with failing tests.
             # This is defined in IPython.testing.iptest
             self.process = Popen(self.args,
-                stdout=nose.iptest_stdstreams_fileno(), stderr=STDOUT,
+                stdout=blackhole, stderr=STDOUT,
                 env=os.environ,
                 cwd=self.work_dir
             )
@@ -42,7 +40,7 @@ class TestProcessLauncher(LocalProcessLauncher):
             s = 'The process was already started and has state: %r' % self.state
             raise ProcessStateError(s)
 
-# nose setup/teardown
+# global setup/teardown
 
 def setup():
     
@@ -132,4 +130,4 @@ def teardown():
             except:
                 print("couldn't shutdown process: ", p)
     blackhole.close()
-    
+

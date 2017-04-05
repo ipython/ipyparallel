@@ -3,7 +3,6 @@ from functools import partial
 import os
 import pickle
 
-import nose.tools as nt
 from ipyparallel.serialize import canning
 from ipyparallel.serialize.canning import can, uncan
 
@@ -25,7 +24,7 @@ def test_no_closure():
     
     pfoo = dumps(foo)
     bar = loads(pfoo)
-    nt.assert_equal(foo(), bar())
+    assert foo() == bar()
 
 def test_generator_closure():
     # this only creates a closure on Python 3
@@ -37,7 +36,7 @@ def test_generator_closure():
     
     pfoo = dumps(foo)
     bar = loads(pfoo)
-    nt.assert_equal(foo(), bar())
+    assert foo() == bar()
 
 def test_nested_closure():
     @interactive
@@ -49,7 +48,7 @@ def test_nested_closure():
     
     pfoo = dumps(foo)
     bar = loads(pfoo)
-    nt.assert_equal(foo(), bar())
+    assert foo() == bar()
 
 def test_closure():
     i = 'i'
@@ -59,25 +58,25 @@ def test_closure():
     
     pfoo = dumps(foo)
     bar = loads(pfoo)
-    nt.assert_equal(foo(), bar())
+    assert foo() == bar()
 
 def test_uncan_bytes_buffer():
     data = b'data'
     canned = can(data)
     canned.buffers = [memoryview(buf) for buf in canned.buffers]
     out = uncan(canned)
-    nt.assert_equal(out, data)
+    assert out == data
 
 def test_can_partial():
     def foo(x, y, z):
         return x * y * z
     partial_foo = partial(foo, 2, y=5)
     canned = can(partial_foo)
-    nt.assert_is_instance(canned, canning.CannedPartial)
+    assert isinstance(canned, canning.CannedPartial)
     dumped = pickle.dumps(canned)
     loaded = pickle.loads(dumped)
     pfoo2 = uncan(loaded)
-    nt.assert_equal(pfoo2(z=3), partial_foo(z=3))
+    assert pfoo2(z=3) == partial_foo(z=3)
 
 def test_can_partial_buffers():
     def foo(arg1, arg2, kwarg1, kwarg2):
@@ -87,12 +86,11 @@ def test_can_partial_buffers():
     buf2 = memoryview(os.urandom(1024 * 1024))
     partial_foo = partial(foo, 5, buf1, kwarg1=buf2, kwarg2=10)
     canned = can(partial_foo)
-    nt.assert_equal(len(canned.buffers), 2)
-    nt.assert_is_instance(canned, canning.CannedPartial)
+    assert len(canned.buffers) == 2
+    assert isinstance(canned, canning.CannedPartial)
     buffers, canned.buffers = canned.buffers, []
     dumped = pickle.dumps(canned)
     loaded = pickle.loads(dumped)
     loaded.buffers = buffers
     pfoo2 = uncan(loaded)
-    nt.assert_equal(pfoo2(), partial_foo())
-
+    assert pfoo2() == partial_foo()

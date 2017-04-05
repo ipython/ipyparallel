@@ -12,9 +12,10 @@ from collections import namedtuple
 from tempfile import NamedTemporaryFile
 
 import zmq
-from nose.plugins.attrib import attr
 
-from IPython.testing import decorators as dec
+import pytest
+
+from IPython import get_ipython
 from IPython.utils.io import capture_output
 from ipython_genutils.py3compat import unicode_type
 
@@ -27,11 +28,9 @@ from ipyparallel.tests import add_engines
 
 from .clienttest import ClusterTestCase, crash, wait, skip_without
 
-def setup():
-    add_engines(3, total=True)
-
 point = namedtuple("point", "x y")
 
+@pytest.mark.usefixtures('ipython')
 class TestView(ClusterTestCase):
     
     def setUp(self):
@@ -41,7 +40,7 @@ class TestView(ClusterTestCase):
             time.sleep(2)
         super(TestView, self).setUp()
 
-    @attr('crash')
+    @pytest.mark.xfail
     def test_z_crash_mux(self):
         """test graceful handling of engine death (direct)"""
         # self.add_engines(1)
@@ -241,24 +240,6 @@ class TestView(ClusterTestCase):
         self.assertEqual(gathered, x)
         
 
-    @dec.known_failure_py3
-    @skip_without('numpy')
-    def test_push_numpy_nocopy(self):
-        import numpy
-        view = self.client[:]
-        a = numpy.arange(64)
-        view['A'] = a
-        @interactive
-        def check_writeable(x):
-            return x.flags.writeable
-        
-        for flag in view.apply_sync(check_writeable, pmod.Reference('A')):
-            self.assertFalse(flag, "array is writeable, push shouldn't have pickled it")
-        
-        view.push(dict(B=a))
-        for flag in view.apply_sync(check_writeable, pmod.Reference('B')):
-            self.assertFalse(flag, "array is writeable, push shouldn't have pickled it")
-    
     @skip_without('numpy')
     def test_apply_numpy(self):
         """view.apply(f, ndarray)"""
@@ -313,10 +294,10 @@ class TestView(ClusterTestCase):
 
     @skip_without('pandas')
     def test_push_pull_timeseries(self):
-        """push/pull pandas.TimeSeries"""
+        """push/pull pandas.Series"""
         import pandas
         
-        ts = pandas.TimeSeries(list(range(10)))
+        ts = pandas.Series(list(range(10)))
         
         view = self.client[-1]
         
@@ -418,7 +399,6 @@ class TestView(ClusterTestCase):
             self.assertFalse(view.block)
         self.assertTrue(view.block)
     
-    @dec.known_failure_py3
     def test_importer(self):
         view = self.client[-1]
         view.clear(block=True)
@@ -678,9 +658,9 @@ class TestView(ClusterTestCase):
         self.assertEqual(io.stdout.count('by zero'), count, io.stdout)
         self.assertEqual(io.stdout.count(':execute'), count, io.stdout)
     
-    @dec.skipif_not_matplotlib
     def test_magic_pylab(self):
         """%pylab works on engines"""
+        pytest.importorskip('matplotlib')
         view = self.client[-1]
         ar = view.execute("%pylab inline")
         # at least check if this raised:

@@ -6,17 +6,12 @@
 import os
 import time
 
-import nose.tools as nt
-
 from IPython.utils.io import capture_output
 
 from ipyparallel.error import TimeoutError
 from ipyparallel import error, Client
 from ipyparallel.tests import add_engines
 from .clienttest import ClusterTestCase
-
-def setup():
-    add_engines(2, total=True)
 
 def wait(n):
     import time
@@ -310,8 +305,8 @@ class AsyncResultTest(ClusterTestCase):
             time.sleep(0.05)
         
         ar.get(5)
-        nt.assert_in(4, found)
-        self.assertTrue(len(found) > 1, "should have seen data multiple times, but got: %s" % found)
+        assert 4 in found
+        assert len(found) > 1, "should have seen data multiple times, but got: %s" % found
     
     def test_not_single_result(self):
         save_build = self.client._build_targets

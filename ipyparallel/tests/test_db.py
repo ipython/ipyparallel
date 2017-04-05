@@ -9,24 +9,19 @@ import logging
 import os
 import tempfile
 import time
-
 from datetime import datetime, timedelta
 from unittest import TestCase
+
+import pytest
 
 from ipyparallel import util
 from ipyparallel.controller.dictdb import DictDB
 from ipyparallel.controller.sqlitedb import SQLiteDB
 from ipyparallel.controller.hub import init_record
 
-from IPython.testing import decorators as dec
 from jupyter_client.session import Session
 
 from ipyparallel.util import utc
-
-
-def setup():
-    global temp_db
-    temp_db = tempfile.NamedTemporaryFile(suffix='.db').name
 
 
 class TaskDBTest:
@@ -277,22 +272,22 @@ class TestDictBackend(TaskDBTest, TestCase):
         self.assertEqual(len(self.db.get_history()), 79)
 
 class TestSQLiteBackend(TaskDBTest, TestCase):
+    
+    def setUp(self):
+        self.temp_db = tempfile.NamedTemporaryFile(suffix='.db').name
+        super(TestSQLiteBackend, self).setUp()
 
-    @dec.skip_without('sqlite3')
     def create_db(self):
-        location, fname = os.path.split(temp_db)
+        location, fname = os.path.split(self.temp_db)
         log = logging.getLogger('test')
         log.setLevel(logging.CRITICAL)
         return SQLiteDB(location=location, filename=fname, log=log)
-    
+
     def tearDown(self):
         self.db._db.commit()
         self.db._db.close()
+        try:
+            os.remove(self.temp_db)
+        except:
+            pass
 
-
-def teardown():
-    """cleanup task db file after all tests have run"""
-    try:
-        os.remove(temp_db)
-    except:
-        pass

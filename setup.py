@@ -129,7 +129,8 @@ setup_args = dict(
         ':python_version == "2.7"': ['futures'],
         'nbext': ["notebook"],
         'test': [
-            'nose',
+            'pytest',
+            'pytest-cov',
             'ipython[test]',
             'testpath',
             'mock',
