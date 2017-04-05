@@ -285,9 +285,9 @@ class TestParallelMagics(ClusterTestCase):
                 ip.magic('pxresult')
             self.assertIn(str(data[name]), io.stdout)
         
-    @pytest.mark.importskip('matplotlib')
     def test_px_pylab(self):
         """%pylab works on engines"""
+        pytest.importorskip('matplotlib')
         ip = get_ipython()
         v = self.client[-1]
         v.block = True

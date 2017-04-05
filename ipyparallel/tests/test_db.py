@@ -277,7 +277,6 @@ class TestSQLiteBackend(TaskDBTest, TestCase):
         self.temp_db = tempfile.NamedTemporaryFile(suffix='.db').name
         super(TestSQLiteBackend, self).setUp()
 
-    @pytest.mark.importskip('sqlite3')
     def create_db(self):
         location, fname = os.path.split(self.temp_db)
         log = logging.getLogger('test')

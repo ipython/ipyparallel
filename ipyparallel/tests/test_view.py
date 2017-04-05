@@ -658,9 +658,9 @@ class TestView(ClusterTestCase):
         self.assertEqual(io.stdout.count('by zero'), count, io.stdout)
         self.assertEqual(io.stdout.count(':execute'), count, io.stdout)
     
-    @pytest.mark.importskip('matplotlib')
     def test_magic_pylab(self):
         """%pylab works on engines"""
+        pytest.importorskip('matplotlib')
         view = self.client[-1]
         ar = view.execute("%pylab inline")
         # at least check if this raised:

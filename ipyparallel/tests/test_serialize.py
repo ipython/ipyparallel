@@ -74,8 +74,8 @@ def test_roundtrip_memoryview():
     assert remainder == []
     assert v2.tobytes() == b
 
-pytest.mark.importskip('numpy')
 def test_numpy():
+    pytest.importorskip('numpy')
     from numpy.testing.utils import assert_array_equal
     for shape in SHAPES:
         for dtype in DTYPES:
@@ -88,8 +88,8 @@ def test_numpy():
             assert A.dtype == B.dtype
             assert_array_equal(A,B)
 
-pytest.mark.importskip('numpy')
 def test_recarray():
+    pytest.importorskip('numpy')
     from numpy.testing.utils import assert_array_equal
     for shape in SHAPES:
         for dtype in [
@@ -105,8 +105,8 @@ def test_recarray():
             assert A.dtype == B.dtype
             assert_array_equal(A,B)
 
-pytest.mark.importskip('numpy')
 def test_numpy_in_seq():
+    pytest.importorskip('numpy')
     from numpy.testing.utils import assert_array_equal
     for shape in SHAPES:
         for dtype in DTYPES:
@@ -121,8 +121,8 @@ def test_numpy_in_seq():
             assert A.dtype == B.dtype
             assert_array_equal(A,B)
 
-pytest.mark.importskip('numpy')
 def test_numpy_in_dict():
+    pytest.importorskip('numpy')
     from numpy.testing.utils import assert_array_equal
     for shape in SHAPES:
         for dtype in DTYPES:
@@ -204,9 +204,8 @@ def test_class_inheritance():
     assert D2.a == D.a
     assert D2.b == D.b
 
-pytest.mark.importskip('numpy')
 def test_pickle_threshold():
-    import numpy
+    numpy = pytest.importorskip('numpy')
     from numpy.testing.utils import assert_array_equal
     A = numpy.ones((5, 5))
     bufs = serialize_object(A, 1024)
