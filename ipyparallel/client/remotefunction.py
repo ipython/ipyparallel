@@ -12,7 +12,10 @@ from decorator import decorator
 
 from . import map as Map
 from .asyncresult import AsyncMapResult
-from IPython.utils.signatures import signature
+try:
+    from inspect import signature
+except ImportError: # py2
+    from IPython.utils.signatures import signature
 
 #-----------------------------------------------------------------------------
 # Functions and Decorators
