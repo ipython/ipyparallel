@@ -30,13 +30,6 @@ from ipython_genutils.py3compat import string_types
 from .futures import MessageFuture, multi_future
 
 
-try:
-    from tqdm import tqdm
-    use_progressbar = True
-except ImportError:
-    use_progressbar = False
-
-
 def _raw_text(s):
     display_pretty(s, raw=True)
 
@@ -573,14 +566,18 @@ class AsyncResult(Future):
         """
         return self.timedelta(self.submitted, self.received)
 
-    def wait_interactive(self, interval=1.0, timeout=-1):
-        """interactive wait, printing progress at regular intervals"""
+    def wait_interactive(self, interval=1.0, timeout=-1, progress=None):
+        """interactive wait, printing progress at regular intervals.
+
+        progress can be a tqdm-like progress bar."""
+
+        use_progressbar = progress is not None
         if timeout is None:
             timeout = -1
         N = len(self)
         tic = time.time()
         if use_progressbar:
-            progress_bar = tqdm(total=N)
+            progress_bar = progress(total=N)
             n_prev = 0
         while not self.ready() and (timeout < 0 or time.time() - tic <= timeout):
             self.wait(interval)
@@ -589,8 +586,11 @@ class AsyncResult(Future):
                 n_prev = self.progress
             else:
                 clear_output(wait=True)
-                print("%4i/%i tasks finished after %4i s" %
-                      (self.progress, N, self.elapsed), end="")
+                print(
+                    "%4i/%i tasks finished after %4i s"
+                    % (self.progress, N, self.elapsed),
+                    end="",
+                )
                 sys.stdout.flush()
 
         if use_progressbar:
