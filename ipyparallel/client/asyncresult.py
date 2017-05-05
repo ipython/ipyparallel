@@ -30,6 +30,13 @@ from ipython_genutils.py3compat import string_types
 from .futures import MessageFuture, multi_future
 
 
+try:
+    from tqdm import tqdm
+    use_progressbar = True
+except ImportError:
+    use_progressbar = False
+
+
 def _raw_text(s):
     display_pretty(s, raw=True)
 
@@ -572,15 +579,24 @@ class AsyncResult(Future):
             timeout = -1
         N = len(self)
         tic = time.time()
+        if use_progressbar:
+            progress_bar = tqdm(total=N)
+            n_prev = 0
         while not self.ready() and (timeout < 0 or time.time() - tic <= timeout):
             self.wait(interval)
-            clear_output(wait=True)
-            print(
-                "%4i/%i tasks finished after %4i s" % (self.progress, N, self.elapsed),
-                end="",
-            )
-            sys.stdout.flush()
-        print("\ndone")
+            if use_progressbar:
+                progress_bar.update(self.progress - n_prev)
+                n_prev = self.progress
+            else:
+                clear_output(wait=True)
+                print("%4i/%i tasks finished after %4i s" %
+                      (self.progress, N, self.elapsed), end="")
+                sys.stdout.flush()
+
+        if use_progressbar:
+            progress_bar.close()
+        else:
+            print("\ndone")
 
     def _republish_displaypub(self, content, eid):
         """republish individual displaypub content dicts"""
