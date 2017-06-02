@@ -45,7 +45,7 @@ def check_ready(f, self, *args, **kwargs):
     return f(self, *args, **kwargs)
 
 _metadata_keys = []
-_FOREVER = int(1e8) # a long time because some infinite timeouts are uninterruptible
+_FOREVER = int(1e6) # a long time because some infinite timeouts are uninterruptible
 
 class AsyncResult(Future):
     """Class for representing results of non-blocking calls.
