@@ -9,6 +9,7 @@ import sys
 import time
 from concurrent.futures import Future
 from datetime import datetime
+import threading
 from threading import Event
 try:
     from queue import Queue
@@ -45,7 +46,8 @@ def check_ready(f, self, *args, **kwargs):
     return f(self, *args, **kwargs)
 
 _metadata_keys = []
-_FOREVER = int(1e6) # a long time because some infinite timeouts are uninterruptible
+# threading.TIMEOUT_MAX new in 3.2
+_FOREVER = getattr(threading, 'TIMEOUT_MAX', int(1e6))
 
 class AsyncResult(Future):
     """Class for representing results of non-blocking calls.
