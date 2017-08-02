@@ -299,7 +299,6 @@ to specify your own. Here is a sample PBS script template:
 
     cd $PBS_O_WORKDIR
     export PATH=$HOME/usr/local/bin
-    export PYTHONPATH=$HOME/usr/local/lib/python2.7/site-packages
     /usr/local/bin/mpiexec -n {n} ipengine --profile-dir={profile_dir}
 
 There are a few important points about this template:
@@ -329,12 +328,11 @@ The controller template should be similar, but simpler:
     #PBS -N ipython
     #PBS -j oe
     #PBS -l walltime=00:10:00
-    #PBS -l nodes=1:ppn=4
+    #PBS -l nodes=1:ppn=1
     #PBS -q {queue}
 
     cd $PBS_O_WORKDIR
     export PATH=$HOME/usr/local/bin
-    export PYTHONPATH=$HOME/usr/local/lib/python2.7/site-packages
     ipcontroller --profile-dir={profile_dir}
 
 
