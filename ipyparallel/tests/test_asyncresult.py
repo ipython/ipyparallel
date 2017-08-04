@@ -8,6 +8,7 @@ import time
 
 from IPython.utils.io import capture_output
 
+import ipyparallel as ipp
 from ipyparallel.error import TimeoutError
 from ipyparallel import error, Client
 from ipyparallel.tests import add_engines
@@ -207,7 +208,7 @@ class AsyncResultTest(ClusterTestCase):
         v = self.client[:]
         ar = v.apply_async(time.sleep, 0.25)
         ar.get(2)
-        rc2 = Client(profile='iptest')
+        rc2 = ipp.Client(profile='iptest')
         # must have try/finally to close second Client, otherwise
         # will have dangling sockets causing problems
         try:

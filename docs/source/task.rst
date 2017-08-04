@@ -5,7 +5,7 @@ The IPython task interface
 ==========================
 
 The task interface to the cluster presents the engines as a fault tolerant,
-dynamic load-balanced system of workers. Unlike the multiengine interface, in
+dynamic load-balanced system of workers. Unlike the direct interface, in
 the task interface the user have no direct access to individual engines. By
 allowing the IPython scheduler to assign work, this interface is simultaneously
 simpler and more powerful.
@@ -38,9 +38,9 @@ a :class:`LoadBalancedView`, here called `lview`:
 
 .. sourcecode:: ipython
 
-    In [1]: from ipyparallel import Client
+    In [1]: import ipyparallel as ipp
 
-    In [2]: rc = Client()
+    In [2]: rc = ipp.Client()
 
 
 This form assumes that the controller was started on localhost with default
@@ -50,9 +50,9 @@ argument to the constructor:
 .. sourcecode:: ipython
 
     # for a visible LAN controller listening on an external port:
-    In [2]: rc = Client('tcp://192.168.1.16:10101')
+    In [2]: rc = ipp.Client('tcp://192.168.1.16:10101')
     # or to connect with a specific profile you have set up:
-    In [3]: rc = Client(profile='mpi')
+    In [3]: rc = ipp.Client(profile='mpi')
 
 For load-balanced execution, we will make use of a :class:`LoadBalancedView` object, which can
 be constructed via the client's :meth:`load_balanced_view` method:
@@ -69,11 +69,11 @@ be constructed via the client's :meth:`load_balanced_view` method:
 Quick and easy parallelism
 ==========================
 
-In many cases, you simply want to apply a Python function to a sequence of
-objects, but *in parallel*. Like the multiengine interface, these can be
+In many cases, you want to apply a Python function to a sequence of
+objects, but *in parallel*. Like the direct interface, these can be
 implemented via the task interface. The exact same tools can perform these
 actions in load-balanced ways as well as multiplexed ways: a parallel version
-of :func:`map` and :func:`@parallel` function decorator. If one specifies the
+of :func:`map` and :func:`@view.parallel` function decorator. If one specifies the
 argument `balanced=True`, then they are dynamically load balanced. Thus, if the
 execution time per item varies significantly, you should use the versions in
 the task interface.
@@ -81,7 +81,7 @@ the task interface.
 Parallel map
 ------------
 
-To load-balance :meth:`map`,simply use a LoadBalancedView:
+To load-balance :meth:`map`, use a LoadBalancedView:
 
 .. sourcecode:: ipython
 
@@ -97,8 +97,8 @@ To load-balance :meth:`map`,simply use a LoadBalancedView:
 Parallel function decorator
 ---------------------------
 
-Parallel functions are just like normal function, but they can be called on
-sequences and *in parallel*. The multiengine interface provides a decorator
+Parallel functions are just like normal functions, but they can be called on
+sequences and *in parallel*. The direct interface provides a decorator
 that turns any Python function into a parallel function:
 
 .. sourcecode:: ipython
@@ -145,18 +145,18 @@ There are two decorators and a class used for functional dependencies:
 
 .. sourcecode:: ipython
 
-    In [9]: from ipyparallel import depend, require, dependent
+    In [9]: import ipyparallel as ipp
 
-@require
-********
+@ipp.require
+************
 
 The simplest sort of dependency is requiring that a Python module is available. The
-``@require`` decorator lets you define a function that will only run on engines where names
+``@ipp.require`` decorator lets you define a function that will only run on engines where names
 you specify are importable:
 
 .. sourcecode:: ipython
 
-    In [10]: @require('numpy', 'zmq')
+    In [10]: @ipp.require('numpy', 'zmq')
        ....: def myfunc():
        ....:     return dostuff()
 
@@ -169,20 +169,20 @@ You can also require specific objects, not just module names:
     def foo(a):
         return a*a
 
-    @parallel.require(foo)
+    @ipp.require(foo)
     def bar(b):
         return foo(b)
 
-    @parallel.require(bar)
+    @ipp.require(bar)
     def baz(c, d):
         return bar(c) - bar(d)
 
     view.apply_sync(baz, 4, 5)
 
-@depend
-*******
+@ipp.depend
+***********
 
-The ``@depend`` decorator lets you decorate any function with any *other* function to
+The ``@ipp.depend`` decorator lets you decorate any function with any *other* function to
 evaluate the dependency. The dependency function will be called at the start of the task,
 and if it returns ``False``, then the dependency will be considered unmet, and the task
 will be assigned to another engine. If the dependency returns *anything other than
@@ -194,16 +194,16 @@ will be assigned to another engine. If the dependency returns *anything other th
        ....:    import sys
        ....:    return sys.platform == plat
 
-    In [11]: @depend(platform_specific, 'darwin')
+    In [11]: @ipp.depend(platform_specific, 'darwin')
        ....: def mactask():
        ....:    do_mac_stuff()
 
-    In [12]: @depend(platform_specific, 'nt')
+    In [12]: @ipp.depend(platform_specific, 'nt')
        ....: def wintask():
        ....:    do_windows_stuff()
 
 In this case, any time you apply ``mactask``, it will only run on an OSX machine.
-``@depend`` is just like ``apply``, in that it has a ``@depend(f,*args,**kwargs)``
+``@ipp.depend`` is like ``apply``, in that it has a ``@ipp.depend(f,*args,**kwargs)``
 signature.
 
 dependents
@@ -219,7 +219,7 @@ the :class:`dependent` object that the decorators use:
        ....:    dostuff()
 
     In [14]: mactask = dependent(mytask, platform_specific, 'darwin')
-    # this is the same as decorating the declaration of mytask with @depend
+    # this is the same as decorating the declaration of mytask with @ipp.depend
     # but you can do it again:
 
     In [15]: wintask = dependent(mytask, platform_specific, 'nt')
@@ -228,7 +228,7 @@ the :class:`dependent` object that the decorators use:
     In [16]: t = dependent(f, g, *dargs, **dkwargs)
 
     # is equivalent to:
-    In [17]: @depend(g, *dargs, **dkwargs)
+    In [17]: @ipp.depend(g, *dargs, **dkwargs)
        ....: def t(a,b,c):
        ....:     # contents of f
 
@@ -237,7 +237,7 @@ Graph Dependencies
 
 Sometimes you want to restrict the time and/or location to run a given task as a function
 of the time and/or location of other tasks. This is implemented via a subclass of
-:class:`set`, called a :class:`Dependency`. A Dependency is just a set of `msg_ids`
+:class:`set`, called a :class:`Dependency`. A Dependency is a set of `msg_ids`
 corresponding to tasks, and a few attributes to guide how to decide when the Dependency
 has been met.
 
@@ -282,8 +282,8 @@ timeout
     Dependencies only work within the task scheduler. You cannot instruct a load-balanced
     task to run after a job submitted via the MUX interface.
 
-The simplest form of Dependencies is with `all=True,success=True,failure=False`. In these cases,
-you can skip using Dependency objects, and just pass msg_ids or AsyncResult objects as the
+The simplest form of Dependencies is with `all=True, success=True, failure=False`. In these cases,
+you can skip using Dependency objects, and pass msg_ids or AsyncResult objects as the
 `follow` and `after` keywords to :meth:`client.apply`:
 
 .. sourcecode:: ipython
@@ -346,7 +346,7 @@ Resubmit
 
 Sometimes you may want to re-run a task. This could be because it failed for some reason, and
 you have fixed the error, or because you want to restore the cluster to an interrupted state.
-For this, the :class:`Client` has a :meth:`rc.resubmit` method.  This simply takes one or more
+For this, the :class:`Client` has a :meth:`rc.resubmit` method.  This takes one or more
 msg_ids, and returns an :class:`AsyncHubResult` for the result(s).  You cannot resubmit
 a task that is pending - only those that have finished, either successful or unsuccessful.
 
@@ -363,7 +363,7 @@ of a controller config object.
 
 The built-in routing schemes:
 
-To select one of these schemes, simply do::
+To select one of these schemes::
 
     $ ipcontroller --scheme=<schemename>
     for instance:

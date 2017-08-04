@@ -121,12 +121,12 @@ handled by the same socket as registration.
 
 :func:`queue_request` requests can specify multiple engines to query via the `targets`
 element. A verbose flag can be passed, to determine whether the result should be the list
-of `msg_ids` in the queue or simply the length of each list.
+of `msg_ids` in the queue or the length of each list.
 
 Message type: ``queue_request``::
 
     content = {
-        'verbose' : True, # whether return should be lists themselves or just lens
+        'verbose' : True, # whether return should be lists themselves or the lengths thereof
         'targets' : [0,3,1] # list of ints
     }
 
@@ -154,7 +154,7 @@ Clients can request individual results directly from the hub. This is primarily 
 gathering results of executions not submitted by the requesting client, as the client
 will have all its own results already. Requests are made by msg_id, and can contain one or
 more msg_id. An additional boolean key 'statusonly' can be used to not request the
-results, but simply poll the status of the jobs.
+results, but poll the status of the jobs instead.
 
 Message type: ``result_request``::
 
@@ -199,7 +199,7 @@ Message type: ``purge_request``::
         'engine_ids' : [0,2,4] # list of engine IDs
     }
 
-The reply to a purge request is simply the status 'ok' if the request succeeded, or an
+The reply to a purge request is the status 'ok' if the request succeeded, or an
 explanation of why it failed, such as requesting the purge of a nonexistent or pending
 message.
 
@@ -255,8 +255,8 @@ use the model::
 
 which takes `f`, a function in the user's namespace, and executes ``f(*args, **kwargs)``
 on a remote engine, returning the result (or, for non-blocking, information facilitating
-later retrieval of the result). This model, unlike the execute message which just uses a
-code string, must be able to send arbitrary (pickleable) Python objects. And ideally, copy
+later retrieval of the result). This model, unlike the execute message which uses code as a
+string, must be able to send arbitrary (pickleable) Python objects. And ideally, copy
 as little data as we can. The `buffers` property of a Message was introduced for this
 purpose.
 

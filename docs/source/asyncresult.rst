@@ -63,7 +63,7 @@ times (in seconds as floats).
 
 For use while the tasks are still pending:
 
-* :attr:`ar.elapsed` is just the elapsed seconds since submission, for use
+* :attr:`ar.elapsed` is the elapsed seconds since submission, for use
   before the AsyncResult is complete.
 * :attr:`ar.progress` is the number of tasks that have completed.  Fractional progress
   would be::
@@ -89,8 +89,8 @@ For use after the tasks are done:
   are doing work in the Client, and not waiting/spinning, then `received` might
   be artificially high.
 
-An often interesting metric is the time it actually cost to do the work in parallel
-relative to the serial computation, and this can be given simply with
+An often interesting metric is the time it cost to do the work in parallel
+relative to the serial computation, and this can be given with
 
 .. sourcecode:: python
 
@@ -101,7 +101,7 @@ Map results are iterable!
 =========================
 
 When an AsyncResult object has multiple results (e.g. the :class:`~AsyncMapResult`
-object), you can actually iterate through results themselves, and act on them as they arrive:
+object), you can iterate through results themselves, and act on them as they arrive:
 
 .. literalinclude:: ../../examples/itermapresult.py
     :language: python
@@ -145,6 +145,6 @@ To break that down:
 
     When AsyncResult or the AsyncMapResult don't provide what you need (for instance,
     handling individual results as they arrive, but with metadata), you can always
-    just split the original result's ``msg_ids`` attribute, and handle them as you like.
+    split the original result's ``msg_ids`` attribute, and handle them as you like.
 
     For an example of this, see :file:`examples/customresult.py`

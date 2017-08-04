@@ -14,7 +14,7 @@
 
 from rmtkernel import ensemble_diffs, normalize_diffs, GOE
 import numpy as np
-from ipyparallel import Client
+import ipyparallel as ipp
 
 # <markdowncell>
 
@@ -114,7 +114,7 @@ def parallel_diffs(rc, num, N):
 
 # <codecell>
 
-client = Client()
+client = ipp.Client()
 view = client[:]
 view.run('rmtkernel.py')
 view.block = False

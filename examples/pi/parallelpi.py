@@ -17,7 +17,7 @@ of the IPython engines.
 """
 from __future__ import print_function
 
-from ipyparallel import Client
+import ipyparallel as ipp
 from matplotlib import pyplot as plt
 import numpy as np
 from pidigits import *
@@ -28,7 +28,7 @@ filestring = 'pi200m.ascii.%(i)02dof20'
 files = [filestring % {'i':i} for i in range(1,21)]
 
 # Connect to the IPython cluster
-c = Client()
+c = ipp.Client()
 c[:].run('pidigits.py')
 
 # the number of engines

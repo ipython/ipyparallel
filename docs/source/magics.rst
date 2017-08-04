@@ -13,8 +13,8 @@ These magics will automatically become available when you create a Client:
 
 .. sourcecode:: ipython
 
-    In [1]: from ipyparallel import Client
-    In [2]: rc = Client()
+    In [1]: import ipyparallel as ipp
+    In [2]: rc = ipp.Client()
 
 The initially active View will have attributes ``targets='all', block=True``,
 which is a blocking view of all engines, evaluated at request time
@@ -182,7 +182,7 @@ which adjusts how the outputs of multiple engines are presented.
 
 If you are using %px in non-blocking mode, you won't get output.
 You can use %pxresult to display the outputs of the latest command,
-just as is done when %px is blocking:
+as is done when %px is blocking:
 
 .. sourcecode:: ipython
 
@@ -197,7 +197,7 @@ just as is done when %px is blocking:
     [stdout:2] hi
     [stdout:3] hi
 
-%pxresult simply calls :meth:`.AsyncResult.display_outputs` on the most recent request.
+%pxresult calls :meth:`.AsyncResult.display_outputs` on the most recent request.
 It accepts the same output-grouping arguments as %%px, so you can use it to view
 a result in different ways.
 
@@ -341,7 +341,7 @@ the Engine to *also* bind its kernel, to listen for connections:
 
 .. sourcecode:: ipython
 
-    In [50]: %px from ipyparallel import bind_kernel; bind_kernel()
+    In [50]: %px import ipyparallel as ipp; ipp.bind_kernel()
 
 Then, if your engines are local, you can start a qtconsole right on the engine(s):
 
@@ -351,7 +351,7 @@ Then, if your engines are local, you can start a qtconsole right on the engine(s
 
 Careful with this one, because if your view is of 16 engines it will start 16 QtConsoles!
 
-Or you can view just the connection info, and work out the right way to connect to the engines,
+Or you can view the connection info and work out the right way to connect to the engines,
 depending on where they live and where you are:
 
 .. sourcecode:: ipython
@@ -370,7 +370,7 @@ depending on where they live and where you are:
 
     Paste the above JSON into a file, and connect with:
         $> ipython <app> --existing <file>
-    or, if you are local, you can connect with just:
+    or, if you are local, you can connect with:
         $> ipython <app> --existing kernel-60125.json
     or even just:
         $> ipython <app> --existing

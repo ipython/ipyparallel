@@ -50,7 +50,7 @@ Or you can set the same behavior as the default by adding the following line to 
 
     ``--ip=*`` instructs ZeroMQ to listen on all interfaces,
     but it does not contain the IP needed for engines / clients
-    to know where the controller actually is.
+    to know where the controller is.
     This can be specified with the ``--location`` argument,
     such as ``--location=10.0.0.1``, or ``--location=server.local``,
     the specific IP address or hostname of the controller, as seen from engines and/or clients.
@@ -91,7 +91,7 @@ created by the controller are put into the :file:`IPYTHONDIR/profile_default/sec
 directory. If the engines share a filesystem with the controller, step 2 can be skipped as
 the engines will automatically look at that location.
 
-The final step required to actually use the running controller from a client is to move
+The final step required to use the running controller from a client is to move
 the JSON file :file:`ipcontroller-client.json` from ``host0`` to any host where clients
 will be run. If these file are put into the :file:`IPYTHONDIR/profile_default/security`
 directory of the client's host, they will be found automatically. Otherwise, the full path
@@ -121,16 +121,16 @@ controller and engines in the following situations:
     system you will need to use :command:`ipcontroller` and
     :command:`ipengine` directly.
 
-Under the hood, :command:`ipcluster` just uses :command:`ipcontroller`
+Under the hood, :command:`ipcluster` uses :command:`ipcontroller`
 and :command:`ipengine` to perform the steps described above.
 
 The simplest way to use ipcluster requires no configuration, and will
 launch a controller and a number of engines on the local machine. For instance,
-to start one controller and 4 engines on localhost, just do::
+to start one controller and 4 engines on localhost::
 
     $ ipcluster start -n 4
 
-To see other command line options, do::
+To see other command line options::
 
     $ ipcluster -h
 
@@ -166,8 +166,7 @@ and Windows HPC Server.
 In general, these are configured by the :attr:`IPClusterEngines.engine_set_launcher_class`,
 and :attr:`IPClusterStart.controller_launcher_class` configurables, which can be the
 fully specified object name (e.g. ``'ipyparallel.apps.launcher.LocalControllerLauncher'``),
-but if you are using IPython's builtin launchers, you can specify just the class name,
-or even just the prefix e.g:
+but if you are using IPython's builtin launchers, you can specify a launcher by its prefix e.g:
 
 .. sourcecode:: python
 
@@ -243,7 +242,7 @@ If you have a reason to also start the Controller with mpi, you can specify:
 
 On newer MPI implementations (such as OpenMPI), this will work even if you
 don't make any calls to MPI or call :func:`MPI_Init`. However, older MPI
-implementations actually require each process to call :func:`MPI_Init` upon
+implementations require each process to call :func:`MPI_Init` upon
 starting. The easiest way of having this done is to install the mpi4py
 [mpi4py]_ package and then specify the ``c.MPI.use`` option in :file:`ipengine_config.py`:
 
@@ -304,7 +303,7 @@ to specify your own. Here is a sample PBS script template:
 There are a few important points about this template:
 
 1. This template will be rendered at runtime using IPython's :class:`EvalFormatter`.
-   This is simply a subclass of :class:`string.Formatter` that allows simple expressions
+   This is a subclass of :class:`string.Formatter` that allows simple expressions
    on keys.
 
 2. Instead of putting in the actual number of engines, use the notation
@@ -346,7 +345,7 @@ Once you have created these scripts, save them with names like
     c.PBSControllerLauncher.batch_template_file = "pbs.controller.template"
 
 
-Alternately, you can just define the templates as strings inside :file:`ipcluster_config`.
+Alternately, you can define the templates as strings inside :file:`ipcluster_config`.
 
 Whether you are using your own templates or our defaults, the extra configurables available are
 the number of engines to launch (``{n}``, and the batch system queue to which the jobs are to be
@@ -360,7 +359,7 @@ submitted (``{queue}``)). These are configurables, and can be specified in
 
 Note that assuming you are running PBS on a multi-node cluster, the Controller's default behavior
 of listening only on localhost is likely too restrictive.  In this case, also assuming the
-nodes are safely behind a firewall, you can simply instruct the Controller to listen for
+nodes are safely behind a firewall, you can instruct the Controller to listen for
 connections on all its interfaces, by adding in :file:`ipcontroller_config`:
 
 .. sourcecode:: python
@@ -562,8 +561,8 @@ The ``file`` flag works like this::
 .. note::
 
     If the controller's and engine's hosts all have a shared file system
-    (:file:`IPYTHONDIR/profile_<name>/security` is the same on all of them), then things
-    will just work!
+    (:file:`IPYTHONDIR/profile_<name>/security` is the same on all of them),
+    then no paths need to be specified or files copied.
 
 SSH Tunnels
 ***********
@@ -597,7 +596,7 @@ Or you can specify an ssh server on the command-line when starting an engine::
 
     $> ipengine --profile=foo --ssh=my.login.node
 
-For example, if your system is totally restricted, then all connections will actually be
+For example, if your system is totally restricted, then all connections will be
 loopback, and ssh tunnels will be used to connect engines to the controller::
 
     [node1] $> ipcontroller --enginessh=node1
@@ -611,7 +610,7 @@ An example using ipcontroller/engine with ssh
 ---------------------------------------------
 
 No configuration files are necessary to use ipcontroller/engine in an SSH environment
-without a shared filesystem. You simply need to make sure that the controller is listening
+without a shared filesystem. You need to make sure that the controller is listening
 on an interface visible to the engines, and move the connection file from the controller to
 the engines.
 
@@ -671,7 +670,7 @@ At fist glance it may seem that that managing the JSON files is a bit
 annoying. Going back to the house and key analogy, copying the JSON around
 each time you start the controller is like having to make a new key every time
 you want to unlock the door and enter your house. As with your house, you want
-to be able to create the key (or JSON file) once, and then simply use it at
+to be able to create the key (or JSON file) once, and then use it at
 any point in the future.
 
 To do this, the only thing you have to do is specify the `--reuse` flag, so that
@@ -679,9 +678,9 @@ the connection information in the JSON files remains accurate::
 
     $ ipcontroller --reuse
 
-Then, just copy the JSON files over the first time and you are set. You can
+Then copy the JSON files over the first time and you are set. You can
 start and stop the controller and engines any many times as you want in the
-future, just make sure to tell the controller to reuse the file.
+future, as long as you make sure to tell the controller to reuse the file.
 
 .. note::
 
@@ -712,7 +711,7 @@ Ports and addresses
 In many cases, you will want to configure the Controller's network identity.  By default,
 the Controller listens only on loopback, which is the most secure but often impractical.
 To instruct the controller to listen on a specific interface, you can set the
-:attr:`HubFactory.ip` trait.  To listen on all interfaces, simply specify:
+:attr:`HubFactory.ip` trait.  To listen on all interfaces, specify:
 
 .. sourcecode:: python
 
@@ -752,9 +751,6 @@ through the login node, an example :file:`ipcontroller_config.py` might contain:
     c.HubFactory.ssh_server = 'login.mycluster.net'
 
 After doing this, your :file:`ipcontroller-client.json` file will look something like this:
-
-.. this can be Python, despite the fact that it's actually JSON, because it's
-.. still valid Python
 
 .. sourcecode:: python
 
@@ -803,7 +799,7 @@ To use one of these backends, you must set the :attr:`HubFactory.db_class` trait
     # to reuse tasks or results, and want to keep memory consumption under control.
     c.HubFactory.db_class = 'ipyparallel.controller.dictdb.NoDB'
 
-When using the proper databases, you can actually allow for tasks to persist from
+When using the proper databases, you can allow for tasks to persist from
 one session to the next by specifying the MongoDB database or SQLite table in
 which tasks are to be stored.  The default is to use a table named for the Hub's Session,
 which is a UUID, and thus different every time.
@@ -831,11 +827,11 @@ you can specify any arguments you may need to the PyMongo `Connection
 
 But sometimes you are moving lots of data around quickly, and you don't need
 that information to be stored for later access, even by other Clients to this
-same session. For this case, we have a dummy database, which doesn't actually
+same session. For this case, we have a dummy database, which doesn't
 store anything. This lets the Hub stay small in memory, at the obvious expense
 of being able to access the information that would have been stored in the
 database (used for task resubmission, requesting results of tasks you didn't
-submit, etc.). To use this backend, simply pass ``--nodb`` to
+submit, etc.). To use this backend, pass ``--nodb`` to
 :command:`ipcontroller` on the command-line, or specify the :class:`NoDB` class
 in your :file:`ipcontroller_config.py` as described above.
 

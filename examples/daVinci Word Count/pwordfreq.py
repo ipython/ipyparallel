@@ -15,7 +15,7 @@ from itertools import repeat
 
 from wordfreq import print_wordfreq, wordfreq
 
-from ipyparallel import Client, Reference
+import ipyparallel as ipp
 
 import requests
 
@@ -29,7 +29,7 @@ def pwordfreq(view, fnames):
     """
     assert len(fnames) == len(view.targets)
     view.scatter('fname', fnames, flatten=True)
-    ar = view.apply(wordfreq, Reference('fname'))
+    ar = view.apply(wordfreq, ipp.Reference('fname'))
     freqs_list = ar.get()
     word_set = set()
     for f in freqs_list:
@@ -42,7 +42,7 @@ def pwordfreq(view, fnames):
 
 if __name__ == '__main__':
     # Create a Client and View
-    rc = Client()
+    rc = ipp.Client()
     
     view = rc[:]
     view.apply_sync(os.chdir, os.getcwd())

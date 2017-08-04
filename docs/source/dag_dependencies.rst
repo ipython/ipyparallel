@@ -33,7 +33,7 @@ Here, we have a very simple 5-node DAG:
 .. figure:: figs/simpledag.*
     :width: 600px
 
-With NetworkX, an arrow is just a fattened bit on the edge. Here, we can see that task 0
+With NetworkX, an arrow is a fattened bit on the edge. Here, we can see that task 0
 depends on nothing, and can run immediately. 1 and 2 depend on 0; 3 depends on
 1 and 2; and 4 depends only on 1.
 
@@ -98,7 +98,7 @@ Now, we need to build our dict of jobs corresponding to the nodes on the graph:
     In [3]: jobs = {}
 
     # in reality, each job would presumably be different
-    # randomwait is just a function that sleeps for a random interval
+    # randomwait is a function that sleeps for a random interval
     In [4]: for node in G:
        ...:     jobs[node] = randomwait
 
@@ -112,7 +112,7 @@ on which it depends:
 
 .. sourcecode:: ipython
 
-    In [5]: rc = Client()
+    In [5]: rc = ipp.Client()
     In [5]: view = rc.load_balanced_view()
 
     In [6]: results = {}

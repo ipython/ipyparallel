@@ -31,7 +31,7 @@ Contents
    changelog
    intro
    process
-   multiengine
+   direct
    magics
    task
    asyncresult

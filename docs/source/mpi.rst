@@ -6,7 +6,7 @@ Using MPI with IPython
 
 Often, a parallel algorithm will require moving data between the engines. One
 way of accomplishing this is by doing a pull and then a push using the
-multiengine client. However, this will be slow as all the data has to go
+direct view. However, this will be slow as all the data has to go
 through the controller to the client and then back through the controller, to
 its final destination.
 
@@ -29,7 +29,7 @@ If you want to use MPI with IPython, you will need to install:
     have *some* way of calling MPI from Python. You also need some way of
     making sure that :func:`MPI_Init` is called when the IPython engines start
     up. There are a number of ways of doing this and a good number of
-    associated subtleties. We highly recommend just using mpi4py as it
+    associated subtleties. We highly recommend using mpi4py as it
     takes care of most of these problems. If you want to do something
     different, let us know and we can help you get started.
 
@@ -60,10 +60,10 @@ stop and clean up the controller and engines.
 Manual starting using :command:`mpiexec`
 ----------------------------------------
 
-If you want to start the IPython engines using the :command:`mpiexec`, just
+If you want to start the IPython engines using the :command:`mpiexec`:
 do::
 
-    $ mpiexec -n 4 ipengine --mpi=mpi4py
+    $ mpiexec -n 4 ipengine
 
 This requires that you already have a controller running and that the FURL
 files for the engines are in place. We also have built in support for
@@ -87,7 +87,7 @@ now call any code that uses MPI in the IPython engines. And, all of this can
 be done interactively. Here we show a simple example that uses mpi4py
 [mpi4py]_ version 1.1.0 or later.
 
-First, lets define a simply function that uses MPI to calculate the sum of a
+First, lets define a function that uses MPI to calculate the sum of a
 distributed array. Save the following text in a file called :file:`psum.py`:
 
 .. sourcecode:: python
@@ -118,9 +118,9 @@ manner using our :func:`psum` function:
 
 .. sourcecode:: ipython
 
-    In [1]: from ipyparallel import Client
+    In [1]: import ipyparallel as ipp
 
-    In [2]: c = Client(profile='mpi')
+    In [2]: c = ipp.Client(profile='mpi')
 
     In [3]: view = c[:]
 

@@ -55,9 +55,9 @@ To create a new client, and set up the default direct and load-balanced objects:
     In [3]: tc = kclient.TaskClient()
 
     # new
-    In [1]: from ipyparallel import Client
+    In [1]: import ipyparallel as ipp
 
-    In [2]: rc = Client()
+    In [2]: rc = ipp.Client()
 
     In [3]: dview = rc[:]
 
@@ -120,11 +120,11 @@ argument.
 
 .. seealso::
 
-    :ref:`Our Direct Interface doc <parallel_multiengine>` for a simple tutorial with the
+    :ref:`Our Direct Interface doc <parallel_direct>` for a simple tutorial with the
     DirectView.
 
 
-The other major difference is the use of :meth:`apply`. When remote work is simply functions,
+The other major difference is the use of :meth:`apply`. When remote work is comprised of functions,
 the natural return value is the actual Python objects. It is no longer the recommended pattern
 to use stdout as your results, due to stream decoupling and the asynchronous nature of how the
 stdout streams are handled in the new system.
@@ -133,7 +133,7 @@ Task to LoadBalancedView
 ========================
 
 Load-Balancing has changed more than Multiplexing.  This is because there is no longer a notion
-of a StringTask or a MapTask, there are simply Python functions to call.  Tasks are now
+of a StringTask or a MapTask, there are Python functions to call.  Tasks are now
 simpler, because they are no longer composites of push/execute/pull/clear calls, they are
 a single function that takes arguments, and returns objects.
 
@@ -176,9 +176,7 @@ In the new code, this is simpler:
 
     In [10]: import numpy
 
-    In [11]: from ipyparallel import Reference
-
-    In [12]: ar = lbview.apply(numpy.dot, Reference('A'), B)
+    In [12]: ar = lbview.apply(numpy.dot, ipp.Reference('A'), B)
 
     In [13]: C = ar.get()
 
@@ -235,7 +233,7 @@ There are still some things that behave the same as IPython.kernel:
     In [6]: ar.r
     Out[6]: [5, 5]
 
-The ``.r`` or ``.result`` property simply calls :meth:`get`, waiting for and returning the
+The ``.r`` or ``.result`` property calls :meth:`get`, waiting for and returning the
 result.
 
 .. seealso::

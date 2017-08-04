@@ -19,7 +19,7 @@ import random, sys
 from optparse import OptionParser
 
 from IPython.utils.timing import time
-from ipyparallel import Client
+import ipyparallel as ipp
 
 def main():
     parser = OptionParser()
@@ -40,7 +40,7 @@ def main():
     (opts, args) = parser.parse_args()
     assert opts.tmax >= opts.tmin, "tmax must not be smaller than tmin"
 
-    rc = Client()
+    rc = ipp.Client()
     view = rc.load_balanced_view()
     print(view)
     rc.block=True

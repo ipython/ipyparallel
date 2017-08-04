@@ -13,7 +13,7 @@ and some engines using something like::
 from __future__ import print_function
 
 import sys
-from ipyparallel import Client, error
+import ipyparallel as ipp
 import time
 import bs4 # this isn't necessary, but it helps throw the dependency error earlier
 
@@ -46,7 +46,7 @@ class DistributedSpider(object):
     pollingDelay = 0.5
 
     def __init__(self, site):
-        self.client = Client()
+        self.client = ipp.Client()
         self.view = self.client.load_balanced_view()
         self.mux = self.client[:]
 
@@ -83,7 +83,7 @@ class DistributedSpider(object):
             # task is not done yet.  This provides a simple way of polling.
             try:
                 links = ar.get(0)
-            except error.TimeoutError:
+            except ipp.error.TimeoutError:
                 continue
             except Exception as e:
                 self.linksDone[url] = None

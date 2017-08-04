@@ -18,11 +18,11 @@ where you can reorder the partial data before performing the reduce.
 """
 from __future__ import print_function
 
-from ipyparallel import Client, Reference
+import ipyparallel as ipp
 
 
 # connect client and create views
-rc = Client()
+rc = ipp.Client()
 rc.block=True
 ids = rc.ids
 
@@ -58,7 +58,7 @@ def connect(com, peers, tree, pub_url, root_id):
     """this function will be called on the engines"""
     com.connect(peers, tree, pub_url, root_id)
 
-view.apply_sync(connect, Reference('com'), peers, btree, pub_url, root_id)
+view.apply_sync(connect, ipp.Reference('com'), peers, btree, pub_url, root_id)
 
 # functions that can be used for reductions
 # max and min builtins can be used as well
