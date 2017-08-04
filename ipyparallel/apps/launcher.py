@@ -1073,6 +1073,14 @@ class BatchSystemLauncher(BaseLauncher):
     batch_file = Unicode(u'')
     # the format dict used with batch_template:
     context = Dict()
+    
+    namespace = Dict(config=True,
+        help="""Extra variables to pass to the template.
+
+        This lets you parameterize additional options,
+        such as wall_time with a custom template.
+        """
+    )
 
     def _context_default(self):
         """load the default context with the default values for the basic keys
@@ -1120,7 +1128,12 @@ class BatchSystemLauncher(BaseLauncher):
             # note that this is *only* when user did not specify a template.
             self._insert_options_in_script()
             self._insert_job_array_in_script()
-        script_as_string = self.formatter.format(self.batch_template, **self.context)
+        ns = {}
+        # internally generated
+        ns.update(self.context)
+        # from user config
+        ns.update(self.namespace)
+        script_as_string = self.formatter.format(self.batch_template, **ns)
         self.log.debug('Writing batch script: %s', self.batch_file)
         with open(self.batch_file, 'w') as f:
             f.write(script_as_string)
