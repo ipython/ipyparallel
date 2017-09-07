@@ -1298,8 +1298,8 @@ class Client(HasTraits):
         Returns
         -------
 
-        executor: distributed.Executor
-            A dask.distributed.Executor connected to the dask cluster.
+        client = distributed.Client
+            A dask.distributed.Client connected to the dask cluster.
         """
         import distributed
 
@@ -1326,9 +1326,16 @@ class Client(HasTraits):
         worker_args.setdefault('ncores', 1)
         dview.apply_sync(util.become_dask_worker, **worker_args)
 
-        # Finally, return an Executor connected to the Scheduler
-        executor = distributed.Executor('{ip}:{port}'.format(**distributed_info))
-        return executor
+        # Finally, return a Client connected to the Scheduler
+        try:
+            distributed_Client = distributed.Client
+        except AttributeError:
+            # For distributed pre-1.18.1
+            distributed_Client = distributed.Executor
+
+        client = distributed_Client('{ip}:{port}'.format(**distributed_info))
+
+        return client
 
 
     def stop_dask(self, targets='all'):
