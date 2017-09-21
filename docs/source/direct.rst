@@ -88,7 +88,7 @@ DirectView's :meth:`map` method:
 
 .. sourcecode:: ipython
 
-    In [62]: serial_result = map(lambda x:x**10, range(32))
+    In [62]: serial_result = list(map(lambda x:x**10, range(32)))
     
     In [63]: parallel_result = dview.map_sync(lambda x: x**10, range(32))
 
@@ -97,7 +97,6 @@ DirectView's :meth:`map` method:
 
 
 .. note::
-
     The :class:`DirectView`'s version of :meth:`map` does
     not do dynamic load balancing. For a load balanced version, use a
     :class:`LoadBalancedView`.
