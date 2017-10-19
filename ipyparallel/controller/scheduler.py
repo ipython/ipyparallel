@@ -12,6 +12,7 @@ import logging
 import sys
 import time
 
+from pprint import pprint
 from collections import deque
 from datetime import datetime
 from random import randint, random
@@ -701,33 +702,72 @@ help="""select the task scheduler scheme  [default: Python LRU]
                 if self.loads[idx] == self.hwm-1:
                     self.update_graph(None)
 
+    def reorder_jobs(self, jobs, order='interleaved'):
+        """
+        Reorder the jobs in the queue.
+        
+        normal: Order jobs in order of submission
+        interleaved: Interleave jobs sent by different clients
+        """
+        def roundrobin(iterables):
+            """Interleave the elements of a list of lists"""
+            interleaved = []
+            while any(iterables):
+                for i in iterables:
+                    if i: interleaved.append(i.pop(0))
+            return interleaved
+
+        def split_by_session(jobs):
+            """Return a dictionary of lists of jobs keyed by session id."""
+            sessions = {}
+            for j in jobs:
+                session = j.header['session']
+                if not sessions.has_key(session): sessions[session] = [j]
+                else: sessions[session].append(j)
+            return sessions
+
+        self.log.debug("Original order: " + str([j.msg_id+"@"+j.header['session'] for j in jobs]))
+        if order == 'interleaved':
+            sessions = split_by_session(jobs).values()
+            interleaved = roundrobin(sessions)
+            self.log.debug("New order: " + str([j.msg_id+"@"+j.header['session'] for j in interleaved]))
+            return deque(interleaved)
+        elif order == 'normal':
+            return deque(jobs)
+        else:
+            return deque(jobs)
+
     def update_graph(self, dep_id=None, success=True):
         """dep_id just finished. Update our dependency
         graph and submit any jobs that just became runnable.
 
         Called with dep_id=None to update entire graph for hwm, but without finishing a task.
         """
-        # print ("\n\n***********")
-        # pprint (dep_id)
-        # pprint (self.graph)
-        # pprint (self.queue_map)
-        # pprint (self.all_completed)
-        # pprint (self.all_failed)
-        # print ("\n\n***********\n\n")
-        # update any jobs that depended on the dependency
+        #print ("\n\n***********")
+        #pprint (dep_id)
+        #pprint (self.graph)
+        #pprint (self.queue_map)
+        #pprint (self.all_completed)
+        #pprint (self.all_failed)
+        #print ("\n\n***********\n\n")
+
+        #update any jobs that depended on the dependency
         msg_ids = self.graph.pop(dep_id, [])
 
         # recheck *all* jobs if
         # a) we have HWM and an engine just become no longer full
         # or b) dep_id was given as None
-        
+
         if dep_id is None or self.hwm and any( [ load==self.hwm-1 for load in self.loads ]):
-            jobs = self.queue
             using_queue = True
+            # Interleave jobs from different sessions
+            jobs = self.reorder_jobs(list(self.queue), order='interleaved')
+            self.queue = jobs
         else:
             using_queue = False
-            jobs = deque(sorted( self.queue_map[msg_id] for msg_id in msg_ids ))
-        
+            jobs = sorted(self.queue_map[msg_id] for msg_id in msg_ids)
+            jobs = self.reorder_jobs(jobs, order='interleaved')
+       
         to_restore = []
         while jobs:
             job = jobs.popleft()
