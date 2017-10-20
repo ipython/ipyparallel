@@ -15,7 +15,7 @@ import time
 from pprint import pprint
 from collections import deque
 from datetime import datetime
-from random import randint, random
+from random import randint, random, shuffle
 from types import FunctionType
 
 try:
@@ -729,6 +729,7 @@ help="""select the task scheduler scheme  [default: Python LRU]
         self.log.debug("Original order: " + str([j.msg_id+"@"+j.header['session'] for j in jobs]))
         if order == 'interleaved':
             sessions = split_by_session(jobs).values()
+            shuffle(sessions)
             interleaved = roundrobin(sessions)
             self.log.debug("New order: " + str([j.msg_id+"@"+j.header['session'] for j in interleaved]))
             return deque(interleaved)
