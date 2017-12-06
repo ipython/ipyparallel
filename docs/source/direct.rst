@@ -396,8 +396,12 @@ between engines, MPI, pyzmq, or some other direct interconnect should be used.
     In [59]: dview['a']
     Out[59]: [ [0, 1, 2, 3], [4, 5, 6, 7], [8, 9, 10, 11], [12, 13, 14, 15] ]
 
-    In [60]: dview.gather('a')
-    Out[60]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    In [60]: dview.gather('a') # This will show you the status of gather.
+    Out[60]: <AsyncMapResult: gather:finished>
+    In [61]: dview.gather('a').get() # This will give you the result.
+    Out[61]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+    In [62]: dview.gather('a')[3] # You can also direct call the result.
+    Out[62]: [2]
 
 Other things to look at
 =======================
