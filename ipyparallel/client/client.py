@@ -107,11 +107,11 @@ class ExecuteReply(RichOutput):
         if execute_result:
             return execute_result.get('metadata', {})
         return {}
-    
+
     def display(self):
         from IPython.display import publish_display_data
         publish_display_data(self.data, self.metadata)
-    
+
     def _repr_mime_(self, mime):
         if mime not in self.data:
             return
@@ -120,51 +120,63 @@ class ExecuteReply(RichOutput):
             return data, self._metadata[mime]
         else:
             return data
-    
+
+    def _repr_mimebundle_(self, *args, **kwargs):
+        data, md = super(ExecuteReply, self)._repr_mimebundle_(*args, **kwargs)
+        if 'text/plain' in data:
+            data['text/plain'] = self._plaintext()
+        return data, md
+
     def __getitem__(self, key):
         return self.metadata[key]
-    
+
     def __getattr__(self, key):
         if key not in self.metadata:
             raise AttributeError(key)
         return self.metadata[key]
-    
+
     def __repr__(self):
         execute_result = self.metadata['execute_result'] or {'data':{}}
         text_out = execute_result['data'].get('text/plain', '')
         if len(text_out) > 32:
             text_out = text_out[:29] + '...'
-        
+
         return "<ExecuteReply[%i]: %s>" % (self.execution_count, text_out)
-    
-    def _repr_pretty_(self, p, cycle):
+
+    def _plaintext(self):
         execute_result = self.metadata['execute_result'] or {'data':{}}
         text_out = execute_result['data'].get('text/plain', '')
-        
+
         if not text_out:
-            return
-        
+            return ''
+
         ip = get_ipython()
         if ip is None:
             colors = "NoColor"
         else:
             colors = ip.colors
-        
+
         if colors == "NoColor":
             out = normal = ""
         else:
             out = TermColors.Red
             normal = TermColors.Normal
-        
+
         if '\n' in text_out and not text_out.startswith('\n'):
             # add newline for multiline reprs
             text_out = '\n' + text_out
-        
-        p.text(
-            out + u'Out[%i:%i]: ' % (
+
+        return u''.join([
+            out,
+            u'Out[%i:%i]: ' % (
                 self.metadata['engine_id'], self.execution_count
-            ) + normal + text_out
-        )
+            ),
+            normal,
+            text_out,
+            ])
+
+    def _repr_pretty_(self, p, cycle):
+        p.text(self._plaintext())
 
 
 class Metadata(dict):
