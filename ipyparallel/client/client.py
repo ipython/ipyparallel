@@ -122,8 +122,9 @@ class ExecuteReply(RichOutput):
             return data
 
     def _repr_mimebundle_(self, *args, **kwargs):
-        data, md = super(ExecuteReply, self)._repr_mimebundle_(*args, **kwargs)
+        data, md = self.data, self.metadata
         if 'text/plain' in data:
+            data = data.copy()
             data['text/plain'] = self._plaintext()
         return data, md
 
