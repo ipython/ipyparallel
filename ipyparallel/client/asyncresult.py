@@ -17,7 +17,6 @@ except ImportError: # py2
     from Queue import Queue
 
 from decorator import decorator
-from tornado.gen import multi_future
 import zmq
 from zmq import MessageTracker
 
@@ -27,7 +26,7 @@ from ipyparallel import error
 from ipyparallel.util import utcnow, compare_datetimes
 from ipython_genutils.py3compat import string_types
 
-from .futures import MessageFuture
+from .futures import MessageFuture, multi_future
 
 def _raw_text(s):
     display_pretty(s, raw=True)
@@ -94,7 +93,7 @@ class AsyncResult(Future):
         else:
             self._metadata = [self._client.metadata[id] for id in self.msg_ids]
         self._init_futures()
-    
+
     def _init_futures(self):
         """Build futures for results and output; hook up callbacks"""
         if not self._children:
@@ -375,6 +374,8 @@ class AsyncResult(Future):
     @staticmethod
     def _wait_for_child(child, evt, timeout=_FOREVER):
         """Wait for a child to be done"""
+        if child.done():
+            return
         evt.clear()
         child.add_done_callback(lambda f: evt.set())
         evt.wait(timeout)

@@ -21,7 +21,6 @@ pjoin = os.path.join
 import zmq
 from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
-from tornado.gen import multi_future
 
 from traitlets.config.configurable import MultipleInstanceError
 from IPython.core.application import BaseIPythonApplication
@@ -48,7 +47,7 @@ from jupyter_client.session import Session
 from ipyparallel import serialize
 
 from .asyncresult import AsyncResult, AsyncHubResult
-from .futures import MessageFuture
+from .futures import MessageFuture, multi_future
 from .view import DirectView, LoadBalancedView
 
 #--------------------------------------------------------------------------
