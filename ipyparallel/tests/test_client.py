@@ -488,7 +488,7 @@ class TestClient(ClusterTestCase):
         # ensure there are some tasks
         for i in range(5):
             self.client[:].apply_sync(lambda : 1)
-        self.client.wait(10)
+        assert self.client.wait(timeout=10)
         self._wait_for_idle()
         self.client.purge_results('all')
         self.assertEqual(len(self.client.results), 0, msg="Results not empty")
@@ -500,7 +500,7 @@ class TestClient(ClusterTestCase):
         # ensure there are some tasks
         for i in range(5):
             self.client[:].apply_sync(lambda : 1)
-        self.client.wait(10)
+        self.client.wait(timeout=10)
         self._wait_for_idle()
         self.client.purge_everything()
         # The client results
