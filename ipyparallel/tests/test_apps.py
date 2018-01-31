@@ -50,18 +50,21 @@ def test_bind_kernel():
     app = MockIPEngineApp()
     app.kernel_app = None
     app.kernel = MagicMock(spec=IPythonKernel)
+    def socket_spec():
+        spec = create_autospec(zmq.Socket, instance=True)
+        spec.FD = 2
+        return spec
     app.kernel.shell_streams = [zmqstream.ZMQStream(
-        socket=create_autospec(spec=zmq.Socket, spec_set=True, instance=True),
+        socket=socket_spec(),
         io_loop=create_autospec(spec=ioloop.IOLoop, spec_set=True,
                                 instance=True))]
     app.kernel.control_stream = zmqstream.ZMQStream(
-        socket=create_autospec(spec=zmq.Socket, spec_set=True, instance=True),
-        io_loop=create_autospec(spec=ioloop.IOLoop, spect_set=True,
+        socket=socket_spec(),
+        io_loop=create_autospec(spec=ioloop.IOLoop, spec_set=True,
                                 instance=True))
 
     # testing the case iopub_socket is not replaced with IOPubThread
-    iopub_socket = create_autospec(
-            spec=zmq.Socket, spec_set=False, instance=True)
+    iopub_socket = socket_spec()
     app.kernel.iopub_socket = iopub_socket
     assert(isinstance(app.kernel.iopub_socket, zmq.Socket))
     bind_kernel(app)
