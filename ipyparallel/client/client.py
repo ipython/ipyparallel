@@ -21,7 +21,6 @@ pjoin = os.path.join
 import zmq
 from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
-from tornado.gen import multi_future
 
 from traitlets.config.configurable import MultipleInstanceError
 from IPython.core.application import BaseIPythonApplication
@@ -48,7 +47,7 @@ from jupyter_client.session import Session
 from ipyparallel import serialize
 
 from .asyncresult import AsyncResult, AsyncHubResult
-from .futures import MessageFuture
+from .futures import MessageFuture, multi_future
 from .view import DirectView, LoadBalancedView
 
 #--------------------------------------------------------------------------
@@ -100,17 +99,19 @@ class ExecuteReply(RichOutput):
         execute_result = self.metadata['execute_result']
         if execute_result:
             return execute_result.get('data', {})
+        return {}
     
     @property
     def _metadata(self):
         execute_result = self.metadata['execute_result']
         if execute_result:
             return execute_result.get('metadata', {})
-    
+        return {}
+
     def display(self):
         from IPython.display import publish_display_data
         publish_display_data(self.data, self.metadata)
-    
+
     def _repr_mime_(self, mime):
         if mime not in self.data:
             return
@@ -119,51 +120,64 @@ class ExecuteReply(RichOutput):
             return data, self._metadata[mime]
         else:
             return data
-    
+
+    def _repr_mimebundle_(self, *args, **kwargs):
+        data, md = self.data, self.metadata
+        if 'text/plain' in data:
+            data = data.copy()
+            data['text/plain'] = self._plaintext()
+        return data, md
+
     def __getitem__(self, key):
         return self.metadata[key]
-    
+
     def __getattr__(self, key):
         if key not in self.metadata:
             raise AttributeError(key)
         return self.metadata[key]
-    
+
     def __repr__(self):
         execute_result = self.metadata['execute_result'] or {'data':{}}
         text_out = execute_result['data'].get('text/plain', '')
         if len(text_out) > 32:
             text_out = text_out[:29] + '...'
-        
+
         return "<ExecuteReply[%i]: %s>" % (self.execution_count, text_out)
-    
-    def _repr_pretty_(self, p, cycle):
+
+    def _plaintext(self):
         execute_result = self.metadata['execute_result'] or {'data':{}}
         text_out = execute_result['data'].get('text/plain', '')
-        
+
         if not text_out:
-            return
-        
+            return ''
+
         ip = get_ipython()
         if ip is None:
             colors = "NoColor"
         else:
             colors = ip.colors
-        
+
         if colors == "NoColor":
             out = normal = ""
         else:
             out = TermColors.Red
             normal = TermColors.Normal
-        
+
         if '\n' in text_out and not text_out.startswith('\n'):
             # add newline for multiline reprs
             text_out = '\n' + text_out
-        
-        p.text(
-            out + u'Out[%i:%i]: ' % (
+
+        return u''.join([
+            out,
+            u'Out[%i:%i]: ' % (
                 self.metadata['engine_id'], self.execution_count
-            ) + normal + text_out
-        )
+            ),
+            normal,
+            text_out,
+            ])
+
+    def _repr_pretty_(self, p, cycle):
+        p.text(self._plaintext())
 
 
 class Metadata(dict):
@@ -825,7 +839,7 @@ class Client(HasTraits):
 
     def _make_io_loop(self):
         """Make my IOLoop. Override with IOLoop.current to return"""
-        return IOLoop()
+        return IOLoop(make_current=False)
     
     def _stop_io_thread(self):
         """Stop my IO thread"""
@@ -856,6 +870,7 @@ class Client(HasTraits):
     
     def _io_main(self):
         """main loop for background IO thread"""
+        self._io_loop.make_current()
         self._io_loop.start()
         self._io_loop.close()
     
@@ -1170,7 +1185,7 @@ class Client(HasTraits):
         targets = self._build_targets(targets)[0]
         futures = []
         for t in targets:
-            futures.append(self._send(self._control_socket, 'clear_request', content={}, ident=t))
+            futures.append(self._send(self._control_stream, 'clear_request', content={}, ident=t))
         if not block:
             return multi_future(futures)
         for future in futures:
@@ -1213,7 +1228,7 @@ class Client(HasTraits):
         content = dict(msg_ids=msg_ids)
         futures = []
         for t in targets:
-            futures.append(self._send(self._control_socket, 'abort_request',
+            futures.append(self._send(self._control_stream, 'abort_request',
                     content=content, ident=t))
         
         if not block:
@@ -1255,7 +1270,7 @@ class Client(HasTraits):
         
         futures = []
         for t in targets:
-            futures.append(self._send(self._control_socket, 'shutdown_request',
+            futures.append(self._send(self._control_stream, 'shutdown_request',
                         content={'restart':restart},ident=t))
         error = False
         if block or hub:
@@ -1268,7 +1283,7 @@ class Client(HasTraits):
         if hub:
             # don't trigger close on shutdown notification, which will prevent us from receiving the reply
             self._notification_handlers['shutdown_notification'] = lambda msg: None
-            msg = self._send_recv(self._query_socket, 'shutdown_request')
+            msg = self._send_recv(self._query_stream, 'shutdown_request')
             if msg['content']['status'] != 'ok':
                 error = self._unwrap_exception(msg['content'])
             if not error:
@@ -1311,7 +1326,7 @@ class Client(HasTraits):
             scheduler_args = dict(scheduler_args) # copy
 
         # Start a Scheduler on the Hub:
-        reply = self._send_recv(self._query_socket, 'become_dask_request',
+        reply = self._send_recv(self._query_stream, 'become_dask_request',
             {'scheduler_args': scheduler_args},
         )
         if reply['content']['status'] != 'ok':
@@ -1350,7 +1365,7 @@ class Client(HasTraits):
         dview = self.direct_view(targets)
 
         # Start a Scheduler on the Hub:
-        reply = self._send_recv(self._query_socket, 'stop_distributed_request')
+        reply = self._send_recv(self._query_stream, 'stop_distributed_request')
         if reply['content']['status'] != 'ok':
             raise self._unwrap_exception(reply['content'])
 
@@ -1476,7 +1491,7 @@ class Client(HasTraits):
             targets = None
         if targets is not None:
             targets = self._build_targets(targets)[1]
-        return LoadBalancedView(client=self, socket=self._task_socket, targets=targets,
+        return LoadBalancedView(client=self, socket=self._task_stream, targets=targets,
                                 **kwargs)
     
     def executor(self, targets=None):
@@ -1521,7 +1536,7 @@ class Client(HasTraits):
             targets = self._build_targets(targets)[1]
         if single:
             targets = targets[0]
-        return DirectView(client=self, socket=self._mux_socket, targets=targets,
+        return DirectView(client=self, socket=self._mux_stream, targets=targets,
                           **kwargs)
 
     #--------------------------------------------------------------------------
@@ -1610,7 +1625,7 @@ class Client(HasTraits):
         theids = self._msg_ids_from_jobs(indices_or_msg_ids)
         content = dict(msg_ids = theids)
 
-        reply = self._send_recv(self._query_socket, 'resubmit_request', content)
+        reply = self._send_recv(self._query_stream, 'resubmit_request', content)
         content = reply['content']
         if content['status'] != 'ok':
             raise self._unwrap_exception(content)
@@ -1662,7 +1677,7 @@ class Client(HasTraits):
 
         if theids: # some not locally cached
             content = dict(msg_ids=theids, status_only=status_only)
-            reply = self._send_recv(self._query_socket, "result_request", content=content)
+            reply = self._send_recv(self._query_stream, "result_request", content=content)
             content = reply['content']
             if content['status'] != 'ok':
                 raise self._unwrap_exception(content)
@@ -1740,7 +1755,7 @@ class Client(HasTraits):
         else:
             engine_ids = self._build_targets(targets)[1]
         content = dict(targets=engine_ids, verbose=verbose)
-        reply = self._send_recv(self._query_socket, "queue_request", content=content)
+        reply = self._send_recv(self._query_stream, "queue_request", content=content)
         content = reply['content']
         status = content.pop('status')
         if status != 'ok':
@@ -1905,7 +1920,7 @@ class Client(HasTraits):
             msg_ids = self._msg_ids_from_jobs(jobs)
 
         content = dict(engine_ids=targets, msg_ids=msg_ids)
-        reply = self._send_recv(self._query_socket, "purge_request", content=content)
+        reply = self._send_recv(self._query_stream, "purge_request", content=content)
         content = reply['content']
         if content['status'] != 'ok':
             raise self._unwrap_exception(content)
@@ -1961,7 +1976,7 @@ class Client(HasTraits):
                 list of all msg_ids, ordered by task submission time.
         """
 
-        reply = self._send_recv(self._query_socket, "history_request", content={})
+        reply = self._send_recv(self._query_stream, "history_request", content={})
         content = reply['content']
         if content['status'] != 'ok':
             raise self._unwrap_exception(content)
@@ -1985,7 +2000,7 @@ class Client(HasTraits):
         if isinstance(keys, string_types):
             keys = [keys]
         content = dict(query=query, keys=keys)
-        reply = self._send_recv(self._query_socket, "db_request", content=content)
+        reply = self._send_recv(self._query_stream, "db_request", content=content)
         content = reply['content']
         if content['status'] != 'ok':
             raise self._unwrap_exception(content)

@@ -79,7 +79,7 @@ class HeartMonitor(LoggingConfigurable):
 
     pingstream=Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
     pongstream=Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
-    loop = Instance('zmq.eventloop.ioloop.IOLoop')
+    loop = Instance('tornado.ioloop.IOLoop')
     def _loop_default(self):
         return ioloop.IOLoop.instance()
 
@@ -100,7 +100,7 @@ class HeartMonitor(LoggingConfigurable):
 
     def start(self):
         self.tic = time.time()
-        self.caller = ioloop.PeriodicCallback(self.beat, self.period, self.loop)
+        self.caller = ioloop.PeriodicCallback(self.beat, self.period)
         self.caller.start()
 
     def add_new_heart_handler(self, handler):

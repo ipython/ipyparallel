@@ -8,6 +8,7 @@ from __future__ import division
 from concurrent.futures import Future
 from datetime import datetime
 import os
+import sys
 from threading import Thread
 import time
 
@@ -488,7 +489,7 @@ class TestClient(ClusterTestCase):
         # ensure there are some tasks
         for i in range(5):
             self.client[:].apply_sync(lambda : 1)
-        self.client.wait(10)
+        assert self.client.wait(timeout=10)
         self._wait_for_idle()
         self.client.purge_results('all')
         self.assertEqual(len(self.client.results), 0, msg="Results not empty")
@@ -500,7 +501,7 @@ class TestClient(ClusterTestCase):
         # ensure there are some tasks
         for i in range(5):
             self.client[:].apply_sync(lambda : 1)
-        self.client.wait(10)
+        self.client.wait(timeout=10)
         self._wait_for_idle()
         self.client.purge_everything()
         # The client results
@@ -540,19 +541,18 @@ class TestClient(ClusterTestCase):
 
     def test_await_future(self):
         f = Future()
-        tf = TornadoFuture()
         def finish_later():
             time.sleep(0.1)
             f.set_result('future')
-            tf.set_result('tornado')
         Thread(target=finish_later).start()
-        assert self.client.wait([f, tf])
+        assert self.client.wait([f])
         assert f.done()
-        assert tf.done()
         assert f.result() == 'future'
-        assert tf.result() == 'tornado'
 
     @skip_without('distributed')
+    @pytest.mark.skipif(
+        sys.version_info[:2] == (3, 4),
+        reason="become_dask doesn't work on Python 3.4")
     def test_become_dask(self):
         executor = self.client.become_dask()
         reprs = self.client[:].apply_sync(repr, Reference('distributed_worker'))
@@ -564,7 +564,8 @@ class TestClient(ClusterTestCase):
         self.assertEqual(tot.result(), 285)
 
         # cleanup
-        self.client.stop_distributed()
+        executor.shutdown()
+        self.client.stop_dask()
         ar = self.client[:].apply_async(lambda x: x, Reference('distributed_worker'))
         self.assertRaisesRemote(NameError, ar.get)
 

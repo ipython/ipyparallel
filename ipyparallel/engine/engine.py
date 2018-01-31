@@ -285,7 +285,7 @@ class EngineFactory(RegistrationFactory):
                 # Use a slightly bigger check period than the hub signal period to not warn unnecessary 
                 self.hb_check_period = int(content['hb_period'])+10
                 self.log.info("Starting to monitor the heartbeat signal from the hub every %i ms." , self.hb_check_period)
-                self._hb_reporter = ioloop.PeriodicCallback(self._hb_monitor, self.hb_check_period, self.loop)
+                self._hb_reporter = ioloop.PeriodicCallback(self._hb_monitor, self.hb_check_period)
                 self._hb_reporter.start()
             else:
                 self.log.info("Monitoring of the heartbeat signal from the hub is not enabled.")

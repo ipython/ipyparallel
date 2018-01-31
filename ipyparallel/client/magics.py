@@ -350,7 +350,9 @@ class ParallelMagics(Magics):
         """
         # override run_cell
         self._original_run_cell = self.shell.run_cell
+        self._original_run_nodes = self.shell.run_ast_nodes
         self.shell.run_cell = self.pxrun_cell
+        self.shell.run_ast_nodes = self.pxrun_nodes
 
         self._autopx = True
         print("%autopx enabled")
@@ -360,60 +362,20 @@ class ParallelMagics(Magics):
         """
         if self._autopx:
             self.shell.run_cell = self._original_run_cell
+            self.shell.run_ast_nodes = self._original_run_nodes
             self._autopx = False
             print("%autopx disabled")
 
-    def pxrun_cell(self, raw_cell, store_history=False, silent=False):
-        """drop-in replacement for InteractiveShell.run_cell.
-
-        This executes code remotely, instead of in the local namespace.
-
-        See InteractiveShell.run_cell for details.
-        """
-
-        if (not raw_cell) or raw_cell.isspace():
-            return
-
-        ipself = self.shell
-
-        with ipself.builtin_trap:
-            cell = ipself.prefilter_manager.prefilter_lines(raw_cell)
-
-            # Store raw and processed history
-            if store_history:
-                ipself.history_manager.store_inputs(ipself.execution_count,
-                                                  cell, raw_cell)
-
-            # ipself.logger.log(cell, raw_cell)
-
-            cell_name = ipself.compile.cache(cell, ipself.execution_count)
-
-            try:
-                ast.parse(cell, filename=cell_name)
-            except (OverflowError, SyntaxError, ValueError, TypeError,
-                    MemoryError):
-                # Case 1
-                ipself.showsyntaxerror()
-                ipself.execution_count += 1
-                return None
-            except NameError:
-                # ignore name errors, because we don't know the remote keys
-                pass
-
-        if store_history:
-            # Write output to the database. Does nothing unless
-            # history output logging is enabled.
-            ipself.history_manager.store_output(ipself.execution_count)
-            # Each cell is a *single* input, regardless of how many lines it has
-            ipself.execution_count += 1
-        if re.search(r'get_ipython\(\)\.magic\(u?["\']%?autopx', cell):
+    def pxrun_nodes(self, *args, **kwargs):
+        cell = self._px_cell
+        if re.search(r'^\s*%autopx\b', cell):
             self._disable_autopx()
             return False
         else:
             try:
                 result = self.view.execute(cell, silent=False, block=False)
             except:
-                ipself.showtraceback()
+                self.shell.showtraceback()
                 return True
             else:
                 if self.view.block:
@@ -423,10 +385,18 @@ class ParallelMagics(Magics):
                         self.shell.showtraceback()
                         return True
                     else:
-                        with ipself.builtin_trap:
-                            result.display_outputs()
+                        result.display_outputs()
                 return False
 
+    def pxrun_cell(self, raw_cell, *args, **kwargs):
+        """drop-in replacement for InteractiveShell.run_cell.
+
+        This executes code remotely, instead of in the local namespace.
+
+        See InteractiveShell.run_cell for details.
+        """
+        self._px_cell = raw_cell
+        return self._original_run_cell(raw_cell, *args, **kwargs)
 
 __doc__ = __doc__.format(
                 AUTOPX_DOC = dedent(ParallelMagics.autopx.__doc__),

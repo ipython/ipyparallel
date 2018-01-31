@@ -98,7 +98,7 @@ class View(HasTraits):
     results = Dict()
     client = Instance('ipyparallel.Client', allow_none=True)
 
-    _socket = Instance('zmq.Socket', allow_none=True)
+    _socket = Any()
     _flag_names = List(['targets', 'block', 'track'])
     _in_sync_results = Bool(False)
     _targets = Any()
@@ -988,7 +988,7 @@ class LoadBalancedView(View):
         """
 
         # validate whether we can run
-        if self._socket.closed:
+        if self._socket.closed():
             msg = "Task farming is disabled"
             if self._task_scheme == 'pure':
                 msg += " because the pure ZMQ scheduler cannot handle"

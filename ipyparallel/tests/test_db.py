@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 from unittest import TestCase
 
 import pytest
+from tornado.ioloop import IOLoop
 
 from ipyparallel import util
 from ipyparallel.controller.dictdb import DictDB
@@ -274,6 +275,8 @@ class TestDictBackend(TaskDBTest, TestCase):
 class TestSQLiteBackend(TaskDBTest, TestCase):
     
     def setUp(self):
+        # make a new IOLoop
+        IOLoop().make_current()
         self.temp_db = tempfile.NamedTemporaryFile(suffix='.db').name
         super(TestSQLiteBackend, self).setUp()
 
@@ -284,10 +287,10 @@ class TestSQLiteBackend(TaskDBTest, TestCase):
         return SQLiteDB(location=location, filename=fname, log=log)
 
     def tearDown(self):
-        self.db._db.commit()
-        self.db._db.close()
+        self.db.close()
         try:
             os.remove(self.temp_db)
         except:
             pass
+        IOLoop.clear_current()
 
