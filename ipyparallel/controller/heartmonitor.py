@@ -100,7 +100,7 @@ class HeartMonitor(LoggingConfigurable):
 
     def start(self):
         self.tic = time.time()
-        self.caller = ioloop.PeriodicCallback(self.beat, self.period, self.loop)
+        self.caller = ioloop.PeriodicCallback(self.beat, self.period)
         self.caller.start()
 
     def add_new_heart_handler(self, handler):

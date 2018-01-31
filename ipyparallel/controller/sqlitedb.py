@@ -17,7 +17,7 @@ except ImportError:
     sqlite3 = None
 
 from dateutil.parser import parse as dateutil_parse
-from zmq.eventloop import ioloop
+from tornado import ioloop
 
 from traitlets import Unicode, Instance, List, Dict
 from jupyter_client.jsonutil import date_default, squash_dates
@@ -185,8 +185,7 @@ class SQLiteDB(BaseDB):
         # register db commit as 2s periodic callback
         # to prevent clogging pipes
         # assumes we are being run in a zmq ioloop app
-        loop = ioloop.IOLoop.instance()
-        pc = ioloop.PeriodicCallback(self._db.commit, 2000, loop)
+        pc = ioloop.PeriodicCallback(self._db.commit, 2000)
         pc.start()
 
     def _defaults(self, keys=None):
