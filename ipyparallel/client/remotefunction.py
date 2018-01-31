@@ -139,14 +139,12 @@ class RemoteFunction(object):
         with self.view.temp_flags(block=block, **self.flags):
             return self.view.apply(self.func, *args, **kwargs)
 
-# define prepickled map function
 if sys.version_info[0] >= 3:
-    f = lambda f, *sequences: list(map(f, *sequences))
+    _map = lambda f, *sequences: list(map(f, *sequences))
 else:
-    f = map
+    _map = map
+_prepickled_map = None
 
-_prepickled_map = PrePickled(f)
-del f
 
 class ParallelFunction(RemoteFunction):
     """Class for mapping a function to sequences.
@@ -195,6 +193,9 @@ class ParallelFunction(RemoteFunction):
     
     @sync_view_results
     def __call__(self, *sequences, **kwargs):
+        global _prepickled_map
+        if _prepickled_map is None:
+            _prepickled_map = PrePickled(_map)
         client = self.view.client
         _mapping = kwargs.pop('__ipp_mapping', False)
         if kwargs:
