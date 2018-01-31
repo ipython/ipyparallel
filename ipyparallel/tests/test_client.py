@@ -540,17 +540,13 @@ class TestClient(ClusterTestCase):
 
     def test_await_future(self):
         f = Future()
-        tf = TornadoFuture()
         def finish_later():
             time.sleep(0.1)
             f.set_result('future')
-            tf.set_result('tornado')
         Thread(target=finish_later).start()
-        assert self.client.wait([f, tf])
+        assert self.client.wait([f])
         assert f.done()
-        assert tf.done()
         assert f.result() == 'future'
-        assert tf.result() == 'tornado'
 
     @skip_without('distributed')
     def test_become_dask(self):
