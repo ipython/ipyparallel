@@ -8,6 +8,7 @@ from __future__ import division
 from concurrent.futures import Future
 from datetime import datetime
 import os
+import sys
 from threading import Thread
 import time
 
@@ -549,6 +550,9 @@ class TestClient(ClusterTestCase):
         assert f.result() == 'future'
 
     @skip_without('distributed')
+    @pytest.mark.skipif(
+        sys.version_info[:2] == (3, 4),
+        reason="become_dask doesn't work on Python 3.4")
     def test_become_dask(self):
         executor = self.client.become_dask()
         reprs = self.client[:].apply_sync(repr, Reference('distributed_worker'))
@@ -560,7 +564,8 @@ class TestClient(ClusterTestCase):
         self.assertEqual(tot.result(), 285)
 
         # cleanup
-        self.client.stop_distributed()
+        executor.shutdown()
+        self.client.stop_dask()
         ar = self.client[:].apply_async(lambda x: x, Reference('distributed_worker'))
         self.assertRaisesRemote(NameError, ar.get)
 
