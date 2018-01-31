@@ -322,12 +322,13 @@ class AsyncResult(Future):
             if timeout and timeout < 0:
                 # Event doesn't like timeout < 0
                 timeout = None
+            elif timeout == 0:
+                raise error.TimeoutError("Still waiting to be sent")
             # wait for Future to indicate send having been called,
             # which means MessageTracker is ready.
             tic = time.time()
             if not self._sent_event.wait(timeout):
                 raise error.TimeoutError("Still waiting to be sent")
-                return False
             if timeout:
                 timeout = max(0, timeout - (time.time() - tic))
         try:
