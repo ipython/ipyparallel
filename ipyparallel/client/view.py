@@ -20,6 +20,7 @@ from ipyparallel import util
 from ipyparallel.controller.dependency import Dependency, dependent
 from ipython_genutils.py3compat import string_types, iteritems, PY3
 
+from ..serialize import PrePickled
 from . import map as Map
 from .asyncresult import AsyncResult, AsyncMapResult
 from .remotefunction import ParallelFunction, parallel, remote, getname
@@ -553,9 +554,15 @@ class DirectView(View):
         
         _idents, _targets = self.client._build_targets(targets)
         futures = []
+
+        pf = PrePickled(f)
+        pargs = [PrePickled(arg) for arg in args]
+        pkwargs = {k: PrePickled(v) for k, v in kwargs.items()}
+
         for ident in _idents:
-            future = self.client.send_apply_request(self._socket, f, args, kwargs, track=track,
-                                    ident=ident)
+            future = self.client.send_apply_request(
+                self._socket, pf, pargs, pkwargs,
+                track=track, ident=ident)
             futures.append(future)
         if track:
             trackers = [_.tracker for _ in futures]

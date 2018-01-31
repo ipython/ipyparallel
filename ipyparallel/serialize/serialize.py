@@ -33,6 +33,17 @@ if PY3:
 # Serialization Functions
 #-----------------------------------------------------------------------------
 
+
+class PrePickled(object):
+    """Wrapper for a pre-pickled object
+
+    Used for pre-emptively pickling re-used objects
+    to avoid pickling the same object several times.
+    """
+    def __init__(self, obj):
+        self.buffers = serialize_object(obj)
+
+
 def _nbytes(buf):
     """Return byte-size of a memoryview or buffer"""
     if isinstance(buf, memoryview):
@@ -94,6 +105,8 @@ def serialize_object(obj, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
     -------
     [bufs] : list of buffers representing the serialized object.
     """
+    if isinstance(obj, PrePickled):
+        return obj.buffers[:]
     buffers = []
     if istype(obj, sequence_types) and len(obj) < item_threshold:
         cobj = can_sequence(obj)
@@ -170,8 +183,7 @@ def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_thresho
         serialize_object(kwargs[key], buffer_threshold, item_threshold) for key in kw_keys))
 
     info = dict(nargs=len(args), narg_bufs=len(arg_bufs), kw_keys=kw_keys)
-
-    msg = [pickle.dumps(can(f), PICKLE_PROTOCOL)]
+    msg = serialize_object(f)
     msg.append(pickle.dumps(info, PICKLE_PROTOCOL))
     msg.extend(arg_bufs)
     msg.extend(kwarg_bufs)
@@ -183,8 +195,7 @@ def unpack_apply_message(bufs, g=None, copy=True):
     Returns: original f,args,kwargs"""
     bufs = list(bufs) # allow us to pop
     assert len(bufs) >= 2, "not enough buffers!"
-    pf = buffer_to_bytes_py2(bufs.pop(0))
-    f = uncan(pickle.loads(pf), g)
+    f, bufs = deserialize_object(bufs, g)
     pinfo = buffer_to_bytes_py2(bufs.pop(0))
     info = pickle.loads(pinfo)
     arg_bufs, kwarg_bufs = bufs[:info['narg_bufs']], bufs[info['narg_bufs']:]

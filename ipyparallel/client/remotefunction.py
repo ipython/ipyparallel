@@ -10,6 +10,7 @@ import warnings
 
 from decorator import decorator
 
+from ..serialize import PrePickled
 from . import map as Map
 from .asyncresult import AsyncMapResult
 try:
@@ -138,6 +139,12 @@ class RemoteFunction(object):
         with self.view.temp_flags(block=block, **self.flags):
             return self.view.apply(self.func, *args, **kwargs)
 
+if sys.version_info[0] >= 3:
+    _map = lambda f, *sequences: list(map(f, *sequences))
+else:
+    _map = map
+_prepickled_map = None
+
 
 class ParallelFunction(RemoteFunction):
     """Class for mapping a function to sequences.
@@ -186,6 +193,9 @@ class ParallelFunction(RemoteFunction):
     
     @sync_view_results
     def __call__(self, *sequences, **kwargs):
+        global _prepickled_map
+        if _prepickled_map is None:
+            _prepickled_map = PrePickled(_map)
         client = self.view.client
         _mapping = kwargs.pop('__ipp_mapping', False)
         if kwargs:
@@ -239,6 +249,9 @@ class ParallelFunction(RemoteFunction):
             nparts = len(targets)
 
         futures = []
+
+        pf = PrePickled(self.func)
+
         for index, t in enumerate(targets):
             args = []
             for seq in sequences:
@@ -247,15 +260,13 @@ class ParallelFunction(RemoteFunction):
 
             if sum([len(arg) for arg in args]) == 0:
                 continue
+            args = [PrePickled(arg) for arg in args]
 
             if _mapping:
-                if sys.version_info[0] >= 3:
-                    f = lambda f, *sequences: list(map(f, *sequences))
-                else:
-                    f = map
-                args = [self.func] + args
+                f = _prepickled_map
+                args = [pf] + args
             else:
-                f=self.func
+                f = pf
 
             view = self.view if balanced else client[t]
             with view.temp_flags(block=False, **self.flags):
