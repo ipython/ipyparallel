@@ -269,7 +269,7 @@ class LocalProcessLauncher(BaseLauncher):
                 self.stderr = self.process.stderr.fileno()
             self.loop.add_handler(self.stdout, self.handle_stdout, self.loop.READ)
             self.loop.add_handler(self.stderr, self.handle_stderr, self.loop.READ)
-            self.poller = ioloop.PeriodicCallback(self.poll, self.poll_frequency, self.loop)
+            self.poller = ioloop.PeriodicCallback(self.poll, self.poll_frequency)
             self.poller.start()
             self.notify_start(self.process.pid)
         else:
