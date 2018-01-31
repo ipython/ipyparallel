@@ -99,12 +99,14 @@ class ExecuteReply(RichOutput):
         execute_result = self.metadata['execute_result']
         if execute_result:
             return execute_result.get('data', {})
+        return {}
     
     @property
     def _metadata(self):
         execute_result = self.metadata['execute_result']
         if execute_result:
             return execute_result.get('metadata', {})
+        return {}
     
     def display(self):
         from IPython.display import publish_display_data
