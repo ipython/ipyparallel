@@ -56,7 +56,7 @@ class LogWatcher(LoggingConfigurable):
     def _context_default(self):
         return zmq.Context.instance()
     
-    loop = Instance(zmq.eventloop.ioloop.IOLoop)
+    loop = Instance('tornado.ioloop.IOLoop')
     def _loop_default(self):
         return ioloop.IOLoop.instance()
     
