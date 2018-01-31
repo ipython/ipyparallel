@@ -106,7 +106,7 @@ def serialize_object(obj, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
     [bufs] : list of buffers representing the serialized object.
     """
     if isinstance(obj, PrePickled):
-        return obj.buffers
+        return obj.buffers[:]
     buffers = []
     if istype(obj, sequence_types) and len(obj) < item_threshold:
         cobj = can_sequence(obj)
@@ -183,10 +183,7 @@ def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_thresho
         serialize_object(kwargs[key], buffer_threshold, item_threshold) for key in kw_keys))
 
     info = dict(nargs=len(args), narg_bufs=len(arg_bufs), kw_keys=kw_keys)
-    if isinstance(f, PrePickled):
-        msg = f.buffers[:]
-    else:
-        msg = [pickle.dumps(can(f), PICKLE_PROTOCOL)]
+    msg = serialize_object(f)
     msg.append(pickle.dumps(info, PICKLE_PROTOCOL))
     msg.extend(arg_bufs)
     msg.extend(kwarg_bufs)
