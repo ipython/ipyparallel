@@ -185,8 +185,13 @@ class SQLiteDB(BaseDB):
         # register db commit as 2s periodic callback
         # to prevent clogging pipes
         # assumes we are being run in a zmq ioloop app
-        pc = ioloop.PeriodicCallback(self._db.commit, 2000)
+        self._commit_callback = pc = ioloop.PeriodicCallback(self._db.commit, 2000)
         pc.start()
+
+    def close(self):
+        self._commit_callback.stop()
+        self._db.commit()
+        self._db.close()
 
     def _defaults(self, keys=None):
         """create an empty record"""

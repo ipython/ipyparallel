@@ -93,6 +93,9 @@ class BaseDB(LoggingConfigurable):
     # base configurable traits:
     session = Unicode("")
 
+    def close(self):
+        pass
+
 class DictDB(BaseDB):
     """Basic in-memory dict-based object for saving Task Records.
 

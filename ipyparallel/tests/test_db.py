@@ -284,8 +284,7 @@ class TestSQLiteBackend(TaskDBTest, TestCase):
         return SQLiteDB(location=location, filename=fname, log=log)
 
     def tearDown(self):
-        self.db._db.commit()
-        self.db._db.close()
+        self.db.close()
         try:
             os.remove(self.temp_db)
         except:
