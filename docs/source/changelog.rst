@@ -3,6 +3,27 @@
 Changes in IPython Parallel
 ===========================
 
+6.1.0
+-----
+
+Compatibility fixes with related packages:
+
+- Fix compatibility with pyzmq 17 and tornado 5.
+- Fix compatibility with IPython ≥ 6.
+- Improve compatibility with dask.distributed ≥ 1.18.
+
+New features:
+
+- Add :attr:`namespace` to BatchSpawners for easier extensibility.
+- Support serializing partial functions.
+- Support hostnames for machine location, not just ip addresses.
+- Add ``--location`` argument to ipcluster for setting the controller location.
+  It can be a hostname or ip.
+- Engine rank matches MPI rank if engines are started with ``--mpi``.
+- Avoid duplicate pickling of the same object in maps, etc.
+
+Documentation has been improved significantly.
+
 
 6.0.2
 -----
