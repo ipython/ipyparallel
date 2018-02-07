@@ -77,6 +77,17 @@ for d, _, _ in os.walk(pjoin(here, name)):
 
 package_data = {'ipyparallel.nbextension': [pjoin('static', '*')]}
 
+data_files = [
+    (
+        'etc/jupyter/jupyter_notebook_config.d',
+        [pjoin(here, 'etc', 'ipyparallel-serverextension.json')],
+    ),
+    (
+        'etc/jupyter/nbconfig/tree.d',
+        [pjoin(here, 'etc', 'ipyparallel-nbextension.json')],
+    ),
+]
+
 version_ns = {}
 with open(pjoin(here, name, '_version.py')) as f:
     exec(f.read(), {}, version_ns)
@@ -111,6 +122,7 @@ setup_args = dict(
         "test": IPTestCommand,
         "bdist_egg": bdist_egg if "bdist_egg" in sys.argv else bdist_egg_disabled,
     },
+    data_files=data_files,
     install_requires=[
         "ipython_genutils",
         "decorator",

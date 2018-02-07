@@ -2,6 +2,8 @@ include COPYING.md
 include CONTRIBUTING.md
 include README.md
 
+graft etc
+
 # Documentation
 graft docs
 

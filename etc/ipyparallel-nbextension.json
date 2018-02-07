@@ -1,0 +1,5 @@
+{
+  "load_extensions": {
+    "ipyparallel/main": true
+  }
+}
