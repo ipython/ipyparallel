@@ -3,6 +3,11 @@
 Changes in IPython Parallel
 ===========================
 
+6.1.1
+-----
+
+- Fix regression in 6.1.0 preventing BatchSpawners (PBS, etc.) from launching with ipcluster.
+
 6.1.0
 -----
 
