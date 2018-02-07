@@ -506,13 +506,24 @@ class IPClusterStart(IPClusterEngines):
 
     def init_launchers(self):
         self.controller_launcher = self.build_launcher(self.controller_launcher_class, 'Controller')
-        controller_args = self.controller_launcher.controller_args
+
+        controller_args = getattr(self.controller_launcher, 'controller_args', None)
+        if controller_args is None:
+            def add_args(args):
+                # only some Launchers support modifying controller args
+                self.log.warning(
+                    "Not adding controller args %s. "
+                    "controller_args passthrough is not supported by %s",
+                    args, self.controller_launcher.__class__.__name__,
+                )
+        else:
+            add_args = controller_args.extend
         if self.controller_ip:
-            controller_args.append('--ip=%s' % self.controller_ip)
+            add_args(['--ip=%s' % self.controller_ip])
         if self.controller_location:
-            controller_args.append('--location=%s' % self.controller_location)
+            add_args(['--location=%s' % self.controller_location])
         if self.extra_args:
-            controller_args.extend(self.extra_args)
+            add_args(self.extra_args)
         self.engine_launcher = self.build_launcher(self.engine_launcher_class, 'EngineSet')
 
     def engines_stopped(self, r):
