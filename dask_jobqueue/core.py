@@ -1,11 +1,14 @@
 from contextlib import contextmanager
 import logging
 import subprocess
-import toolz
 import socket
+import os
+import sys
 
 from distributed.utils import tmpfile, ignoring, get_ip_interface
 from distributed import LocalCluster
+
+dirname = os.path.dirname(sys.executable)
 
 logger = logging.getLogger(__name__)
 
@@ -16,43 +19,119 @@ class JobQueueCluster(object):
     This class should not be used directly, use inherited class appropriate
     for your queueing system (e.g. PBScluster or SLURMCluster)
 
+    Abstract init parameters
+    ------------------------
+    name : str
+        Name of Dask workers.
+    threads : int
+        Number of threads per process.
+    processes : int
+        Number of processes per node.
+    memory : str
+        Bytes of memory that the worker can use. This should be a string
+        like "7GB" that can be interpretted both by PBS and Dask.
+    interface : str
+        Network interface like 'eth0' or 'ib0'.
+    death_timeout : float
+        Seconds to wait for a scheduler before closing workers
+    local_directory : str
+        Dask worker local directory for file spilling.
+    extra : str
+        Additional arguments to pass to `dask-worker`
+    kwargs : dict
+        Additional keyword arguments to pass to `LocalCluster`
+
     See Also
     --------
     PBSCluster
     SLURMCluster
     """
-    def __new__(cls, *args, **kwargs):
-        #Prevent class instantiation
-        print(str(cls))
-        raise NotImplemented
+
+    _script_template ="""
+#!/bin/bash
+
+%(job_header)s
+
+%(worker_command)s 
+""".lstrip()
 
     def __init__(self,
-                 threads_per_worker=4,
+                 name='dask-worker',
+                 threads=4,
                  processes=6,
-                 memory='20GB',
+                 memory='16GB',
                  interface=None,
                  death_timeout=60,
-                 worker_extra='',
+                 local_directory=None,
+                 extra='',
                  **kwargs
                  ):
+        """
+        This initializer should be considered as Abstract, and never used directly.
+        :param name:
+        :param threads:
+        :param processes:
+        :param memory:
+        :param interface:
+        :param death_timeout:
+        :param local_directory:
+        :param extra:
+        :param kwargs:
+        """
 
 
         if interface:
             host = get_ip_interface(interface)
-            worker_extra += ' --interface  %s ' % interface
+            extra += ' --interface  %s ' % interface
         else:
             host = socket.gethostname()
 
         self.cluster = LocalCluster(n_workers=0, ip=host, **kwargs)
-        self.memory = memory.replace(' ', '')
 
         self.jobs = dict()
         self.n = 0
         self._adaptive = None
 
+        self._command_template = "%s/dask-worker %s" % (dirname, self.scheduler.address)
+        if threads != None: self._command_template += " --nthreads %d" % threads
+        if processes != None: self._command_template += " --nprocs %d" % processes
+        if memory != None: self._command_template += " --memory-limit %s" % memory
+        if name != None:
+            self._command_template += " --name %s" % name
+            self._command_template += "-%(n)d" #Keep %(n) to be replaced later.
+        if death_timeout != None: self._command_template += " --death-timeout %s" % death_timeout
+        if local_directory != None: self._command_template += " --local-directory %s" % local_directory
+        if extra!= None: self._command_template += extra
+
     def job_script(self):
         self.n += 1
-        return self._template % toolz.merge(self.config, {'n': self.n})
+        return self._script_template % {'job_header': self.job_header,
+                                        'worker_command': self._command_template % {'n': self.n}
+                                        }
+
+    @property
+    def job_header(self):
+        """
+        Abstract attribute for the Job scheduler script header part.
+        :return: A string representation of the Job script header part.
+        """
+        raise NotImplementedError
+
+    @property
+    def submitcmd(self):
+        """
+        Abstract attribute for job scheduler submission command
+        :return:
+        """
+        raise NotImplementedError
+
+    @property
+    def cancelcmd(self):
+        """
+        Abstract attribute for job scheduler cancel command
+        :return:
+        """
+        raise NotImplementedError
 
     @contextmanager
     def job_file(self):
@@ -67,7 +146,7 @@ class JobQueueCluster(object):
         workers = []
         for _ in range(n):
             with self.job_file() as fn:
-                out = self._call([self._submitcmd, fn])
+                out = self._call([self.submitcmd, fn])
                 job = out.decode().split('.')[0]
                 self.jobs[self.n] = job
                 workers.append(self.n)
@@ -127,7 +206,7 @@ class JobQueueCluster(object):
             return
         workers = list(map(int, workers))
         jobs = [self.jobs[w] for w in workers]
-        self._call([self._cancelcmd] + list(jobs))
+        self._call([self.cancelcmd] + list(jobs))
         for w in workers:
             with ignoring(KeyError):
                 del self.jobs[w]
