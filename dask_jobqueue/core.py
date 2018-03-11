@@ -2,8 +2,10 @@ from contextlib import contextmanager
 import logging
 import subprocess
 import toolz
+import socket
 
-from distributed.utils import tmpfile, ignoring
+from distributed.utils import tmpfile, ignoring, get_ip_interface
+from distributed import LocalCluster
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +21,34 @@ class JobQueueCluster(object):
     PBSCluster
     SLURMCluster
     """
-    def __init__(self):
+    def __new__(cls, *args, **kwargs):
+        #Prevent class instantiation
+        print(str(cls))
         raise NotImplemented
+
+    def __init__(self,
+                 threads_per_worker=4,
+                 processes=6,
+                 memory='20GB',
+                 interface=None,
+                 death_timeout=60,
+                 worker_extra='',
+                 **kwargs
+                 ):
+
+
+        if interface:
+            host = get_ip_interface(interface)
+            worker_extra += ' --interface  %s ' % interface
+        else:
+            host = socket.gethostname()
+
+        self.cluster = LocalCluster(n_workers=0, ip=host, **kwargs)
+        self.memory = memory.replace(' ', '')
+
+        self.jobs = dict()
+        self.n = 0
+        self._adaptive = None
 
     def job_script(self):
         self.n += 1

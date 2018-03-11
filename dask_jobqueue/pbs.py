@@ -1,6 +1,5 @@
 import logging
 import os
-import socket
 import sys
 
 from distributed import LocalCluster
@@ -18,7 +17,7 @@ class PBSCluster(JobQueueCluster):
 
     Parameters
     ----------
-    name : str
+    job_name : str
         Name of worker jobs. Passed to `$PBS -N` option.
     queue : str
         Destination queue for each worker job. Passed to `#PBS -q` option.
@@ -41,7 +40,9 @@ class PBSCluster(JobQueueCluster):
         Network interface like 'eth0' or 'ib0'.
     death_timeout : float
         Seconds to wait for a scheduler before closing workers
-    extra : str
+    job_extra : list
+        Additional lines to put in PBS script header (usually starting with #PBS comment)
+    worker_extra : str
         Additional arguments to pass to `dask-worker`
     kwargs : dict
         Additional keyword arguments to pass to `LocalCluster`
@@ -61,17 +62,18 @@ class PBSCluster(JobQueueCluster):
     >>> cluster.adapt()
     """
     def __init__(self,
-                 name='dask',
-                 queue='regular',
+                 name='dask-worker',
+                 queue=None,
                  project=None,
-                 resource_spec='select=1:ncpus=36:mem=109GB',
-                 threads_per_worker=4,
-                 processes=9,
-                 memory='7GB',
+                 resource_spec='select=1:ncpus=24:mem=120GB',
                  walltime='00:30:00',
+                 pbs_extra=[],
+                 threads_per_worker=4,
+                 processes=6,
+                 memory='20GB',
                  interface=None,
                  death_timeout=60,
-                 extra='',
+                 worker_extra='',
                  **kwargs):
         self._template = """
 #!/bin/bash
@@ -92,18 +94,12 @@ class PBSCluster(JobQueueCluster):
      %(extra)s
 """.lstrip()
 
-        if interface:
-            host = get_ip_interface(interface)
-            extra += ' --interface  %s ' % interface
-        else:
-            host = socket.gethostname()
-
         project = project or os.environ.get('PBS_ACCOUNT')
-        if not project:
-            raise ValueError("Must specify a project like `project='UCLB1234' "
-                             "or set PBS_ACCOUNT environment variable")
-        self.cluster = LocalCluster(n_workers=0, ip=host, **kwargs)
-        memory = memory.replace(' ', '')
+
+        super(PBSCluster, self).__init__(threads_per_worker=threads_per_worker,processes=processes,
+                 memory=memory,interface=interface,death_timeout=death_timeout,worker_extra=worker_extra,
+                 **kwargs)
+
         self.config = {'name': name,
                        'queue': queue,
                        'project': project,
@@ -115,10 +111,8 @@ class PBSCluster(JobQueueCluster):
                        'base_path': dirname,
                        'memory': memory,
                        'death_timeout': death_timeout,
-                       'extra': extra}
-        self.jobs = dict()
-        self.n = 0
-        self._adaptive = None
+                       'extra': worker_extra}
+
         self._submitcmd = 'qsub'
         self._cancelcmd = 'qdel'
 
