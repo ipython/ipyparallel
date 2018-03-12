@@ -15,7 +15,7 @@ RUN pip install --no-cache-dir drmaa
 RUN pip install --no-cache-dir git+https://github.com/dask/distributed.git --upgrade
 
 COPY ./setup-slave.sh /
-COPY ./run-slave.sh /
+COPY ./*.sh /
 RUN bash ./setup-slave.sh
 
 CMD python -m SimpleHTTPServer
