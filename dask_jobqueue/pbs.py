@@ -51,7 +51,7 @@ class PBSCluster(JobQueueCluster):
     Examples
     --------
     >>> from dask_jobqueue import PBSCluster
-    >>> cluster = PBSCluster(project='...')
+    >>> cluster = PBSCluster(queue= 'regular', project='DaskOnPBS')
     >>> cluster.start_workers(10)  # this may take a few seconds to launch
 
     >>> from dask.distributed import Client
@@ -63,9 +63,9 @@ class PBSCluster(JobQueueCluster):
     >>> cluster.adapt()
     """
 
-    _submitcmd = 'qsub'
-    _cancelcmd = 'qdel'
-
+    #Override class variables
+    submit_command = 'qsub'
+    cancel_command = 'qdel'
 
     def __init__(self,
                  name='dask-worker',
@@ -77,15 +77,22 @@ class PBSCluster(JobQueueCluster):
                  local_directory='$TMPDIR',
                  **kwargs):
 
+        #Instantiate args and parameters from parent abstract class
         super(PBSCluster, self).__init__(name=name, local_directory=local_directory, **kwargs)
 
+        #Try to find a project name from environment variable
         project = project or os.environ.get('PBS_ACCOUNT')
 
+        #PBS header build
         header_lines = ['#PBS -N %s' % name]
-        if queue != None: header_lines.append('#PBS -q %s' % queue)
-        if project != None: header_lines.append('#PBS -A %s' % project)
-        if resource_spec != None: header_lines.append('#PBS -l %s' % resource_spec)
-        if walltime != None: header_lines.append('#PBS -l walltime=%s' % walltime)
+        if queue is not None:
+            header_lines.append('#PBS -q %s' % queue)
+        if project is not None:
+            header_lines.append('#PBS -A %s' % project)
+        if resource_spec is not None:
+            header_lines.append('#PBS -l %s' % resource_spec)
+        if walltime is not None:
+            header_lines.append('#PBS -l walltime=%s' % walltime)
         header_lines.extend(['#PBS %s' % arg for arg in job_extra])
 
         self._job_header = '\n'.join(header_lines)
@@ -95,11 +102,3 @@ class PBSCluster(JobQueueCluster):
     @property
     def job_header(self):
         return self._job_header
-
-    @property
-    def submitcmd(self):
-        return self._submitcmd
-
-    @property
-    def cancelcmd(self):
-        return self._cancelcmd

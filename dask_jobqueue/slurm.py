@@ -27,8 +27,9 @@ class SLURMCluster(JobQueueCluster):
     >>> cluster.adapt()
     """
 
-    _submitcmd = 'sbatch'
-    _cancelcmd = 'scancel'
+    #Override class variables
+    submit_command = 'sbatch'
+    cancel_command = 'scancel'
 
     def __init__(self,
                  name='dask',
@@ -98,11 +99,3 @@ export LC_ALL="en_US.utf8"
     @property
     def job_header(self):
         return self._job_header
-
-    @property
-    def submitcmd(self):
-        return self._submitcmd
-
-    @property
-    def cancelcmd(self):
-        return self._cancelcmd

@@ -19,8 +19,8 @@ class JobQueueCluster(object):
     This class should not be used directly, use inherited class appropriate
     for your queueing system (e.g. PBScluster or SLURMCluster)
 
-    Abstract init parameters
-    ------------------------
+    Parameters
+    ----------
     name : str
         Name of Dask workers.
     threads : int
@@ -41,19 +41,30 @@ class JobQueueCluster(object):
     kwargs : dict
         Additional keyword arguments to pass to `LocalCluster`
 
+    Attributes
+    ----------
+    submit_command: str
+        Abstract attribute for job scheduler submit command, should be overriden
+    cancel_command: str
+        Abstract attribute for job scheduler cancel command, should be overriden
+
     See Also
     --------
     PBSCluster
     SLURMCluster
     """
 
-    _script_template ="""
+    _script_template = """
 #!/bin/bash
 
 %(job_header)s
 
-%(worker_command)s 
+%(worker_command)s
 """.lstrip()
+
+    #Following class attributes should be overriden by extending classes.
+    submit_command = None
+    cancel_command = None
 
     def __init__(self,
                  name='dask-worker',
@@ -68,17 +79,9 @@ class JobQueueCluster(object):
                  ):
         """
         This initializer should be considered as Abstract, and never used directly.
-        :param name:
-        :param threads:
-        :param processes:
-        :param memory:
-        :param interface:
-        :param death_timeout:
-        :param local_directory:
-        :param extra:
-        :param kwargs:
         """
-
+        if not self.cancel_command or not self.submit_command:
+            raise NotImplementedError('JobQueueCluster is an abstract class that should not be instanciated.')
 
         if interface:
             host = get_ip_interface(interface)
@@ -92,16 +95,23 @@ class JobQueueCluster(object):
         self.n = 0
         self._adaptive = None
 
+        #dask-worker command line build
         self._command_template = "%s/dask-worker %s" % (dirname, self.scheduler.address)
-        if threads != None: self._command_template += " --nthreads %d" % threads
-        if processes != None: self._command_template += " --nprocs %d" % processes
-        if memory != None: self._command_template += " --memory-limit %s" % memory
-        if name != None:
+        if threads is not None:
+            self._command_template += " --nthreads %d" % threads
+        if processes is not None:
+            self._command_template += " --nprocs %d" % processes
+        if memory is not None:
+            self._command_template += " --memory-limit %s" % memory
+        if name is not None:
             self._command_template += " --name %s" % name
             self._command_template += "-%(n)d" #Keep %(n) to be replaced later.
-        if death_timeout != None: self._command_template += " --death-timeout %s" % death_timeout
-        if local_directory != None: self._command_template += " --local-directory %s" % local_directory
-        if extra!= None: self._command_template += extra
+        if death_timeout is not None:
+            self._command_template += " --death-timeout %s" % death_timeout
+        if local_directory is not None:
+            self._command_template += " --local-directory %s" % local_directory
+        if extra is not None:
+            self._command_template += extra
 
     def job_script(self):
         self.n += 1
@@ -113,23 +123,10 @@ class JobQueueCluster(object):
     def job_header(self):
         """
         Abstract attribute for the Job scheduler script header part.
-        :return: A string representation of the Job script header part.
-        """
-        raise NotImplementedError
 
-    @property
-    def submitcmd(self):
-        """
-        Abstract attribute for job scheduler submission command
-        :return:
-        """
-        raise NotImplementedError
-
-    @property
-    def cancelcmd(self):
-        """
-        Abstract attribute for job scheduler cancel command
-        :return:
+        Returns
+        -------
+        A string containing multiple lines to be used as header of job file to be sumitted.
         """
         raise NotImplementedError
 
@@ -146,7 +143,7 @@ class JobQueueCluster(object):
         workers = []
         for _ in range(n):
             with self.job_file() as fn:
-                out = self._call([self.submitcmd, fn])
+                out = self._call([self.submit_command, fn])
                 job = out.decode().split('.')[0]
                 self.jobs[self.n] = job
                 workers.append(self.n)
@@ -206,7 +203,7 @@ class JobQueueCluster(object):
             return
         workers = list(map(int, workers))
         jobs = [self.jobs[w] for w in workers]
-        self._call([self.cancelcmd] + list(jobs))
+        self._call([self.cancel_command] + list(jobs))
         for w in workers:
             with ignoring(KeyError):
                 del self.jobs[w]

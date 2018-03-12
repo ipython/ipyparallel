@@ -5,12 +5,12 @@ import pytest
 
 from dask.distributed import Client
 from distributed.utils_test import loop  # noqa: F401
-from pangeo import SLURMCluster
+from dask_jobqueue import SLURMCluster
 
 
 def test_basic(loop):
-    with SLURMCluster(walltime='00:02:00', threads_per_worker=2, memory='7GB',
-                    loop=loop) as cluster:
+    with SLURMCluster(walltime='00:02:00', threads=2, memory='7GB',
+                      loop=loop) as cluster:
         with Client(cluster) as client:
             workers = cluster.start_workers(2)
             future = client.submit(lambda x: x + 1, 10)
@@ -42,8 +42,7 @@ def test_adaptive(loop):
             assert cluster.jobs
 
             start = time()
-            while len(client.scheduler_info()['workers']) \
-                  != cluster.config['processes']:
+            while len(client.scheduler_info()['workers']) != cluster.config['processes']:
                 sleep(0.1)
                 assert time() < start + 10
 
