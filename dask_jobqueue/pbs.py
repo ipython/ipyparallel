@@ -24,7 +24,7 @@ class PBSCluster(JobQueueCluster):
     walltime : str
         Walltime for each worker job.
     job_extra : list
-        List of other PBS options, for example -j oe. Passed with '#PBS ' prefix
+        List of other PBS options, for example -j oe. Each option will be prepended with the #PBS prefix.
     local_directory : str
         Dask worker local directory for file spilling.
     kwargs : dict
@@ -51,7 +51,7 @@ class PBSCluster(JobQueueCluster):
     Examples
     --------
     >>> from dask_jobqueue import PBSCluster
-    >>> cluster = PBSCluster(queue= 'regular', project='DaskOnPBS')
+    >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS')
     >>> cluster.start_workers(10)  # this may take a few seconds to launch
 
     >>> from dask.distributed import Client
@@ -74,11 +74,10 @@ class PBSCluster(JobQueueCluster):
                  resource_spec='select=1:ncpus=24:mem=100GB',
                  walltime='00:30:00',
                  job_extra=[],
-                 local_directory='$TMPDIR',
                  **kwargs):
 
         #Instantiate args and parameters from parent abstract class
-        super(PBSCluster, self).__init__(name=name, local_directory=local_directory, **kwargs)
+        super(PBSCluster, self).__init__(name=name, **kwargs)
 
         #Try to find a project name from environment variable
         project = project or os.environ.get('PBS_ACCOUNT')
@@ -95,10 +94,7 @@ class PBSCluster(JobQueueCluster):
             header_lines.append('#PBS -l walltime=%s' % walltime)
         header_lines.extend(['#PBS %s' % arg for arg in job_extra])
 
-        self._job_header = '\n'.join(header_lines)
+        #Declare class attribute that shall be overriden
+        self.job_header = '\n'.join(header_lines)
 
         logger.debug("Job script: \n %s" % self.job_script())
-
-    @property
-    def job_header(self):
-        return self._job_header

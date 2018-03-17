@@ -92,10 +92,7 @@ export LC_ALL="en_US.utf8"
                        'memory': memory
                        }
 
-        self._job_header = self._header_template % self.config
+        self.job_header = self._header_template % self.config
 
         logger.debug("Job script: \n %s" % self.job_script())
 
-    @property
-    def job_header(self):
-        return self._job_header

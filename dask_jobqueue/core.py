@@ -83,6 +83,9 @@ class JobQueueCluster(object):
         if not self.cancel_command or not self.submit_command:
             raise NotImplementedError('JobQueueCluster is an abstract class that should not be instanciated.')
 
+        #This attribute should be overriden
+        self.job_header = None
+
         if interface:
             host = get_ip_interface(interface)
             extra += ' --interface  %s ' % interface
@@ -96,7 +99,7 @@ class JobQueueCluster(object):
         self._adaptive = None
 
         #dask-worker command line build
-        self._command_template = "%s/dask-worker %s" % (dirname, self.scheduler.address)
+        self._command_template = os.path.join(dirname, 'dask-worker %s' % self.scheduler.address)
         if threads is not None:
             self._command_template += " --nthreads %d" % threads
         if processes is not None:
@@ -118,17 +121,6 @@ class JobQueueCluster(object):
         return self._script_template % {'job_header': self.job_header,
                                         'worker_command': self._command_template % {'n': self.n}
                                         }
-
-    @property
-    def job_header(self):
-        """
-        Abstract attribute for the Job scheduler script header part.
-
-        Returns
-        -------
-        A string containing multiple lines to be used as header of job file to be sumitted.
-        """
-        raise NotImplementedError
 
     @contextmanager
     def job_file(self):
