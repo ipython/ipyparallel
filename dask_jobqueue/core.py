@@ -5,7 +5,7 @@ import socket
 import os
 import sys
 
-from distributed.utils import tmpfile, ignoring, get_ip_interface
+from distributed.utils import tmpfile, ignoring, get_ip_interface, parse_bytes, format_bytes
 from distributed import LocalCluster
 
 dirname = os.path.dirname(sys.executable)
@@ -93,6 +93,11 @@ class JobQueueCluster(object):
             host = socket.gethostname()
 
         self.cluster = LocalCluster(n_workers=0, ip=host, **kwargs)
+
+        #Keep information on process, threads and memory, for use in subclasses
+        self.worker_memory = parse_bytes(memory)
+        self.worker_processes = processes
+        self.worker_threads = threads
 
         self.jobs = dict()
         self.n = 0

@@ -1,7 +1,9 @@
 import logging
 import os
+import math
 
 from .core import JobQueueCluster
+from distributed.utils import format_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +79,7 @@ class PBSCluster(JobQueueCluster):
                  name='dask-worker',
                  queue=None,
                  project=None,
-                 resource_spec='select=1:ncpus=24:mem=100GB',
+                 resource_spec=None,
                  walltime='00:30:00',
                  job_extra=[],
                  **kwargs):
@@ -94,8 +96,13 @@ class PBSCluster(JobQueueCluster):
             header_lines.append('#PBS -q %s' % queue)
         if project is not None:
             header_lines.append('#PBS -A %s' % project)
-        if resource_spec is not None:
-            header_lines.append('#PBS -l %s' % resource_spec)
+        if resource_spec is None:
+            #Compute default resources specifications
+            ncpus = self.worker_processes * self.worker_threads
+            memory_string = pbs_format_bytes_ceil(self.worker_memory * self.worker_processes)
+            resource_spec = "select=1:ncpus=%d:mem=%s" % (ncpus, memory_string)
+            logger.info("Resource specification for PBS not set, initializing it to %s" % resource_spec)
+        header_lines.append('#PBS -l %s' % resource_spec)
         if walltime is not None:
             header_lines.append('#PBS -l walltime=%s' % walltime)
         header_lines.extend(['#PBS %s' % arg for arg in job_extra])
@@ -104,3 +111,27 @@ class PBSCluster(JobQueueCluster):
         self.job_header = '\n'.join(header_lines)
 
         logger.debug("Job script: \n %s" % self.job_script())
+
+def pbs_format_bytes_ceil(n):
+    """ Format bytes as text
+    PBS expects KiB, MiB or Gib, but names it KB, MB, GB
+    Whereas Dask makes the difference between KB and KiB
+
+    >>> pbs_format_bytes_ceil(1)
+    '1B'
+    >>> pbs_format_bytes_ceil(1234)
+    '1234B'
+    >>> pbs_format_bytes_ceil(12345678)
+    '13MB'
+    >>> pbs_format_bytes_ceil(1234567890)
+    '1177MB'
+    >>> pbs_format_bytes_ceil(15000000000)
+    '14GB'
+    """
+    if n >= 10*(1024**3):
+        return '%dGB' % math.ceil(n / (1024**3))
+    if n >= 10*(1024**2):
+        return '%dMB' % (n / (1024**2))
+    if n >= 10*1024:
+        return '%dkB' % (n / 1024)
+    return '%dB' % n
