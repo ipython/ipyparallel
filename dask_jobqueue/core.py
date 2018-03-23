@@ -5,7 +5,7 @@ import socket
 import os
 import sys
 
-from distributed.utils import tmpfile, ignoring, get_ip_interface, parse_bytes, format_bytes
+from distributed.utils import tmpfile, ignoring, get_ip_interface, parse_bytes
 from distributed import LocalCluster
 
 dirname = os.path.dirname(sys.executable)

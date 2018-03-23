@@ -113,4 +113,3 @@ export LC_ALL="en_US.utf8"
         self.job_header = self._header_template % self.config
 
         logger.debug("Job script: \n %s" % self.job_script())
-

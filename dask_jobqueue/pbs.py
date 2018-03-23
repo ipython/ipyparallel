@@ -3,7 +3,6 @@ import os
 import math
 
 from .core import JobQueueCluster
-from distributed.utils import format_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -116,6 +115,7 @@ class PBSCluster(JobQueueCluster):
 
         logger.debug("Job script: \n %s" % self.job_script())
 
+
 def pbs_format_bytes_ceil(n):
     """ Format bytes as text
     PBS expects KiB, MiB or Gib, but names it KB, MB, GB
@@ -132,10 +132,10 @@ def pbs_format_bytes_ceil(n):
     >>> pbs_format_bytes_ceil(15000000000)
     '14GB'
     """
-    if n >= 10*(1024**3):
+    if n >= 10 * (1024**3):
         return '%dGB' % math.ceil(n / (1024**3))
-    if n >= 10*(1024**2):
+    if n >= 10 * (1024**2):
         return '%dMB' % (n / (1024**2))
-    if n >= 10*1024:
+    if n >= 10 * 1024:
         return '%dkB' % (n / 1024)
     return '%dB' % n
