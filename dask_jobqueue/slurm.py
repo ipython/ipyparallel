@@ -60,12 +60,31 @@ class SLURMCluster(JobQueueCluster):
             Walltime for each worker job.
         kwargs : dict
             Additional keyword arguments to pass to `JobQueueCluster` and `LocalCluster`
+            
+        Inherited parameters from JobQueueCluster
+        -----------------------------------------
+        name : str
+            Name of Dask workers.
+        threads : int
+            Number of threads per process.
+        processes : int
+            Number of processes per node.
+        memory : str
+            Bytes of memory that the worker can use. This should be a string
+            like "7GB" that can be interpretted both by PBS and Dask.
+        interface : str
+            Network interface like 'eth0' or 'ib0'.
+        death_timeout : float
+            Seconds to wait for a scheduler before closing workers
+        local_directory : str
+            Dask worker local directory for file spilling.
+        extra : str
+            Additional arguments to pass to `dask-worker`
+        kwargs : dict
+        Additional keyword arguments to pass to `LocalCluster`
         """
 
         super(SLURMCluster, self).__init__(name=name, processes=processes, **kwargs)
-
-        #TODO has this been tested? This seems weird to use only processes, and not processes * threads
-        # There are no memory limit given to Slurm either?
 
         #Keeping template for now has I don't know much about slurm.
         self._header_template = """

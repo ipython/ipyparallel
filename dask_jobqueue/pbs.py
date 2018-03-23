@@ -33,8 +33,10 @@ class PBSCluster(JobQueueCluster):
     kwargs : dict
         Additional keyword arguments to pass to `JobQueueCluster` and `LocalCluster`
 
-    Inherited parameters
-    --------------------
+    Inherited parameters from JobQueueCluster
+    -----------------------------------------
+    name : str
+        Name of Dask workers.
     threads : int
         Number of threads per process.
     processes : int
@@ -46,6 +48,8 @@ class PBSCluster(JobQueueCluster):
         Network interface like 'eth0' or 'ib0'.
     death_timeout : float
         Seconds to wait for a scheduler before closing workers
+    local_directory : str
+        Dask worker local directory for file spilling.
     extra : str
         Additional arguments to pass to `dask-worker`
     kwargs : dict
