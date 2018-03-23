@@ -60,7 +60,7 @@ class SLURMCluster(JobQueueCluster):
             Walltime for each worker job.
         kwargs : dict
             Additional keyword arguments to pass to `JobQueueCluster` and `LocalCluster`
-            
+
         Inherited parameters from JobQueueCluster
         -----------------------------------------
         name : str
@@ -86,7 +86,6 @@ class SLURMCluster(JobQueueCluster):
 
         super(SLURMCluster, self).__init__(name=name, processes=processes, **kwargs)
 
-        #Keeping template for now has I don't know much about slurm.
         self._header_template = """
 #SBATCH -J %(name)s
 #SBATCH -n %(processes)d
