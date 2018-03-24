@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -x
+
 function jobqueue_before_install {
     docker version
     docker-compose version
@@ -14,7 +16,7 @@ function jobqueue_before_install {
 }
 
 function jobqueue_install {
-    docker exec -it sge_master /bin/bash -c "cd /dask-jobqueue; pip install --no-cache-dir ."
+    docker exec -it sge_master /bin/bash -c "cd /dask-jobqueue; python setup.py install"
 }
 
 function jobqueue_script {
