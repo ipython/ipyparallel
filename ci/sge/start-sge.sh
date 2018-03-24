@@ -1,5 +1,5 @@
 #!/bin/bash
-cd ci/sge
+
 docker-compose up -d
 while [ `docker exec -it sge_master qhost | grep lx26-amd64 | wc -l` -ne 2 ]
   do
@@ -7,4 +7,3 @@ while [ `docker exec -it sge_master qhost | grep lx26-amd64 | wc -l` -ne 2 ]
     sleep 1
   done
 echo "SGE properly configured"
-cd -

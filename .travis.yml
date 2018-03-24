@@ -31,7 +31,7 @@ before_install:
   - conda install --yes -c conda-forge python=$TRAVIS_PYTHON_VERSION distributed
 
   # Start containers
-  - ./ci/sge/start-sge.sh
+  - cd ./ci/sge; ./start-sge.sh; cd -
   - docker ps -a
   - docker images
 

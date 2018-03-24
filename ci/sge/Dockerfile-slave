@@ -14,6 +14,7 @@ RUN conda install -c conda-forge dask distributed blas pytest mock ipython pip p
 RUN pip install --no-cache-dir drmaa
 RUN pip install --no-cache-dir git+https://github.com/dask/distributed.git --upgrade
 
+COPY ../../../dask-jobqueue /
 COPY ./setup-slave.sh /
 COPY ./*.sh /
 RUN bash ./setup-slave.sh
