@@ -8,7 +8,7 @@ function jobqueue_before_install {
     cd ./ci/sge
     ./start-sge.sh
     cd -
-    
+
     docker ps -a
     docker images
 }

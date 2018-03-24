@@ -30,7 +30,7 @@ before_install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda install --yes -c conda-forge python=$TRAVIS_PYTHON_VERSION dask distributed flake8
   # Start jobqueue
-  - source ci/${JOBQUEUE}.travis
+  - source ci/${JOBQUEUE}.sh
   - jobqueue_before_install
 install:
   - which python
