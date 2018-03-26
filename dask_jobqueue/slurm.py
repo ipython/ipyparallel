@@ -2,13 +2,14 @@ import logging
 import os
 import sys
 
-from .core import JobQueueCluster
+from .core import JobQueueCluster, docstrings
 
 logger = logging.getLogger(__name__)
 
 dirname = os.path.dirname(sys.executable)
 
 
+@docstrings.with_indent(4)
 class SLURMCluster(JobQueueCluster):
     """ Launch Dask on a SLURM cluster
 
@@ -32,7 +33,6 @@ class SLURMCluster(JobQueueCluster):
     cancel_command = 'scancel'
 
     def __init__(self,
-                 name='dask',
                  queue='',
                  project=None,
                  processes=8,
@@ -43,8 +43,6 @@ class SLURMCluster(JobQueueCluster):
 
         Parameters
         ----------
-        name : str
-            Name of worker jobs. Passed to `#SBATCH -J` option.
         queue : str
             Destination queue for each worker job.
             Passed to `#SBATCH -p` option.
@@ -58,33 +56,10 @@ class SLURMCluster(JobQueueCluster):
             like "7GB" that can be interpretted both by PBS and Dask.
         walltime : str
             Walltime for each worker job.
-        kwargs : dict
-            Additional keyword arguments to pass to `JobQueueCluster` and `LocalCluster`
-
-        Inherited parameters from JobQueueCluster
-        -----------------------------------------
-        name : str
-            Name of Dask workers.
-        threads : int
-            Number of threads per process.
-        processes : int
-            Number of processes per node.
-        memory : str
-            Bytes of memory that the worker can use. This should be a string
-            like "7GB" that can be interpretted both by PBS and Dask.
-        interface : str
-            Network interface like 'eth0' or 'ib0'.
-        death_timeout : float
-            Seconds to wait for a scheduler before closing workers
-        local_directory : str
-            Dask worker local directory for file spilling.
-        extra : str
-            Additional arguments to pass to `dask-worker`
-        kwargs : dict
-        Additional keyword arguments to pass to `LocalCluster`
+        %(JobQueueCluster.parameters)s
         """
 
-        super(SLURMCluster, self).__init__(name=name, processes=processes, **kwargs)
+        super(SLURMCluster, self).__init__(processes=processes, **kwargs)
 
         self._header_template = """
 #SBATCH -J %(name)s
@@ -101,7 +76,7 @@ export LC_ALL="en_US.utf8"
 """.lstrip()
 
         memory = memory.replace(' ', '')
-        self.config = {'name': name,
+        self.config = {'name': self.name,
                        'queue': queue,
                        'project': project,
                        'processes': processes,

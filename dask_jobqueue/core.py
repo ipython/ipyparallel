@@ -4,6 +4,7 @@ import subprocess
 import socket
 import os
 import sys
+import docrep
 
 from distributed.utils import tmpfile, ignoring, get_ip_interface, parse_bytes
 from distributed import LocalCluster
@@ -11,8 +12,10 @@ from distributed import LocalCluster
 dirname = os.path.dirname(sys.executable)
 
 logger = logging.getLogger(__name__)
+docstrings = docrep.DocstringProcessor()
 
 
+@docstrings.get_sectionsf('JobQueueCluster')
 class JobQueueCluster(object):
     """ Base class to launch Dask Clusters for Job queues
 

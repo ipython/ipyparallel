@@ -2,19 +2,17 @@ import logging
 import os
 import math
 
-from .core import JobQueueCluster
+from .core import JobQueueCluster, docstrings
 
 logger = logging.getLogger(__name__)
 
 
+@docstrings.with_indent(4)
 class PBSCluster(JobQueueCluster):
     """ Launch Dask on a PBS cluster
 
-
     Parameters
     ----------
-    name : str
-        Name of worker jobs and Dask workers. Passed to `$PBS -N` option.
     queue : str
         Destination queue for each worker job. Passed to `#PBS -q` option.
     project : str
@@ -29,30 +27,7 @@ class PBSCluster(JobQueueCluster):
         List of other PBS options, for example -j oe. Each option will be prepended with the #PBS prefix.
     local_directory : str
         Dask worker local directory for file spilling.
-    kwargs : dict
-        Additional keyword arguments to pass to `JobQueueCluster` and `LocalCluster`
-
-    Inherited parameters from JobQueueCluster
-    -----------------------------------------
-    name : str
-        Name of Dask workers.
-    threads : int
-        Number of threads per process.
-    processes : int
-        Number of processes per node.
-    memory : str
-        Bytes of memory that the worker can use. This should be a string
-        like "7GB" that can be interpretted both by PBS and Dask.
-    interface : str
-        Network interface like 'eth0' or 'ib0'.
-    death_timeout : float
-        Seconds to wait for a scheduler before closing workers
-    local_directory : str
-        Dask worker local directory for file spilling.
-    extra : str
-        Additional arguments to pass to `dask-worker`
-    kwargs : dict
-        Additional keyword arguments to pass to `LocalCluster`
+    %(JobQueueCluster.parameters)s
 
     Examples
     --------
@@ -79,7 +54,6 @@ class PBSCluster(JobQueueCluster):
     cancel_command = 'qdel'
 
     def __init__(self,
-                 name='dask-worker',
                  queue=None,
                  project=None,
                  resource_spec=None,
@@ -88,13 +62,14 @@ class PBSCluster(JobQueueCluster):
                  **kwargs):
 
         #Instantiate args and parameters from parent abstract class
-        super(PBSCluster, self).__init__(name=name, **kwargs)
+        super(PBSCluster, self).__init__(**kwargs)
 
         #Try to find a project name from environment variable
         project = project or os.environ.get('PBS_ACCOUNT')
 
         #PBS header build
-        header_lines = ['#PBS -N %s' % name]
+        if self.name is not None:
+            header_lines = ['#PBS -N %s' % self.name]
         if queue is not None:
             header_lines.append('#PBS -q %s' % queue)
         if project is not None:
