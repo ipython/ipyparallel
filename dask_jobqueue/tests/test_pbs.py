@@ -9,6 +9,7 @@ from dask_jobqueue import PBSCluster
 
 pytestmark = pytest.mark.env("pbs")
 
+
 def test_basic(loop):  # noqa: F811
     with PBSCluster(walltime='00:02:00', threads_per_worker=2, memory='7GB',
                     interface='ib0', loop=loop) as cluster:
@@ -57,7 +58,7 @@ def test_adaptive(loop):  # noqa: F811
             start = time()
             while cluster.jobs:
                 sleep(0.100)
-                assert time() < start + 10	
+                assert time() < start + 10
 
 
 @pytest.mark.skipif('PBS_ACCOUNT' in os.environ, reason='PBS_ACCOUNT defined')  # noqa: F811

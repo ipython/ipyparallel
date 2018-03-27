@@ -38,8 +38,7 @@ install:
   - jobqueue_install
 script:
   - flake8 -j auto dask_jobqueue
-  - py.test dask_jobqueue --verbose  # run tests (skip queue tests)
-  - jobque_script
+  - jobqueue_script
 after_success:
   - jobqueue_after_success
 

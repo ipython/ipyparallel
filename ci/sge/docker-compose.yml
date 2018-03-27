@@ -10,7 +10,7 @@ services:
     hostname: sge_master
     #network_mode: host
     volumes:
-      - .:/dask-jobqueue
+      - ../..:/dask-jobqueue
     command: bash /run-master.sh
 
   slave-one:
@@ -21,7 +21,7 @@ services:
     hostname: slave_one
     #network_mode: host
     volumes:
-      - .:/dask-jobqueue
+      - ../..:/dask-jobqueue
     command: bash /run-slave.sh
     links:
       - "master:sge_master"
@@ -36,7 +36,7 @@ services:
     hostname: slave_two
     #network_mode: host
     volumes:
-      - .:/dask-jobqueue
+      - ../..:/dask-jobqueue
     command: bash /run-slave.sh
     links:
       - "master:sge_master"
