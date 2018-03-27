@@ -67,9 +67,10 @@ class PBSCluster(JobQueueCluster):
         #Try to find a project name from environment variable
         project = project or os.environ.get('PBS_ACCOUNT')
 
+        header_lines = []
         #PBS header build
         if self.name is not None:
-            header_lines = ['#PBS -N %s' % self.name]
+            header_lines.append('#PBS -N %s' % self.name)
         if queue is not None:
             header_lines.append('#PBS -q %s' % queue)
         if project is not None:
@@ -110,7 +111,7 @@ def pbs_format_bytes_ceil(n):
     if n >= 10 * (1024**3):
         return '%dGB' % math.ceil(n / (1024**3))
     if n >= 10 * (1024**2):
-        return '%dMB' % (n / (1024**2))
+        return '%dMB' % math.ceil(n / (1024**2))
     if n >= 10 * 1024:
-        return '%dkB' % (n / 1024)
+        return '%dkB' % math.ceil(n / 1024)
     return '%dB' % n

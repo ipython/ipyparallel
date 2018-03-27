@@ -102,6 +102,7 @@ class JobQueueCluster(Cluster):
         self.worker_memory = parse_bytes(memory)
         self.worker_processes = processes
         self.worker_threads = threads
+        self.name = name
 
         self.jobs = dict()
         self.n = 0

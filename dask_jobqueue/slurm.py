@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import math
 
 from .core import JobQueueCluster, docstrings
 
@@ -35,9 +36,9 @@ class SLURMCluster(JobQueueCluster):
     def __init__(self,
                  queue='',
                  project=None,
-                 processes=8,
-                 memory='7GB',
                  walltime='00:30:00',
+                 job_extra=[],
+                 env_extra=['export LANG="en_US.utf8"', 'export LANGUAGE="en_US.utf8"', 'export LC_ALL="en_US.utf8"'],
                  **kwargs):
         """ Initialize a SLURM Cluster
 
@@ -49,8 +50,6 @@ class SLURMCluster(JobQueueCluster):
         project : str
             Accounting string associated with each worker job. Passed to
             `#SBATCH -A` option.
-        processes : int
-            Number of processes per node.
         memory : str
             Bytes of memory that the worker can use. This should be a string
             like "7GB" that can be interpretted both by PBS and Dask.
@@ -59,32 +58,57 @@ class SLURMCluster(JobQueueCluster):
         %(JobQueueCluster.parameters)s
         """
 
-        super(SLURMCluster, self).__init__(processes=processes, **kwargs)
+        super(SLURMCluster, self).__init__(**kwargs)
 
-        self._header_template = """
-#SBATCH -J %(name)s
-#SBATCH -n %(processes)d
-#SBATCH -p %(queue)s
-#SBATCH -A %(project)s
-#SBATCH -t %(walltime)s
-#SBATCH -e %(name)s.err
-#SBATCH -o %(name)s.out
+        #Always ask for only one task
+        header_lines = []
+        #PBS header build
+        if self.name is not None:
+            header_lines.append('#SBATCH -J %s' % self.name)
+            header_lines.append('#SBATCH -e %s.err' % self.name)
+            header_lines.append('#SBATCH -o %s.out' % self.name)
+        if queue is not None:
+            header_lines.append('#SBATCH -p %s' % queue)
+        if project is not None:
+            header_lines.append('#SBATCH -A %s' % project)
 
-export LANG="en_US.utf8"
-export LANGUAGE="en_US.utf8"
-export LC_ALL="en_US.utf8"
-""".lstrip()
+        #Init resources, always 1 task, and then number of cpu is processes * threads
+        header_lines.append('#SBATCH -n 1')
+        header_lines.append('#SBATCH --cpus-per-task=%d' % self.worker_processes * self.worker_threads)
+        if self.worker_memory is not None:
+            total_memory = slurm_format_bytes_ceil(self.worker_processes * self.worker_memory)
+            header_lines.append('#SBATCH --mem=%d' % total_memory)
+        if walltime is not None:
+            header_lines.append('#SBATCH -t %s' % walltime)
+        header_lines.extend(['#SBATCH %s' % arg for arg in job_extra])
+        header_lines.append('')
+        header_lines.extend([arg for arg in env_extra])
 
-        memory = memory.replace(' ', '')
-        self.config = {'name': self.name,
-                       'queue': queue,
-                       'project': project,
-                       'processes': processes,
-                       'walltime': walltime,
-                       # Not used
-                       'memory': memory
-                       }
-
-        self.job_header = self._header_template % self.config
+        #Declare class attribute that shall be overriden
+        self.job_header = '\n'.join(header_lines)
 
         logger.debug("Job script: \n %s" % self.job_script())
+
+def slurm_format_bytes_ceil(n):
+    """ Format bytes as text
+    SLURM expects KiB, MiB or Gib, but names it KB, MB, GB
+    SLURM does not handle Bytes, only starts at KB
+
+    >>> pbs_format_bytes_ceil(1)
+    '1K'
+    >>> pbs_format_bytes_ceil(1234)
+    '2K'
+    >>> pbs_format_bytes_ceil(12345678)
+    '13M'
+    >>> pbs_format_bytes_ceil(1234567890)
+    '2G'
+    >>> pbs_format_bytes_ceil(15000000000)
+    '14G'
+    """
+    if n >= (1024**3):
+        return '%dG' % math.ceil(n / (1024**3))
+    if n >= (1024**2):
+        return '%dM' % math.ceil(n / (1024**2))
+    if n >= 1024:
+        return '%dK' % math.ceil(n / 1024)
+    return '1K' % n
