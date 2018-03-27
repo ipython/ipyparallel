@@ -8,6 +8,7 @@ import docrep
 
 from distributed.utils import tmpfile, ignoring, get_ip_interface, parse_bytes
 from distributed import LocalCluster
+from distributed.deploy import Cluster
 
 dirname = os.path.dirname(sys.executable)
 
@@ -16,7 +17,7 @@ docstrings = docrep.DocstringProcessor()
 
 
 @docstrings.get_sectionsf('JobQueueCluster')
-class JobQueueCluster(object):
+class JobQueueCluster(Cluster):
     """ Base class to launch Dask Clusters for Job queues
 
     This class should not be used directly, use inherited class appropriate
@@ -153,10 +154,6 @@ class JobQueueCluster(object):
     def scheduler(self):
         return self.cluster.scheduler
 
-    @property
-    def scheduler_address(self):
-        return self.cluster.scheduler_address
-
     def _calls(self, cmds):
         """ Call a command using subprocess.communicate
 
@@ -223,15 +220,3 @@ class JobQueueCluster(object):
     def __exit__(self, type, value, traceback):
         self.stop_workers(self.jobs)
         self.cluster.__exit__(type, value, traceback)
-
-    def adapt(self):
-        """ Start up an Adaptive deployment if not already started
-
-        This makes the cluster request resources in accordance to current
-        demand on the scheduler """
-        from distributed.deploy import Adaptive
-        if self._adaptive:
-            return
-        else:
-            self._adaptive = Adaptive(self.scheduler, self, startup_cost=5,
-                                      key=lambda ws: ws.host)
