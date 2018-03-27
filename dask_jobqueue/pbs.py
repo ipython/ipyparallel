@@ -25,8 +25,6 @@ class PBSCluster(JobQueueCluster):
         Walltime for each worker job.
     job_extra : list
         List of other PBS options, for example -j oe. Each option will be prepended with the #PBS prefix.
-    local_directory : str
-        Dask worker local directory for file spilling.
     %(JobQueueCluster.parameters)s
 
     Examples

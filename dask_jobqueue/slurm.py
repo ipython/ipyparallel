@@ -14,10 +14,24 @@ dirname = os.path.dirname(sys.executable)
 class SLURMCluster(JobQueueCluster):
     """ Launch Dask on a SLURM cluster
 
+    Parameters
+    ----------
+    queue : str
+        Destination queue for each worker job. Passed to `#SBATCH -p` option.
+    project : str
+        Accounting string associated with each worker job. Passed to
+        `#SBATCH -A` option.
+    walltime : str
+        Walltime for each worker job.
+    job_extra : list
+        List of other Slurm options, for example -j oe. Each option will be prepended with the #SBATCH prefix.
+    %(JobQueueCluster.parameters)s
+
     Examples
     --------
     >>> from pangeo import SLURMCluster
-    >>> cluster = SLURMCluster(project='...')
+    >>> cluster = SLURMCluster(env_extra=['export LANG="en_US.utf8"', \
+        'export LANGUAGE="en_US.utf8"', 'export LC_ALL="en_US.utf8"'])
     >>> cluster.start_workers(10)  # this may take a few seconds to launch
 
     >>> from dask.distributed import Client
@@ -34,29 +48,11 @@ class SLURMCluster(JobQueueCluster):
     cancel_command = 'scancel'
 
     def __init__(self,
-                 queue='',
+                 queue=None,
                  project=None,
                  walltime='00:30:00',
                  job_extra=[],
-                 env_extra=['export LANG="en_US.utf8"', 'export LANGUAGE="en_US.utf8"', 'export LC_ALL="en_US.utf8"'],
                  **kwargs):
-        """ Initialize a SLURM Cluster
-
-        Parameters
-        ----------
-        queue : str
-            Destination queue for each worker job.
-            Passed to `#SBATCH -p` option.
-        project : str
-            Accounting string associated with each worker job. Passed to
-            `#SBATCH -A` option.
-        memory : str
-            Bytes of memory that the worker can use. This should be a string
-            like "7GB" that can be interpretted both by PBS and Dask.
-        walltime : str
-            Walltime for each worker job.
-        %(JobQueueCluster.parameters)s
-        """
 
         super(SLURMCluster, self).__init__(**kwargs)
 
@@ -74,20 +70,20 @@ class SLURMCluster(JobQueueCluster):
 
         #Init resources, always 1 task, and then number of cpu is processes * threads
         header_lines.append('#SBATCH -n 1')
-        header_lines.append('#SBATCH --cpus-per-task=%d' % self.worker_processes * self.worker_threads)
+        ncpus = self.worker_processes * self.worker_threads
+        header_lines.append('#SBATCH --cpus-per-task=%d' % ncpus)
         if self.worker_memory is not None:
             total_memory = slurm_format_bytes_ceil(self.worker_processes * self.worker_memory)
-            header_lines.append('#SBATCH --mem=%d' % total_memory)
+            header_lines.append('#SBATCH --mem=%s' % total_memory)
         if walltime is not None:
             header_lines.append('#SBATCH -t %s' % walltime)
         header_lines.extend(['#SBATCH %s' % arg for arg in job_extra])
-        header_lines.append('')
-        header_lines.extend([arg for arg in env_extra])
 
         #Declare class attribute that shall be overriden
         self.job_header = '\n'.join(header_lines)
 
         logger.debug("Job script: \n %s" % self.job_script())
+
 
 def slurm_format_bytes_ceil(n):
     """ Format bytes as text

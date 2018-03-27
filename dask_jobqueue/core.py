@@ -42,6 +42,8 @@ class JobQueueCluster(Cluster):
         Dask worker local directory for file spilling.
     extra : str
         Additional arguments to pass to `dask-worker`
+    env_extra : list
+        Other commands to add to script before launching worker.
     kwargs : dict
         Additional keyword arguments to pass to `LocalCluster`
 
@@ -63,6 +65,8 @@ class JobQueueCluster(Cluster):
 
 %(job_header)s
 
+%(env_header)s
+
 %(worker_command)s
 """.lstrip()
 
@@ -79,6 +83,7 @@ class JobQueueCluster(Cluster):
                  death_timeout=60,
                  local_directory=None,
                  extra='',
+                 env_extra=[],
                  **kwargs
                  ):
         """
@@ -108,6 +113,8 @@ class JobQueueCluster(Cluster):
         self.n = 0
         self._adaptive = None
 
+        self._env_header = '\n'.join(env_extra)
+
         #dask-worker command line build
         self._command_template = os.path.join(dirname, 'dask-worker %s' % self.scheduler.address)
         if threads is not None:
@@ -129,6 +136,7 @@ class JobQueueCluster(Cluster):
     def job_script(self):
         self.n += 1
         return self._script_template % {'job_header': self.job_header,
+                                        'env_header': self._env_header,
                                         'worker_command': self._command_template % {'n': self.n}
                                         }
 
