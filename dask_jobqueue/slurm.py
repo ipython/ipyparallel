@@ -1,18 +1,15 @@
 import logging
 import os
-import socket
 import sys
 
-from distributed import LocalCluster
-from distributed.utils import get_ip_interface
-
-from .core import JobQueueCluster
+from .core import JobQueueCluster, docstrings
 
 logger = logging.getLogger(__name__)
 
 dirname = os.path.dirname(sys.executable)
 
 
+@docstrings.with_indent(4)
 class SLURMCluster(JobQueueCluster):
     """ Launch Dask on a SLURM cluster
 
@@ -30,32 +27,28 @@ class SLURMCluster(JobQueueCluster):
 
     >>> cluster.adapt()
     """
+
+    #Override class variables
+    submit_command = 'sbatch'
+    cancel_command = 'scancel'
+
     def __init__(self,
-                 name='dask',
                  queue='',
                  project=None,
-                 threads_per_worker=4,
                  processes=8,
                  memory='7GB',
                  walltime='00:30:00',
-                 interface=None,
-                 death_timeout=60,
-                 extra='',
                  **kwargs):
         """ Initialize a SLURM Cluster
 
         Parameters
         ----------
-        name : str
-            Name of worker jobs. Passed to `#SBATCH -J` option.
         queue : str
             Destination queue for each worker job.
             Passed to `#SBATCH -p` option.
         project : str
             Accounting string associated with each worker job. Passed to
             `#SBATCH -A` option.
-        threads_per_worker : int
-            Number of threads per process.
         processes : int
             Number of processes per node.
         memory : str
@@ -63,18 +56,12 @@ class SLURMCluster(JobQueueCluster):
             like "7GB" that can be interpretted both by PBS and Dask.
         walltime : str
             Walltime for each worker job.
-        interface : str
-            Network interface like 'eth0' or 'ib0'.
-        death_timeout : float
-            Seconds to wait for a scheduler before closing workers
-        extra : str
-            Additional arguments to pass to `dask-worker`
-        kwargs : dict
-            Additional keyword arguments to pass to `LocalCluster`
+        %(JobQueueCluster.parameters)s
         """
-        self._template = """
-#!/bin/bash
 
+        super(SLURMCluster, self).__init__(processes=processes, **kwargs)
+
+        self._header_template = """
 #SBATCH -J %(name)s
 #SBATCH -n %(processes)d
 #SBATCH -p %(queue)s
@@ -86,43 +73,18 @@ class SLURMCluster(JobQueueCluster):
 export LANG="en_US.utf8"
 export LANGUAGE="en_US.utf8"
 export LC_ALL="en_US.utf8"
-
-%(base_path)s/dask-worker %(scheduler)s \
-    --nthreads %(threads_per_worker)d \
-    --nprocs %(processes)s \
-    --memory-limit %(memory)s \
-    --name %(name)s-%(n)d \
-    --death-timeout %(death_timeout)s \
-     %(extra)s
 """.lstrip()
 
-        if interface:
-            host = get_ip_interface(interface)
-            extra += ' --interface  %s ' % interface
-        else:
-            host = socket.gethostname()
-
-        project = project or os.environ.get('SLURM_ACCOUNT')
-        if not project:
-            raise ValueError("Must specify a project like `project='UCLB1234' "
-                             "or set SLURM_ACCOUNT environment variable")
-        self.cluster = LocalCluster(n_workers=0, ip=host, **kwargs)
         memory = memory.replace(' ', '')
-        self.config = {'name': name,
+        self.config = {'name': self.name,
                        'queue': queue,
                        'project': project,
-                       'threads_per_worker': threads_per_worker,
                        'processes': processes,
-                       'scheduler': self.scheduler.address,
                        'walltime': walltime,
-                       'base_path': dirname,
-                       'memory': memory,
-                       'death_timeout': death_timeout,
-                       'extra': extra}
-        self.jobs = dict()
-        self.n = 0
-        self._adaptive = None
-        self._submitcmd = 'sbatch'
-        self._cancelcmd = 'scancel'
+                       # Not used
+                       'memory': memory
+                       }
+
+        self.job_header = self._header_template % self.config
 
         logger.debug("Job script: \n %s" % self.job_script())

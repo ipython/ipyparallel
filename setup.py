@@ -10,4 +10,5 @@ setup(name='dask-jobqueue',
       license='BSD 3-Clause',
       packages=['dask_jobqueue'],
       long_description=(open('README.rst').read() if exists('README.rst') else ''),
+      install_requires=['docrep'],
       zip_safe=False)
