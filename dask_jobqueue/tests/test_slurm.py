@@ -7,9 +7,11 @@ from dask.distributed import Client
 from distributed.utils_test import loop  # noqa: F401
 from dask_jobqueue import SLURMCluster
 
+pytestmark = pytest.mark.env("pbs")
 
-def test_basic(loop):
-    with SLURMCluster(walltime='00:02:00', threads=2, memory='7GB',
+
+def test_basic(loop):  # noqa: F811
+    with SLURMCluster(walltime='00:02:00', threads_per_worker=2, memory='7GB',
                       loop=loop) as cluster:
         with Client(cluster) as client:
             workers = cluster.start_workers(2)
@@ -32,7 +34,7 @@ def test_basic(loop):
             assert not cluster.jobs
 
 
-def test_adaptive(loop):
+def test_adaptive(loop):  # noqa: F811
     with SLURMCluster(walltime='00:02:00', loop=loop) as cluster:
         cluster.adapt()
         with Client(cluster) as client:
@@ -42,7 +44,8 @@ def test_adaptive(loop):
             assert cluster.jobs
 
             start = time()
-            while len(client.scheduler_info()['workers']) != cluster.config['processes']:
+            while (len(client.scheduler_info()['workers']) !=
+                   cluster.config['processes']):
                 sleep(0.1)
                 assert time() < start + 10
 
@@ -59,7 +62,7 @@ def test_adaptive(loop):
                 assert time() < start + 10
 
 
-@pytest.mark.skipif('PBS_ACCOUNT' in os.environ, reason='PBS_ACCOUNT defined')
+@pytest.mark.skipif('PBS_ACCOUNT' in os.environ, reason='PBS_ACCOUNT defined')  # noqa: F811
 def test_errors(loop):
     with pytest.raises(ValueError) as info:
         SLURMCluster()

@@ -1,0 +1,44 @@
+version: "2"
+
+services:
+
+  master:
+    build:
+      context: .
+      dockerfile: Dockerfile-master
+    container_name: sge_master
+    hostname: sge_master
+    #network_mode: host
+    volumes:
+      - ../..:/dask-jobqueue
+    command: bash /run-master.sh
+
+  slave-one:
+    build:
+      context: .
+      dockerfile: Dockerfile-slave
+    container_name: slave_one
+    hostname: slave_one
+    #network_mode: host
+    volumes:
+      - ../..:/dask-jobqueue
+    command: bash /run-slave.sh
+    links:
+      - "master:sge_master"
+    depends_on:
+      - master
+
+  slave-two:
+    build:
+      context: .
+      dockerfile: Dockerfile-slave
+    container_name: slave_two
+    hostname: slave_two
+    #network_mode: host
+    volumes:
+      - ../..:/dask-jobqueue
+    command: bash /run-slave.sh
+    links:
+      - "master:sge_master"
+    depends_on:
+      - master
