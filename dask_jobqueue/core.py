@@ -5,6 +5,7 @@ import socket
 import os
 import sys
 import docrep
+import shlex
 
 from distributed.utils import tmpfile, ignoring, get_ip_interface, parse_bytes
 from distributed import LocalCluster
@@ -153,8 +154,8 @@ class JobQueueCluster(Cluster):
         workers = []
         for _ in range(n):
             with self.job_file() as fn:
-                out = self._call([self.submit_command, fn])
-                job = out.decode().split('.')[0]
+                out = self._call(shlex.split(self.submit_command) + [fn])
+                job = out.decode().split('.')[0].strip()
                 self.jobs[self.n] = job
                 workers.append(self.n)
         return workers
