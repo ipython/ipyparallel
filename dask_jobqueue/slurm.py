@@ -58,7 +58,7 @@ class SLURMCluster(JobQueueCluster):
 
         #Always ask for only one task
         header_lines = []
-        #PBS header build
+        #SLURM header build
         if self.name is not None:
             header_lines.append('#SBATCH -J %s' % self.name)
             header_lines.append('#SBATCH -e %s.err' % self.name)
@@ -90,15 +90,15 @@ def slurm_format_bytes_ceil(n):
     SLURM expects KiB, MiB or Gib, but names it KB, MB, GB
     SLURM does not handle Bytes, only starts at KB
 
-    >>> pbs_format_bytes_ceil(1)
+    >>> slurm_format_bytes_ceil(1)
     '1K'
-    >>> pbs_format_bytes_ceil(1234)
+    >>> slurm_format_bytes_ceil(1234)
     '2K'
-    >>> pbs_format_bytes_ceil(12345678)
+    >>> slurm_format_bytes_ceil(12345678)
     '13M'
-    >>> pbs_format_bytes_ceil(1234567890)
+    >>> slurm_format_bytes_ceil(1234567890)
     '2G'
-    >>> pbs_format_bytes_ceil(15000000000)
+    >>> slurm_format_bytes_ceil(15000000000)
     '14G'
     """
     if n >= (1024**3):
