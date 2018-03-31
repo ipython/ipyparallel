@@ -76,9 +76,9 @@ class JobQueueCluster(Cluster):
 
     def __init__(self,
                  name='dask-worker',
-                 threads=4,
-                 processes=6,
-                 memory='16GB',
+                 threads=2,
+                 processes=4,
+                 memory='8GB',
                  interface=None,
                  death_timeout=60,
                  local_directory=None,
