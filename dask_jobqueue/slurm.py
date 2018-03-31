@@ -23,6 +23,10 @@ class SLURMCluster(JobQueueCluster):
         `#SBATCH -A` option.
     walltime : str
         Walltime for each worker job.
+    job_cpu : int
+        Number of cpu to book in SLURM, if None, defaults to worker threads * processes
+    job_mem : str
+        Amount of memory to request in SLURM. If None, defaults to worker processes * memory
     job_extra : list
         List of other Slurm options, for example -j oe. Each option will be prepended with the #SBATCH prefix.
     %(JobQueueCluster.parameters)s
@@ -52,6 +56,8 @@ env_extra=['export LANG="en_US.utf8"', \
                  queue=None,
                  project=None,
                  walltime='00:30:00',
+                 job_cpu=None,
+                 job_mem=None,
                  job_extra=[],
                  **kwargs):
 
@@ -69,13 +75,20 @@ env_extra=['export LANG="en_US.utf8"', \
         if project is not None:
             header_lines.append('#SBATCH -A %s' % project)
 
-        #Init resources, always 1 task, and then number of cpu is processes * threads
+        #Init resources, always 1 task,
+        # and then number of cpu is processes * threads if not set
         header_lines.append('#SBATCH -n 1')
-        ncpus = self.worker_processes * self.worker_threads
+        ncpus = job_cpu
+        if ncpus is None:
+            ncpus = self.worker_processes * self.worker_threads
         header_lines.append('#SBATCH --cpus-per-task=%d' % ncpus)
-        if self.worker_memory is not None:
+        #Memory
+        total_memory = job_mem
+        if job_mem is None and self.worker_memory is not None:
             total_memory = slurm_format_bytes_ceil(self.worker_processes * self.worker_memory)
+        if total_memory is not None:
             header_lines.append('#SBATCH --mem=%s' % total_memory)
+
         if walltime is not None:
             header_lines.append('#SBATCH -t %s' % walltime)
         header_lines.extend(['#SBATCH %s' % arg for arg in job_extra])
