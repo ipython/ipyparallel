@@ -171,7 +171,10 @@ class HeartMonitor(LoggingConfigurable):
                     pass
         else:
             self.log.info("heartbeat::Heart %s failed :(", heart)
-        self.hearts.remove(heart)
+        try:
+            self.hearts.remove(heart)
+        except KeyError:
+            self.log.info("heartbeat:: %s has already been removed." % heart)
 
 
     @log_errors
