@@ -33,7 +33,7 @@ define(function(require) {
         if (!IPython.notebook_list) return;
         var base_url = IPython.notebook_list.base_url;
         // hide the deprecated clusters tab
-        $("#tabs").find('[href=#clusters]').hide();
+        $("#tabs").find('[href="#clusters"]').hide();
         $('head').append(
             $('<link>')
             .attr('rel', 'stylesheet')
