@@ -33,38 +33,3 @@ def test_basic(loop):  # noqa: F811
                 assert time() < start + 10
 
             assert not cluster.jobs
-
-
-def test_adaptive(loop):  # noqa: F811
-    with SGECluster(walltime='00:02:00', loop=loop) as cluster:
-        cluster.adapt()
-        with Client(cluster) as client:
-            future = client.submit(lambda x: x + 1, 10)
-            assert future.result(60) == 11
-
-            assert cluster.jobs
-
-            start = time()
-            while len(client.scheduler_info()['workers']) != cluster.config['processes']:
-                sleep(0.1)
-                assert time() < start + 10
-
-            del future
-
-            start = time()
-            while len(client.scheduler_info()['workers']) > 0:
-                sleep(0.100)
-                assert time() < start + 10
-
-            start = time()
-            while cluster.jobs:
-                sleep(0.100)
-                assert time() < start + 10
-
-
-@pytest.mark.skipif('SGE_ACCOUNT' in os.environ, reason='SGE_ACCOUNT defined')  # noqa: F811
-def test_errors(loop):
-    with pytest.raises(ValueError) as info:
-        SGECluster()
-
-    assert 'project=' in str(info.value)
