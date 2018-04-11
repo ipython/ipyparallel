@@ -71,19 +71,6 @@ class SGECluster(JobQueueCluster):
 
         super(SGECluster, self).__init__(**kwargs)
 
-#         self._header_template = """
-# #!/bin/bash
-
-# #$ -N %(name)s
-# #$ -q %(queue)s
-# #$ -P %(project)s
-# #$ -l %(resource_spec)s
-# #$ -l h_rt=%(walltime)s
-# #$ -cwd
-# #$ -j y
-
-# """.lstrip()
-
         header_lines = ['#!/bin/bash']
 
         if self.name is not None:
@@ -104,8 +91,7 @@ class SGECluster(JobQueueCluster):
                        'project': project,
                        'processes': self.worker_processes,
                        'walltime': walltime,
-                       'resource_spec': resource_spec,
-        }
+                       'resource_spec': resource_spec,}
         self.job_header = self._header_template % self.config
 
         logger.debug("Job script: \n %s" % self.job_script())

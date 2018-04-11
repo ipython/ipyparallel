@@ -1,4 +1,3 @@
-import os
 from time import time, sleep
 
 import pytest
