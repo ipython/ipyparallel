@@ -86,7 +86,7 @@ class SGECluster(JobQueueCluster):
         header_lines.extend(['#$ -cwd', '#$ -j y'])
         self._header_template = '\n'.join(header_lines)
 
-        self.config = {'name': getattr(self, 'name', 'default-name'),
+        self.config = {'name': self.name,
                        'queue': queue,
                        'project': project,
                        'processes': self.worker_processes,
