@@ -1,10 +1,6 @@
 import logging
 import os
-import socket
 import sys
-
-from distributed import LocalCluster
-from distributed.utils import get_ip_interface
 
 from .core import JobQueueCluster
 
@@ -68,8 +64,8 @@ class SGECluster(JobQueueCluster):
     def __init__(self,
                  queue=None,
                  project=None,
-                 resource_spec='h_vmem=36G',
-                 walltime='0:30:0',
+                 resource_spec=None,
+                 walltime='0:30:00',
                  interface=None,
                  **kwargs):
 
@@ -88,52 +84,28 @@ class SGECluster(JobQueueCluster):
 
 # """.lstrip()
 
-        # if interface:
-        #     host = get_ip_interface(interface)
-        #     extra += ' --interface  %s ' % interface
-        # else:
-        #     host = socket.gethostname()
-
-        project = project or os.environ.get('SGE_ACCOUNT')
-
         header_lines = ['#!/bin/bash']
 
-        # XXX: change the getattr when this is fixed in master
-        if getattr(self, 'name', None) is not None:
+        if self.name is not None:
             header_lines.append('#$ -N %(name)s')
         if queue is not None:
             header_lines.append('#$ -q %(queue)s')
         if project is not None:
             header_lines.append('#$ -P %(project)s')
         if resource_spec is not None:
-            # TODO clever default like in pbs???
             header_lines.append('#$ -l %(resource_spec)s')
         if walltime is not None:
             header_lines.append('#$ -l h_rt=%(walltime)s')
         header_lines.extend(['#$ -cwd', '#$ -j y'])
         self._header_template = '\n'.join(header_lines)
 
-        # if not project:
-        #     raise ValueError("Must specify a project like `project='UCLB1234' "
-        #                      "or set SGE_ACCOUNT environment variable")
-        # self.cluster = LocalCluster(n_workers=0, ip=host, **kwargs)
-        # memory = memory.replace(' ', '')
         self.config = {'name': getattr(self, 'name', 'default-name'),
                        'queue': queue,
                        'project': project,
-                       # 'threads_per_worker': threads_per_worker,
                        'processes': self.worker_processes,
                        'walltime': walltime,
-                       # 'scheduler': self.scheduler.address,
                        'resource_spec': resource_spec,
-                       # 'base_path': dirname,
-                       # 'memory': memory,
-                       # 'death_timeout': death_timeout,
-                       # 'extra': extra
         }
         self.job_header = self._header_template % self.config
-        # self.jobs = dict()
-        # self.n = 0
-        # self._adaptive = None
 
         logger.debug("Job script: \n %s" % self.job_script())
