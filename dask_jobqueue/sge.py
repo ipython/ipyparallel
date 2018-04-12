@@ -2,13 +2,14 @@ import logging
 import os
 import sys
 
-from .core import JobQueueCluster
+from .core import JobQueueCluster, docstrings
 
 logger = logging.getLogger(__name__)
 
 dirname = os.path.dirname(sys.executable)
 
 
+@docstrings.with_indent(4)
 class SGECluster(JobQueueCluster):
     """ Launch Dask on a SGE cluster
 
@@ -26,8 +27,6 @@ class SGECluster(JobQueueCluster):
         Walltime for each worker job.
     interface : str
         Network interface like 'eth0' or 'ib0'.
-    kwargs : dict
-        Additional keyword arguments to pass to `LocalCluster`
     %(JobQueueCluster.parameters)s
 
     Examples
