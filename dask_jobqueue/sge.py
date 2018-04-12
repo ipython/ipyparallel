@@ -14,20 +14,11 @@ class SGECluster(JobQueueCluster):
 
     Parameters
     ----------
-    name : str
-        Name of worker jobs. Passed to `$SGE -N` option.
     queue : str
         Destination queue for each worker job. Passed to `#$ -q` option.
     project : str
         Accounting string associated with each worker job. Passed to
         `#$ -A` option.
-    threads_per_worker : int
-        Number of threads per process.
-    processes : int
-        Number of processes per node.
-    memory : str
-        Bytes of memory that the worker can use. This should be a string
-        like "7GB" that can be interpretted both by SGE and Dask.
     resource_spec : str
         Request resources and specify job placement. Passed to `#$ -l`
         option.
@@ -35,17 +26,14 @@ class SGECluster(JobQueueCluster):
         Walltime for each worker job.
     interface : str
         Network interface like 'eth0' or 'ib0'.
-    death_timeout : float
-        Seconds to wait for a scheduler before closing workers
-    extra : str
-        Additional arguments to pass to `dask-worker`
     kwargs : dict
         Additional keyword arguments to pass to `LocalCluster`
+    %(JobQueueCluster.parameters)s
 
     Examples
     --------
     >>> from dask_jobqueue import SGECluster
-    >>> cluster = SGECluster(project='...')
+    >>> cluster = SGECluster(queue='regular')
     >>> cluster.start_workers(10)  # this may take a few seconds to launch
 
     >>> from dask.distributed import Client
@@ -66,7 +54,6 @@ class SGECluster(JobQueueCluster):
                  project=None,
                  resource_spec=None,
                  walltime='0:30:00',
-                 interface=None,
                  **kwargs):
 
         super(SGECluster, self).__init__(**kwargs)
