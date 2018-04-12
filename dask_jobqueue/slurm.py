@@ -33,7 +33,7 @@ class SLURMCluster(JobQueueCluster):
 
     Examples
     --------
-    >>> from pangeo import SLURMCluster
+    >>> from dask_jobqueue import SLURMCluster
     >>> cluster = SLURMCluster(processes=6, threads=4, memory="16GB", \
 env_extra=['export LANG="en_US.utf8"', \
 'export LANGUAGE="en_US.utf8"', 'export LC_ALL="en_US.utf8"'])
