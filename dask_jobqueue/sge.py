@@ -25,8 +25,6 @@ class SGECluster(JobQueueCluster):
         option.
     walltime : str
         Walltime for each worker job.
-    interface : str
-        Network interface like 'eth0' or 'ib0'.
     %(JobQueueCluster.parameters)s
 
     Examples
