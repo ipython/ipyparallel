@@ -1,14 +1,14 @@
-from contextlib import contextmanager
 import logging
-import subprocess
-import socket
 import os
+import socket
+import subprocess
 import sys
-import docrep
+from contextlib import contextmanager
 
-from distributed.utils import tmpfile, ignoring, get_ip_interface, parse_bytes
+import docrep
 from distributed import LocalCluster
 from distributed.deploy import Cluster
+from distributed.utils import get_ip_interface, ignoring, parse_bytes, tmpfile
 
 dirname = os.path.dirname(sys.executable)
 
@@ -50,9 +50,11 @@ class JobQueueCluster(Cluster):
     Attributes
     ----------
     submit_command: str
-        Abstract attribute for job scheduler submit command, should be overriden
+        Abstract attribute for job scheduler submit command,
+        should be overriden
     cancel_command: str
-        Abstract attribute for job scheduler cancel command, should be overriden
+        Abstract attribute for job scheduler cancel command,
+        should be overriden
 
     See Also
     --------
@@ -87,10 +89,12 @@ class JobQueueCluster(Cluster):
                  **kwargs
                  ):
         """
-        This initializer should be considered as Abstract, and never used directly.
+        This initializer should be considered as Abstract, and never used
+        directly.
         """
         if not self.cancel_command or not self.submit_command:
-            raise NotImplementedError('JobQueueCluster is an abstract class that should not be instanciated.')
+            raise NotImplementedError('JobQueueCluster is an abstract class '
+                                      'that should not be instanciated.')
 
         #This attribute should be overriden
         self.job_header = None
@@ -103,7 +107,8 @@ class JobQueueCluster(Cluster):
 
         self.cluster = LocalCluster(n_workers=0, ip=host, **kwargs)
 
-        #Keep information on process, threads and memory, for use in subclasses
+        # Keep information on process, threads and memory, for use in
+        # subclasses
         self.worker_memory = parse_bytes(memory)
         self.worker_processes = processes
         self.worker_threads = threads
@@ -115,8 +120,9 @@ class JobQueueCluster(Cluster):
 
         self._env_header = '\n'.join(env_extra)
 
-        #dask-worker command line build
-        self._command_template = os.path.join(dirname, 'dask-worker %s' % self.scheduler.address)
+        # dask-worker command line build
+        self._command_template = os.path.join(
+            dirname, 'dask-worker %s' % self.scheduler.address)
         if threads is not None:
             self._command_template += " --nthreads %d" % threads
         if processes is not None:
@@ -125,7 +131,7 @@ class JobQueueCluster(Cluster):
             self._command_template += " --memory-limit %s" % memory
         if name is not None:
             self._command_template += " --name %s" % name
-            self._command_template += "-%(n)d" #Keep %(n) to be replaced later.
+            self._command_template += "-%(n)d" # Keep %(n) to be replaced later
         if death_timeout is not None:
             self._command_template += " --death-timeout %s" % death_timeout
         if local_directory is not None:
@@ -135,10 +141,10 @@ class JobQueueCluster(Cluster):
 
     def job_script(self):
         self.n += 1
+        template = self._command_template % {'n': self.n}
         return self._script_template % {'job_header': self.job_header,
                                         'env_header': self._env_header,
-                                        'worker_command': self._command_template % {'n': self.n}
-                                        }
+                                        'worker_command': template}
 
     @contextmanager
     def job_file(self):

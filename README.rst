@@ -19,7 +19,7 @@ Example
 Adaptivity
 ----------
 
-This can also adapt the cluster size dynamicaly based on current load.
+This can also adapt the cluster size dynamically based on current load.
 This helps to scale up the cluster when necessary but scale it down and save
 resources when not actively computing.
 
