@@ -71,14 +71,14 @@ class SGECluster(JobQueueCluster):
         if walltime is not None:
             header_lines.append('#$ -l h_rt=%(walltime)s')
         header_lines.extend(['#$ -cwd', '#$ -j y'])
-        self._header_template = '\n'.join(header_lines)
+        header_template = '\n'.join(header_lines)
 
-        self.config = {'name': self.name,
-                       'queue': queue,
-                       'project': project,
-                       'processes': self.worker_processes,
-                       'walltime': walltime,
-                       'resource_spec': resource_spec,}
-        self.job_header = self._header_template % self.config
+        config = {'name': self.name,
+                  'queue': queue,
+                  'project': project,
+                  'processes': self.worker_processes,
+                  'walltime': walltime,
+                  'resource_spec': resource_spec,}
+        self.job_header = header_template % config
 
         logger.debug("Job script: \n %s" % self.job_script())
