@@ -4,8 +4,9 @@ import subprocess
 import socket
 import os
 import sys
-import docrep
 import shlex
+
+import docrep
 
 from distributed.utils import tmpfile, ignoring, get_ip_interface, parse_bytes
 from distributed import LocalCluster
