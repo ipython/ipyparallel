@@ -1,12 +1,8 @@
 import logging
-import os
-import sys
 
 from .core import JobQueueCluster, docstrings
 
 logger = logging.getLogger(__name__)
-
-dirname = os.path.dirname(sys.executable)
 
 
 @docstrings.with_indent(4)
