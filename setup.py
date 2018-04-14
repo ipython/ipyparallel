@@ -2,6 +2,7 @@
 
 from os.path import exists
 
+import versioneer
 from setuptools import setup
 
 with open('requirements.txt') as f:
@@ -14,7 +15,8 @@ else:
     long_description = ''
 
 setup(name='dask-jobqueue',
-      version='0.1.0',
+      version=versioneer.get_version(),
+      cmdclass=versioneer.get_cmdclass(),
       description='Deploy Dask on job queuing systems like PBS or SLURM',
       url='https://github.com/dask/dask-jobqueue',
       license='BSD 3-Clause',
