@@ -45,7 +45,7 @@ class PBSCluster(JobQueueCluster):
     It is a good practice to define local_directory to your PBS system scratch
     directory, and you should specify resource_spec according to the processes
     and threads asked:
-    
+
     >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS',
                              local_directory=os.getenv('TMPDIR', '/tmp'),
                              threads=4, processes=6, memory='16GB',
