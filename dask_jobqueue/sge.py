@@ -38,7 +38,7 @@ class SGECluster(JobQueueCluster):
     >>> cluster.adapt()
     """
 
-    #Override class variables
+    # Override class variables
     submit_command = 'qsub -terse'
     cancel_command = 'qdel'
 

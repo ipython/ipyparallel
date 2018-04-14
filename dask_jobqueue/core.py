@@ -1,9 +1,10 @@
 import logging
 import os
+import shlex
 import socket
 import subprocess
 import sys
-import shlex
+from contextlib import contextmanager
 
 import docrep
 from distributed import LocalCluster
@@ -72,7 +73,7 @@ class JobQueueCluster(Cluster):
 %(worker_command)s
 """.lstrip()
 
-    #Following class attributes should be overriden by extending classes.
+    # Following class attributes should be overriden by extending classes.
     submit_command = None
     cancel_command = None
 

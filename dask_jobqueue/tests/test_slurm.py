@@ -2,8 +2,8 @@ import os
 from time import sleep, time
 
 import pytest
-from dask.distributed import Client
 from dask_jobqueue import SLURMCluster
+from distributed import Client
 from distributed.utils_test import loop  # noqa: F401
 
 pytestmark = pytest.mark.env("pbs")

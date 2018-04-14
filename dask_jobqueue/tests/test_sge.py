@@ -1,11 +1,9 @@
-from time import time, sleep
+from time import sleep, time
 
 import pytest
-
-from dask.distributed import Client
-from distributed.utils_test import loop  # noqa: F401
-
 from dask_jobqueue import SGECluster
+from distributed import Client
+from distributed.utils_test import loop  # noqa: F401
 
 pytestmark = pytest.mark.env("sge")
 
