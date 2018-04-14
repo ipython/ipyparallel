@@ -1,6 +1,6 @@
 import logging
-import os
 import math
+import os
 
 from .core import JobQueueCluster, docstrings
 
@@ -24,7 +24,8 @@ class PBSCluster(JobQueueCluster):
     walltime : str
         Walltime for each worker job.
     job_extra : list
-        List of other PBS options, for example -j oe. Each option will be prepended with the #PBS prefix.
+        List of other PBS options, for example -j oe. Each option will be
+        prepended with the #PBS prefix.
     %(JobQueueCluster.parameters)s
 
     Examples
@@ -41,13 +42,17 @@ class PBSCluster(JobQueueCluster):
 
     >>> cluster.adapt()
 
-    It is a good practice to define local_directory to your PBS system scratch directory,
-    and you should specify resource_spec according to the processes and threads asked:
-    >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS',local_directory=os.getenv('TMPDIR', '/tmp'), \
-                             threads=4, processes=6, memory='16GB', resource_spec='select=1:ncpus=24:mem=100GB')
+    It is a good practice to define local_directory to your PBS system scratch
+    directory,
+    and you should specify resource_spec according to the processes and
+    threads asked:
+    >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS',
+                             local_directory=os.getenv('TMPDIR', '/tmp'),
+                             threads=4, processes=6, memory='16GB',
+                             resource_spec='select=1:ncpus=24:mem=100GB')
     """
 
-    #Override class variables
+    # Override class variables
     submit_command = 'qsub'
     cancel_command = 'qdel'
 
@@ -59,14 +64,14 @@ class PBSCluster(JobQueueCluster):
                  job_extra=[],
                  **kwargs):
 
-        #Instantiate args and parameters from parent abstract class
+        # Instantiate args and parameters from parent abstract class
         super(PBSCluster, self).__init__(**kwargs)
 
-        #Try to find a project name from environment variable
+        # Try to find a project name from environment variable
         project = project or os.environ.get('PBS_ACCOUNT')
 
         header_lines = []
-        #PBS header build
+        # PBS header build
         if self.name is not None:
             header_lines.append('#PBS -N %s' % self.name)
         if queue is not None:
@@ -74,17 +79,19 @@ class PBSCluster(JobQueueCluster):
         if project is not None:
             header_lines.append('#PBS -A %s' % project)
         if resource_spec is None:
-            #Compute default resources specifications
+            # Compute default resources specifications
             ncpus = self.worker_processes * self.worker_threads
-            memory_string = pbs_format_bytes_ceil(self.worker_memory * self.worker_processes)
+            memory = self.worker_memory * self.worker_processes
+            memory_string = pbs_format_bytes_ceil(memory)
             resource_spec = "select=1:ncpus=%d:mem=%s" % (ncpus, memory_string)
-            logger.info("Resource specification for PBS not set, initializing it to %s" % resource_spec)
+            logger.info("Resource specification for PBS not set, "
+                        "initializing it to %s" % resource_spec)
         header_lines.append('#PBS -l %s' % resource_spec)
         if walltime is not None:
             header_lines.append('#PBS -l walltime=%s' % walltime)
         header_lines.extend(['#PBS %s' % arg for arg in job_extra])
 
-        #Declare class attribute that shall be overriden
+        # Declare class attribute that shall be overriden
         self.job_header = '\n'.join(header_lines)
 
         logger.debug("Job script: \n %s" % self.job_script())

@@ -1,7 +1,7 @@
 import logging
+import math
 import os
 import sys
-import math
 
 from .core import JobQueueCluster, docstrings
 
@@ -24,19 +24,23 @@ class SLURMCluster(JobQueueCluster):
     walltime : str
         Walltime for each worker job.
     job_cpu : int
-        Number of cpu to book in SLURM, if None, defaults to worker threads * processes
+        Number of cpu to book in SLURM, if None, defaults to worker
+        threads * processes
     job_mem : str
-        Amount of memory to request in SLURM. If None, defaults to worker processes * memory
+        Amount of memory to request in SLURM. If None, defaults to worker
+        processes * memory
     job_extra : list
-        List of other Slurm options, for example -j oe. Each option will be prepended with the #SBATCH prefix.
+        List of other Slurm options, for example -j oe. Each option will be
+        prepended with the #SBATCH prefix.
     %(JobQueueCluster.parameters)s
 
     Examples
     --------
     >>> from dask_jobqueue import SLURMCluster
-    >>> cluster = SLURMCluster(processes=6, threads=4, memory="16GB", \
-env_extra=['export LANG="en_US.utf8"', \
-'export LANGUAGE="en_US.utf8"', 'export LC_ALL="en_US.utf8"'])
+    >>> cluster = SLURMCluster(processes=6, threads=4, memory="16GB",
+                               env_extra=['export LANG="en_US.utf8"',
+                                          'export LANGUAGE="en_US.utf8"',
+                                          'export LC_ALL="en_US.utf8"'])
     >>> cluster.start_workers(10)  # this may take a few seconds to launch
 
     >>> from dask.distributed import Client
@@ -63,9 +67,9 @@ env_extra=['export LANG="en_US.utf8"', \
 
         super(SLURMCluster, self).__init__(**kwargs)
 
-        #Always ask for only one task
+        # Always ask for only one task
         header_lines = []
-        #SLURM header build
+        # SLURM header build
         if self.name is not None:
             header_lines.append('#SBATCH -J %s' % self.name)
             header_lines.append('#SBATCH -e %s.err' % self.name)
@@ -75,17 +79,18 @@ env_extra=['export LANG="en_US.utf8"', \
         if project is not None:
             header_lines.append('#SBATCH -A %s' % project)
 
-        #Init resources, always 1 task,
+        # Init resources, always 1 task,
         # and then number of cpu is processes * threads if not set
         header_lines.append('#SBATCH -n 1')
         ncpus = job_cpu
         if ncpus is None:
             ncpus = self.worker_processes * self.worker_threads
         header_lines.append('#SBATCH --cpus-per-task=%d' % ncpus)
-        #Memory
+        # Memory
         total_memory = job_mem
         if job_mem is None and self.worker_memory is not None:
-            total_memory = slurm_format_bytes_ceil(self.worker_processes * self.worker_memory)
+            memory = self.worker_processes * self.worker_memory
+            total_memory = slurm_format_bytes_ceil(memory)
         if total_memory is not None:
             header_lines.append('#SBATCH --mem=%s' % total_memory)
 
@@ -93,7 +98,7 @@ env_extra=['export LANG="en_US.utf8"', \
             header_lines.append('#SBATCH -t %s' % walltime)
         header_lines.extend(['#SBATCH %s' % arg for arg in job_extra])
 
-        #Declare class attribute that shall be overriden
+        # Declare class attribute that shall be overriden
         self.job_header = '\n'.join(header_lines)
 
         logger.debug("Job script: \n %s" % self.job_script())
