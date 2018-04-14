@@ -3,3 +3,5 @@ include README.rst
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
+include versioneer.py
+include dask_jobqueue/_version.py

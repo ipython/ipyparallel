@@ -2,9 +2,10 @@ import os
 from time import sleep, time
 
 import pytest
-from dask_jobqueue import PBSCluster
 from distributed import Client
 from distributed.utils_test import loop  # noqa: F401
+
+from dask_jobqueue import PBSCluster
 
 pytestmark = pytest.mark.env("pbs")
 
