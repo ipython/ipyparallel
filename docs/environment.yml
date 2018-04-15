@@ -1,0 +1,7 @@
+name: dask-jobqueue-docs
+channels:
+  - conda-forge
+dependencies:
+  - python=3.6
+  - distributed
+  - docrep
