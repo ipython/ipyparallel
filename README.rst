@@ -1,43 +1,32 @@
 Deploy Dask on Job Queueing systems
 ===================================
 
-This helps to deploy Dask on batch-style job schedulers like PBS and SLURM.
+.. image:: https://travis-ci.org/dask/dask-jobqueue.svg?branch=master
+    :target: https://travis-ci.org/dask/dask-jobqueue
 
-Example
+.. image:: https://readthedocs.org/projects/dask-jobqueue/badge/?version=latest
+:target: http://dask-jobqueue.readthedocs.io/en/latest/?badge=latest
+:alt: Documentation Status
+
+|Build Status| |Doc Status| |Gitter| |Version Status|
+
+Easy deployment of Dask Distributed on job queuing systems such as PBS, Slurm,
+or SGE.  See documentation_ for more information.
+
+
+LICENSE
 -------
 
-.. code-block:: python
+New BSD. See `License File <https://github.com/dask/dask-jobqueue/blob/master/LICENSE.txt>`__.
 
-   from dask_jobqueue import PBSCluster
-
-   cluster = PBSCluster(processes=6, threads=4, memory="16GB")
-   cluster.start_workers(10)
-
-   from dask.distributed import Client
-   client = Client(cluster)
-
-Adaptivity
-----------
-
-This can also adapt the cluster size dynamically based on current load.
-This helps to scale up the cluster when necessary but scale it down and save
-resources when not actively computing.
-
-.. code-block:: python
-
-   cluster.adapt()
-
-
-History
--------
-
-This package came out of the `Pangeo <https://pangeo-data.github.io/>`_
-collaboration and was copy-pasted from a live repository at
-`this commit <https://github.com/pangeo-data/pangeo/commit/28f86b9c836bd622daa14d5c9b48ab73bbed4c73>`_.
-Unfortunately, development history was not preserved.
-
-Original developers include the following:
-
--  `Jim Edwards <https://github.com/jedwards4b>`_
--  `Joe Hamman <https://github.com/jhamman>`_
--  `Matthew Rocklin <https://github.com/mrocklin>`_
+.. _documentation: http://dask-jobqueue.readthedocs.io/en/latest
+.. |Build Status| image:: https://travis-ci.org/dask/dask-jobqueue.svg?branch=master
+   :target: https://travis-ci.org/dask/dask-jobqueue
+.. |Doc Status| image:: https://readthedocs.org/projects/dask-jobqueue/badge/?version=latest
+   :target: http://dask-jobqueue.readthedocs.io/en/latest
+   :alt: Documentation Status
+.. |Gitter| image:: https://badges.gitter.im/Join%20Chat.svg
+   :alt: Join the chat at https://gitter.im/dask/dask
+   :target: https://gitter.im/dask/dask?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
+.. |Version Status| image:: https://img.shields.io/pypi/v/dask-jobqueue.svg
+   :target: https://pypi.python.org/pypi/dask-jobqueue/

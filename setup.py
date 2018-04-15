@@ -17,7 +17,8 @@ else:
 setup(name='dask-jobqueue',
       version=versioneer.get_version(),
       cmdclass=versioneer.get_cmdclass(),
-      description='Deploy Dask on job queuing systems like PBS or SLURM',
+      description='Easy deployment of Dask Distributed on job queuing systems '
+                  'such as PBS, Slurm, or SGE.*',
       url='https://github.com/dask/dask-jobqueue',
       license='BSD 3-Clause',
       packages=['dask_jobqueue'],
