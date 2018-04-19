@@ -10,9 +10,8 @@ logger = logging.getLogger(__name__)
 dirname = os.path.dirname(sys.executable)
 
 
-@docstrings.with_indent(4)
 class SLURMCluster(JobQueueCluster):
-    """ Launch Dask on a SLURM cluster
+    __doc__ = docstrings.with_indents(""" Launch Dask on a SLURM cluster
 
     Parameters
     ----------
@@ -50,7 +49,7 @@ class SLURMCluster(JobQueueCluster):
     kill workers based on load.
 
     >>> cluster.adapt()
-    """
+    """, 4)
 
     #Override class variables
     submit_command = 'sbatch'
