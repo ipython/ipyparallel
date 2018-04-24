@@ -74,3 +74,6 @@ class SGECluster(JobQueueCluster):
         self.job_header = header_template % config
 
         logger.debug("Job script: \n %s" % self.job_script())
+
+    def _job_id_from_submit_output(self, out):
+        return out.strip()

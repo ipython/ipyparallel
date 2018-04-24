@@ -161,7 +161,7 @@ class JobQueueCluster(Cluster):
         for _ in range(n):
             with self.job_file() as fn:
                 out = self._call(shlex.split(self.submit_command) + [fn])
-                job = out.decode().split('.')[0].strip()
+                job = self._job_id_from_submit_output(out.decode())
                 self.jobs[self.n] = job
                 workers.append(self.n)
         return workers
@@ -236,3 +236,9 @@ class JobQueueCluster(Cluster):
     def __exit__(self, type, value, traceback):
         self.stop_workers(self.jobs)
         self.cluster.__exit__(type, value, traceback)
+
+    def _job_id_from_submit_output(self, out):
+        raise NotImplementedError('_job_id_from_submit_output must be '
+                                  'implemented when JobQueueCluster is '
+                                  'inherited. It should convert the stdout '
+                                  'from submit_command to the job id')

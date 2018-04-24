@@ -52,7 +52,7 @@ class SLURMCluster(JobQueueCluster):
     """, 4)
 
     #Override class variables
-    submit_command = 'sbatch'
+    submit_command = 'sbatch --parsable'
     cancel_command = 'scancel'
 
     def __init__(self,
@@ -101,6 +101,9 @@ class SLURMCluster(JobQueueCluster):
         self.job_header = '\n'.join(header_lines)
 
         logger.debug("Job script: \n %s" % self.job_script())
+
+    def _job_id_from_submit_output(self, out):
+        return out.split(';')[0].strip()
 
 
 def slurm_format_bytes_ceil(n):
