@@ -1,6 +1,4 @@
 # flake8: noqa
-from __future__ import absolute_import, division, print_function
-
 from .core import JobQueueCluster
 from .pbs import PBSCluster
 from .slurm import SLURMCluster

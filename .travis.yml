@@ -17,27 +17,28 @@ matrix:
       env:
         - OS=ubuntu-14.04
         - JOBQUEUE=sge
+    - python: "2.7"
+      env:
+        - OS=ubuntu-14.04
+        # JOBQUEUE=none is for tests that do not need a cluster to run
+        - JOBQUEUE=none
+    - python: "3.6"
+      env:
+        - OS=ubuntu-14.04
+        # JOBQUEUE=none is for tests that do not need a cluster to run
+        - JOBQUEUE=none
 env:
   global:
     - DOCKER_COMPOSE_VERSION=1.6.0
 
 before_install:
   - pwd
-  - docker version
-  - docker-compose version
-  # Install miniconda
-  - ./ci/conda_setup.sh
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - conda install --yes -c conda-forge python=$TRAVIS_PYTHON_VERSION dask distributed flake8
-  # Start jobqueue
+  # Init jobqueue environment: load init and test methods
   - source ci/${JOBQUEUE}.sh
   - jobqueue_before_install
 install:
-  - which python
-  - pip install --no-deps -e .
   - jobqueue_install
 script:
-  - flake8 -j auto dask_jobqueue
   - jobqueue_script
 after_success:
   - jobqueue_after_success
