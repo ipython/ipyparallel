@@ -27,6 +27,10 @@ matrix:
         - OS=ubuntu-14.04
         # JOBQUEUE=none is for tests that do not need a cluster to run
         - JOBQUEUE=none
+    - python: "3.6"
+      env:
+        - OS=ubuntu-14.04
+        - JOBQUEUE=pbs
 env:
   global:
     - DOCKER_COMPOSE_VERSION=1.6.0
