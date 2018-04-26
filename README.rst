@@ -1,13 +1,6 @@
 Deploy Dask on Job Queueing systems
 ===================================
 
-.. image:: https://travis-ci.org/dask/dask-jobqueue.svg?branch=master
-    :target: https://travis-ci.org/dask/dask-jobqueue
-
-.. image:: https://readthedocs.org/projects/dask-jobqueue/badge/?version=latest
-:target: http://dask-jobqueue.readthedocs.io/en/latest/?badge=latest
-:alt: Documentation Status
-
 |Build Status| |Doc Status| |Gitter| |Version Status|
 
 Easy deployment of Dask Distributed on job queuing systems such as PBS, Slurm,
