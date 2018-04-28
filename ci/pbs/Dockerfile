@@ -33,6 +33,8 @@ ENV LANG en_US.UTF-8
 ENV LC_ALL en_US.UTF-8
 
 RUN conda install --yes -c conda-forge python=3.6 dask distributed flake8 pytest docrep
+# Take the latest version of distributed due to test failure otherwise (see #47 comment by mrocklin)
+RUN pip install --no-cache-dir git+https://github.com/dask/distributed.git --upgrade
 # Copy entrypoint
 COPY ./*.sh /
 RUN chmod a+x ./*.sh
