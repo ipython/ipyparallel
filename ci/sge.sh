@@ -23,7 +23,7 @@ function jobqueue_script {
     docker exec -it sge_master /bin/bash -c "cd /dask-jobqueue; py.test dask_jobqueue --verbose -E sge"
 }
 
-function jobqueue_after_success {
+function jobqueue_after_script {
     docker exec -it sge_master bash -c 'cat /tmp/sge*'
     docker exec -it slave_one bash -c 'cat /tmp/exec*'
     docker exec -it slave_two bash -c 'cat /tmp/exec*'

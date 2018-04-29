@@ -44,8 +44,8 @@ install:
   - jobqueue_install
 script:
   - jobqueue_script
-after_success:
-  - jobqueue_after_success
+after_script:
+  - jobqueue_after_script
 
   # TODO
   # - pip install --no-cache-dir coveralls

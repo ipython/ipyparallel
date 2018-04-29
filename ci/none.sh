@@ -19,6 +19,6 @@ function jobqueue_script {
   py.test --verbose
 }
 
-function jobqueue_after_success {
-    echo "Hurrah"
+function jobqueue_after_script {
+    echo "Done."
 }

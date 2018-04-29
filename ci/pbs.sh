@@ -30,7 +30,7 @@ function jobqueue_script {
     docker exec -it -u pbsuser pbs_master /bin/bash -c "cd /dask-jobqueue; py.test dask_jobqueue --verbose -E pbs"
 }
 
-function jobqueue_after_success {
+function jobqueue_after_script {
     docker exec -it -u pbsuser pbs_master qstat
     docker exec -it pbs_master bash -c 'cat /var/spool/pbs/sched_logs/*'
     docker exec -it pbs_slave_1 bash -c 'cat /var/spool/pbs/mom_logs/*'
