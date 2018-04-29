@@ -33,6 +33,8 @@ function jobqueue_script {
 function jobqueue_after_script {
     docker exec -it -u pbsuser pbs_master qstat
     docker exec -it pbs_master bash -c 'cat /var/spool/pbs/sched_logs/*'
+    docker exec -it pbs_master bash -c 'cat /var/spool/pbs/server_logs/*'
+    docker exec -it pbs_master bash -c 'cat /var/spool/pbs/server_priv/accounting/*'
     docker exec -it pbs_slave_1 bash -c 'cat /var/spool/pbs/mom_logs/*'
     docker exec -it pbs_slave_1 bash -c 'cat /var/spool/pbs/spool/*'
     docker exec -it pbs_slave_2 bash -c 'cat /var/spool/pbs/mom_logs/*'
