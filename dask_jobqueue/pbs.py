@@ -4,6 +4,8 @@ import logging
 import math
 import os
 
+import dask
+
 from .core import JobQueueCluster, docstrings
 
 logger = logging.getLogger(__name__)
@@ -58,11 +60,11 @@ class PBSCluster(JobQueueCluster):
     cancel_command = 'qdel'
 
     def __init__(self,
-                 queue=None,
-                 project=None,
-                 resource_spec=None,
-                 walltime='00:30:00',
-                 job_extra=[],
+                 queue=dask.config.get('jobqueue.queue'),
+                 project=dask.config.get('jobqueue.project'),
+                 resource_spec=dask.config.get('jobqueue.resource-spec'),
+                 walltime=dask.config.get('jobqueue.walltime'),
+                 job_extra=dask.config.get('jobqueue.pbs.job-extra'),
                  **kwargs):
 
         # Instantiate args and parameters from parent abstract class
