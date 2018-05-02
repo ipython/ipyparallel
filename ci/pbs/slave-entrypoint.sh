@@ -11,6 +11,11 @@ sed -i "s/PBS_START_SCHED=.*/PBS_START_SCHED=0/" $pbs_conf_file
 sed -i "s/PBS_START_COMM=.*/PBS_START_COMM=0/" $pbs_conf_file
 sed -i "s/PBS_START_MOM=.*/PBS_START_MOM=1/" $pbs_conf_file
 
+# Prevent PBS trying to use scp between host for stdout and stderr file of jobs
+# On standard PBS deployement, you would use a shared mount, or correctly configured passwordless scp
+echo "\$usecp *:/home/ /home/" >> $mom_conf_file
+echo "\$usecp *:/dask-jobqueue/ /tmp/" >> $mom_conf_file
+
 # start PBS Pro
 /etc/init.d/pbs start
 
