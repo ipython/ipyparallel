@@ -8,16 +8,10 @@ function jobqueue_before_install {
 
     # start pbs cluster
     cd ./ci/pbs
-    docker-compose up -d
-    while [ `docker exec -it -u pbsuser pbs_master pbsnodes -a | grep "Mom = pbs_slave" | wc -l` -ne 2 ]
-    do
-        echo "Waiting for PBS slave nodes to become available";
-        sleep 2
-    done
-    echo "PBS properly configured"
-    docker exec -it -u pbsuser pbs_master pbsnodes -a
+    ./start-pbs.sh
     cd -
 
+    docker exec -it -u pbsuser pbs_master pbsnodes -a
     docker ps -a
     docker images
 }
@@ -31,12 +25,16 @@ function jobqueue_script {
 }
 
 function jobqueue_after_script {
-    docker exec -it -u pbsuser pbs_master qstat
+    docker exec -it -u pbsuser pbs_master qstat -fx
     docker exec -it pbs_master bash -c 'cat /var/spool/pbs/sched_logs/*'
     docker exec -it pbs_master bash -c 'cat /var/spool/pbs/server_logs/*'
     docker exec -it pbs_master bash -c 'cat /var/spool/pbs/server_priv/accounting/*'
     docker exec -it pbs_slave_1 bash -c 'cat /var/spool/pbs/mom_logs/*'
     docker exec -it pbs_slave_1 bash -c 'cat /var/spool/pbs/spool/*'
+    docker exec -it pbs_slave_1 bash -c 'cat /tmp/*.e*'
+    docker exec -it pbs_slave_1 bash -c 'cat /tmp/*.o*'
     docker exec -it pbs_slave_2 bash -c 'cat /var/spool/pbs/mom_logs/*'
     docker exec -it pbs_slave_2 bash -c 'cat /var/spool/pbs/spool/*'
+    docker exec -it pbs_slave_2 bash -c 'cat /tmp/*.e*'
+    docker exec -it pbs_slave_2 bash -c 'cat /tmp/*.o*'
 }

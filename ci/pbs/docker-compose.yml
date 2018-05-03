@@ -17,7 +17,7 @@ services:
     volumes:
       - ../..:/dask-jobqueue
     entrypoint: "bash /slave-entrypoint.sh"
-    command: sleep 3600
+    command: bash /run-slave.sh
     links:
       - "master:pbs_master"
     environment:
@@ -32,7 +32,7 @@ services:
     volumes:
       - ../..:/dask-jobqueue
     entrypoint: "bash /slave-entrypoint.sh"
-    command: sleep 3600
+    command: bash /run-slave.sh
     links:
       - "master:pbs_master"
     environment:
