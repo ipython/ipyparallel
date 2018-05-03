@@ -89,10 +89,11 @@ class JobQueueCluster(Cluster):
                  env_extra=[],
                  **kwargs
                  ):
-        """
-        This initializer should be considered as Abstract, and never used
-        directly.
-        """
+        """ """
+        # """
+        # This initializer should be considered as Abstract, and never used
+        # directly.
+        # """
         if not self.cancel_command or not self.submit_command:
             raise NotImplementedError('JobQueueCluster is an abstract class '
                                       'that should not be instanciated.')
@@ -141,6 +142,7 @@ class JobQueueCluster(Cluster):
             self._command_template += extra
 
     def job_script(self):
+        """ Construct a job submission script """
         self.n += 1
         template = self._command_template % {'n': self.n}
         return self._script_template % {'job_header': self.job_header,
@@ -168,6 +170,7 @@ class JobQueueCluster(Cluster):
 
     @property
     def scheduler(self):
+        """ The scheduler of this cluster """
         return self.cluster.scheduler
 
     def _calls(self, cmds):
@@ -212,6 +215,7 @@ class JobQueueCluster(Cluster):
         return self._calls([cmd])[0]
 
     def stop_workers(self, workers):
+        """ Stop a list of workers"""
         if not workers:
             return
         workers = list(map(int, workers))
@@ -222,9 +226,11 @@ class JobQueueCluster(Cluster):
                 del self.jobs[w]
 
     def scale_up(self, n, **kwargs):
+        """ Brings total worker count up to ``n`` """
         return self.start_workers(n - len(self.jobs))
 
     def scale_down(self, workers):
+        ''' Close the workers with the given addresses '''
         if isinstance(workers, dict):
             names = {v['name'] for v in workers.values()}
             job_ids = {name.split('-')[-2] for name in names}
