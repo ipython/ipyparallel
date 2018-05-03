@@ -2,8 +2,8 @@
 Dask-Jobqueue
 =============
 
-*Easy deployment of Dask Distributed on job queuing systems such as
-PBS, Slurm, or SGE.*
+*Easy deployment of Dask Distributed on job queuing systems like
+PBS, Slurm, and SGE.*
 
 Motivation
 ----------
@@ -11,7 +11,7 @@ Motivation
 1. While ``dask.distributed`` offers a flexible distributed parallel computing
    Python, it is not always easy to deploy on systems that use job queuing
    systems. Dask-jobqueue provides a Pythonic interface for deploying and
-   managing dask clusters.
+   managing Dask clusters.
 2. In practice, deploying distributed requires customization, both for the
    machine(s) that it will deployed on and for the specific application it will
    be deployed for. Dask-jobqueue provides users with an intuitive interface for
@@ -30,6 +30,8 @@ Example
    from dask.distributed import Client
    client = Client(cluster)
 
+See :doc:`Examples <examples>` for more real-world examples.
+
 
 Adaptivity
 ----------
@@ -40,39 +42,67 @@ resources when not actively computing.
 
 .. code-block:: python
 
-   cluster.adapt()
-
-
-History
--------
-
-This package came out of the `Pangeo <https://pangeo-data.github.io/>`_
-collaboration and was copy-pasted from a live repository at
-`this commit <https://github.com/pangeo-data/pangeo/commit/28f86b9c836bd622daa14d5c9b48ab73bbed4c73>`_.
-Unfortunately, development history was not preserved.
-
-Original developers include the following:
-
--  `Jim Edwards <https://github.com/jedwards4b>`_
--  `Joe Hamman <https://github.com/jhamman>`_
--  `Matthew Rocklin <https://github.com/mrocklin>`_
-
-**Getting Started**
-
-* :doc:`install`
-* :doc:`examples`
+   cluster.adapt(minimum=1, maximum=100)
 
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: Getting Started
 
    install.rst
    examples.rst
-
-.. toctree::
-   :maxdepth: 2
-   :hidden:
-   :caption: Contents:
-
+   history.rst
    api.rst
+
+How this works
+--------------
+
+This creates a Dask Scheduler in the Python process where the cluster object
+is instantiated:
+
+.. code-block:: python
+
+   cluster = PBSCluster(processes=18,
+                        threads=4,
+                        memory="6GB",
+                        project='P48500028',
+                        queue='premium',
+                        resource_spec='select=1:ncpus=36:mem=109G',
+                        walltime='02:00:00')  # <-- scheduler started here
+
+When you ask for more workers, such as with the ``scale`` command
+
+.. code-block:: python
+
+   cluster.scale(10)
+
+The cluster generates a traditional job script and submits that an appropriate
+number of times to the job queue.  You can see the job script that it will
+generate as follows:
+
+.. code-block:: python
+
+   >>> print(cluster.job_script())
+
+.. code-block:: bash
+
+   #!/bin/bash
+
+   #PBS -N dask-worker
+   #PBS -q premium
+   #PBS -A P48500028
+   #PBS -l select=1:ncpus=36:mem=109G
+   #PBS -l walltime=02:00:00
+
+   /home/mrocklin/Software/anaconda/bin/dask-worker tcp://127.0.1.1:43745
+   --nthreads 4 --nprocs 18 --memory-limit 6GB --name dask-worker-3
+   --death-timeout 60
+
+Each of these jobs are sent to the job queue independently and, once that job
+starts, a dask-worker process will start up and connect back to the scheduler
+running within this process.
+
+If the job queue is busy then it's possible that the workers will take a while
+to get through or that not all of them arrive.  In practice we find that
+because dask-jobqueue submits many small jobs rather than a single large one
+workers are often able to start relatively quickly.  This will depend on the
+state of your cluster's job queue though.

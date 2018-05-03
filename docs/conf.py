@@ -187,3 +187,6 @@ intersphinx_mapping = {
     'distributed': ('https://distributed.readthedocs.io/en/stable/',
                     'https://distributed.readthedocs.io/en/stable/objects.inv')
 }
+
+def setup(app):
+    app.add_stylesheet("http://dask.pydata.org/en/latest/_static/style.css")
