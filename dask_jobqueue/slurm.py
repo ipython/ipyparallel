@@ -63,9 +63,9 @@ class SLURMCluster(JobQueueCluster):
                  queue=dask.config.get('jobqueue.queue'),
                  project=dask.config.get('jobqueue.project'),
                  walltime=dask.config.get('jobqueue.walltime'),
-                 job_cpu=dask.config.get('jobqueue.slurm.job_cpu'),
-                 job_mem=dask.config.get('jobqueue.slurm.job_mem'),
-                 job_extra=dask.config.get('jobqueue.slurm.job_extra'),
+                 job_cpu=dask.config.get('jobqueue.slurm.job-cpu'),
+                 job_mem=dask.config.get('jobqueue.slurm.job-mem'),
+                 job_extra=dask.config.get('jobqueue.slurm.job-extra'),
                  **kwargs):
 
         super(SLURMCluster, self).__init__(**kwargs)

@@ -85,7 +85,7 @@ class JobQueueCluster(Cluster):
                  memory=dask.config.get('jobqueue.memory'),
                  interface=dask.config.get('jobqueue.interface'),
                  death_timeout=dask.config.get('jobqueue.death-timeout'),
-                 local_directory=dask.config.get('jobqueue.local-direcory'),
+                 local_directory=dask.config.get('jobqueue.local-directory'),
                  extra=dask.config.get('jobqueue.extra'),
                  env_extra=dask.config.get('jobqueue.env-extra'),
                  **kwargs

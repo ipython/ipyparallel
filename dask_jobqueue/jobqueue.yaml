@@ -3,7 +3,7 @@ jobqueue:
   threads: 2
   processes: 4
   memory: 8GB
-  intervace: null
+  interface: null
   death-timeout: 60s
   local-directory: null
   extra: ""
@@ -23,4 +23,4 @@ jobqueue:
   slurm:
     job-cpu: null
     job-mem: null
-
+    job-extra: {}

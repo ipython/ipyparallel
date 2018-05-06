@@ -62,7 +62,7 @@ class PBSCluster(JobQueueCluster):
     def __init__(self,
                  queue=dask.config.get('jobqueue.queue'),
                  project=dask.config.get('jobqueue.project'),
-                 resource_spec=dask.config.get('jobqueue.resource-spec'),
+                 resource_spec=dask.config.get('jobqueue.pbs.resource-spec'),
                  walltime=dask.config.get('jobqueue.walltime'),
                  job_extra=dask.config.get('jobqueue.pbs.job-extra'),
                  **kwargs):
