@@ -7,14 +7,15 @@ from __future__ import print_function
 
 import collections
 from concurrent.futures import Future
-import os
+from getpass import getpass
 import json
+import os
+from pprint import pprint
+import sys
 from threading import Thread, Event, current_thread
 import time
 import types
 import warnings
-from getpass import getpass
-from pprint import pprint
 
 pjoin = os.path.join
 
@@ -657,13 +658,13 @@ class Client(HasTraits):
             self._connected = False
             tb = '\n'.join(content.get('traceback', []))
             raise Exception("Failed to connect! %s" % tb)
-        
+
         self._start_io_thread()
-    
+
     #--------------------------------------------------------------------------
     # handlers and callbacks for incoming messages
     #--------------------------------------------------------------------------
-    
+
     def _unwrap_exception(self, content):
         """unwrap exception, and remap engine_id to int."""
         e = error.unwrap_exception(content)
@@ -840,41 +841,64 @@ class Client(HasTraits):
 
     def _make_io_loop(self):
         """Make my IOLoop. Override with IOLoop.current to return"""
-        return IOLoop(make_current=False)
-    
+        if 'asyncio' in sys.modules:
+            # tornado 5 on asyncio requires creating a new asyncio loop
+            import asyncio
+            try:
+                asyncio.get_event_loop()
+            except RuntimeError:
+                # no asyncio loop, make one
+                # e.g.
+                asyncio.set_event_loop(asyncio.new_event_loop())
+        return IOLoop.current()
+
     def _stop_io_thread(self):
         """Stop my IO thread"""
         if self._io_loop:
             self._io_loop.add_callback(self._io_loop.stop)
         if self._io_thread and self._io_thread is not current_thread():
             self._io_thread.join()
-    
+
+    def _setup_streams(self):
+        self._query_stream = ZMQStream(self._query_socket)
+        self._query_stream.on_recv(self._dispatch_single_reply, copy=False)
+        self._control_stream = ZMQStream(self._control_socket)
+        self._control_stream.on_recv(self._dispatch_single_reply, copy=False)
+        self._mux_stream = ZMQStream(self._mux_socket)
+        self._mux_stream.on_recv(self._dispatch_reply, copy=False)
+        self._task_stream = ZMQStream(self._task_socket)
+        self._task_stream.on_recv(self._dispatch_reply, copy=False)
+        self._iopub_stream = ZMQStream(self._iopub_socket)
+        self._iopub_stream.on_recv(self._dispatch_iopub, copy=False)
+        self._notification_stream = ZMQStream(self._notification_socket)
+        self._notification_stream.on_recv(self._dispatch_notification, copy=False)
+
     def _start_io_thread(self):
         """Start IOLoop in a background thread."""
-        self._io_loop = self._make_io_loop()
-        self._query_stream = ZMQStream(self._query_socket, self._io_loop)
-        self._query_stream.on_recv(self._dispatch_single_reply, copy=False)
-        self._control_stream = ZMQStream(self._control_socket, self._io_loop)
-        self._control_stream.on_recv(self._dispatch_single_reply, copy=False)
-        self._mux_stream = ZMQStream(self._mux_socket, self._io_loop)
-        self._mux_stream.on_recv(self._dispatch_reply, copy=False)
-        self._task_stream = ZMQStream(self._task_socket, self._io_loop)
-        self._task_stream.on_recv(self._dispatch_reply, copy=False)
-        self._iopub_stream = ZMQStream(self._iopub_socket, self._io_loop)
-        self._iopub_stream.on_recv(self._dispatch_iopub, copy=False)
-        self._notification_stream = ZMQStream(self._notification_socket, self._io_loop)
-        self._notification_stream.on_recv(self._dispatch_notification, copy=False)
-        
-        self._io_thread = Thread(target=self._io_main)
+        evt = Event()
+        self._io_thread = Thread(target=self._io_main, args=(evt,))
         self._io_thread.daemon = True
         self._io_thread.start()
-    
-    def _io_main(self):
+        # wait for the IOLoop to start
+        for i in range(10):
+            if evt.wait(1):
+                return
+            if not self._io_thread.is_alive():
+                raise RuntimeError("IO Loop failed to start")
+        else:
+            raise RuntimeError("Start event was never set. Maybe a problem in the IO thread.")
+
+    def _io_main(self, start_evt=None):
         """main loop for background IO thread"""
-        self._io_loop.make_current()
+        self._io_loop = self._make_io_loop()
+        self._setup_streams()
+        # signal that start has finished
+        # so that the main thread knows that all our attributes are defined
+        if start_evt:
+            start_evt.set()
         self._io_loop.start()
         self._io_loop.close()
-    
+
     @unpack_message
     def _dispatch_single_reply(self, msg):
         """Dispatch single (non-execution) replies"""
@@ -882,7 +906,7 @@ class Client(HasTraits):
         future = self._futures.get(msg_id)
         if future is not None:
             future.set_result(msg)
-    
+
     @unpack_message
     def _dispatch_notification(self, msg):
         """Dispatch notification messages"""

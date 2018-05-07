@@ -110,9 +110,9 @@ class BaseParallelApplication(BaseIPythonApplication):
     cluster_id = Unicode('', config=True,
         help="""String id to add to runtime files, to prevent name collisions when
         using multiple clusters with a single profile simultaneously.
-        
+
         When set, files will be named like: 'ipcontroller-<cluster_id>-engine.json'
-        
+
         Since this is text inserted into filenames, typical recommendations apply:
         Simple character strings are ideal, and spaces are not recommended (but should
         generally work).
@@ -122,25 +122,25 @@ class BaseParallelApplication(BaseIPythonApplication):
         self.name = self.__class__.name
         if new:
             self.name += '-%s'%new
-    
+
     def _config_files_default(self):
         return ['ipcontroller_config.py', 'ipengine_config.py', 'ipcluster_config.py']
-    
+
     loop = Instance('tornado.ioloop.IOLoop')
     def _loop_default(self):
         from zmq.eventloop.ioloop import IOLoop
-        return IOLoop.instance()
+        return IOLoop.current()
 
     aliases = Dict(base_aliases)
     flags = Dict(base_flags)
-    
+
     @catch_config_error
     def initialize(self, argv=None):
         """initialize the app"""
         super(BaseParallelApplication, self).initialize(argv)
         self.to_work_dir()
         self.reinit_logging()
-        
+
     def to_work_dir(self):
         wd = self.work_dir
         if unicode_type(wd) != py3compat.getcwd():
