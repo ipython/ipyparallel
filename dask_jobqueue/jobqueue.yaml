@@ -4,7 +4,7 @@ jobqueue:
   processes: 4
   memory: 8GB
   interface: null
-  death-timeout: 60s
+  death-timeout: 60
   local-directory: null
   extra: ""
   env-extra: []
