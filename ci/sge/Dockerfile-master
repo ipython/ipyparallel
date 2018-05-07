@@ -12,7 +12,6 @@ ENV PATH /opt/anaconda/bin:$PATH
 RUN conda install -n root conda=4.4.11 && conda clean -tipy
 RUN conda install -c conda-forge dask distributed blas pytest mock ipython pip psutil && conda clean -tipy
 RUN pip install --no-cache-dir drmaa
-RUN pip install --no-cache-dir git+https://github.com/dask/distributed.git --upgrade
 
 COPY ./*.sh /
 COPY ./*.txt /
