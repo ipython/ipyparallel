@@ -1,0 +1,42 @@
+version: "2"
+
+services:
+
+  master:
+    build: .
+    container_name: pbs_master
+    hostname: pbs_master
+    volumes:
+      - ../..:/dask-jobqueue
+    command: bash /run-master.sh
+
+  slave_one:
+    build: .
+    container_name: pbs_slave_1
+    hostname: pbs_slave_1
+    volumes:
+      - ../..:/dask-jobqueue
+    entrypoint: "bash /slave-entrypoint.sh"
+    command: bash /run-slave.sh
+    links:
+      - "master:pbs_master"
+    environment:
+      - PBS_MASTER=pbs_master
+    depends_on:
+      - master
+
+  slave_two:
+    build: .
+    container_name: pbs_slave_2
+    hostname: pbs_slave_2
+    volumes:
+      - ../..:/dask-jobqueue
+    entrypoint: "bash /slave-entrypoint.sh"
+    command: bash /run-slave.sh
+    links:
+      - "master:pbs_master"
+    environment:
+      - PBS_MASTER=pbs_master
+    depends_on:
+      - master
+
