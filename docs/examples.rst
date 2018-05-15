@@ -15,7 +15,7 @@ PBS Deployments
 
    cluster = PBSCluster(queue='regular',
                         project='DaskOnPBS',
-                        local_directory=os.getenv('TMPDIR', '/tmp'),
+                        local_directory='$TMPDIR',
                         threads=4,
                         processes=6,
                         memory='16GB',
