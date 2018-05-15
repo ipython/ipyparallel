@@ -1,0 +1,81 @@
+version: "2.2"
+
+services:
+  mysql:
+    image: mysql:5.7
+    hostname: mysql
+    container_name: mysql
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: slurm_acct_db
+      MYSQL_USER: slurm
+      MYSQL_PASSWORD: password
+    volumes:
+      - var_lib_mysql:/var/lib/mysql
+
+  slurmdbd:
+    build: .
+    command: ["slurmdbd"]
+    container_name: slurmdbd
+    hostname: slurmdbd
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - var_log_slurm:/var/log/slurm
+    expose:
+      - "6819"
+    depends_on:
+      - mysql
+
+  slurmctld:
+    build: .
+    command: ["slurmctld"]
+    container_name: slurmctld
+    hostname: slurmctld
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm
+      - ../..:/dask-jobqueue
+    expose:
+      - "6817"
+    depends_on:
+      - "slurmdbd"
+
+  c1:
+    build: .
+    command: ["slurmd"]
+    hostname: c1
+    container_name: c1
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm
+    expose:
+      - "6818"
+    depends_on:
+      - "slurmctld"
+
+  c2:
+    build: .
+    command: ["slurmd"]
+    hostname: c2
+    container_name: c2
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm
+    expose:
+      - "6818"
+    depends_on:
+      - "slurmctld"
+
+volumes:
+  etc_munge:
+  etc_slurm:
+  slurm_jobdir:
+  var_lib_mysql:
+  var_log_slurm:

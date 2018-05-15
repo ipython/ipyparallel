@@ -31,6 +31,11 @@ matrix:
       env:
         - OS=ubuntu-14.04
         - JOBQUEUE=pbs
+    - python: "3.6"
+      env:
+        - OS=ubuntu-14.04
+        - JOBQUEUE=slurm
+
 env:
   global:
     - DOCKER_COMPOSE_VERSION=1.6.0
