@@ -8,8 +8,8 @@ PBS, Slurm, and SGE.*
 Motivation
 ----------
 
-1. While ``dask.distributed`` offers a flexible distributed parallel computing
-   Python, it is not always easy to deploy on systems that use job queuing
+1. While ``dask.distributed`` offers a flexible library for distributed computing
+   in Python, it is not always easy to deploy on systems that use job queuing
    systems. Dask-jobqueue provides a Pythonic interface for deploying and
    managing Dask clusters.
 2. In practice, deploying distributed requires customization, both for the
