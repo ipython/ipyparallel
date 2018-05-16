@@ -65,6 +65,6 @@ SLURM Deployment: Low-priority node usage
                            queue='savio2_bigmem',
                            env_extra=['export LANG="en_US.utf8"',
                                       'export LANGUAGE="en_US.utf8"',
-                                      'export LC_ALL="en_US.utf8"', 
-                                      'qos="savio_lowprio"'])
+                                      'export LC_ALL="en_US.utf8"'],
+                           job_extra=['--qos="savio_lowprio"'])
 
