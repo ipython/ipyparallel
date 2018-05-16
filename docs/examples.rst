@@ -66,6 +66,5 @@ SLURM Deployment: Low-priority node usage
                            env_extra=['export LANG="en_US.utf8"',
                                       'export LANGUAGE="en_US.utf8"',
                                       'export LC_ALL="en_US.utf8"', 
-                                      'qos="savio_lowprio"', 
-                                      'nodes="20"'])
+                                      'qos="savio_lowprio"'])
 
