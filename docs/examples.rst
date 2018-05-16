@@ -46,5 +46,5 @@ SLURM Deployments
                           threads=2,
                           memory="16GB",
                           project="woodshole",
-                          walltime="01:00",
+                          walltime="01:00:00",
                           queue="normal")
