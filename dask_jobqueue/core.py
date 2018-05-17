@@ -6,6 +6,7 @@ import subprocess
 import sys
 from contextlib import contextmanager
 
+import dask
 import docrep
 from distributed import LocalCluster
 from distributed.deploy import Cluster
@@ -78,15 +79,15 @@ class JobQueueCluster(Cluster):
     cancel_command = None
 
     def __init__(self,
-                 name='dask-worker',
-                 threads=2,
-                 processes=4,
-                 memory='8GB',
-                 interface=None,
-                 death_timeout=60,
-                 local_directory=None,
-                 extra='',
-                 env_extra=[],
+                 name=dask.config.get('jobqueue.name'),
+                 threads=dask.config.get('jobqueue.threads'),
+                 processes=dask.config.get('jobqueue.processes'),
+                 memory=dask.config.get('jobqueue.memory'),
+                 interface=dask.config.get('jobqueue.interface'),
+                 death_timeout=dask.config.get('jobqueue.death-timeout'),
+                 local_directory=dask.config.get('jobqueue.local-directory'),
+                 extra=dask.config.get('jobqueue.extra'),
+                 env_extra=dask.config.get('jobqueue.env-extra'),
                  **kwargs
                  ):
         """ """

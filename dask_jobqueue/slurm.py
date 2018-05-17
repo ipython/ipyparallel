@@ -5,6 +5,8 @@ import math
 import os
 import sys
 
+import dask
+
 from .core import JobQueueCluster, docstrings
 
 logger = logging.getLogger(__name__)
@@ -58,12 +60,12 @@ class SLURMCluster(JobQueueCluster):
     cancel_command = 'scancel'
 
     def __init__(self,
-                 queue=None,
-                 project=None,
-                 walltime='00:30:00',
-                 job_cpu=None,
-                 job_mem=None,
-                 job_extra=[],
+                 queue=dask.config.get('jobqueue.queue'),
+                 project=dask.config.get('jobqueue.project'),
+                 walltime=dask.config.get('jobqueue.walltime'),
+                 job_cpu=dask.config.get('jobqueue.slurm.job-cpu'),
+                 job_mem=dask.config.get('jobqueue.slurm.job-mem'),
+                 job_extra=dask.config.get('jobqueue.slurm.job-extra'),
                  **kwargs):
 
         super(SLURMCluster, self).__init__(**kwargs)

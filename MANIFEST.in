@@ -1,3 +1,6 @@
+recursive-include dask_jobqueue *.py
+recursive-include dask_jobqueue *.yaml
+
 include LICENSE.txt
 include README.rst
 

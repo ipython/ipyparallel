@@ -1,5 +1,7 @@
 import logging
 
+import dask
+
 from .core import JobQueueCluster, docstrings
 
 logger = logging.getLogger(__name__)
@@ -42,10 +44,10 @@ class SGECluster(JobQueueCluster):
     cancel_command = 'qdel'
 
     def __init__(self,
-                 queue=None,
-                 project=None,
-                 resource_spec=None,
-                 walltime='0:30:00',
+                 queue=dask.config.get('jobqueue.queue'),
+                 project=dask.config.get('jobqueue.project'),
+                 resource_spec=dask.config.get('jobqueue.sge.resource-spec'),
+                 walltime=dask.config.get('jobqueue.walltime'),
                  **kwargs):
 
         super(SGECluster, self).__init__(**kwargs)

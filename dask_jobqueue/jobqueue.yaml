@@ -1,0 +1,26 @@
+jobqueue:
+  name: dask-worker
+  threads: 2
+  processes: 4
+  memory: 8GB
+  interface: null
+  death-timeout: 60
+  local-directory: null
+  extra: ""
+  env-extra: []
+
+  queue: null
+  project: null
+  walltime: '00:30:00'
+
+  pbs:
+    resource-spec: null
+    job-extra: []
+
+  sge:
+    resource-spec: null
+
+  slurm:
+    job-cpu: null
+    job-mem: null
+    job-extra: {}
