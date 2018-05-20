@@ -108,7 +108,7 @@ class BaseLauncher(LoggingConfigurable):
     stop_data = Any()
 
     def _loop_default(self):
-        return ioloop.IOLoop.instance()
+        return ioloop.IOLoop.current()
 
     def __init__(self, work_dir=u'.', config=None, **kwargs):
         super(BaseLauncher, self).__init__(work_dir=work_dir, config=config, **kwargs)

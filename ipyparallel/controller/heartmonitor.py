@@ -17,7 +17,7 @@ from zmq.eventloop import ioloop, zmqstream
 
 from traitlets.config.configurable import LoggingConfigurable
 from ipython_genutils.py3compat import str_to_bytes
-from traitlets import Set, Instance, CFloat, Integer, Dict, Bool
+from traitlets import Set, Instance, Float, Integer, Dict, Bool
 
 from ipyparallel.util import log_errors
 
@@ -40,7 +40,7 @@ class Heart(object):
         # do not allow the device to share global Context.instance,
         # which is the default behavior in pyzmq > 2.1.10
         self.device.context_factory = zmq.Context
-        
+
         self.device.daemon=True
         self.device.connect_in(in_addr)
         self.device.connect_out(out_addr)
@@ -62,10 +62,10 @@ class HeartMonitor(LoggingConfigurable):
     pingstream: a PUB stream
     pongstream: an ROUTER stream
     period: the period of the heartbeat in milliseconds"""
-    
+
     debug = Bool(False, config=True,
         help="""Whether to include every heartbeat in debugging output.
-        
+
         Has to be set explicitly, because there will be *a lot* of output.
         """
     )
@@ -77,21 +77,21 @@ class HeartMonitor(LoggingConfigurable):
         help='Allowed consecutive missed pings from controller Hub to engine before unregistering.',
     )
 
-    pingstream=Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
-    pongstream=Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
+    pingstream = Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
+    pongstream = Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
     loop = Instance('tornado.ioloop.IOLoop')
     def _loop_default(self):
-        return ioloop.IOLoop.instance()
+        return ioloop.IOLoop.current()
 
     # not settable:
-    hearts=Set()
-    responses=Set()
-    on_probation=Dict()
-    last_ping=CFloat(0)
+    hearts = Set()
+    responses = Set()
+    on_probation = Dict()
+    last_ping = Float(0)
     _new_handlers = Set()
     _failure_handlers = Set()
-    lifetime = CFloat(0)
-    tic = CFloat(0)
+    lifetime = Float(0)
+    tic = Float(0)
 
     def __init__(self, **kwargs):
         super(HeartMonitor, self).__init__(**kwargs)

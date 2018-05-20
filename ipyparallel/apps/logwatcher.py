@@ -37,10 +37,10 @@ from traitlets import Int, Unicode, Instance, List
 class LogWatcher(LoggingConfigurable):
     """A simple class that receives messages on a SUB socket, as published
     by subclasses of `zmq.log.handlers.PUBHandler`, and logs them itself.
-    
+
     This can subscribe to multiple topics, but defaults to all topics.
     """
-    
+
     # configurables
     topics = List([''], config=True,
         help="The ZMQ topics to subscribe to. Default is to subscribe to all messages")
@@ -48,18 +48,18 @@ class LogWatcher(LoggingConfigurable):
         help="ZMQ url on which to listen for log messages")
     def _url_default(self):
         return 'tcp://%s:20202' % localhost()
-    
+
     # internals
     stream = Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
-    
+
     context = Instance(zmq.Context)
     def _context_default(self):
         return zmq.Context.instance()
-    
+
     loop = Instance('tornado.ioloop.IOLoop')
     def _loop_default(self):
-        return ioloop.IOLoop.instance()
-    
+        return ioloop.IOLoop.current()
+
     def __init__(self, **kwargs):
         super(LogWatcher, self).__init__(**kwargs)
         s = self.context.socket(zmq.SUB)
@@ -67,13 +67,13 @@ class LogWatcher(LoggingConfigurable):
         self.stream = zmqstream.ZMQStream(s, self.loop)
         self.subscribe()
         self.on_trait_change(self.subscribe, 'topics')
-    
+
     def start(self):
         self.stream.on_recv(self.log_message)
-    
+
     def stop(self):
         self.stream.stop_on_recv()
-    
+
     def subscribe(self):
         """Update our SUB socket's subscriptions."""
         self.stream.setsockopt(zmq.UNSUBSCRIBE, '')

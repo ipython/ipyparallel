@@ -22,7 +22,7 @@ class ClusterManager(LoggingConfigurable):
     loop = Instance('tornado.ioloop.IOLoop')
     def _loop_default(self):
         from zmq.eventloop.ioloop import IOLoop
-        return IOLoop.instance()
+        return IOLoop.current()
 
     def build_launchers(self, profile_dir):
         from ipyparallel.apps.ipclusterapp import IPClusterStart

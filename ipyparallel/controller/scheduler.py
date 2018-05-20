@@ -749,7 +749,7 @@ help="""select the task scheduler scheme  [default: Python LRU]
                     for mid in job.dependents:
                         if mid in self.graph:
                             self.graph[mid].remove(msg_id)
-                    
+
                     # abort the loop if we just filled up all of our engines.
                     # avoids an O(N) operation in situation of full queue,
                     # where graph update is triggered as soon as an engine becomes
@@ -757,17 +757,17 @@ help="""select the task scheduler scheme  [default: Python LRU]
                     # even though they can't run.
                     if not self.available_engines():
                         break
-            
+
             if using_queue and put_it_back:
                 # popped a job from the queue but it neither ran nor failed,
                 # so we need to put it back when we are done
                 # make sure to_restore preserves the same ordering
                 to_restore.append(job)
-        
+
         # put back any tasks we popped but didn't run
         if using_queue:
             self.queue.extendleft(to_restore)
-    
+
     #----------------------------------------------------------------------
     # methods to be overridden by subclasses
     #----------------------------------------------------------------------
@@ -780,12 +780,10 @@ help="""select the task scheduler scheme  [default: Python LRU]
         for lis in (self.targets, self.loads):
             lis.append(lis.pop(idx))
 
-
     def finish_job(self, idx):
         """Called after self.targets[idx] just finished a job.
         Override with subclasses."""
         self.loads[idx] -= 1
-
 
 
 def launch_scheduler(in_addr, out_addr, mon_addr, not_addr, reg_addr, config=None,
@@ -801,7 +799,7 @@ def launch_scheduler(in_addr, out_addr, mon_addr, not_addr, reg_addr, config=Non
     if in_thread:
         # use instance() to get the same Context/Loop as our parent
         ctx = zmq.Context.instance()
-        loop = ioloop.IOLoop.instance()
+        loop = ioloop.IOLoop.current()
     else:
         # in a process, don't use instance()
         # for safety with multiprocessing
@@ -822,10 +820,10 @@ def launch_scheduler(in_addr, out_addr, mon_addr, not_addr, reg_addr, config=Non
     nots = zmqstream.ZMQStream(ctx.socket(zmq.SUB),loop)
     nots.setsockopt(zmq.SUBSCRIBE, b'')
     nots.connect(not_addr)
-    
+
     querys = ZMQStream(ctx.socket(zmq.DEALER),loop)
     querys.connect(reg_addr)
-    
+
     # setup logging.
     if in_thread:
         log = Application.instance().log
