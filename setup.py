@@ -16,8 +16,8 @@ name = 'ipyparallel'
 import sys
 
 v = sys.version_info
-if v[:2] < (2,7) or (v[0] >= 3 and v[:2] < (3,3)):
-    error = "ERROR: %s requires Python version 2.7 or 3.3 or above." % name
+if v[:2] < (2, 7) or (v[0] >= 3 and v[:2] < (3, 4)):
+    error = "ERROR: %s requires Python version 2.7 or 3.4 or above." % name
     print(error, file=sys.stderr)
     sys.exit(1)
 
@@ -83,68 +83,60 @@ with open(pjoin(here, name, '_version.py')) as f:
 
 
 setup_args = dict(
-    name            = name,
-    version         = version_ns['__version__'],
-    packages        = packages,
-    package_data    = package_data,
-    description     = "Interactive Parallel Computing with IPython",
-    long_description= """Use multiple instances of IPython in parallel, interactively.
+    name=name,
+    version=version_ns["__version__"],
+    packages=packages,
+    package_data=package_data,
+    description="Interactive Parallel Computing with IPython",
+    long_description="""Use multiple instances of IPython in parallel, interactively.
     
     See https://ipyparallel.readthedocs.io for more info.
     """,
-    author          = 'IPython Development Team',
-    author_email    = 'ipython-dev@scipy.org',
-    url             = 'http://ipython.org',
-    license         = 'BSD',
-    platforms       = "Linux, Mac OS X, Windows",
-    keywords        = ['Interactive', 'Interpreter', 'Shell', 'Parallel'],
-    classifiers     = [
-        'Intended Audience :: Developers',
-        'Intended Audience :: System Administrators',
-        'Intended Audience :: Science/Research',
-        'License :: OSI Approved :: BSD License',
-        'Programming Language :: Python',
-        'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
-        'Programming Language :: Python :: 3.5',
+    author="IPython Development Team",
+    author_email="ipython-dev@scipy.org",
+    url="http://ipython.org",
+    license="BSD",
+    platforms="Linux, Mac OS X, Windows",
+    keywords=["Interactive", "Interpreter", "Shell", "Parallel"],
+    classifiers=[
+        "Intended Audience :: Developers",
+        "Intended Audience :: System Administrators",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: BSD License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3",
     ],
-    cmdclass        = {
-        'test': IPTestCommand,
-        'bdist_egg': bdist_egg if 'bdist_egg' in sys.argv else bdist_egg_disabled,
+    cmdclass={
+        "test": IPTestCommand,
+        "bdist_egg": bdist_egg if "bdist_egg" in sys.argv else bdist_egg_disabled,
     },
-    install_requires = [
-        'ipython_genutils',
-        'decorator',
-        'pyzmq>=13',
-        'traitlets>=4.3',
-        'ipython>=4',
-        'jupyter_client',
-        'ipykernel',
-        'tornado>=4',
-        'python-dateutil>=2.1',
+    install_requires=[
+        "ipython_genutils",
+        "decorator",
+        "pyzmq>=13",
+        "traitlets>=4.3",
+        "ipython>=4",
+        "jupyter_client",
+        "ipykernel",
+        "tornado>=4",
+        "python-dateutil>=2.1",
     ],
-    extras_require = {
-        ':python_version == "2.7"': ['futures'],
-        'nbext': ["notebook"],
-        'test': [
-            'pytest',
-            'pytest-cov',
-            'ipython[test]',
-            'testpath',
-            'mock',
-        ],
+    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*",
+    extras_require={
+        ':python_version == "2.7"': ["futures"],
+        "nbext": ["notebook"],
+        "test": ["pytest", "pytest-cov", "ipython[test]", "testpath", "mock"],
     },
-    entry_points = {
-        'console_scripts': [
-            'ipcluster = ipyparallel.apps.ipclusterapp:launch_new_instance',
-            'ipcontroller = ipyparallel.apps.ipcontrollerapp:launch_new_instance',
-            'ipengine = ipyparallel.apps.ipengineapp:launch_new_instance',
+    entry_points={
+        "console_scripts": [
+            "ipcluster = ipyparallel.apps.ipclusterapp:launch_new_instance",
+            "ipcontroller = ipyparallel.apps.ipcontrollerapp:launch_new_instance",
+            "ipengine = ipyparallel.apps.ipengineapp:launch_new_instance",
         ]
-    }
+    },
 )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     setup(**setup_args)
