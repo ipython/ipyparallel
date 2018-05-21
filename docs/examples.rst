@@ -48,3 +48,23 @@ SLURM Deployments
                           project="woodshole",
                           walltime="01:00:00",
                           queue="normal")
+
+
+
+SLURM Deployment: Low-priority node usage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+
+    from dask_jobqueue import SLURMCluster
+    cluster = SLURMCluster(processes=6, 
+                           threads=4, 
+                           memory="16GB", 
+                           project="co_laika", 
+                           queue='savio2_bigmem',
+                           env_extra=['export LANG="en_US.utf8"',
+                                      'export LANGUAGE="en_US.utf8"',
+                                      'export LC_ALL="en_US.utf8"'],
+                           job_extra=['--qos="savio_lowprio"'])
+
