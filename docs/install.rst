@@ -1,17 +1,25 @@
 Installing
 ==========
 
-You can install dask-jobqueue with ``pip``, or by installing from source.
+You can install dask-jobqueue with ``pip``, ``conda``, or by installing from source.
 
 Pip
 ---
 
 Pip can be used to install both dask-jobqueue and its dependencies (e.g. dask,
-distributed,  NumPy, Pandas, and so on that are necessary for different
+distributed,  NumPy, Pandas, etc., that are necessary for different
 workloads).::
 
    pip install "dask_jobqueue"    # Install everything from last released version
 
+Conda
+-----
+
+To install the latest version of dask-jobqueue from the
+`conda-forge <https://conda-forge.github.io/>`_ repository using
+`conda <https://www.anaconda.com/downloads>`_::
+
+    conda install dask-jobqueue -c conda-forge
 
 Install from Source
 -------------------
