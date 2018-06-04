@@ -45,8 +45,7 @@ can be used, called ``MoabCluster``:
                          project='gfdl_m',
                          memory='16G',
                          resource_spec='pmem=96G',
-                         job_extra=['-d /home/First.Last', '-M none'],
-                         death_timeout=600)
+                         job_extra=['-d /home/First.Last', '-M none'])
                         
 SGE Deployments
 ---------------
