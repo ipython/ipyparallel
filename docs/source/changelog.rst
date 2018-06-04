@@ -3,6 +3,16 @@
 Changes in IPython Parallel
 ===========================
 
+6.2.0
+-----
+
+- Drop support for Python 3.3. IPython parallel now requires Python 2.7 or >= 3.4.
+- Further fixes for compatibility with tornado 5 when run with asyncio (Python 3)
+- Fix for enabling clusters tab via nbextension
+- Multiple fixes for handling when engines stop unexpectedly
+- Installing IPython Parallel enables the Clusters tab extension by default,
+  without any additional commands.
+
 6.1.1
 -----
 
