@@ -38,6 +38,7 @@ can be used, called ``MoabCluster``:
 
 .. code-block:: python
 
+   import os
    from dask_jobqueue import MoabCluster
 
    cluster = MoabCluster(processes=6,
@@ -45,7 +46,8 @@ can be used, called ``MoabCluster``:
                          project='gfdl_m',
                          memory='16G',
                          resource_spec='pmem=96G',
-                         job_extra=['-d /home/First.Last', '-M none'])
+                         job_extra=['-d /home/First.Last', '-M none'],
+                         local_directory=os.getenv('TMPDIR', '/tmp'))
                         
 SGE Deployments
 ---------------

@@ -24,8 +24,12 @@ class MoabCluster(PBSCluster):
 
     Examples
     --------
+    >>> import os
     >>> from dask_jobqueue import MoabCluster
-    >>> cluster = MoabCluster(queue='regular', project='DaskOnMoab')
+    >>> cluster = MoabCluster(processes=6, threads=1, project='gfdl_m',
+                              memory='16G', resource_spec='96G',
+                              job_extra=['-d /home/First.Last', '-M none'],
+                              local_directory=os.getenv('TMPDIR', '/tmp'))
     >>> cluster.start_workers(10)  # this may take a few seconds to launch
 
     >>> from dask.distributed import Client
@@ -35,15 +39,6 @@ class MoabCluster(PBSCluster):
     kill workers based on load.
 
     >>> cluster.adapt()
-
-    It is a good practice to define local_directory to your Moab system scratch
-    directory, and you should specify resource_spec according to the processes
-    and threads asked:
-
-    >>> cluster = MoabCluster(queue='regular', project='DaskOnMoab',
-                              local_directory=os.getenv('TMPDIR', '/tmp'),
-                              threads=4, processes=6, memory='16GB',
-                              resource_spec='select=1:ncpus=24:mem=100GB')
     """, 4)
     submit_command = 'msub'
     cancel_command = 'canceljob'
