@@ -321,24 +321,24 @@ help="""select the task scheduler scheme  [default: Python LRU]
         # wait 5 seconds before cleaning up pending jobs, since the results might
         # still be incoming
         if self.pending[uid]:
-            self.loop.add_timeout(self.loop.time() + 5,
-                lambda : self.handle_stranded_tasks(uid),
+            self.loop.add_timeout(
+                self.loop.time() + 5,
+                lambda: self.handle_stranded_tasks(uid),
             )
         else:
             self.completed.pop(uid)
             self.failed.pop(uid)
 
-
     def handle_stranded_tasks(self, engine):
         """Deal with jobs resident in an engine that died."""
         lost = self.pending[engine]
-        for msg_id in lost.keys():
-            if msg_id not in self.pending[engine]:
+        for msg_id in list(lost.keys()):
+            if msg_id not in lost:
                 # prevent double-handling of messages
                 continue
 
             raw_msg = lost[msg_id].raw_msg
-            idents,msg = self.session.feed_identities(raw_msg, copy=False)
+            idents, msg = self.session.feed_identities(raw_msg, copy=False)
             parent = self.session.unpack(msg[1].bytes)
             idents = [engine, idents[0]]
 
