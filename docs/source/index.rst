@@ -18,9 +18,19 @@ or::
 
     conda install ipyparallel
 
-And if you want the IPython clusters tab extension in your Jupyter Notebook dashboard::
+As of IPython Parallel 6.2, this will additionally install and enable the IPython Clusters tab
+in the Jupyter Notebook dashboard.
+
+You can also enable/install the clusters tab yourself after the fact with:
 
     ipcluster nbextension enable
+
+Or the individual Jupyter commands:
+
+    jupyter serverextension install [--sys-prefix] --py ipyparallel
+    jupyter nbextension install [--sys-prefix] --py ipyparallel
+    jupyter nbextension enable [--sys-prefix] --py ipyparallel
+
 
 Contents
 --------

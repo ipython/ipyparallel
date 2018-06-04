@@ -10,6 +10,8 @@ Changes in IPython Parallel
 - Further fixes for compatibility with tornado 5 when run with asyncio (Python 3)
 - Fix for enabling clusters tab via nbextension
 - Multiple fixes for handling when engines stop unexpectedly
+- Installing IPython Parallel enables the Clusters tab extension by default,
+  without any additional commands.
 
 6.1.1
 -----
