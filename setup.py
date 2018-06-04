@@ -86,6 +86,10 @@ data_files = [
         'etc/jupyter/nbconfig/tree.d',
         [pjoin(here, 'etc', 'ipyparallel-nbextension.json')],
     ),
+    (
+        'share/jupyter/nbextensions/ipyparallel',
+        glob(pjoin(here, 'ipyparallel', 'nbextension', 'static', '*')),
+    ),
 ]
 
 version_ns = {}
