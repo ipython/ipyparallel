@@ -308,7 +308,7 @@ class AsyncResultTest(ClusterTestCase):
         ar.get(5)
         assert 4 in found
         assert len(found) > 1, "should have seen data multiple times, but got: %s" % found
-    
+
     def test_not_single_result(self):
         save_build = self.client._build_targets
         def single_engine(*a, **kw):
@@ -321,10 +321,10 @@ class AsyncResultTest(ClusterTestCase):
             ar = dv.apply_async(lambda : 5)
             self.assertEqual(ar.get(10), [5])
         self.client._build_targets = save_build
-    
+
     def test_owner_pop(self):
         self.minimum_engines(1)
-        
+
         view = self.client[-1]
         ar = view.apply_async(lambda : 1)
         ar.get()
@@ -332,7 +332,7 @@ class AsyncResultTest(ClusterTestCase):
         msg_id = ar.msg_ids[0]
         self.assertNotIn(msg_id, self.client.results)
         self.assertNotIn(msg_id, self.client.metadata)
-    
+
     def test_dir(self):
         """dir(AsyncResult)"""
         view = self.client[-1]
@@ -341,14 +341,19 @@ class AsyncResultTest(ClusterTestCase):
         d = dir(ar)
         self.assertIn('stdout', d)
         self.assertIn('get', d)
-    
+
     def test_wait_for_send(self):
         view = self.client[-1]
         view.track = True
-        data = os.urandom(10*1024*1024)
-        ar = view.apply_async(lambda x:x, data)
         with self.assertRaises(error.TimeoutError):
-            ar.wait_for_send(0)
+            # this test can fail if the send happens too quickly
+            # e.g. the IO thread takes control for too long,
+            # so run the test a few times
+            for i in range(3):
+                if i > 0:
+                    print("Retrying test_wait_for_send")
+                data = os.urandom(10*1024*1024)
+                ar = view.apply_async(lambda x: x, data)
+                ar.wait_for_send(0)
         ar.wait_for_send(10)
-    
 
