@@ -80,15 +80,15 @@ package_data = {'ipyparallel.nbextension': [pjoin('static', '*')]}
 data_files = [
     (
         'etc/jupyter/jupyter_notebook_config.d',
-        [pjoin(here, 'etc', 'ipyparallel-serverextension.json')],
+        [pjoin('etc', 'ipyparallel-serverextension.json')],
     ),
     (
         'etc/jupyter/nbconfig/tree.d',
-        [pjoin(here, 'etc', 'ipyparallel-nbextension.json')],
+        [pjoin('etc', 'ipyparallel-nbextension.json')],
     ),
     (
         'share/jupyter/nbextensions/ipyparallel',
-        glob(pjoin(here, 'ipyparallel', 'nbextension', 'static', '*')),
+        glob(pjoin('ipyparallel', 'nbextension', 'static', '*')),
     ),
 ]
 

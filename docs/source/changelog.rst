@@ -3,6 +3,11 @@
 Changes in IPython Parallel
 ===========================
 
+6.2.1
+-----
+
+- Workaround a setuptools issue preventing installation from sdist on Windows
+
 6.2.0
 -----
 
