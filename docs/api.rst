@@ -9,6 +9,7 @@ API
 .. autosummary::
    :toctree: generated/
 
+   MoabCluster
    PBSCluster
    SLURMCluster
    SGECluster

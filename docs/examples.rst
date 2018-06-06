@@ -30,6 +30,25 @@ PBS Deployments
                         walltime='02:00:00',
                         interface='ib0')
 
+Moab Deployments
+~~~~~~~~~~~~~~~~
+
+On systems which use the Moab Workload Manager, a subclass of ``PBSCluster``
+can be used, called ``MoabCluster``:
+
+.. code-block:: python
+
+   import os
+   from dask_jobqueue import MoabCluster
+
+   cluster = MoabCluster(processes=6,
+                         threads=1,
+                         project='gfdl_m',
+                         memory='16G',
+                         resource_spec='pmem=96G',
+                         job_extra=['-d /home/First.Last', '-M none'],
+                         local_directory=os.getenv('TMPDIR', '/tmp'))
+                        
 SGE Deployments
 ---------------
 
