@@ -1,26 +1,81 @@
 jobqueue:
-  name: dask-worker
-  threads: 2
-  processes: 4
-  memory: 8GB
-  interface: null
-  death-timeout: 60
-  local-directory: null
-  extra: ""
-  env-extra: []
-
-  queue: null
-  project: null
-  walltime: '00:30:00'
-
   pbs:
+    name: dask-worker
+
+    # Dask worker options
+    threads: 2
+    processes: 4
+    memory: 8GB
+    interface: null
+    death-timeout: 60
+    local-directory: null
+
+    # PBS resource manager options
+    queue: null
+    project: null
+    walltime: '00:30:00'
+    extra: ""
+    env-extra: []
     resource-spec: null
     job-extra: []
 
   sge:
+    name: dask-worker
+
+    # Dask worker options
+    threads: 2
+    processes: 4
+    memory: 8GB
+    interface: null
+    death-timeout: 60
+    local-directory: null
+
+    # SGE resource manager options
+    queue: null
+    project: null
+    walltime: '00:30:00'
+    extra: ""
+    env-extra: []
+
     resource-spec: null
 
   slurm:
+    name: dask-worker
+
+    # Dask worker options
+    threads: 2
+    processes: 4
+    memory: 8GB
+    interface: null
+    death-timeout: 60
+    local-directory: null
+
+    # SLURM resource manager options
+    queue: null
+    project: null
+    walltime: '00:30:00'
+    extra: ""
+    env-extra: []
     job-cpu: null
     job-mem: null
     job-extra: {}
+
+  moab:
+    name: dask-worker
+
+    # Dask worker options
+    threads: 2
+    processes: 4
+    memory: 8GB
+    interface: null
+    death-timeout: 60
+    local-directory: null
+
+    # PBS resource manager options
+    queue: null
+    project: null
+    walltime: '00:30:00'
+    extra: ""
+    env-extra: []
+    resource-spec: null
+    job-extra: []
