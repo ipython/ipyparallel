@@ -112,7 +112,7 @@ class JobQueueCluster(Cluster):
 
         # Keep information on process, threads and memory, for use in
         # subclasses
-        self.worker_memory = parse_bytes(memory)
+        self.worker_memory = parse_bytes(memory) if memory is not None else None
         self.worker_processes = processes
         self.worker_threads = threads
         self.name = name
