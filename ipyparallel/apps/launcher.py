@@ -300,23 +300,23 @@ class LocalProcessLauncher(BaseLauncher):
 
     def handle_stdout(self, fd, events):
         if WINDOWS:
-            line = self.stdout.recv()
+            line = self.stdout.recv().decode('utf8', 'replace')
         else:
-            line = self.process.stdout.readline()
+            line = self.process.stdout.readline().decode('utf8', 'replace')
         # a stopped process will be readable but return empty strings
         if line:
-            self.log.debug(line[:-1])
+            self.log.debug(line.rstrip())
         else:
             self.poll()
 
     def handle_stderr(self, fd, events):
         if WINDOWS:
-            line = self.stderr.recv()
+            line = self.stderr.recv().decode('utf8', 'replace')
         else:
-            line = self.process.stderr.readline()
+            line = self.process.stderr.readline().decode('utf8', 'replace')
         # a stopped process will be readable but return empty strings
         if line:
-            self.log.debug(line[:-1])
+            self.log.debug(line.rstrip())
         else:
             self.poll()
 
