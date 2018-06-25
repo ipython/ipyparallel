@@ -10,6 +10,7 @@ from joblib.parallel import ParallelBackendBase, AutoBatchingMixin
 class IPythonParallelBackend(AutoBatchingMixin, ParallelBackendBase):
 
     def __init__(self, view=None):
+        super(IPythonParallelBackend, self).__init__()
         if view is None:
             self._owner = True
             rc = ipp.Client()
