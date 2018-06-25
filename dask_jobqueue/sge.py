@@ -44,7 +44,7 @@ class SGECluster(JobQueueCluster):
     cancel_command = 'qdel'
     scheduler_name = 'sge'
 
-    def __init__(self, *args, queue=None, project=None, resource_spec=None, walltime=None, **kwargs):
+    def __init__(self, queue=None, project=None, resource_spec=None, walltime=None, **kwargs):
         if queue is None:
             queue = dask.config.get('jobqueue.%s.queue' % self.scheduler_name)
         if project is None:
@@ -54,7 +54,7 @@ class SGECluster(JobQueueCluster):
         if walltime is None:
             walltime = dask.config.get('jobqueue.%s.walltime' % self.scheduler_name)
 
-        super(SGECluster, self).__init__(*args, **kwargs)
+        super(SGECluster, self).__init__(**kwargs)
 
         header_lines = ['#!/bin/bash']
 

@@ -60,7 +60,7 @@ class PBSCluster(JobQueueCluster):
     cancel_command = 'qdel'
     scheduler_name = 'pbs'
 
-    def __init__(self, *args, queue=None, project=None, resource_spec=None, walltime=None, job_extra=None, **kwargs):
+    def __init__(self, queue=None, project=None, resource_spec=None, walltime=None, job_extra=None, **kwargs):
         if queue is None:
             queue = dask.config.get('jobqueue.%s.queue' % self.scheduler_name)
         if resource_spec is None:
@@ -72,7 +72,7 @@ class PBSCluster(JobQueueCluster):
         project = project or dask.config.get('jobqueue.%s.project' % self.scheduler_name) or os.environ.get('PBS_ACCOUNT')
 
         # Instantiate args and parameters from parent abstract class
-        super(PBSCluster, self).__init__(*args, **kwargs)
+        super(PBSCluster, self).__init__(**kwargs)
 
         header_lines = []
         # PBS header build

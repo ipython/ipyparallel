@@ -60,7 +60,7 @@ class SLURMCluster(JobQueueCluster):
     cancel_command = 'scancel'
     scheduler_name = 'slurm'
 
-    def __init__(self, *args, queue=None, project=None, walltime=None,
+    def __init__(self, queue=None, project=None, walltime=None,
             job_cpu=None, job_mem=None, job_extra=None, **kwargs):
         if queue is None:
             queue = dask.config.get('jobqueue.slurm.queue')
@@ -75,7 +75,7 @@ class SLURMCluster(JobQueueCluster):
         if job_extra is None:
             job_extra = dask.config.get('jobqueue.slurm.job-extra')
 
-        super(SLURMCluster, self).__init__(*args, **kwargs)
+        super(SLURMCluster, self).__init__(**kwargs)
 
         # Always ask for only one task
         header_lines = []
