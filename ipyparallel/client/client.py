@@ -850,7 +850,9 @@ class Client(HasTraits):
                 # no asyncio loop, make one
                 # e.g.
                 asyncio.set_event_loop(asyncio.new_event_loop())
-        return IOLoop.current()
+        loop = IOLoop()
+        loop.make_current()
+        return loop
 
     def _stop_io_thread(self):
         """Stop my IO thread"""
@@ -860,17 +862,17 @@ class Client(HasTraits):
             self._io_thread.join()
 
     def _setup_streams(self):
-        self._query_stream = ZMQStream(self._query_socket)
+        self._query_stream = ZMQStream(self._query_socket, self._io_loop)
         self._query_stream.on_recv(self._dispatch_single_reply, copy=False)
-        self._control_stream = ZMQStream(self._control_socket)
+        self._control_stream = ZMQStream(self._control_socket, self._io_loop)
         self._control_stream.on_recv(self._dispatch_single_reply, copy=False)
-        self._mux_stream = ZMQStream(self._mux_socket)
+        self._mux_stream = ZMQStream(self._mux_socket, self._io_loop)
         self._mux_stream.on_recv(self._dispatch_reply, copy=False)
-        self._task_stream = ZMQStream(self._task_socket)
+        self._task_stream = ZMQStream(self._task_socket, self._io_loop)
         self._task_stream.on_recv(self._dispatch_reply, copy=False)
-        self._iopub_stream = ZMQStream(self._iopub_socket)
+        self._iopub_stream = ZMQStream(self._iopub_socket, self._io_loop)
         self._iopub_stream.on_recv(self._dispatch_iopub, copy=False)
-        self._notification_stream = ZMQStream(self._notification_socket)
+        self._notification_stream = ZMQStream(self._notification_socket, self._io_loop)
         self._notification_stream.on_recv(self._dispatch_notification, copy=False)
 
     def _start_io_thread(self):
