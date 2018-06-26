@@ -2,16 +2,12 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import math
-import os
-import sys
 
 import dask
 
 from .core import JobQueueCluster, docstrings
 
 logger = logging.getLogger(__name__)
-
-dirname = os.path.dirname(sys.executable)
 
 
 class SLURMCluster(JobQueueCluster):

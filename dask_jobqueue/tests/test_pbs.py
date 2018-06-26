@@ -1,6 +1,7 @@
 from time import sleep, time
 
 import pytest
+import sys
 from distributed import Client
 from distributed.utils_test import loop  # noqa: F401
 
@@ -57,7 +58,7 @@ def test_job_script():
         assert '#PBS -q' not in job_script
         assert '#PBS -A' not in job_script
 
-        assert '/dask-worker tcp://' in job_script
+        assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
         assert '--nthreads 2 --nprocs 4 --memory-limit 7GB' in job_script
 
     with PBSCluster(queue='regular', project='DaskOnPBS', processes=4, threads=2, memory='7GB',
@@ -71,7 +72,7 @@ def test_job_script():
         assert '#PBS -l walltime=' in job_script
         assert '#PBS -A DaskOnPBS' in job_script
 
-        assert '/dask-worker tcp://' in job_script
+        assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
         assert '--nthreads 2 --nprocs 4 --memory-limit 7GB' in job_script
 
 
