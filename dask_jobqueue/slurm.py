@@ -54,15 +54,22 @@ class SLURMCluster(JobQueueCluster):
     #Override class variables
     submit_command = 'sbatch --parsable'
     cancel_command = 'scancel'
+    scheduler_name = 'slurm'
 
-    def __init__(self,
-                 queue=dask.config.get('jobqueue.queue'),
-                 project=dask.config.get('jobqueue.project'),
-                 walltime=dask.config.get('jobqueue.walltime'),
-                 job_cpu=dask.config.get('jobqueue.slurm.job-cpu'),
-                 job_mem=dask.config.get('jobqueue.slurm.job-mem'),
-                 job_extra=dask.config.get('jobqueue.slurm.job-extra'),
-                 **kwargs):
+    def __init__(self, queue=None, project=None, walltime=None,
+                 job_cpu=None, job_mem=None, job_extra=None, **kwargs):
+        if queue is None:
+            queue = dask.config.get('jobqueue.slurm.queue')
+        if project is None:
+            project = dask.config.get('jobqueue.slurm.project')
+        if walltime is None:
+            walltime = dask.config.get('jobqueue.slurm.walltime')
+        if job_cpu is None:
+            job_cpu = dask.config.get('jobqueue.slurm.job-cpu')
+        if job_mem is None:
+            job_mem = dask.config.get('jobqueue.slurm.job-mem')
+        if job_extra is None:
+            job_extra = dask.config.get('jobqueue.slurm.job-extra')
 
         super(SLURMCluster, self).__init__(**kwargs)
 

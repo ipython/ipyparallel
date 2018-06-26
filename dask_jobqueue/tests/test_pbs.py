@@ -1,15 +1,17 @@
+import sys
 from time import sleep, time
 
-import pytest
-import sys
-from distributed import Client
+import dask
+from dask.distributed import Client
 from distributed.utils_test import loop  # noqa: F401
+import pytest
 
-from dask_jobqueue import PBSCluster
+from dask_jobqueue import PBSCluster, MoabCluster
 
 
-def test_header():
-    with PBSCluster(walltime='00:02:00', processes=4, threads=2, memory='7GB') as cluster:
+@pytest.mark.parametrize('Cluster', [PBSCluster, MoabCluster])
+def test_header(Cluster):
+    with Cluster(walltime='00:02:00', processes=4, threads=2, memory='7GB') as cluster:
 
         assert '#PBS' in cluster.job_header
         assert '#PBS -N dask-worker' in cluster.job_header
@@ -18,8 +20,8 @@ def test_header():
         assert '#PBS -q' not in cluster.job_header
         assert '#PBS -A' not in cluster.job_header
 
-    with PBSCluster(queue='regular', project='DaskOnPBS', processes=4, threads=2, memory='7GB',
-                    resource_spec='select=1:ncpus=24:mem=100GB') as cluster:
+    with Cluster(queue='regular', project='DaskOnPBS', processes=4, threads=2, memory='7GB',
+                 resource_spec='select=1:ncpus=24:mem=100GB') as cluster:
 
         assert '#PBS -q regular' in cluster.job_header
         assert '#PBS -N dask-worker' in cluster.job_header
@@ -28,7 +30,7 @@ def test_header():
         assert '#PBS -l walltime=' in cluster.job_header
         assert '#PBS -A DaskOnPBS' in cluster.job_header
 
-    with PBSCluster() as cluster:
+    with Cluster() as cluster:
 
         assert '#PBS -j oe' not in cluster.job_header
         assert '#PBS -N' in cluster.job_header
@@ -37,7 +39,7 @@ def test_header():
         assert '#PBS -A' not in cluster.job_header
         assert '#PBS -q' not in cluster.job_header
 
-    with PBSCluster(job_extra=['-j oe']) as cluster:
+    with Cluster(job_extra=['-j oe']) as cluster:
 
         assert '#PBS -j oe' in cluster.job_header
         assert '#PBS -N' in cluster.job_header
@@ -47,8 +49,9 @@ def test_header():
         assert '#PBS -q' not in cluster.job_header
 
 
-def test_job_script():
-    with PBSCluster(walltime='00:02:00', processes=4, threads=2, memory='7GB') as cluster:
+@pytest.mark.parametrize('Cluster', [PBSCluster, MoabCluster])
+def test_job_script(Cluster):
+    with Cluster(walltime='00:02:00', processes=4, threads=2, memory='7GB') as cluster:
 
         job_script = cluster.job_script()
         assert '#PBS' in job_script
@@ -61,8 +64,8 @@ def test_job_script():
         assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
         assert '--nthreads 2 --nprocs 4 --memory-limit 7GB' in job_script
 
-    with PBSCluster(queue='regular', project='DaskOnPBS', processes=4, threads=2, memory='7GB',
-                    resource_spec='select=1:ncpus=24:mem=100GB') as cluster:
+    with Cluster(queue='regular', project='DaskOnPBS', processes=4, threads=2, memory='7GB',
+                 resource_spec='select=1:ncpus=24:mem=100GB') as cluster:
 
         job_script = cluster.job_script()
         assert '#PBS -q regular' in job_script
@@ -131,3 +134,11 @@ def test_adaptive(loop):
             #while cluster.jobs:
             #    sleep(0.100)
             #    assert time() < start + 10
+
+
+def test_config(loop):  # noqa: F811
+    with dask.config.set({'jobqueue.pbs.walltime': '00:02:00',
+                          'jobqueue.pbs.local-directory': '/foo'}):
+        with PBSCluster(loop=loop) as cluster:
+            assert '00:02:00' in cluster.job_script()
+            assert '--local-directory /foo' in cluster.job_script()

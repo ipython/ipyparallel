@@ -50,28 +50,30 @@ class PBSCluster(JobQueueCluster):
     and threads asked:
 
     >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS',
-                             local_directory=os.getenv('TMPDIR', '/tmp'),
-                             threads=4, processes=6, memory='16GB',
-                             resource_spec='select=1:ncpus=24:mem=100GB')
+    ...                      local_directory=os.getenv('TMPDIR', '/tmp'),
+    ...                      threads=4, processes=6, memory='16GB',
+    ...                      resource_spec='select=1:ncpus=24:mem=100GB')
     """, 4)
 
     # Override class variables
     submit_command = 'qsub'
     cancel_command = 'qdel'
+    scheduler_name = 'pbs'
 
-    def __init__(self,
-                 queue=dask.config.get('jobqueue.queue'),
-                 project=dask.config.get('jobqueue.project'),
-                 resource_spec=dask.config.get('jobqueue.pbs.resource-spec'),
-                 walltime=dask.config.get('jobqueue.walltime'),
-                 job_extra=dask.config.get('jobqueue.pbs.job-extra'),
-                 **kwargs):
+    def __init__(self, queue=None, project=None, resource_spec=None, walltime=None, job_extra=None, **kwargs):
+        if queue is None:
+            queue = dask.config.get('jobqueue.%s.queue' % self.scheduler_name)
+        if resource_spec is None:
+            resource_spec = dask.config.get('jobqueue.%s.resource-spec' % self.scheduler_name)
+        if walltime is None:
+            walltime = dask.config.get('jobqueue.%s.walltime' % self.scheduler_name)
+        if job_extra is None:
+            job_extra = dask.config.get('jobqueue.%s.job-extra' % self.scheduler_name)
+        if project is None:
+            project = dask.config.get('jobqueue.%s.project' % self.scheduler_name) or os.environ.get('PBS_ACCOUNT')
 
         # Instantiate args and parameters from parent abstract class
         super(PBSCluster, self).__init__(**kwargs)
-
-        # Try to find a project name from environment variable
-        project = project or os.environ.get('PBS_ACCOUNT')
 
         header_lines = []
         # PBS header build

@@ -74,17 +74,19 @@ class JobQueueCluster(Cluster):
     # Following class attributes should be overriden by extending classes.
     submit_command = None
     cancel_command = None
+    scheduler_name = ''
 
     def __init__(self,
-                 name=dask.config.get('jobqueue.name'),
-                 threads=dask.config.get('jobqueue.threads'),
-                 processes=dask.config.get('jobqueue.processes'),
-                 memory=dask.config.get('jobqueue.memory'),
-                 interface=dask.config.get('jobqueue.interface'),
-                 death_timeout=dask.config.get('jobqueue.death-timeout'),
-                 local_directory=dask.config.get('jobqueue.local-directory'),
-                 extra=dask.config.get('jobqueue.extra'),
-                 env_extra=dask.config.get('jobqueue.env-extra'),
+                 name=None,
+                 threads=None,
+                 processes=None,
+                 memory=None,
+                 interface=None,
+                 death_timeout=None,
+                 local_directory=None,
+                 extra=None,
+                 env_extra=None,
+                 walltime=None,
                  **kwargs
                  ):
         """ """
@@ -92,9 +94,28 @@ class JobQueueCluster(Cluster):
         # This initializer should be considered as Abstract, and never used
         # directly.
         # """
-        if not self.cancel_command or not self.submit_command:
+        if not self.scheduler_name:
             raise NotImplementedError('JobQueueCluster is an abstract class '
                                       'that should not be instanciated.')
+
+        if name is None:
+            name = dask.config.get('jobqueue.%s.name' % self.scheduler_name)
+        if threads is None:
+            threads = dask.config.get('jobqueue.%s.threads' % self.scheduler_name)
+        if processes is None:
+            processes = dask.config.get('jobqueue.%s.processes' % self.scheduler_name)
+        if memory is None:
+            memory = dask.config.get('jobqueue.%s.memory' % self.scheduler_name)
+        if interface is None:
+            interface = dask.config.get('jobqueue.%s.interface' % self.scheduler_name)
+        if death_timeout is None:
+            death_timeout = dask.config.get('jobqueue.%s.death-timeout' % self.scheduler_name)
+        if local_directory is None:
+            local_directory = dask.config.get('jobqueue.%s.local-directory' % self.scheduler_name)
+        if extra is None:
+            extra = dask.config.get('jobqueue.%s.extra' % self.scheduler_name)
+        if env_extra is None:
+            env_extra = dask.config.get('jobqueue.%s.env-extra' % self.scheduler_name)
 
         #This attribute should be overriden
         self.job_header = None
