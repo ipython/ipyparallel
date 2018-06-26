@@ -1,6 +1,7 @@
 from time import sleep, time
 
 import pytest
+import sys
 from distributed import Client
 from distributed.utils_test import loop  # noqa: F401
 
@@ -56,7 +57,7 @@ def test_job_script():
 
         assert 'export ' not in job_script
 
-        assert '/dask-worker tcp://' in job_script
+        assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
         assert '--nthreads 2 --nprocs 4 --memory-limit 7GB' in job_script
 
     with SLURMCluster(walltime='00:02:00', processes=4, threads=2, memory='7GB',
@@ -77,7 +78,7 @@ def test_job_script():
         assert 'export LANGUAGE="en_US.utf8"' in job_script
         assert 'export LC_ALL="en_US.utf8"' in job_script
 
-        assert '/dask-worker tcp://' in job_script
+        assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
         assert '--nthreads 2 --nprocs 4 --memory-limit 7GB' in job_script
 
 
