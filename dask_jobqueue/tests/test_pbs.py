@@ -2,6 +2,7 @@ import sys
 from time import sleep, time
 
 import dask
+from dask.distributed import Client
 from distributed.utils_test import loop  # noqa: F401
 import pytest
 
