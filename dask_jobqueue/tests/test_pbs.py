@@ -1,7 +1,8 @@
 from time import sleep, time
 
 import pytest
-from distributed import Client
+import dask
+from dask.distributed import Client
 from distributed.utils_test import loop  # noqa: F401
 
 from dask_jobqueue import PBSCluster, MoabCluster
@@ -19,7 +20,7 @@ def test_header(Cluster):
         assert '#PBS -A' not in cluster.job_header
 
     with Cluster(queue='regular', project='DaskOnPBS', processes=4, threads=2, memory='7GB',
-                    resource_spec='select=1:ncpus=24:mem=100GB') as cluster:
+                 resource_spec='select=1:ncpus=24:mem=100GB') as cluster:
 
         assert '#PBS -q regular' in cluster.job_header
         assert '#PBS -N dask-worker' in cluster.job_header
@@ -132,3 +133,11 @@ def test_adaptive(loop):
             #while cluster.jobs:
             #    sleep(0.100)
             #    assert time() < start + 10
+
+
+def test_config(loop):  # noqa: F811
+    with dask.config.set({'jobqueue.pbs.walltime': '00:02:00',
+                          'jobqueue.pbs.local-directory': '/foo'}):
+        with PBSCluster(loop=loop) as cluster:
+            assert '00:02:00' in cluster.job_script()
+            assert '--local-directory /foo' in cluster.job_script()

@@ -61,7 +61,7 @@ class SLURMCluster(JobQueueCluster):
     scheduler_name = 'slurm'
 
     def __init__(self, queue=None, project=None, walltime=None,
-            job_cpu=None, job_mem=None, job_extra=None, **kwargs):
+                 job_cpu=None, job_mem=None, job_extra=None, **kwargs):
         if queue is None:
             queue = dask.config.get('jobqueue.slurm.queue')
         if project is None:

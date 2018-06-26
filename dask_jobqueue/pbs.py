@@ -50,9 +50,9 @@ class PBSCluster(JobQueueCluster):
     and threads asked:
 
     >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS',
-                             local_directory=os.getenv('TMPDIR', '/tmp'),
-                             threads=4, processes=6, memory='16GB',
-                             resource_spec='select=1:ncpus=24:mem=100GB')
+    ...                      local_directory=os.getenv('TMPDIR', '/tmp'),
+    ...                      threads=4, processes=6, memory='16GB',
+    ...                      resource_spec='select=1:ncpus=24:mem=100GB')
     """, 4)
 
     # Override class variables
@@ -69,7 +69,8 @@ class PBSCluster(JobQueueCluster):
             walltime = dask.config.get('jobqueue.%s.walltime' % self.scheduler_name)
         if job_extra is None:
             job_extra = dask.config.get('jobqueue.%s.job-extra' % self.scheduler_name)
-        project = project or dask.config.get('jobqueue.%s.project' % self.scheduler_name) or os.environ.get('PBS_ACCOUNT')
+        if project is None:
+            project = dask.config.get('jobqueue.%s.project' % self.scheduler_name) or os.environ.get('PBS_ACCOUNT')
 
         # Instantiate args and parameters from parent abstract class
         super(PBSCluster, self).__init__(**kwargs)
