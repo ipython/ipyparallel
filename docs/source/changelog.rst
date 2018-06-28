@@ -3,6 +3,14 @@
 Changes in IPython Parallel
 ===========================
 
+6.2.2
+-----
+
+- Fix compatibility with tornado 4, broken in 6.2.0
+- Fix encoding of engine and controller logs in ``ipcluster --debug`` on Python 3
+- Fix compatiblity with joblib 0.12
+- Include LICENSE file in wheels
+
 6.2.1
 -----
 
