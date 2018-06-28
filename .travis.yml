@@ -1,23 +1,34 @@
 # http://travis-ci.org/#!/ipython/ipyparallel
 language: python
 python:
-    - "nightly"
-    - 3.6
-    - 2.7
-    - 3.5
-    - 3.4
+  - "nightly"
+  - 3.6
+  - 2.7
+  - 3.5
+  - 3.4
 sudo: false
 cache:
   directories:
     - $HOME/.cache/pip
 install:
-    - pip install --upgrade setuptools pip
-    - pip install --pre --upgrade .[test] distributed joblib codecov
-    - 'pip install --only-binary :all: matplotlib || echo "no matplotlib"'
+  - pip install --upgrade setuptools pip
+  - pip install --pre --upgrade .[test] distributed joblib codecov
+  - |
+    # install pinned tornado
+    if [[ ! -z "$TORNADO" ]]; then
+      pip install tornado==${TORNADO}
+    fi
+  - 'pip install --only-binary :all: matplotlib || echo "no matplotlib"'
+  - pip freeze
 script:
-    - pytest --maxfail=3 --cov ipyparallel -vsx ipyparallel/tests
+  - pytest --maxfail=3 --cov ipyparallel -vsx ipyparallel/tests
 after_success:
-    - codecov
+  - codecov
 matrix:
-    allow_failures:
-        - python: "nightly"
+  allow_failures:
+    - python: "nightly"
+  include:
+    - python: 3.6
+      env: TORNADO="4.5.3"
+    - python: 2.7
+      env: TORNADO="4.5.3"
