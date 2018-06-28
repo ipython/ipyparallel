@@ -52,14 +52,11 @@ can be used, called ``MoabCluster``:
 SGE Deployments
 ---------------
 
-Examples welcome `here <https://github.com/dask/dask-jobqueue/issues/40>`_
-
 On systems which use SGE as the scheduler, ```SGECluster`` can be used:
 
 .. code-block:: python
 
     from dask_jobqueue import SGECluster
-
 
     cluster = SGECluster(queue='default.q',
                          walltime="1500000",
@@ -89,6 +86,7 @@ SLURM Deployment: Low-priority node usage
 
 
     from dask_jobqueue import SLURMCluster
+
     cluster = SLURMCluster(processes=6,
                            threads=4,
                            memory="16GB",
@@ -104,7 +102,7 @@ Viewing Dask Dashboard
 ~~~~~~~~~~~~~~~~~~~~~~
 
 Sometimes, the Dask dashboard might not be directly accessible via the browser.
-To solve this, you can use SSH tunnelling. Let's say we started with the
+To solve this, you can use SSH tunneling. Let's say we started with the
 following setup:
 
 .. code-block:: python

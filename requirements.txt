@@ -1,2 +1,3 @@
-distributed>=1.21.3
+dask>=0.18.1
+distributed>=1.22
 docrep
