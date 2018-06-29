@@ -126,7 +126,7 @@ class JobQueueCluster(Cluster):
         else:
             host = socket.gethostname()
 
-        self.cluster = LocalCluster(n_workers=0, ip=host, **kwargs)
+        self.local_cluster = LocalCluster(n_workers=0, ip=host, **kwargs)
 
         # Keep information on process, threads and memory, for use in
         # subclasses
@@ -191,7 +191,7 @@ class JobQueueCluster(Cluster):
     @property
     def scheduler(self):
         """ The scheduler of this cluster """
-        return self.cluster.scheduler
+        return self.local_cluster.scheduler
 
     def _calls(self, cmds):
         """ Call a command using subprocess.communicate
@@ -261,7 +261,7 @@ class JobQueueCluster(Cluster):
 
     def __exit__(self, type, value, traceback):
         self.stop_workers(self.jobs)
-        self.cluster.__exit__(type, value, traceback)
+        self.local_cluster.__exit__(type, value, traceback)
 
     def _job_id_from_submit_output(self, out):
         raise NotImplementedError('_job_id_from_submit_output must be '
