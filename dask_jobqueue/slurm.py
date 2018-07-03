@@ -88,17 +88,13 @@ class SLURMCluster(JobQueueCluster):
         # Init resources, always 1 task,
         # and then number of cpu is processes * threads if not set
         header_lines.append('#SBATCH -n 1')
-        ncpus = job_cpu
-        if ncpus is None:
-            ncpus = self.worker_processes * self.worker_threads
-        header_lines.append('#SBATCH --cpus-per-task=%d' % ncpus)
+        header_lines.append('#SBATCH --cpus-per-task=%d' % (job_cpu or self.worker_cores))
         # Memory
-        total_memory = job_mem
-        if job_mem is None and self.worker_memory is not None:
-            memory = self.worker_processes * self.worker_memory
-            total_memory = slurm_format_bytes_ceil(memory)
-        if total_memory is not None:
-            header_lines.append('#SBATCH --mem=%s' % total_memory)
+        memory = job_mem
+        if job_mem is None:
+            memory = slurm_format_bytes_ceil(self.worker_memory)
+        if memory is not None:
+            header_lines.append('#SBATCH --mem=%s' % memory)
 
         if walltime is not None:
             header_lines.append('#SBATCH -t %s' % walltime)

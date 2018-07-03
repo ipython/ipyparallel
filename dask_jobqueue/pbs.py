@@ -85,13 +85,13 @@ class PBSCluster(JobQueueCluster):
             header_lines.append('#PBS -A %s' % project)
         if resource_spec is None:
             # Compute default resources specifications
-            ncpus = self.worker_processes * self.worker_threads
-            memory = self.worker_memory * self.worker_processes
-            memory_string = pbs_format_bytes_ceil(memory)
-            resource_spec = "select=1:ncpus=%d:mem=%s" % (ncpus, memory_string)
+            resource_spec = "select=1:ncpus=%d" % self.worker_cores
+            memory_string = pbs_format_bytes_ceil(self.worker_memory)
+            resource_spec += ':mem=' + memory_string
             logger.info("Resource specification for PBS not set, "
                         "initializing it to %s" % resource_spec)
-        header_lines.append('#PBS -l %s' % resource_spec)
+        if resource_spec is not None:
+            header_lines.append('#PBS -l %s' % resource_spec)
         if walltime is not None:
             header_lines.append('#PBS -l walltime=%s' % walltime)
         header_lines.extend(['#PBS %s' % arg for arg in job_extra])

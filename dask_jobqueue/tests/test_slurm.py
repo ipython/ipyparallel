@@ -9,7 +9,7 @@ from dask_jobqueue import SLURMCluster
 
 
 def test_header():
-    with SLURMCluster(walltime='00:02:00', processes=4, threads=2, memory='7GB') as cluster:
+    with SLURMCluster(walltime='00:02:00', processes=4, cores=8, memory='28GB') as cluster:
 
         assert '#SBATCH' in cluster.job_header
         assert '#SBATCH -J dask-worker' in cluster.job_header
@@ -20,8 +20,8 @@ def test_header():
         assert '#SBATCH -p' not in cluster.job_header
         assert '#SBATCH -A' not in cluster.job_header
 
-    with SLURMCluster(queue='regular', project='DaskOnPBS', processes=4, threads=2, memory='7GB',
-                      job_cpu=16, job_mem='100G') as cluster:
+    with SLURMCluster(queue='regular', project='DaskOnPBS', processes=4,
+                      cores=8, memory='28GB', job_cpu=16, job_mem='100G') as cluster:
 
         assert '#SBATCH --cpus-per-task=16' in cluster.job_header
         assert '#SBATCH --cpus-per-task=8' not in cluster.job_header
@@ -30,24 +30,26 @@ def test_header():
         assert '#SBATCH -A DaskOnPBS' in cluster.job_header
         assert '#SBATCH -p regular' in cluster.job_header
 
-    with SLURMCluster() as cluster:
+    with SLURMCluster(cores=4, memory='8GB') as cluster:
 
         assert '#SBATCH' in cluster.job_header
         assert '#SBATCH -J ' in cluster.job_header
         assert '#SBATCH -n 1' in cluster.job_header
-        assert '#SBATCH --cpus-per-task=' in cluster.job_header
-        assert '#SBATCH --mem=' in cluster.job_header
+        # assert '#SBATCH --cpus-per-task=' in cluster.job_header
+        # assert '#SBATCH --mem=' in cluster.job_header
         assert '#SBATCH -t ' in cluster.job_header
         assert '#SBATCH -p' not in cluster.job_header
         assert '#SBATCH -A' not in cluster.job_header
 
 
 def test_job_script():
-    with SLURMCluster(walltime='00:02:00', processes=4, threads=2, memory='7GB') as cluster:
+    with SLURMCluster(walltime='00:02:00', processes=4, cores=8,
+                      memory='28GB') as cluster:
 
         job_script = cluster.job_script()
         assert '#SBATCH' in job_script
         assert '#SBATCH -J dask-worker' in job_script
+        assert '--memory-limit 7.00GB ' in job_script
         assert '#SBATCH -n 1' in job_script
         assert '#SBATCH --cpus-per-task=8' in job_script
         assert '#SBATCH --mem=27G' in job_script
@@ -58,9 +60,9 @@ def test_job_script():
         assert 'export ' not in job_script
 
         assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
-        assert '--nthreads 2 --nprocs 4 --memory-limit 7GB' in job_script
+        assert '--nthreads 2 --nprocs 4 --memory-limit 7.00GB' in job_script
 
-    with SLURMCluster(walltime='00:02:00', processes=4, threads=2, memory='7GB',
+    with SLURMCluster(walltime='00:02:00', processes=4, cores=8, memory='28GB',
                       env_extra=['export LANG="en_US.utf8"', 'export LANGUAGE="en_US.utf8"',
                                  'export LC_ALL="en_US.utf8"']
                       ) as cluster:
@@ -79,12 +81,12 @@ def test_job_script():
         assert 'export LC_ALL="en_US.utf8"' in job_script
 
         assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
-        assert '--nthreads 2 --nprocs 4 --memory-limit 7GB' in job_script
+        assert '--nthreads 2 --nprocs 4 --memory-limit 7.00GB' in job_script
 
 
 @pytest.mark.env("slurm")  # noqa: F811
 def test_basic(loop):
-    with SLURMCluster(walltime='00:02:00', threads=2, processes=1, memory='4GB',
+    with SLURMCluster(walltime='00:02:00', cores=2, processes=1, memory='4GB',
                       job_extra=['-D /'], loop=loop) as cluster:
         with Client(cluster) as client:
             workers = cluster.start_workers(2)
@@ -109,7 +111,7 @@ def test_basic(loop):
 
 @pytest.mark.env("slurm")  # noqa: F811
 def test_adaptive(loop):
-    with SLURMCluster(walltime='00:02:00', threads=2, processes=1, memory='4GB',
+    with SLURMCluster(walltime='00:02:00', cores=2, processes=1, memory='4GB',
                       job_extra=['-D /'], loop=loop) as cluster:
         cluster.adapt()
         with Client(cluster) as client:
