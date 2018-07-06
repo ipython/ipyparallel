@@ -91,14 +91,16 @@ recommend using a configuration file like the following:
    jobqueue:
      pbs:
        cores: 24
-       total-memory: 100GB
-       local-directory: $TMPDIR
+       memory: 100GB
        processes: 6
+
+       interface: ib0
+       local-directory: $TMPDIR
 
        resource-spec: "select=1:ncpus=24:mem=100GB"
        queue: regular
        project: my-project
-       walltime: 02:00:00
+       walltime: 00:30:00
 
 See :doc:`Configuration Examples <configurations>` for real-world examples.
 

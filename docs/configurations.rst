@@ -29,8 +29,9 @@ Cheyenne
    jobqueue:
      pbs:
        cores: 36
+       memory: 108GB
        processes: 4
-       total-memory: 108GB
+
        interface: ib0
        local-directory: $TMPDIR
 
