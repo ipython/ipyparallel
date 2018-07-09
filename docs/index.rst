@@ -1,4 +1,3 @@
-
 Dask-Jobqueue
 =============
 
@@ -27,6 +26,12 @@ Example
    import dask.array as da
    x = ...                   # Dask commands now use these distributed resources
 
+.. raw:: html
+
+   <iframe width="560" height="315"
+           src="https://www.youtube.com/embed/FXsgmwpRExM?rel=0"
+           frameborder="0" allow="autoplay; encrypted-media"
+           allowfullscreen></iframe>
 
 Adaptivity
 ----------
