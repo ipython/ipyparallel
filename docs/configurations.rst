@@ -41,3 +41,35 @@ Cheyenne
 
        resource-spec: select=1:ncpus=36:mem=109G
 
+NERSC Cori
+----------
+
+`NERSC Cori Supercomputer <https://www2.cisl.ucar.edu/resources/computational-systems/cheyenne>`_
+
+It should be noted that the the following config file assumes you are running the scheduler on a worker node. Currently the login node appears unable to talk to the worker nodes bidirectionally. As such you need to request an interactive node with the following:
+
+.. code-block:: bash
+
+    $ salloc -N 1 -C haswell --qos=interactive -t 04:00:00
+
+Then you will run dask jobqueue directly on that interactive node. Note the distributed section that is set up to avoid having dask write to disk. This was due to some weird behavior with the local filesystem. 
+
+
+.. code-block:: yaml
+
+    distributed:
+      worker:
+        memory:
+          target: False  # Avoid spilling to disk
+          spill: False  # Avoid spilling to disk
+          pause: 0.80  # fraction at which we pause worker threads
+          terminate: 0.95  # fraction at which we terminate the worker
+
+    jobqueue:
+        slurm:
+            cores: 64
+            memory: 128GB
+            processes: 4
+            queue: debug
+            walltime: '00:10:00'
+            job-extra: ['-C haswell', '-L project, SCRATCH, cscratch1'] 
