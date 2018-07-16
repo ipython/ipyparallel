@@ -1,10 +1,9 @@
-from __future__ import print_function, division, absolute_import
+from __future__ import absolute_import, division, print_function
 
 import os
 
 import dask
 import yaml
-
 
 fn = os.path.join(os.path.dirname(__file__), 'jobqueue.yaml')
 dask.config.ensure_file(source=fn)

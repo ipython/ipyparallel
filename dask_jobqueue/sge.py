@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 import logging
 
 import dask
@@ -56,8 +58,7 @@ class SGECluster(JobQueueCluster):
 
         super(SGECluster, self).__init__(**kwargs)
 
-        header_lines = ['#!/bin/bash']
-
+        header_lines = ['#!/usr/bin/env bash']
         if self.name is not None:
             header_lines.append('#$ -N %(name)s')
         if queue is not None:

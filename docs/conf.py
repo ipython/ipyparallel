@@ -24,9 +24,8 @@ project = u'Dask-jobqueue'
 copyright = u'2018, Anaconda, Inc. and contributors'
 
 
-# The short X.Y version.
-# version = '0.1.0'
 from dask_jobqueue import __version__ as version
+
 # The full version, including alpha/beta/rc tags.
 # release = '0.1.0'
 release = version

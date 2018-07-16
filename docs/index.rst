@@ -16,7 +16,7 @@ Example
 
    from dask_jobqueue import PBSCluster
    cluster = PBSCluster()
-   cluster.scale(10)         # Ask for ten jobs
+   cluster.scale(10)         # Ask for ten workers
 
    from dask.distributed import Client
    client = Client(cluster)  # Connect this local process to remote workers
@@ -42,7 +42,7 @@ save resources when not actively computing.
 
 .. code-block:: python
 
-   cluster.adapt(minimum=1, maximum=100)
+   cluster.adapt(minimum=6, maximum=90)  # auto-scale between 6 and 90 workers
 
 
 Configuration
@@ -81,7 +81,7 @@ will specify how many jobs to deploy using the scale method.
 
 .. code-block:: python
 
-   cluster.scale(20)  # launch twenty jobs of the specification provided above
+   cluster.scale(12)  # launch 12 workers (2 jobs of 6 workers each) of the specification provided above
 
 Configuration Files
 ~~~~~~~~~~~~~~~~~~~
@@ -168,7 +168,7 @@ You then ask for more workers using the ``scale`` command:
 
 .. code-block:: python
 
-   cluster.scale(10)
+   cluster.scale(36)
 
 The cluster generates a traditional job script and submits that an appropriate
 number of times to the job queue.  You can see the job script that it will
@@ -206,3 +206,12 @@ When the cluster object goes away, either because you delete it or because you
 close your Python program, it will send a signal to the workers to shut down.
 If for some reason this signal does not get through then workers will kill
 themselves after 60 seconds of waiting for a non-existent scheduler.
+
+Workers vs Jobs
+---------------
+
+In dask-distributed, a ``Worker`` is a Python object and node in a dask
+``Cluster`` that serves two purposes, 1) serve data, and 2) perform
+computations. ``Jobs`` are resources submitted to, and managed by, the job
+queueing system (e.g. PBS, SGE, etc.). In dask-jobqueue, a single ``Job`` may
+include one or more ``Workers``.

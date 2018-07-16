@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-set -x
-
 function jobqueue_before_install {
   # Install miniconda
   ./ci/conda_setup.sh

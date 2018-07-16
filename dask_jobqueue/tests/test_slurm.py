@@ -1,11 +1,13 @@
+import sys
 from time import sleep, time
 
 import pytest
-import sys
 from distributed import Client
 from distributed.utils_test import loop  # noqa: F401
 
 from dask_jobqueue import SLURMCluster
+
+from . import QUEUE_WAIT
 
 
 def test_header():
@@ -20,14 +22,14 @@ def test_header():
         assert '#SBATCH -p' not in cluster.job_header
         assert '#SBATCH -A' not in cluster.job_header
 
-    with SLURMCluster(queue='regular', project='DaskOnPBS', processes=4,
+    with SLURMCluster(queue='regular', project='DaskOnSlurm', processes=4,
                       cores=8, memory='28GB', job_cpu=16, job_mem='100G') as cluster:
 
         assert '#SBATCH --cpus-per-task=16' in cluster.job_header
         assert '#SBATCH --cpus-per-task=8' not in cluster.job_header
         assert '#SBATCH --mem=100G' in cluster.job_header
         assert '#SBATCH -t ' in cluster.job_header
-        assert '#SBATCH -A DaskOnPBS' in cluster.job_header
+        assert '#SBATCH -A DaskOnSlurm' in cluster.job_header
         assert '#SBATCH -p regular' in cluster.job_header
 
     with SLURMCluster(cores=4, memory='8GB') as cluster:
@@ -86,56 +88,60 @@ def test_job_script():
 
 @pytest.mark.env("slurm")  # noqa: F811
 def test_basic(loop):
-    with SLURMCluster(walltime='00:02:00', cores=2, processes=1, memory='4GB',
+    with SLURMCluster(walltime='00:02:00', cores=2, processes=1, memory='2GB',
                       job_extra=['-D /'], loop=loop) as cluster:
         with Client(cluster) as client:
-            workers = cluster.start_workers(2)
+            cluster.start_workers(2)
+            assert cluster.pending_jobs or cluster.running_jobs
             future = client.submit(lambda x: x + 1, 10)
-            assert future.result(60) == 11
-            assert cluster.jobs
+            assert future.result(QUEUE_WAIT) == 11
+            assert cluster.running_jobs
 
-            info = client.scheduler_info()
-            w = list(info['workers'].values())[0]
-            assert w['memory_limit'] == 4e9
+            workers = list(client.scheduler_info()['workers'].values())
+            w = workers[0]
+            assert w['memory_limit'] == 2e9
             assert w['ncores'] == 2
 
             cluster.stop_workers(workers)
 
             start = time()
-            while len(client.scheduler_info()['workers']) > 0:
+            while client.scheduler_info()['workers']:
                 sleep(0.100)
-                assert time() < start + 10
+                assert time() < start + QUEUE_WAIT
 
-            assert not cluster.jobs
+            assert not cluster.running_jobs
 
 
 @pytest.mark.env("slurm")  # noqa: F811
 def test_adaptive(loop):
-    with SLURMCluster(walltime='00:02:00', cores=2, processes=1, memory='4GB',
+    with SLURMCluster(walltime='00:02:00', cores=2, processes=1, memory='2GB',
                       job_extra=['-D /'], loop=loop) as cluster:
         cluster.adapt()
         with Client(cluster) as client:
             future = client.submit(lambda x: x + 1, 10)
-            assert future.result(60) == 11
 
-            assert cluster.jobs
+            start = time()
+            while not (cluster.pending_jobs or cluster.running_jobs):
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
+
+            assert future.result(QUEUE_WAIT) == 11
 
             start = time()
             processes = cluster.worker_processes
-            while (len(client.scheduler_info()['workers']) != processes):
+            while len(client.scheduler_info()['workers']) != processes:
                 sleep(0.1)
-                assert time() < start + 10
+                assert time() < start + QUEUE_WAIT
 
             del future
 
             start = time()
             while len(client.scheduler_info()['workers']) > 0:
                 sleep(0.100)
-                assert time() < start + 10
+                assert time() < start + QUEUE_WAIT
 
-            # There is probably a bug to fix in the adaptive methods of the JobQueueCluster
-            # Currently cluster.jobs is not cleaned up.
-            # start = time()
-            # while cluster.jobs:
-            #     sleep(0.100)
-            #     assert time() < start + 10
+            start = time()
+            while cluster.pending_jobs or cluster.running_jobs:
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
+            assert cluster.finished_jobs
