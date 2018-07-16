@@ -41,6 +41,7 @@ Cheyenne
 
        resource-spec: select=1:ncpus=36:mem=109G
 
+
 NERSC Cori
 ----------
 
@@ -73,3 +74,24 @@ Then you will run dask jobqueue directly on that interactive node. Note the dist
             queue: debug
             walltime: '00:10:00'
             job-extra: ['-C haswell', '-L project, SCRATCH, cscratch1'] 
+
+
+ARM Stratus
+-----------
+
+`Department of Energy Atmospheric Radiation Measurement (DOE-ARM) Stratus Supercomputer <https://adc.arm.gov/tutorials/cluster/stratusclusterquickstart.html>`_.
+
+.. code-block:: yaml
+
+    jobqueue:
+      pbs:
+        name: dask-worker
+        cores: 36
+        memory: 270GB
+        processes: 6
+        interface: ib0
+        local-directory: $localscratch
+        queue: high_mem # Can also select batch or gpu_ssd
+        project: arm
+        walltime: 00:30:00 #Adjust this to job size
+        job-extra: ['-W group_list=cades-arm']
