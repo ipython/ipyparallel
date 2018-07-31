@@ -53,7 +53,9 @@ It should be noted that the the following config file assumes you are running th
 
     $ salloc -N 1 -C haswell --qos=interactive -t 04:00:00
 
-Then you will run dask jobqueue directly on that interactive node. Note the distributed section that is set up to avoid having dask write to disk. This was due to some weird behavior with the local filesystem. 
+Then you will run dask jobqueue directly on that interactive node. Note the distributed section that is set up to avoid having dask write to disk. This was due to some weird behavior with the local filesystem.
+
+Alternatively you may use the experimental `NERSC jupyterhub <https://jupyter-dev.nersc.gov/>`_ which will launch a notebook server on a reserved large memory node of Cori. In this case no special interactive session is needed and dask jobqueue will perform as expected.
 
 
 .. code-block:: yaml
@@ -73,7 +75,7 @@ Then you will run dask jobqueue directly on that interactive node. Note the dist
             processes: 4
             queue: debug
             walltime: '00:10:00'
-            job-extra: ['-C haswell', '-L project, SCRATCH, cscratch1'] 
+            job-extra: ['-C haswell', '-L project, SCRATCH, cscratch1']
 
 
 ARM Stratus
