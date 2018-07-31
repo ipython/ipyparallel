@@ -27,7 +27,8 @@ def test_header(Cluster):
         assert '--name dask-worker--${JOB_ID}--' in cluster.job_script()
 
     with Cluster(queue='regular', project='DaskOnPBS', processes=4, cores=8,
-                 memory='28GB', resource_spec='select=1:ncpus=24:mem=100GB') as cluster:
+                 resource_spec='select=1:ncpus=24:mem=100GB',
+                 memory='28GB') as cluster:
 
         assert '#PBS -q regular' in cluster.job_header
         assert '#PBS -N dask-worker' in cluster.job_header
@@ -57,7 +58,8 @@ def test_header(Cluster):
 
 @pytest.mark.parametrize('Cluster', [PBSCluster, MoabCluster])
 def test_job_script(Cluster):
-    with Cluster(walltime='00:02:00', processes=4, cores=8, memory='28GB') as cluster:
+    with Cluster(walltime='00:02:00', processes=4, cores=8,
+                 memory='28GB') as cluster:
 
         job_script = cluster.job_script()
         assert '#PBS' in job_script
@@ -67,11 +69,13 @@ def test_job_script(Cluster):
         assert '#PBS -q' not in job_script
         assert '#PBS -A' not in job_script
 
-        assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
+        assert '{} -m distributed.cli.dask_worker tcp://'.format(
+            sys.executable) in job_script
         assert '--nthreads 2 --nprocs 4 --memory-limit 7.00GB' in job_script
 
     with Cluster(queue='regular', project='DaskOnPBS', processes=4, cores=8,
-                 memory='28GB', resource_spec='select=1:ncpus=24:mem=100GB') as cluster:
+                 resource_spec='select=1:ncpus=24:mem=100GB',
+                 memory='28GB') as cluster:
 
         job_script = cluster.job_script()
         assert '#PBS -q regular' in job_script
@@ -81,14 +85,16 @@ def test_job_script(Cluster):
         assert '#PBS -l walltime=' in job_script
         assert '#PBS -A DaskOnPBS' in job_script
 
-        assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
+        assert '{} -m distributed.cli.dask_worker tcp://'.format(
+            sys.executable) in job_script
         assert '--nthreads 2 --nprocs 4 --memory-limit 7.00GB' in job_script
 
 
 @pytest.mark.env("pbs")  # noqa: F811
 def test_basic(loop):
-    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
-                    job_extra=['-V'], loop=loop) as cluster:
+    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB',
+                    local_directory='/tmp', job_extra=['-V'],
+                    loop=loop) as cluster:
         with Client(cluster) as client:
             cluster.start_workers(2)
             assert cluster.pending_jobs or cluster.running_jobs
@@ -113,8 +119,9 @@ def test_basic(loop):
 
 @pytest.mark.env("pbs")  # noqa: F811
 def test_adaptive(loop):
-    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
-                    job_extra=['-V'], loop=loop) as cluster:
+    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB',
+                    local_directory='/tmp', job_extra=['-V'],
+                    loop=loop) as cluster:
         cluster.adapt()
         with Client(cluster) as client:
             future = client.submit(lambda x: x + 1, 10)

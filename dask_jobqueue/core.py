@@ -199,7 +199,7 @@ class JobQueueCluster(Cluster):
             raise ValueError("You must specify how much memory to use per job "
                              "like ``memory='24 GB'``")
 
-        #This attribute should be overriden
+        # This attribute should be overriden
         self.job_header = None
 
         if interface:
