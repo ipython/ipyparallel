@@ -63,6 +63,19 @@ On systems which use SGE as the scheduler, ```SGECluster`` can be used:
                          processes=10,
                          memory='20GB')
 
+LSF Deployments
+---------------
+
+.. code-block:: python
+
+    from dask_jobqueue import LSFCluster
+
+    cluster = LSFCluster(queue='general',
+                         project='cpp'
+                         walltime='00:30',
+                         cores=15,
+                         memory='25GB')
+
 SLURM Deployments
 -----------------
 

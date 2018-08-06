@@ -12,7 +12,7 @@ Cheyenne
 
 NCAR's `Cheyenne Supercomputer <https://www2.cisl.ucar.edu/resources/computational-systems/cheyenne>`_
 uses both PBS (for Cheyenne itself) and Slurm (for the attached DAV clusters
-Geyser/Caldera). The
+Geyser/Caldera).
 
 .. code-block:: yaml
 
@@ -68,6 +68,8 @@ It should be noted that the the following config file assumes you are running th
     $ salloc -N 1 -C haswell --qos=interactive -t 04:00:00
 
 Then you will run dask jobqueue directly on that interactive node. Note the distributed section that is set up to avoid having dask write to disk. This was due to some weird behavior with the local filesystem.
+
+Alternatively you may use the experimental `NERSC jupyterhub <https://jupyter-dev.nersc.gov/>`_ which will launch a notebook server on a reserved large memory node of Cori. In this case no special interactive session is needed and dask jobqueue will perform as expected.
 
 
 .. code-block:: yaml

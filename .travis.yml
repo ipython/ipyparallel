@@ -41,14 +41,20 @@ env:
     - DOCKER_COMPOSE_VERSION=1.6.0
 
 before_install:
+  - set -e
   - pwd
   # Init jobqueue environment: load init and test methods
   - source ci/${JOBQUEUE}.sh
   - jobqueue_before_install
+  - set +e
 install:
+  - set -e
   - jobqueue_install
+  - set +e
 script:
+  - set -e
   - jobqueue_script
+  - set +e
 after_script:
   - jobqueue_after_script
 

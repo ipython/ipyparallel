@@ -1,7 +1,7 @@
 Dask-Jobqueue
 =============
 
-*Easily deploy Dask on job queuing systems like PBS, Slurm, MOAB, and SGE.*
+*Easily deploy Dask on job queuing systems like PBS, Slurm, MOAB, SGE, and LSF.*
 
 
 The Dask-jobqueue project makes it easy to deploy Dask on common job queuing
