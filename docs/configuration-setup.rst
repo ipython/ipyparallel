@@ -6,7 +6,6 @@ bit of information about that system and how you plan to use it.
 
 You provide this information either as keyword arguments to the constructor:
 
-
 .. code-block:: python
 
    cluster = PBSCluster(cores=36, memory='100GB', queue='regular', ...)
@@ -25,6 +24,9 @@ Or as part of a configuration file:
 .. code-block:: python
 
    cluster = PBSCluster()
+
+For more information on handling configuration files see `Dask configuration
+documentation <http://dask.pydata.org/en/latest/configuration.html>`_.
 
 This page explains what these parameters mean and how to find out information
 about them.
@@ -53,11 +55,11 @@ By default Dask will run one Python process per job.  However, you can
 optionally choose to cut up that job into multiple processes using the
 ``processes`` configuration value.  This can be advantageous if your
 computations are bound by the GIL, but disadvantageous if you plan to
-communicate between processes.  Typically we find that for pure Numpy workloads
-a low number of processes (like one) is best, while for pure Python workloads a
-high number of processes (like one process per two cores) is best.  If you are
-unsure then you might want to experiment a bit, or just choose a moderate
-number, like one process per four cores.
+communicate a lot between processes.  Typically we find that for pure Numpy
+workloads a low number of processes (like one) is best, while for pure Python
+workloads a high number of processes (like one process per two cores) is best.
+If you are unsure then you might want to experiment a bit, or just choose a
+moderate number, like one process per four cores.
 
 .. code-block:: yaml
 
@@ -84,8 +86,8 @@ Project
 -------
 
 You may have an allocation on your HPC system that is referenced by a
-*project*.  This is typically a short bit of text references your group or a
-particular project.  This is typically given to you by your IT administrator
+*project*.  This is typically a short bit of text that references your group or
+a particular project.  This is typically given to you by your IT administrator
 when they give you an allocation of hours on the HPC system.
 
 .. code-block:: yaml
@@ -174,9 +176,9 @@ Alternatively, your IT administrators will have this information.
 Managing Configuration files
 ----------------------------
 
-By default dask-jobqueue places a file at ``~/.config/dask/jobqueue.yaml`` with
-a commented out version of many different job schedulers.  You may want to do a
-few things to clean this up:
+By default when dask-jobqueue is first imported it places a file at
+``~/.config/dask/jobqueue.yaml`` with a commented out version of many different
+job schedulers.  You may want to do a few things to clean this up:
 
 1.  Remove all of the commented out portions that don't apply to you.  For
     example if you use only PBS, then consider removing the entries under SGE,
