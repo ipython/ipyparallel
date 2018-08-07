@@ -36,8 +36,7 @@ Geyser/Caldera).
        processes: 9                # Number of Python processes per job
        interface: ib0              # Network interface to use like eth0 or ib0
 
-       queue: premium
-       project: PXYZ123
+       queue: regular
        walltime: '00:30:00'
        resource-spec: select=1:ncpus=36:mem=109GB
 
