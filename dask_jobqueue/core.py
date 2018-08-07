@@ -202,13 +202,16 @@ class JobQueueCluster(Cluster):
         #This attribute should be overriden
         self.job_header = None
 
+        # Find the IP address and (if requested) set interface for workers
+        localhost_kwargs = {}
         if interface:
-            host = get_ip_interface(interface)
+            localhost_kwargs['ip'] = get_ip_interface(interface)
             extra += ' --interface  %s ' % interface
         else:
-            host = socket.gethostname()
+            localhost_kwargs['ip'] = socket.gethostname()
+        localhost_kwargs.update(kwargs)
 
-        self.local_cluster = LocalCluster(n_workers=0, ip=host, **kwargs)
+        self.local_cluster = LocalCluster(n_workers=0, **localhost_kwargs)
 
         # Keep information on process, threads and memory, for use in
         # subclasses

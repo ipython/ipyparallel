@@ -1,4 +1,5 @@
 import pytest
+import socket
 
 from dask_jobqueue import JobQueueCluster, PBSCluster, MoabCluster, SLURMCluster, SGECluster, LSFCluster
 
@@ -27,3 +28,16 @@ def test_repr(Cluster):
         assert 'cores=0' in cluster_repr
         assert 'memory=0 B' in cluster_repr
         assert 'workers=0' in cluster_repr
+
+
+def test_forward_ip():
+    ip = '127.0.0.1'
+    with PBSCluster(walltime='00:02:00', processes=4, cores=8, memory='28GB',
+                    name='dask-worker', ip=ip) as cluster:
+        assert cluster.local_cluster.scheduler.ip == ip
+
+    default_ip = socket.gethostbyname(socket.gethostname())
+    assert default_ip != ip
+    with PBSCluster(walltime='00:02:00', processes=4, cores=8, memory='28GB',
+                    name='dask-worker') as cluster:
+        assert cluster.local_cluster.scheduler.ip == default_ip
