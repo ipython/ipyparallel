@@ -16,5 +16,4 @@ def test_threads_deprecation():
     with pytest.raises(ValueError) as info:
         JobQueueCluster(threads=4)
 
-    assert all(word in str(info.value)
-               for word in ['threads', 'core', 'processes'])
+    assert all(word in str(info.value) for word in ['threads', 'core', 'processes'])

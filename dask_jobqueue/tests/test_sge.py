@@ -13,8 +13,7 @@ from . import QUEUE_WAIT
 
 @pytest.mark.env("sge")  # noqa: F811
 def test_basic(loop):  # noqa: F811
-    with SGECluster(walltime='00:02:00', cores=8, processes=4, memory='2GB',
-                    loop=loop) as cluster:
+    with SGECluster(walltime='00:02:00', cores=8, processes=4, memory='2GB', loop=loop) as cluster:
         print(cluster.job_script())
         with Client(cluster, loop=loop) as client:
             cluster.start_workers(2)

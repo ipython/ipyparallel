@@ -41,7 +41,6 @@ def test_header(Cluster):
 
         assert '#PBS -j oe' not in cluster.job_header
         assert '#PBS -N' in cluster.job_header
-        # assert '#PBS -l select=1:ncpus=' in cluster.job_header
         assert '#PBS -l walltime=' in cluster.job_header
         assert '#PBS -A' not in cluster.job_header
         assert '#PBS -q' not in cluster.job_header
@@ -50,7 +49,6 @@ def test_header(Cluster):
 
         assert '#PBS -j oe' in cluster.job_header
         assert '#PBS -N' in cluster.job_header
-        # assert '#PBS -l select=1:ncpus=' in cluster.job_header
         assert '#PBS -l walltime=' in cluster.job_header
         assert '#PBS -A' not in cluster.job_header
         assert '#PBS -q' not in cluster.job_header
@@ -69,8 +67,7 @@ def test_job_script(Cluster):
         assert '#PBS -q' not in job_script
         assert '#PBS -A' not in job_script
 
-        assert '{} -m distributed.cli.dask_worker tcp://'.format(
-            sys.executable) in job_script
+        assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
         assert '--nthreads 2 --nprocs 4 --memory-limit 7.00GB' in job_script
 
     with Cluster(queue='regular', project='DaskOnPBS', processes=4, cores=8,
@@ -85,16 +82,14 @@ def test_job_script(Cluster):
         assert '#PBS -l walltime=' in job_script
         assert '#PBS -A DaskOnPBS' in job_script
 
-        assert '{} -m distributed.cli.dask_worker tcp://'.format(
-            sys.executable) in job_script
+        assert '{} -m distributed.cli.dask_worker tcp://'.format(sys.executable) in job_script
         assert '--nthreads 2 --nprocs 4 --memory-limit 7.00GB' in job_script
 
 
 @pytest.mark.env("pbs")  # noqa: F811
 def test_basic(loop):
-    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB',
-                    local_directory='/tmp', job_extra=['-V'],
-                    loop=loop) as cluster:
+    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
+                    job_extra=['-V'], loop=loop) as cluster:
         with Client(cluster) as client:
             cluster.start_workers(2)
             assert cluster.pending_jobs or cluster.running_jobs
@@ -119,9 +114,8 @@ def test_basic(loop):
 
 @pytest.mark.env("pbs")  # noqa: F811
 def test_adaptive(loop):
-    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB',
-                    local_directory='/tmp', job_extra=['-V'],
-                    loop=loop) as cluster:
+    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
+                    job_extra=['-V'], loop=loop) as cluster:
         cluster.adapt()
         with Client(cluster) as client:
             future = client.submit(lambda x: x + 1, 10)
@@ -155,9 +149,8 @@ def test_adaptive(loop):
 
 @pytest.mark.env("pbs")  # noqa: F811
 def test_adaptive_grouped(loop):
-    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB',
-                    local_directory='/tmp', job_extra=['-V'],
-                    loop=loop) as cluster:
+    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
+                    job_extra=['-V'], loop=loop) as cluster:
         cluster.adapt(minimum=1)  # at least 1 worker
         with Client(cluster) as client:
             start = time()

@@ -69,8 +69,7 @@ class JobQueuePlugin(SchedulerPlugin):
         ''' Run when a worker leaves the cluster'''
         logger.debug("removing worker %s" % worker)
         name, job_id = self.all_workers[worker]
-        logger.debug("removing worker name (%s) and"
-                     "job_id (%s)" % (name, job_id))
+        logger.debug("removing worker name (%s) and job_id (%s)" % (name, job_id))
 
         # remove worker from this job
         del self.running_jobs[job_id][name]
@@ -85,8 +84,8 @@ class JobQueuePlugin(SchedulerPlugin):
 class JobQueueCluster(Cluster):
     """ Base class to launch Dask Clusters for Job queues
 
-    This class should not be used directly, use inherited class appropriate
-    for your queueing system (e.g. PBScluster or SLURMCluster)
+    This class should not be used directly, use inherited class appropriate for your queueing system (e.g. PBScluster
+    or SLURMCluster)
 
     Parameters
     ----------
@@ -140,8 +139,7 @@ class JobQueueCluster(Cluster):
     submit_command = None
     cancel_command = None
     scheduler_name = ''
-    _adaptive_options = {
-        'worker_key': lambda ws: _job_id_from_worker_name(ws.name)}
+    _adaptive_options = {'worker_key': lambda ws: _job_id_from_worker_name(ws.name)}
 
     def __init__(self,
                  name=None,
@@ -159,15 +157,13 @@ class JobQueueCluster(Cluster):
                  ):
         """ """
         # """
-        # This initializer should be considered as Abstract, and never used
-        # directly.
+        # This initializer should be considered as Abstract, and never used directly.
         # """
         if threads is not None:
             raise ValueError(threads_deprecation_message)
 
         if not self.scheduler_name:
-            raise NotImplementedError('JobQueueCluster is an abstract class '
-                                      'that should not be instanciated.')
+            raise NotImplementedError('JobQueueCluster is an abstract class that should not be instanciated.')
 
         if name is None:
             name = dask.config.get('jobqueue.%s.name' % self.scheduler_name)
@@ -192,12 +188,10 @@ class JobQueueCluster(Cluster):
             warnings.warn(threads_deprecation_message)
 
         if cores is None:
-            raise ValueError("You must specify how many cores to use per job "
-                             "like ``cores=8``")
+            raise ValueError("You must specify how many cores to use per job like ``cores=8``")
 
         if memory is None:
-            raise ValueError("You must specify how much memory to use per job "
-                             "like ``memory='24 GB'``")
+            raise ValueError("You must specify how much memory to use per job like ``memory='24 GB'``")
 
         # This attribute should be overriden
         self.job_header = None
@@ -226,8 +220,7 @@ class JobQueueCluster(Cluster):
         self._env_header = '\n'.join(env_extra)
 
         # dask-worker command line build
-        dask_worker_command = (
-            '%(python)s -m distributed.cli.dask_worker' % dict(python=sys.executable))
+        dask_worker_command = '%(python)s -m distributed.cli.dask_worker' % dict(python=sys.executable)
         self._command_template = ' '.join([dask_worker_command, self.scheduler.address])
         self._command_template += " --nthreads %d" % self.worker_threads
         if processes is not None and processes > 1:
@@ -302,14 +295,13 @@ class JobQueueCluster(Cluster):
     def _calls(self, cmds, **kwargs):
         """ Call a command using subprocess.communicate
 
-        This centralzies calls out to the command line, providing consistent
-        outputs, logging, and an opportunity to go asynchronous in the future
+        This centralzies calls out to the command line, providing consistent outputs, logging, and an opportunity
+        to go asynchronous in the future
 
         Parameters
         ----------
         cmd: List(List(str))
-            A list of commands, each of which is a list of strings to hand to
-            subprocess.communicate
+            A list of commands, each of which is a list of strings to hand to subprocess.communicate
 
         Examples
         --------
@@ -324,10 +316,7 @@ class JobQueueCluster(Cluster):
         procs = []
         for cmd in cmds:
             logger.debug(' '.join(cmd))
-            procs.append(subprocess.Popen(cmd,
-                                          stdout=subprocess.PIPE,
-                                          stderr=subprocess.PIPE,
-                                          **kwargs))
+            procs.append(subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs))
 
         result = []
         for proc in procs:
@@ -398,7 +387,5 @@ class JobQueueCluster(Cluster):
         return jobs
 
     def _job_id_from_submit_output(self, out):
-        raise NotImplementedError('_job_id_from_submit_output must be '
-                                  'implemented when JobQueueCluster is '
-                                  'inherited. It should convert the stdout '
-                                  'from submit_command to the job id')
+        raise NotImplementedError('_job_id_from_submit_output must be implemented when JobQueueCluster is '
+                                  'inherited. It should convert the stdout from submit_command to the job id')
