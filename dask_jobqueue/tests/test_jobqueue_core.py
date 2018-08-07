@@ -1,6 +1,6 @@
 import pytest
 
-from dask_jobqueue import JobQueueCluster
+from dask_jobqueue import JobQueueCluster, PBSCluster, MoabCluster, SLURMCluster, SGECluster, LSFCluster
 
 
 def test_errors():
@@ -16,3 +16,14 @@ def test_threads_deprecation():
 
     assert all(word in str(info.value)
                for word in ['threads', 'core', 'processes'])
+
+
+@pytest.mark.parametrize('Cluster', [PBSCluster, MoabCluster, SLURMCluster, SGECluster, LSFCluster])
+def test_repr(Cluster):
+    with Cluster(walltime='00:02:00', processes=4, cores=8, memory='28GB',
+                 name='dask-worker') as cluster:
+        cluster_repr = repr(cluster)
+        assert cluster.__class__.__name__ in cluster_repr
+        assert 'cores=0' in cluster_repr
+        assert 'memory=0 B' in cluster_repr
+        assert 'workers=0' in cluster_repr

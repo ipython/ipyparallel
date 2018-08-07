@@ -245,6 +245,19 @@ class JobQueueCluster(Cluster):
         if extra is not None:
             self._command_template += extra
 
+    def __repr__(self):
+        running_workers = sum(len(value) for value in self.running_jobs.values())
+        running_cores = running_workers * self.worker_threads
+        total_jobs = len(self.pending_jobs) + len(self.running_jobs)
+        total_workers = total_jobs * self.worker_processes
+        running_memory = running_workers * self.worker_memory / self.worker_processes
+
+        return (self.__class__.__name__ +
+                '(cores=%d, memory=%s, workers=%d/%d, jobs=%d/%d)' %
+                (running_cores, format_bytes(running_memory), running_workers,
+                 total_workers, len(self.running_jobs), total_jobs)
+                )
+
     @property
     def pending_jobs(self):
         """ Jobs pending in the queue """
