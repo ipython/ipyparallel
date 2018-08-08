@@ -3,7 +3,6 @@ from __future__ import absolute_import, division, print_function
 import logging
 import math
 import shlex
-import socket
 import subprocess
 import sys
 import warnings
@@ -15,8 +14,7 @@ import docrep
 from distributed import LocalCluster
 from distributed.deploy import Cluster
 from distributed.diagnostics.plugin import SchedulerPlugin
-from distributed.utils import (
-    format_bytes, get_ip_interface, parse_bytes, tmpfile)
+from distributed.utils import (format_bytes, parse_bytes, tmpfile)
 
 logger = logging.getLogger(__name__)
 docstrings = docrep.DocstringProcessor()
@@ -185,6 +183,8 @@ class JobQueueCluster(Cluster):
             local_directory = dask.config.get('jobqueue.%s.local-directory' % self.scheduler_name)
         if extra is None:
             extra = dask.config.get('jobqueue.%s.extra' % self.scheduler_name)
+        if interface:
+            extra += ' --interface  %s ' % interface
         if env_extra is None:
             env_extra = dask.config.get('jobqueue.%s.env-extra' % self.scheduler_name)
 
@@ -202,16 +202,11 @@ class JobQueueCluster(Cluster):
         #This attribute should be overriden
         self.job_header = None
 
-        # Find the IP address and (if requested) set interface for workers
-        localhost_kwargs = {}
-        if interface:
-            localhost_kwargs['ip'] = get_ip_interface(interface)
-            extra += ' --interface  %s ' % interface
-        else:
-            localhost_kwargs['ip'] = socket.gethostname()
-        localhost_kwargs.update(kwargs)
+        # Bind to all network addresses by default
+        if 'ip' not in kwargs:
+            kwargs['ip'] = ''
 
-        self.local_cluster = LocalCluster(n_workers=0, **localhost_kwargs)
+        self.local_cluster = LocalCluster(n_workers=0, **kwargs)
 
         # Keep information on process, threads and memory, for use in
         # subclasses

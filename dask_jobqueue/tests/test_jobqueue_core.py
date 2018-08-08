@@ -36,8 +36,7 @@ def test_forward_ip():
                     name='dask-worker', ip=ip) as cluster:
         assert cluster.local_cluster.scheduler.ip == ip
 
-    default_ip = socket.gethostbyname(socket.gethostname())
-    assert default_ip != ip
+    default_ip = socket.gethostbyname('')
     with PBSCluster(walltime='00:02:00', processes=4, cores=8, memory='28GB',
                     name='dask-worker') as cluster:
         assert cluster.local_cluster.scheduler.ip == default_ip
