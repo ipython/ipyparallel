@@ -45,7 +45,7 @@ Cheyenne
 NERSC Cori
 ----------
 
-`NERSC Cori Supercomputer <https://www2.cisl.ucar.edu/resources/computational-systems/cheyenne>`_
+`NERSC Cori Supercomputer <https://www.nersc.gov/systems/cori>`_
 
 It should be noted that the the following config file assumes you are running the scheduler on a worker node. Currently the login node appears unable to talk to the worker nodes bidirectionally. As such you need to request an interactive node with the following:
 
