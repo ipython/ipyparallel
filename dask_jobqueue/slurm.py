@@ -107,8 +107,9 @@ class SLURMCluster(JobQueueCluster):
 
 
 def slurm_format_bytes_ceil(n):
-    """ Format bytes as text SLURM expects KiB, MiB or Gib, but names it KB, MB, GB.
-    SLURM does not handle Bytes, only starts at KB.
+    """ Format bytes as text.
+
+    SLURM expects KiB, MiB or Gib, but names it KB, MB, GB. SLURM does not handle Bytes, only starts at KB.
 
     >>> slurm_format_bytes_ceil(1)
     '1K'

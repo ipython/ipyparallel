@@ -306,7 +306,7 @@ class JobQueueCluster(Cluster):
     def _calls(self, cmds, **kwargs):
         """ Call a command using subprocess.communicate
 
-        This centralzies calls out to the command line, providing consistent outputs, logging, and an opportunity
+        This centralizes calls out to the command line, providing consistent outputs, logging, and an opportunity
         to go asynchronous in the future
 
         Parameters

@@ -57,8 +57,7 @@ class PBSCluster(JobQueueCluster):
     cancel_command = 'qdel'
     scheduler_name = 'pbs'
 
-    def __init__(self, queue=None, project=None, resource_spec=None,
-                 walltime=None, job_extra=None, **kwargs):
+    def __init__(self, queue=None, project=None, resource_spec=None, walltime=None, job_extra=None, **kwargs):
         if queue is None:
             queue = dask.config.get('jobqueue.%s.queue' % self.scheduler_name)
         if resource_spec is None:
@@ -68,7 +67,7 @@ class PBSCluster(JobQueueCluster):
         if job_extra is None:
             job_extra = dask.config.get('jobqueue.%s.job-extra' % self.scheduler_name)
         if project is None:
-            project = (dask.config.get('jobqueue.%s.project' % self.scheduler_name) or os.environ.get('PBS_ACCOUNT'))
+            project = dask.config.get('jobqueue.%s.project' % self.scheduler_name) or os.environ.get('PBS_ACCOUNT')
 
         # Instantiate args and parameters from parent abstract class
         super(PBSCluster, self).__init__(**kwargs)
@@ -107,8 +106,9 @@ class PBSCluster(JobQueueCluster):
 
 
 def pbs_format_bytes_ceil(n):
-    """ Format bytes as text PBS expects KiB, MiB or Gib, but names it KB, MB, GB whereas Dask makes the difference
-    between KB and KiB
+    """ Format bytes as text.
+
+    PBS expects KiB, MiB or Gib, but names it KB, MB, GB whereas Dask makes the difference between KB and KiB.
 
     >>> pbs_format_bytes_ceil(1)
     '1B'
