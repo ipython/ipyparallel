@@ -52,8 +52,7 @@ class LSFCluster(JobQueueCluster):
     cancel_command = 'bkill'
     scheduler_name = 'lsf'
 
-    def __init__(self, queue=None, project=None, ncpus=None, mem=None,
-                 walltime=None, job_extra=None, **kwargs):
+    def __init__(self, queue=None, project=None, ncpus=None, mem=None, walltime=None, job_extra=None, **kwargs):
         if queue is None:
             queue = dask.config.get('jobqueue.%s.queue' % self.scheduler_name)
         if project is None:
@@ -83,15 +82,13 @@ class LSFCluster(JobQueueCluster):
         if ncpus is None:
             # Compute default cores specifications
             ncpus = self.worker_cores
-            logger.info("ncpus specification for LSF not set, "
-                        "initializing it to %s" % ncpus)
+            logger.info("ncpus specification for LSF not set, initializing it to %s" % ncpus)
         if ncpus is not None:
             header_lines.append('#BSUB -n %s' % ncpus)
         if mem is None:
             # Compute default memory specifications
             mem = self.worker_memory
-            logger.info("mem specification for LSF not set, "
-                        "initializing it to %s" % mem)
+            logger.info("mem specification for LSF not set, initializing it to %s" % mem)
         if mem is not None:
             memory_string = lsf_format_bytes_ceil(mem)
             header_lines.append('#BSUB -M %s' % memory_string)

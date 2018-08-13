@@ -43,8 +43,7 @@ def test_header():
         assert '#BSUB -q' not in cluster.job_header
         assert '#BSUB -P' not in cluster.job_header
 
-    with LSFCluster(cores=4, memory='8GB',
-                    job_extra=['-u email@domain.com']) as cluster:
+    with LSFCluster(cores=4, memory='8GB', job_extra=['-u email@domain.com']) as cluster:
 
         assert '#BSUB -u email@domain.com' in cluster.job_header
         assert '#BSUB -n' in cluster.job_header
@@ -55,8 +54,7 @@ def test_header():
 
 
 def test_job_script():
-    with LSFCluster(walltime='00:02', processes=4, cores=8,
-                    memory='28GB') as cluster:
+    with LSFCluster(walltime='00:02', processes=4, cores=8, memory='28GB') as cluster:
 
         job_script = cluster.job_script()
         assert '#BSUB' in job_script

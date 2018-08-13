@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function
+
 from .core import docstrings
 from .pbs import PBSCluster
 
@@ -13,13 +15,11 @@ class MoabCluster(PBSCluster):
         Accounting string associated with each worker job. Passed to
         `#PBS -A` option.
     resource_spec : str
-        Request resources and specify job placement. Passed to `#PBS -l`
-        option.
+        Request resources and specify job placement. Passed to `#PBS -l` option.
     walltime : str
         Walltime for each worker job.
     job_extra : list
-        List of other PBS options, for example -j oe. Each option will be
-        prepended with the #PBS prefix.
+        List of other PBS options, for example -j oe. Each option will be prepended with the #PBS prefix.
     %(JobQueueCluster.parameters)s
 
     Examples
@@ -35,8 +35,7 @@ class MoabCluster(PBSCluster):
     >>> from dask.distributed import Client
     >>> client = Client(cluster)
 
-    This also works with adaptive clusters.  This automatically launches and
-    kill workers based on load.
+    This also works with adaptive clusters.  This automatically launches and kill workers based on load.
 
     >>> cluster.adapt()
     """, 4)

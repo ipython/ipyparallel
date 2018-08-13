@@ -10,7 +10,9 @@ Additional examples from other cluster welcome `here <https://github.com/dask/da
 Cheyenne
 --------
 
-`Cheyenne Supercomputer <https://www2.cisl.ucar.edu/resources/computational-systems/cheyenne>`_
+NCAR's `Cheyenne Supercomputer <https://www2.cisl.ucar.edu/resources/computational-systems/cheyenne>`_
+uses both PBS (for Cheyenne itself) and Slurm (for the attached DAV clusters
+Geyser/Caldera).
 
 .. code-block:: yaml
 
@@ -28,18 +30,29 @@ Cheyenne
 
    jobqueue:
      pbs:
-       cores: 36
-       memory: 108GB
-       processes: 4
-
-       interface: ib0
-       local-directory: $TMPDIR
+       name: dask-worker
+       cores: 36                   # Total number of cores per job
+       memory: '109 GB'            # Total amount of memory per job
+       processes: 9                # Number of Python processes per job
+       interface: ib0              # Network interface to use like eth0 or ib0
 
        queue: regular
-       project: null  # TODO, change me
        walltime: '00:30:00'
+       resource-spec: select=1:ncpus=36:mem=109GB
 
-       resource-spec: select=1:ncpus=36:mem=109G
+     slurm:
+       name: dask-worker
+
+       # Dask worker options
+       cores: 1                    # Total number of cores per job
+       memory: '25 GB'             # Total amount of memory per job
+       processes: 1                # Number of Python processes per job
+
+       interface: ib0
+
+       project: PXYZ123
+       walltime: '00:30:00'
+       job-extra: {-C geyser}
 
 
 NERSC Cori

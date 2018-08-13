@@ -1,7 +1,10 @@
+from __future__ import absolute_import, division, print_function
+
 import pytest
 import socket
 
-from dask_jobqueue import JobQueueCluster, PBSCluster, MoabCluster, SLURMCluster, SGECluster, LSFCluster
+from dask_jobqueue import (JobQueueCluster, PBSCluster, MoabCluster,
+                           SLURMCluster, SGECluster, LSFCluster)
 
 
 def test_errors():
@@ -19,7 +22,8 @@ def test_threads_deprecation():
                for word in ['threads', 'core', 'processes'])
 
 
-@pytest.mark.parametrize('Cluster', [PBSCluster, MoabCluster, SLURMCluster, SGECluster, LSFCluster])
+@pytest.mark.parametrize('Cluster', [PBSCluster, MoabCluster, SLURMCluster,
+                                     SGECluster, LSFCluster])
 def test_repr(Cluster):
     with Cluster(walltime='00:02:00', processes=4, cores=8, memory='28GB',
                  name='dask-worker') as cluster:

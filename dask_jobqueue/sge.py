@@ -17,11 +17,9 @@ class SGECluster(JobQueueCluster):
     queue : str
         Destination queue for each worker job. Passed to `#$ -q` option.
     project : str
-        Accounting string associated with each worker job. Passed to
-        `#$ -A` option.
+        Accounting string associated with each worker job. Passed to `#$ -A` option.
     resource_spec : str
-        Request resources and specify job placement. Passed to `#$ -l`
-        option.
+        Request resources and specify job placement. Passed to `#$ -l` option.
     walltime : str
         Walltime for each worker job.
     %(JobQueueCluster.parameters)s
@@ -35,8 +33,7 @@ class SGECluster(JobQueueCluster):
     >>> from dask.distributed import Client
     >>> client = Client(cluster)
 
-    This also works with adaptive clusters.  This automatically launches and
-    kill workers based on load.
+    This also works with adaptive clusters.  This automatically launches and kill workers based on load.
 
     >>> cluster.adapt()
     """, 4)
@@ -77,7 +74,7 @@ class SGECluster(JobQueueCluster):
                   'project': project,
                   'processes': self.worker_processes,
                   'walltime': walltime,
-                  'resource_spec': resource_spec,}
+                  'resource_spec': resource_spec}
         self.job_header = header_template % config
 
         logger.debug("Job script: \n %s" % self.job_script())
