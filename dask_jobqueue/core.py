@@ -346,7 +346,7 @@ class JobQueueCluster(Cluster):
         logger.debug("Stopping workers: %s" % workers)
         if not workers:
             return
-        jobs = self._stop_pending_jobs()  # stop pending jobs too
+        jobs = self._del_pending_jobs()  # stop pending jobs too
         for w in workers:
             if isinstance(w, dict):
                 jobs.append(_job_id_from_worker_name(w['name']))
@@ -381,18 +381,27 @@ class JobQueueCluster(Cluster):
                 logger.debug('worker %s is already gone' % w)
         self.stop_workers(worker_states)
 
+    def stop_all_jobs(self):
+        ''' Stops all running and pending jobs '''
+        jobs = self._del_pending_jobs()
+        jobs += list(self.running_jobs.keys())
+        self.stop_jobs(set(jobs))
+
+    def close(self):
+        ''' Stops all running and pending jobs and stops scheduler '''
+        self.stop_all_jobs()
+        self.local_cluster.close()
+
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, traceback):
-        jobs = self._stop_pending_jobs()
-        jobs += list(self.running_jobs.keys())
-        self.stop_jobs(set(jobs))
+        self.close()
         self.local_cluster.__exit__(type, value, traceback)
 
-    def _stop_pending_jobs(self):
+    def _del_pending_jobs(self):
         jobs = list(self.pending_jobs.keys())
-        logger.debug("Stopping pending jobs %s" % jobs)
+        logger.debug("Deleting pending jobs %s" % jobs)
         for job_id in jobs:
             del self.pending_jobs[job_id]
         return jobs
