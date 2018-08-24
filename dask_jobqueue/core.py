@@ -14,7 +14,7 @@ import docrep
 from distributed import LocalCluster
 from distributed.deploy import Cluster
 from distributed.diagnostics.plugin import SchedulerPlugin
-from distributed.utils import (format_bytes, parse_bytes, tmpfile)
+from distributed.utils import format_bytes, parse_bytes, tmpfile, get_ip_interface
 
 logger = logging.getLogger(__name__)
 docstrings = docrep.DocstringProcessor()
@@ -179,8 +179,6 @@ class JobQueueCluster(Cluster):
             local_directory = dask.config.get('jobqueue.%s.local-directory' % self.scheduler_name)
         if extra is None:
             extra = dask.config.get('jobqueue.%s.extra' % self.scheduler_name)
-        if interface:
-            extra += ' --interface  %s ' % interface
         if env_extra is None:
             env_extra = dask.config.get('jobqueue.%s.env-extra' % self.scheduler_name)
 
@@ -196,11 +194,16 @@ class JobQueueCluster(Cluster):
         # This attribute should be overriden
         self.job_header = None
 
-        # Bind to all network addresses by default
-        if 'ip' not in kwargs:
-            kwargs['ip'] = ''
+        if interface:
+            extra += ' --interface  %s ' % interface
+            kwargs.setdefault('ip', get_ip_interface(interface))
+        else:
+            kwargs.setdefault('ip', '')
 
-        self.local_cluster = LocalCluster(n_workers=0, **kwargs)
+        # Bokeh diagnostics server should listen on all interfaces
+        diagnostics_ip_and_port = ('', 8787)
+        self.local_cluster = LocalCluster(n_workers=0, diagnostics_port=diagnostics_ip_and_port,
+                                          **kwargs)
 
         # Keep information on process, threads and memory, for use in
         # subclasses
