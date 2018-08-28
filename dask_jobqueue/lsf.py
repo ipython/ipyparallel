@@ -102,9 +102,6 @@ class LSFCluster(JobQueueCluster):
 
         logger.debug("Job script: \n %s" % self.job_script())
 
-    def _job_id_from_submit_output(self, out):
-        return out.split('<')[1].split('>')[0].strip()
-
     def _submit_job(self, script_filename):
         piped_cmd = [self.submit_command + ' ' + script_filename + ' 2> /dev/null']
         return self._call(piped_cmd, shell=True)

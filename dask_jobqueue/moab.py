@@ -42,6 +42,3 @@ class MoabCluster(PBSCluster):
     submit_command = 'msub'
     cancel_command = 'canceljob'
     scheduler_name = 'moab'
-
-    def _job_id_from_submit_output(self, out):
-        return out.strip()

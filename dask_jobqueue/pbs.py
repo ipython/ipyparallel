@@ -101,9 +101,6 @@ class PBSCluster(JobQueueCluster):
 
         logger.debug("Job script: \n %s" % self.job_script())
 
-    def _job_id_from_submit_output(self, out):
-        return out.split('.')[0].strip()
-
 
 def pbs_format_bytes_ceil(n):
     """ Format bytes as text.

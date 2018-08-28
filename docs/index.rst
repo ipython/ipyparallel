@@ -285,5 +285,4 @@ problems are the following:
   We use submit command stdout to parse the job_id corresponding to the
   launched group of worker. If the parsing fails, then dask-jobqueue won't work
   as expected and may throw exceptions. You can have a look at the parsing
-  function in every ``JobQueueCluster`` implementation, see
-  ``_job_id_from_submit_output`` function.
+  function ``JobQueueCluster._job_id_from_submit_output``.

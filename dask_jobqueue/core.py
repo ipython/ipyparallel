@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import math
+import re
 import shlex
 import subprocess
 import sys
@@ -138,6 +139,7 @@ class JobQueueCluster(Cluster):
     cancel_command = None
     scheduler_name = ''
     _adaptive_options = {'worker_key': lambda ws: _job_id_from_worker_name(ws.name)}
+    job_id_regexp = r'(?P<job_id>\d+)'
 
     def __init__(self,
                  name=None,
@@ -410,5 +412,18 @@ class JobQueueCluster(Cluster):
         return jobs
 
     def _job_id_from_submit_output(self, out):
-        raise NotImplementedError('_job_id_from_submit_output must be implemented when JobQueueCluster is '
-                                  'inherited. It should convert the stdout from submit_command to the job id')
+        match = re.search(self.job_id_regexp, out)
+        if match is None:
+            msg = ('Could not parse job id from submission command '
+                   "output.\nJob id regexp is {!r}\nSubmission command "
+                   'output is:\n{}'.format(self.job_id_regexp, out))
+            raise ValueError(msg)
+
+        job_id = match.groupdict().get('job_id')
+        if job_id is None:
+            msg = ("You need to use a 'job_id' named group in your regexp, e.g. "
+                   "r'(?P<job_id>\d+)', in your regexp. Your regexp was: "
+                   "{!r}".format(self.job_id_regexp))
+            raise ValueError(msg)
+
+        return job_id
