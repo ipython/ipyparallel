@@ -9,11 +9,7 @@ RUN curl -o miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-L
     /opt/anaconda/bin/conda clean -tipy && \
     rm -f miniconda.sh
 ENV PATH /opt/anaconda/bin:$PATH
-RUN conda install -n root conda=4.4.11 && conda clean -tipy
-RUN conda install -c conda-forge dask distributed blas pytest mock ipython pip psutil && conda clean -tipy
-RUN pip install --no-cache-dir drmaa
-RUN pip install --no-cache-dir git+https://github.com/dask/dask.git --upgrade --no-deps
-RUN pip install --no-cache-dir git+https://github.com/dask/distributed.git --upgrade --no-deps
+RUN conda install -c conda-forge dask distributed pytest && conda clean -tipy
 
 COPY ./*.sh /
 COPY ./*.txt /
@@ -25,6 +21,5 @@ EXPOSE 6444
 EXPOSE 6445
 EXPOSE 6446
 
-ENV DRMAA_LIBRARY_PATH /usr/lib/gridengine-drmaa/lib/libdrmaa.so
 ENV SGE_ROOT /var/lib/gridengine/
 ENV SGE_CELL default
