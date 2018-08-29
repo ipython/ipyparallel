@@ -45,6 +45,82 @@ save resources when not actively computing.
    cluster.adapt(minimum=6, maximum=90)  # auto-scale between 6 and 90 workers
 
 
+Interactive Use
+---------------
+
+While dask-jobqueue can perfectly be used to submit batch processing, it is
+better suited to interactive processing, using tools like ipython or jupyter
+notebooks. Batch processing with dask-jobqueue can be tricky in some cases
+depending on how your cluster is configured and which resources and queues you
+have access to: scheduler might hang on for a long time before having some
+connected workers, and you could end up with less computing power than you
+expected. Another good solution for batch processing on HPC system using dask
+is the `dask-mpi <http://dask.pydata.org/en/latest/setup/hpc.html#using-mpi>`_
+command.
+
+The following paragraphs describe how to have access to Jupyter notebook and
+Dask dashboard on your HPC system.
+
+Using Jupyter
+~~~~~~~~~~~~~
+
+It is convenient to run a Jupyter notebook server on the HPC for use with
+dask-jobqueue. You may already have a Jupyterhub instance available on your
+system, which can be used as is. Otherwise, a really good documentation for
+starting your own notebook is available in the `Pangeo documentation
+<http://pangeo-data.org/setup_guides/hpc.html#configure-jupyter>`_.
+
+Once Jupyter is installed and configured, using a Jupyter notebook is done by:
+
+- Starting a Jupyter notebook server on the HPC (it is often good practice to
+  run/submit this as a job to an interactive queue, see Pangeo docs for more
+  details).
+
+.. code-block:: bash
+
+   $ jupyter notebook --no-browser --ip=`hostname` --port=8888
+
+- Reading the output of the command above to get the ip or hostname of your
+  notebook, and use SSH tunneling on your local machine to access the notebook.
+  This must only be done in the probable case where you don't have direct
+  access to the notebook URL from your computer browser.
+
+.. code-block:: bash
+
+   $ ssh -N -L 8888:x.x.x.x:8888 username@hpc_domain
+
+Viewing the Dask Dashboard
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Whether or not you are using dask-jobqueue in Jupyter, ipython or other tools,
+at one point you will want to have access to Dask Dashboard. Once you've
+started a cluster and connected a client to it using commands described in
+`Example`_), inspecting ``client`` object will give you the Dashboard URL,
+for example ``http://172.16.23.102:8787/status``. The Dask Dashboard may be
+accessible by clicking the link displayed, otherwise, you'll have to use SSH
+tunneling:
+
+.. code-block:: bash
+
+    # General syntax
+    $ ssh -fN your-login@scheduler-ip-address -L port-number:localhost:port-number
+    # As applied to this example:
+    $ ssh -fN username@172.16.23.102 -L 8787:localhost:8787
+
+Now, you can go to ``http://localhost:8787`` on your browser to view the
+dashboard. Note that you can do SSH tunneling for both Jupyter and Dashboard in
+one command.
+
+A good example of using Jupyter along with dask-jobqueue and the Dashboard is
+availaible below:
+
+.. raw:: html
+
+   <iframe width="560" height="315"
+           src="https://www.youtube.com/embed/nH_AQo8WdKw?rel=0"
+           frameborder="0" allow="autoplay; encrypted-media"
+           allowfullscreen></iframe>
+
 Configuration
 -------------
 
@@ -141,6 +217,7 @@ documentation <http://dask.pydata.org/en/latest/configuration.html>`_
 
    index.rst
    install.rst
+   examples.rst
    configurations.rst
    configuration-setup.rst
    history.rst

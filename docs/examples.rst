@@ -109,37 +109,3 @@ SLURM Deployment: Low-priority node usage
                                       'export LANGUAGE="en_US.utf8"',
                                       'export LC_ALL="en_US.utf8"'],
                            job_extra=['--qos="savio_lowprio"'])
-
-
-Viewing Dask Dashboard
-~~~~~~~~~~~~~~~~~~~~~~
-
-Sometimes, the Dask dashboard might not be directly accessible via the browser.
-To solve this, you can use SSH tunneling. Let's say we started with the
-following setup:
-
-.. code-block:: python
-
-    from dask_jobqueue import SGECluster
-    from distributed import Client
-
-    cluster = SGECluster(queue='default.q',
-                         walltime="1500000",
-                         processes=10,
-                         memory='20GB')
-
-    client = Client(cluster)
-
-Say for example, on inspection of the ``client`` object, you see that the
-Dashboard can be viewed at ``http://172.16.23.102:8787/status``. If the webpage
-is not directly accessible in your browser, then the next thing to try would be
-SSH tunneling.
-
-.. code-block:: bash
-
-    # General syntax
-    $ ssh -fN your-login@scheduler-ip-address -L port-number:localhost:port-number
-    # As applied to this example:
-    $ ssh -fN username@172.16.23.102 -L 8787:localhost:8787
-
-Now, you can go to ``http://localhost:8787`` on your browser to view the dashboard.
