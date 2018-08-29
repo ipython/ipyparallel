@@ -1,4 +1,25 @@
 jobqueue:
+  oar:
+    name: dask-worker
+
+    # Dask worker options
+    cores: null                 # Total number of cores per job
+    memory: null                # Total amount of memory per job
+    processes: 1                # Number of Python processes per job
+
+    interface: null             # Network interface to use like eth0 or ib0
+    death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
+    local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
+
+    # OAR resource manager options
+    queue: null
+    project: null
+    walltime: '00:30:00'
+    extra: ""
+    env-extra: []
+    resource-spec: null
+    job-extra: []
+
   pbs:
     name: dask-worker
 
