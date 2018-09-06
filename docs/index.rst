@@ -222,6 +222,7 @@ documentation <http://dask.pydata.org/en/latest/configuration.html>`_
    configuration-setup.rst
    history.rst
    api.rst
+   changelog.rst
 
 How this works
 --------------
