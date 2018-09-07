@@ -124,6 +124,7 @@ availaible below:
            frameborder="0" allow="autoplay; encrypted-media"
            allowfullscreen></iframe>
 
+
 Dask Dashboard with Jupyter
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -135,7 +136,7 @@ it without having to do SSH tunneling. You just need to install
 ``nbserverproxy`` in the python env you use for launching the notebook, and
 activate it as indicated in the docs:
 
-.. code-block::
+.. code-block:: bash
 
    pip install nbserverproxy
    jupyter serverextension enable --py nbserverproxy
@@ -157,7 +158,7 @@ notebook, shown from Cluster and Client objects. In order to do this, just
 edit dask config file, either ``~/.config/dask/jobqueue.yaml`` or
 ``~/.config/dask/distributed.yaml``, and add the following:
 
-.. code-block::
+.. code-block:: yaml
 
    distributed.dashboard.link: "/proxy/{port}/status" # for user launched notebook
    distributed.dashboard.link: "/user/{JUPYTERHUB_USER}/proxy/{port}/status" # for jupyterhub launched notebook
