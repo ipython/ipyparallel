@@ -8,3 +8,5 @@ dependencies:
   - numpydoc
   - ipython
   - sphinx
+  - pip:
+    - dask_sphinx_theme>=1.0.4
