@@ -122,6 +122,10 @@ class JobQueueCluster(Cluster):
     --------
     PBSCluster
     SLURMCluster
+    SGECluster
+    OARCluster
+    LSFCluster
+    MoabCluster
     """
 
     _script_template = """

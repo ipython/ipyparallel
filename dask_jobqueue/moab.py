@@ -26,11 +26,11 @@ class MoabCluster(PBSCluster):
     --------
     >>> import os
     >>> from dask_jobqueue import MoabCluster
-    >>> cluster = MoabCluster(processes=6, threads=1, project='gfdl_m',
-                              memory='16G', resource_spec='96G',
+    >>> cluster = MoabCluster(processes=6, cores=6, project='gfdl_m',
+                              memory='96G', resource_spec='96G',
                               job_extra=['-d /home/First.Last', '-M none'],
                               local_directory=os.getenv('TMPDIR', '/tmp'))
-    >>> cluster.start_workers(10)  # submit enough jobs to deploy 10 workers
+    >>> cluster.scale(60)  # submit enough jobs to deploy 10 workers
 
     >>> from dask.distributed import Client
     >>> client = Client(cluster)

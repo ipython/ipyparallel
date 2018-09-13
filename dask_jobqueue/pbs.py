@@ -33,7 +33,7 @@ class PBSCluster(JobQueueCluster):
     Examples
     --------
     >>> from dask_jobqueue import PBSCluster
-    >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS')
+    >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS', cores=12)
     >>> cluster.scale(10)  # this may take a few seconds to launch
 
     >>> from dask.distributed import Client
@@ -43,13 +43,11 @@ class PBSCluster(JobQueueCluster):
 
     >>> cluster.adapt()
 
-    It is a good practice to define local_directory to your PBS system scratch directory, and you should specify
-    resource_spec according to the processes and threads asked:
+    It is a good practice to define local_directory to your PBS system scratch directory:
 
     >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS',
-    ...                      local_directory=os.getenv('TMPDIR', '/tmp'),
-    ...                      threads=4, processes=6, memory='16GB',
-    ...                      resource_spec='select=1:ncpus=24:mem=100GB')
+    ...                      local_directory='$TMPDIR',
+    ...                      cores=24, processes=6, memory='100GB')
     """, 4)
 
     # Override class variables
