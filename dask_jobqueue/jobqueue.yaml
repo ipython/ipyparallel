@@ -15,7 +15,7 @@ jobqueue:
     queue: null
     project: null
     walltime: '00:30:00'
-    extra: ""
+    extra: []
     env-extra: []
     resource-spec: null
     job-extra: []
@@ -36,7 +36,7 @@ jobqueue:
     queue: null
     project: null
     walltime: '00:30:00'
-    extra: ""
+    extra: []
     env-extra: []
     resource-spec: null
     job-extra: []
@@ -57,7 +57,7 @@ jobqueue:
     queue: null
     project: null
     walltime: '00:30:00'
-    extra: ""
+    extra: []
     env-extra: []
 
     resource-spec: null
@@ -78,7 +78,7 @@ jobqueue:
     queue: null
     project: null
     walltime: '00:30:00'
-    extra: ""
+    extra: []
     env-extra: []
     job-cpu: null
     job-mem: null
@@ -100,7 +100,7 @@ jobqueue:
     queue: null
     project: null
     walltime: '00:30:00'
-    extra: ""
+    extra: []
     env-extra: []
     resource-spec: null
     job-extra: []
@@ -121,7 +121,7 @@ jobqueue:
     queue: null
     project: null
     walltime: '00:30'
-    extra: ""
+    extra: []
     env-extra: []
     ncpus: null
     mem: null

@@ -102,7 +102,7 @@ class JobQueueCluster(Cluster):
         Seconds to wait for a scheduler before closing workers
     local_directory : str
         Dask worker local directory for file spilling.
-    extra : str
+    extra : list
         Additional arguments to pass to `dask-worker`
     env_extra : list
         Other commands to add to script before launching worker.
@@ -201,7 +201,7 @@ class JobQueueCluster(Cluster):
         self.job_header = None
 
         if interface:
-            extra += ' --interface  %s ' % interface
+            extra += ['--interface', interface]
             kwargs.setdefault('ip', get_ip_interface(interface))
         else:
             kwargs.setdefault('ip', '')
@@ -228,22 +228,23 @@ class JobQueueCluster(Cluster):
 
         # dask-worker command line build
         dask_worker_command = '%(python)s -m distributed.cli.dask_worker' % dict(python=sys.executable)
-        self._command_template = ' '.join([dask_worker_command, self.scheduler.address])
-        self._command_template += " --nthreads %d" % self.worker_threads
+        command_args = [dask_worker_command, self.scheduler.address]
+        command_args += ['--nthreads', self.worker_threads]
         if processes is not None and processes > 1:
-            self._command_template += " --nprocs %d" % processes
+            command_args += ['--nprocs', processes]
 
         mem = format_bytes(self.worker_memory / self.worker_processes)
-        mem = mem.replace(' ', '')
-        self._command_template += " --memory-limit %s" % mem
-        self._command_template += " --name %s--${JOB_ID}--" % name
+        command_args += ['--memory-limit', mem.replace(' ', '')]
+        command_args += ['--name', '%s--${JOB_ID}--' % name]
 
         if death_timeout is not None:
-            self._command_template += " --death-timeout %s" % death_timeout
+            command_args += ['--death-timeout', death_timeout]
         if local_directory is not None:
-            self._command_template += " --local-directory %s" % local_directory
+            command_args += ['--local-directory', local_directory]
         if extra is not None:
-            self._command_template += extra
+            command_args += extra
+
+        self._command_template = ' '.join(map(str, command_args))
 
     def __repr__(self):
         running_workers = sum(len(value) for value in self.running_jobs.values())

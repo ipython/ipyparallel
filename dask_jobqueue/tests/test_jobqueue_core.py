@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import pytest
 import socket
+import sys
 
 from dask_jobqueue import (JobQueueCluster, PBSCluster, MoabCluster,
                            SLURMCluster, SGECluster, LSFCluster)
@@ -20,6 +21,21 @@ def test_threads_deprecation():
 
     assert all(word in str(info.value)
                for word in ['threads', 'core', 'processes'])
+
+
+def test_command_template():
+    with PBSCluster(cores=2, memory='4GB') as cluster:
+        assert '%s -m distributed.cli.dask_worker' % (sys.executable) \
+               in cluster._command_template
+        assert ' --nthreads 2' in cluster._command_template
+        assert ' --memory-limit ' in cluster._command_template
+        assert ' --name ' in cluster._command_template
+
+    with PBSCluster(cores=2, memory='4GB', death_timeout=60, local_directory='/scratch',
+                    extra=['--preload', 'mymodule']) as cluster:
+        assert ' --death-timeout 60' in cluster._command_template
+        assert ' --local-directory /scratch' in cluster._command_template
+        assert ' --preload mymodule' in cluster._command_template
 
 
 @pytest.mark.parametrize('Cluster', [PBSCluster, MoabCluster, SLURMCluster,
