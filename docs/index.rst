@@ -261,11 +261,13 @@ documentation <http://dask.pydata.org/en/latest/configuration.html>`_
    index.rst
    install.rst
    examples.rst
-   configurations.rst
    configuration-setup.rst
+   configurations.rst
    history.rst
    api.rst
    changelog.rst
+   develop.rst
+
 
 How this works
 --------------
