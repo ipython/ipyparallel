@@ -181,8 +181,8 @@ intersphinx_mapping = {
                'http://pandas.pydata.org/pandas-docs/stable/objects.inv'),
     'numpy': ('https://docs.scipy.org/doc/numpy/',
               'https://docs.scipy.org/doc/numpy/objects.inv'),
-    'dask': ('http://dask.pydata.org/en/latest',
-             'http://dask.pydata.org/en/latest/objects.inv'),
-    'distributed': ('https://distributed.readthedocs.io/en/stable/',
-                    'https://distributed.readthedocs.io/en/stable/objects.inv')
+    'dask': ('https://dask.org/en/latest',
+             'https://dask.org/en/latest/objects.inv'),
+    'distributed': ('https://distributed.dask.org/en/stable/',
+                    'https://distributed.dask.org/en/stable/objects.inv')
 }

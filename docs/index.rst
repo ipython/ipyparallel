@@ -55,7 +55,7 @@ depending on how your cluster is configured and which resources and queues you
 have access to: scheduler might hang on for a long time before having some
 connected workers, and you could end up with less computing power than you
 expected. Another good solution for batch processing on HPC system using dask
-is the `dask-mpi <http://dask.pydata.org/en/latest/setup/hpc.html#using-mpi>`_
+is the `dask-mpi <https://dask.org/en/latest/setup/hpc.html#using-mpi>`_
 command.
 
 The following paragraphs describe how to have access to Jupyter notebook and
@@ -251,7 +251,7 @@ you can also place such a file in ``/etc/dask/`` and it will affect all people
 on the cluster automatically.
 
 For more information about configuring Dask, see the `Dask configuration
-documentation <http://dask.pydata.org/en/latest/configuration.html>`_
+documentation <https://dask.org/en/latest/configuration.html>`_
 
 
 .. toctree::
