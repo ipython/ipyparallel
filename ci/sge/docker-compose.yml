@@ -1,4 +1,4 @@
-version: "2"
+version: "2.1"
 
 services:
 
@@ -6,6 +6,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-master
+      args:
+        PYTHON_VERSION: ${TRAVIS_PYTHON_VERSION:-3.6}
     container_name: sge_master
     hostname: sge_master
     #network_mode: host
@@ -17,6 +19,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-slave
+      args:
+        PYTHON_VERSION: ${TRAVIS_PYTHON_VERSION:-3.6}
     container_name: slave_one
     hostname: slave_one
     #network_mode: host
@@ -32,6 +36,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile-slave
+      args:
+        PYTHON_VERSION: ${TRAVIS_PYTHON_VERSION:-3.6}
     container_name: slave_two
     hostname: slave_two
     #network_mode: host

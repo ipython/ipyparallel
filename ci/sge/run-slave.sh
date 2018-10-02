@@ -7,4 +7,4 @@ sleep 4
 
 sudo service gridengine-exec restart
 
-python -m http.server 8888
+sleep infinity

@@ -20,4 +20,4 @@ bash add_worker.sh dask.q slave_two 4
 
 sudo service gridengine-master restart
 
-python -m http.server 8888
+sleep infinity
