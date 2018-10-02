@@ -10,4 +10,4 @@ qmgr -c "create node pbs_slave_1"
 qmgr -c "create node pbs_slave_2"
 
 # Start hanging process to leave the container up and running
-python -m http.server 8888
+sleep infinity
