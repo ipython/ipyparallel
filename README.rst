@@ -12,11 +12,11 @@ LICENSE
 
 New BSD. See `License File <https://github.com/dask/dask-jobqueue/blob/master/LICENSE.txt>`__.
 
-.. _documentation: http://dask-jobqueue.readthedocs.io/en/latest
+.. _documentation: https://jobqueue.dask.org/en/latest/
 .. |Build Status| image:: https://travis-ci.org/dask/dask-jobqueue.svg?branch=master
    :target: https://travis-ci.org/dask/dask-jobqueue
 .. |Doc Status| image:: https://readthedocs.org/projects/dask-jobqueue/badge/?version=latest
-   :target: http://dask-jobqueue.readthedocs.io/en/latest
+   :target: https://jobqueue.dask.org/en/latest/
    :alt: Documentation Status
 .. |Gitter| image:: https://badges.gitter.im/Join%20Chat.svg
    :alt: Join the chat at https://gitter.im/dask/dask
