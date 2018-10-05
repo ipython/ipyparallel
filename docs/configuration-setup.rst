@@ -26,7 +26,7 @@ Or as part of a configuration file:
    cluster = PBSCluster()
 
 For more information on handling configuration files see `Dask configuration
-documentation <https://dask.org/en/latest/configuration.html>`_.
+documentation <https://docs.dask.org/en/latest/configuration.html>`_.
 
 This page explains what these parameters mean and how to find out information
 about them.
