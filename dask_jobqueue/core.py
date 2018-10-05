@@ -114,6 +114,8 @@ class JobQueueCluster(Cluster):
         Additional arguments to pass to `dask-worker`
     env_extra : list
         Other commands to add to script before launching worker.
+    python : str
+        Python executable used to launch Dask workers.
     kwargs : dict
         Additional keyword arguments to pass to `LocalCluster`
 
@@ -121,10 +123,10 @@ class JobQueueCluster(Cluster):
     ----------
     submit_command: str
         Abstract attribute for job scheduler submit command,
-        should be overriden
+        should be overridden
     cancel_command: str
         Abstract attribute for job scheduler cancel command,
-        should be overriden
+        should be overridden
 
     See Also
     --------
@@ -146,7 +148,7 @@ class JobQueueCluster(Cluster):
 %(worker_command)s
 """.lstrip()
 
-    # Following class attributes should be overriden by extending classes.
+    # Following class attributes should be overridden by extending classes.
     submit_command = None
     cancel_command = None
     scheduler_name = ''
@@ -165,6 +167,7 @@ class JobQueueCluster(Cluster):
                  env_extra=None,
                  walltime=None,
                  threads=None,
+                 python=sys.executable,
                  **kwargs
                  ):
         """ """
@@ -205,7 +208,7 @@ class JobQueueCluster(Cluster):
         if memory is None:
             raise ValueError("You must specify how much memory to use per job like ``memory='24 GB'``")
 
-        # This attribute should be overriden
+        # This attribute should be overridden
         self.job_header = None
 
         if interface:
@@ -235,7 +238,7 @@ class JobQueueCluster(Cluster):
         self._env_header = '\n'.join(env_extra)
 
         # dask-worker command line build
-        dask_worker_command = '%(python)s -m distributed.cli.dask_worker' % dict(python=sys.executable)
+        dask_worker_command = '%(python)s -m distributed.cli.dask_worker' % dict(python=python)
         command_args = [dask_worker_command, self.scheduler.address]
         command_args += ['--nthreads', self.worker_threads]
         if processes is not None and processes > 1:
