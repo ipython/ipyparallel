@@ -12,7 +12,7 @@ RUN git clone --branch v14.1.2 https://github.com/pbspro/pbspro.git /src/pbspro
 COPY build.sh /
 RUN bash /build.sh
 
-# base image 
+# base image
 FROM centos:7.4.1708
 LABEL description="PBS Professional Open Source and conda"
 

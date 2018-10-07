@@ -91,8 +91,14 @@ def test_basic(loop):
     with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
                     job_extra=['-V'], loop=loop) as cluster:
         with Client(cluster) as client:
-            cluster.start_workers(2)
-            assert cluster.pending_jobs or cluster.running_jobs
+
+            cluster.scale(2)
+
+            start = time()
+            while not(cluster.pending_jobs or cluster.running_jobs):
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
+
             future = client.submit(lambda x: x + 1, 10)
             assert future.result(QUEUE_WAIT) == 11
             assert cluster.running_jobs
@@ -102,14 +108,29 @@ def test_basic(loop):
             assert w['memory_limit'] == 2e9
             assert w['ncores'] == 2
 
-            cluster.stop_workers(workers)
+            cluster.scale(0)
 
             start = time()
-            while client.scheduler_info()['workers']:
+            while cluster.running_jobs:
                 sleep(0.100)
                 assert time() < start + QUEUE_WAIT
 
             assert not cluster.running_jobs
+
+
+@pytest.mark.env("pbs")  # noqa: F811
+@pytest.mark.skip(reason="Current scale method not capable of doing this")
+def test_basic_scale_edge_cases(loop):
+    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
+                    job_extra=['-V'], loop=loop) as cluster:
+
+        cluster.scale(2)
+        cluster.scale(0)
+
+        # Wait to see what happens
+        sleep(0.2)
+
+        assert not(cluster.pending_jobs or cluster.running_jobs)
 
 
 @pytest.mark.env("pbs")  # noqa: F811
@@ -119,12 +140,6 @@ def test_adaptive(loop):
         cluster.adapt()
         with Client(cluster) as client:
             future = client.submit(lambda x: x + 1, 10)
-
-            start = time()
-            while not (cluster.pending_jobs or cluster.running_jobs):
-                sleep(0.100)
-                assert time() < start + QUEUE_WAIT
-
             assert future.result(QUEUE_WAIT) == 11
 
             start = time()
@@ -136,14 +151,10 @@ def test_adaptive(loop):
             del future
 
             start = time()
-            while len(client.scheduler_info()['workers']) > 0:
-                sleep(0.100)
-                assert time() < start + QUEUE_WAIT
-
-            start = time()
             while cluster.pending_jobs or cluster.running_jobs:
                 sleep(0.100)
                 assert time() < start + QUEUE_WAIT
+
             assert cluster.finished_jobs
 
 
