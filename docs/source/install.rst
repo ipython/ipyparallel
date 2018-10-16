@@ -10,7 +10,7 @@ Pip can be used to install both dask-jobqueue and its dependencies (e.g. dask,
 distributed,  NumPy, Pandas, etc., that are necessary for different
 workloads).::
 
-   pip install "dask_jobqueue"    # Install everything from last released version
+   pip install dask_jobqueue --upgrade   # Install everything from last released version
 
 Conda
 -----

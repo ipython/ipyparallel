@@ -93,7 +93,7 @@ SLURM Deployments
 
 
 SLURM Deployment: Low-priority node usage
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------------------
 
 .. code-block:: python
 
