@@ -66,6 +66,9 @@ class SGECluster(JobQueueCluster):
             header_lines.append('#$ -l %(resource_spec)s')
         if walltime is not None:
             header_lines.append('#$ -l h_rt=%(walltime)s')
+        if self.log_directory is not None:
+            header_lines.append('#$ -e %(log_directory)s/')
+            header_lines.append('#$ -o %(log_directory)s/')
         header_lines.extend(['#$ -cwd', '#$ -j y'])
         header_template = '\n'.join(header_lines)
 
@@ -74,7 +77,8 @@ class SGECluster(JobQueueCluster):
                   'project': project,
                   'processes': self.worker_processes,
                   'walltime': walltime,
-                  'resource_spec': resource_spec}
+                  'resource_spec': resource_spec,
+                  'log_directory': self.log_directory}
         self.job_header = header_template % config
 
         logger.debug("Job script: \n %s" % self.job_script())

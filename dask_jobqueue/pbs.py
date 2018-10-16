@@ -91,6 +91,9 @@ class PBSCluster(JobQueueCluster):
             header_lines.append('#PBS -l %s' % resource_spec)
         if walltime is not None:
             header_lines.append('#PBS -l walltime=%s' % walltime)
+        if self.log_directory is not None:
+            header_lines.append('#PBS -e %s/' % self.log_directory)
+            header_lines.append('#PBS -o %s/' % self.log_directory)
         header_lines.extend(['#PBS %s' % arg for arg in job_extra])
         header_lines.append('JOB_ID=${PBS_JOBID%.*}')
 

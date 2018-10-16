@@ -73,8 +73,11 @@ class SLURMCluster(JobQueueCluster):
         # SLURM header build
         if self.name is not None:
             header_lines.append('#SBATCH -J %s' % self.name)
-            header_lines.append('#SBATCH -e %s.err' % self.name)
-            header_lines.append('#SBATCH -o %s.out' % self.name)
+        if self.log_directory is not None:
+            header_lines.append('#SBATCH -e %s/%s-%%J.err' %
+                                (self.log_directory, self.name or 'worker'))
+            header_lines.append('#SBATCH -o %s/%s-%%J.out' %
+                                (self.log_directory, self.name or 'worker'))
         if queue is not None:
             header_lines.append('#SBATCH -p %s' % queue)
         if project is not None:

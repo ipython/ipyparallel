@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import math
+import os
 import re
 import shlex
 import subprocess
@@ -166,6 +167,7 @@ class JobQueueCluster(Cluster):
                  local_directory=None,
                  extra=None,
                  env_extra=None,
+                 log_directory=None,
                  walltime=None,
                  threads=None,
                  python=sys.executable,
@@ -199,6 +201,8 @@ class JobQueueCluster(Cluster):
             extra = dask.config.get('jobqueue.%s.extra' % self.scheduler_name)
         if env_extra is None:
             env_extra = dask.config.get('jobqueue.%s.env-extra' % self.scheduler_name)
+        if log_directory is None:
+            log_directory = dask.config.get('jobqueue.%s.log-directory' % self.scheduler_name)
 
         if dask.config.get('jobqueue.%s.threads', None):
             warnings.warn(threads_deprecation_message)
@@ -258,6 +262,11 @@ class JobQueueCluster(Cluster):
         self._command_template = ' '.join(map(str, command_args))
 
         self._target_scale = 0
+
+        self.log_directory = log_directory
+        if self.log_directory is not None:
+            if not os.path.exists(self.log_directory):
+                os.makedirs(self.log_directory)
 
     def __repr__(self):
         running_workers = self._count_active_workers()
