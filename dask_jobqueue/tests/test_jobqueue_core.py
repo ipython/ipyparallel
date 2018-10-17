@@ -1,10 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-import pytest
 import shutil
 import socket
 import sys
+import re
+
+import pytest
 
 from dask_jobqueue import (JobQueueCluster, PBSCluster, MoabCluster,
                            SLURMCluster, SGECluster, LSFCluster)
@@ -107,3 +109,25 @@ def test_log_directory(tmpdir):
     with PBSCluster(cores=1, memory='1GB',
                     log_directory=tmpdir.strpath):
         assert os.path.exists(tmpdir.strpath)
+
+
+def test_jobqueue_cluster_call(tmpdir):
+    cluster = PBSCluster(cores=1, memory='1GB')
+
+    path = tmpdir.join('test.py')
+    path.write('print("this is the stdout")')
+
+    out = cluster._call([sys.executable, path.strpath])
+    assert out == 'this is the stdout\n'
+
+    path_with_error = tmpdir.join('non-zero-exit-code.py')
+    path_with_error.write('print("this is the stdout")\n1/0')
+
+    match = ('Command exited with non-zero exit code.+'
+             'Exit code: 1.+'
+             'stdout:\nthis is the stdout.+'
+             'stderr:.+ZeroDivisionError')
+
+    match = re.compile(match, re.DOTALL)
+    with pytest.raises(RuntimeError, match=match):
+        cluster._call([sys.executable, path_with_error.strpath])
