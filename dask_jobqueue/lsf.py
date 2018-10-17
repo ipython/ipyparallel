@@ -88,6 +88,10 @@ class LSFCluster(JobQueueCluster):
             logger.info("ncpus specification for LSF not set, initializing it to %s" % ncpus)
         if ncpus is not None:
             header_lines.append('#BSUB -n %s' % ncpus)
+            if ncpus > 1:
+                # span[hosts=1] _might_ affect queue waiting
+                # time, and is not required if ncpus==1
+                header_lines.append('#BSUB -R "span[hosts=1]"')
         if mem is None:
             # Compute default memory specifications
             mem = self.worker_memory
