@@ -186,3 +186,10 @@ intersphinx_mapping = {
     'distributed': ('https://distributed.dask.org/en/stable/',
                     'https://distributed.dask.org/en/stable/objects.inv')
 }
+
+# Link to GitHub issues and pull requests using :pr:`1234` and :issue:`1234`
+# syntax
+extlinks = {
+    'issue': ('https://github.com/dask/dask-jobqueue/issues/%s', 'GH#'),
+    'pr': ('https://github.com/dask/dask-jobqueue/pull/%s', 'GH#')
+}
