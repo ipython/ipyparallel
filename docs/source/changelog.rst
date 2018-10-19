@@ -3,6 +3,12 @@
 Changes in IPython Parallel
 ===========================
 
+6.2.3
+-----
+
+- Fix compatibility for execute requests with ipykernel 5 (now require ipykernel >= 4.4)
+
+
 6.2.2
 -----
 
