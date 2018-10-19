@@ -2,11 +2,10 @@
 
 import sys
 
-from ipython_genutils.py3compat import cast_bytes, cast_unicode_py2, unicode_type, safe_unicode, string_types
+from ipython_genutils.py3compat import cast_bytes, unicode_type, safe_unicode, string_types
 from traitlets import Integer, Type
 
 from ipykernel.ipkernel import IPythonKernel
-from ipykernel.jsonutil import json_clean
 from ipyparallel.serialize import serialize_object, unpack_apply_message
 from ipyparallel.util import utcnow
 from .datapub import ZMQDataPublisher
@@ -43,13 +42,12 @@ class IPythonParallelKernel(IPythonKernel):
             'dependencies_met' : True,
             'engine' : self.ident,
         }
-    
+
     def finish_metadata(self, parent, metadata, reply_content):
         """Finish populating metadata.
-        
+
         Run after completing a request handler.
         """
-        # FIXME: remove ipyparallel-specific code
         metadata['status'] = reply_content['status']
         if reply_content['status'] == 'error':
             if reply_content['ename'] == 'UnmetDependency':
@@ -60,55 +58,6 @@ class IPythonParallelKernel(IPythonKernel):
             )
 
         return metadata
-
-    def execute_request(self, stream, ident, parent):
-        """handle an execute_request - overridden for ipyparallel metadata
-        
-        Once ipykernel has init/finish_metadata, this should be removed.
-        """
-
-        try:
-            content = parent[u'content']
-            code = cast_unicode_py2(content[u'code'])
-            silent = content[u'silent']
-            store_history = content.get(u'store_history', not silent)
-            user_expressions = content.get('user_expressions', {})
-            allow_stdin = content.get('allow_stdin', False)
-        except:
-            self.log.error("Got bad msg: ")
-            self.log.error("%s", parent)
-            return
-
-        stop_on_error = content.get('stop_on_error', True)
-        
-        md = self.init_metadata(parent)
-
-        # Re-broadcast our input for the benefit of listening clients, and
-        # start computing output
-        if not silent:
-            self.execution_count += 1
-            self._publish_execute_input(code, parent, self.execution_count)
-
-        reply_content = self.do_execute(code, silent, store_history,
-                                        user_expressions, allow_stdin)
-        # finish building metadata
-        md = self.finish_metadata(parent, md, reply_content)
-        
-        # Flush output before sending the reply.
-        sys.stdout.flush()
-        sys.stderr.flush()
-
-        # Send the reply.
-        reply_content = json_clean(reply_content)
-
-        reply_msg = self.session.send(stream, u'execute_reply',
-                                      reply_content, parent, metadata=md,
-                                      ident=ident)
-
-        self.log.debug("%s", reply_msg)
-
-        if not silent and reply_msg['content']['status'] == u'error' and stop_on_error:
-            self._abort_queues()
 
     def apply_request(self, stream, ident, parent):
         try:
