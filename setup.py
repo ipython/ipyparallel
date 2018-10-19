@@ -134,7 +134,7 @@ setup_args = dict(
         "traitlets>=4.3",
         "ipython>=4",
         "jupyter_client",
-        "ipykernel",
+        "ipykernel>=4.4",
         "tornado>=4",
         "python-dateutil>=2.1",
     ],

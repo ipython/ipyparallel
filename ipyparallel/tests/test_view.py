@@ -791,22 +791,22 @@ class TestView(ClusterTestCase):
     def test_apply_namedtuple(self):
         def echoxy(p):
             return p.y, p.x
-        
+
         view = self.client[-1]
         tup = view.apply_sync(echoxy, point(1, 2))
         self.assertEqual(tup, (2,1))
-    
+
     def test_sync_imports(self):
         view = self.client[-1]
         with capture_output() as io:
             with view.sync_imports():
                 import IPython
         self.assertIn("IPython", io.stdout)
-        
+
         @interactive
         def find_ipython():
             return 'IPython' in globals()
-        
+
         assert view.apply_sync(find_ipython)
 
     def test_sync_imports_quiet(self):
@@ -815,13 +815,13 @@ class TestView(ClusterTestCase):
             with view.sync_imports(quiet=True):
                 import IPython
         self.assertEqual(io.stdout, '')
-        
+
         @interactive
         def find_ipython():
             return 'IPython' in globals()
-        
+
         assert view.apply_sync(find_ipython)
-    
+
     @skip_without('cloudpickle')
     def test_use_cloudpickle(self):
         view = self.client[:]
@@ -830,14 +830,21 @@ class TestView(ClusterTestCase):
         @interactive
         def get_a():
             return _a
-        
+
+        # verify initial condition
         a_list = view.apply_sync(get_a)
         self.assertEqual(a_list, ['engine'] * len(view))
 
+        # enable cloudpickle
         view.use_cloudpickle()
+        # cloudpickle respects engine values *if defined*
+        a_list = view.apply_sync(get_a)
+        self.assertEqual(a_list, ['engine'] * len(view))
+        # cloudpickle uses client values if engine doesn't override
+        view.execute('del _a', block=True)
         a_list = view.apply_sync(get_a)
         self.assertEqual(a_list, ['client'] * len(view))
-
+        # restore pickle, shouldn't resolve
+        view.execute('del _a', block=True)
         view.use_pickle()
-        a_list = view.apply_sync(get_a)
-        self.assertEqual(a_list, ['engine'] * len(view))
+        self.assertRaisesRemote(NameError, view.apply_sync, get_a)
