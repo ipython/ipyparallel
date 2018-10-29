@@ -119,7 +119,6 @@ def test_basic(loop):
 
 
 @pytest.mark.env("pbs")  # noqa: F811
-@pytest.mark.skip(reason="Current scale method not capable of doing this")
 def test_basic_scale_edge_cases(loop):
     with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
                     job_extra=['-V'], loop=loop) as cluster:
@@ -129,6 +128,10 @@ def test_basic_scale_edge_cases(loop):
 
         # Wait to see what happens
         sleep(0.2)
+        start = time()
+        while cluster.pending_jobs or cluster.running_jobs:
+            sleep(0.1)
+            assert time() < start + QUEUE_WAIT
 
         assert not(cluster.pending_jobs or cluster.running_jobs)
 
