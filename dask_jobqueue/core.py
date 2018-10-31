@@ -247,12 +247,11 @@ class JobQueueCluster(ClusterManager):
         # dask-worker command line build
         dask_worker_command = '%(python)s -m distributed.cli.dask_worker' % dict(python=python)
         command_args = [dask_worker_command, self.scheduler.address]
-        command_args += ['--nthreads', self.worker_threads]
+        command_args += ['--nthreads', self.worker_process_threads]
         if processes is not None and processes > 1:
             command_args += ['--nprocs', processes]
 
-        mem = format_bytes(self.worker_memory / self.worker_processes)
-        command_args += ['--memory-limit', mem.replace(' ', '')]
+        command_args += ['--memory-limit', self.worker_process_memory]
         command_args += ['--name', '%s--${JOB_ID}--' % name]
 
         if death_timeout is not None:
@@ -271,7 +270,7 @@ class JobQueueCluster(ClusterManager):
 
     def __repr__(self):
         running_workers = self._count_active_workers()
-        running_cores = running_workers * self.worker_threads
+        running_cores = running_workers * self.worker_process_threads
         total_jobs = len(self.pending_jobs) + len(self.running_jobs)
         total_workers = total_jobs * self.worker_processes
         running_memory = running_workers * self.worker_memory / self.worker_processes
@@ -298,8 +297,19 @@ class JobQueueCluster(ClusterManager):
         return self._scheduler_plugin.finished_jobs
 
     @property
-    def worker_threads(self):
+    def worker_process_threads(self):
         return int(self.worker_cores / self.worker_processes)
+
+    @property
+    def worker_process_memory(self):
+        mem = format_bytes(self.worker_memory / self.worker_processes)
+        mem = mem.replace(' ', '')
+        return mem
+
+    @property
+    def worker_spec(self):
+        ''' single worker process info needed for scaling on cores or memory '''
+        return {'cores': self.worker_process_threads, 'memory': self.worker_process_memory}
 
     def job_script(self):
         """ Construct a job submission script """

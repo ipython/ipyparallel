@@ -119,6 +119,38 @@ def test_basic(loop):
 
 
 @pytest.mark.env("pbs")  # noqa: F811
+def test_scale_cores_memory(loop):
+    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
+                    job_extra=['-V'], loop=loop) as cluster:
+        with Client(cluster) as client:
+
+            cluster.scale(cores=2)
+
+            start = time()
+            while not(cluster.pending_jobs or cluster.running_jobs):
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
+
+            future = client.submit(lambda x: x + 1, 10)
+            assert future.result(QUEUE_WAIT) == 11
+            assert cluster.running_jobs
+
+            workers = list(client.scheduler_info()['workers'].values())
+            w = workers[0]
+            assert w['memory_limit'] == 2e9
+            assert w['ncores'] == 2
+
+            cluster.scale(memory='0GB')
+
+            start = time()
+            while cluster.running_jobs:
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
+
+            assert not cluster.running_jobs
+
+
+@pytest.mark.env("pbs")  # noqa: F811
 def test_basic_scale_edge_cases(loop):
     with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
                     job_extra=['-V'], loop=loop) as cluster:
@@ -185,6 +217,31 @@ def test_adaptive_grouped(loop):
             while len(client.scheduler_info()['workers']) != processes:
                 sleep(0.1)
                 assert time() < start + QUEUE_WAIT
+
+
+@pytest.mark.env("pbs")  # noqa: F811
+def test_adaptive_cores_mem(loop):
+    with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
+                    job_extra=['-V'], loop=loop) as cluster:
+        cluster.adapt(minimum_cores=0, maximum_memory='4GB')
+        with Client(cluster) as client:
+            future = client.submit(lambda x: x + 1, 10)
+            assert future.result(QUEUE_WAIT) == 11
+
+            start = time()
+            processes = cluster.worker_processes
+            while len(client.scheduler_info()['workers']) != processes:
+                sleep(0.1)
+                assert time() < start + QUEUE_WAIT
+
+            del future
+
+            start = time()
+            while cluster.pending_jobs or cluster.running_jobs:
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
+
+            assert cluster.finished_jobs
 
 
 @pytest.mark.env("pbs")  # noqa: F811
