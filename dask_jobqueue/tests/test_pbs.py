@@ -187,6 +187,54 @@ def test_adaptive_grouped(loop):
                 assert time() < start + QUEUE_WAIT
 
 
+@pytest.mark.env("pbs")  # noqa: F811
+def test_scale_grouped(loop):
+    with PBSCluster(walltime='00:02:00', processes=2, cores=2, memory='2GB', local_directory='/tmp',
+                    job_extra=['-V'], loop=loop) as cluster:
+        with Client(cluster) as client:
+
+            cluster.scale(4)  # Start 2 jobs
+
+            start = time()
+            while len(cluster.running_jobs) != 2:
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
+
+            while len(list(client.scheduler_info()['workers'].values())) != 4:
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
+
+            future = client.submit(lambda x: x + 1, 10)
+            assert future.result(QUEUE_WAIT) == 11
+            assert cluster.running_jobs
+
+            workers = list(client.scheduler_info()['workers'].values())
+            w = workers[0]
+            assert w['memory_limit'] == 1e9
+            assert w['ncores'] == 1
+            assert len(workers) == 4
+
+            cluster.scale(1)  # Should leave 2 workers, 1 job
+
+            start = time()
+            while len(cluster.running_jobs) != 1:
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
+
+            assert len(cluster.running_jobs) == 1
+            workers = list(client.scheduler_info()['workers'].values())
+            assert len(workers) == 2
+
+            cluster.scale(0)
+
+            start = time()
+            while cluster.running_jobs:
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
+
+            assert not cluster.running_jobs
+
+
 def test_config(loop):  # noqa: F811
     with dask.config.set({'jobqueue.pbs.walltime': '00:02:00',
                           'jobqueue.pbs.local-directory': '/foo'}):

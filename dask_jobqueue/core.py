@@ -156,7 +156,6 @@ class JobQueueCluster(ClusterManager):
     submit_command = None
     cancel_command = None
     scheduler_name = ''
-    _adaptive_options = {'worker_key': lambda ws: _job_id_from_worker_name(ws.name)}
     job_id_regexp = r'(?P<job_id>\d+)'
 
     def __init__(self,
@@ -452,7 +451,7 @@ class JobQueueCluster(ClusterManager):
             # We only need to kill some pending jobs,
             to_kill = int(n_to_close / self.worker_processes)
             jobs = list(self.pending_jobs.keys())[-to_kill:]
-            logger.debug("%d jobs to stop, stoppubg jobs %s", to_kill, jobs)
+            logger.debug("%d jobs to stop, stopping jobs %s", to_kill, jobs)
             self.stop_jobs(jobs)
         else:
             worker_states = []
@@ -505,3 +504,6 @@ class JobQueueCluster(ClusterManager):
             raise ValueError(msg)
 
         return job_id
+
+    def worker_key(self, worker_state):
+        return _job_id_from_worker_name(worker_state.name)

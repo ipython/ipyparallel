@@ -30,6 +30,10 @@ class ClusterManager(Cluster):
             ''' Close the workers with the given addresses or remove pending
                 workers to match n running workers.
             '''
+    3.  Optionally worker_key: Callable(WorkerState):
+            ''' Callable mapping a WorkerState object to a group, see
+                Scheduler.workers_to_close
+            '''
 
     This will provide a general ``scale`` method as well as an IPython widget
     for display.
@@ -62,8 +66,10 @@ class ClusterManager(Cluster):
     >>> cluster.adapt(minimum=1, maximum=100)  # scale automatically
     """
 
-    def __init__(self):
+    def __init__(self, adaptive_options={}):
         self._target_scale = 0
+        self._adaptive_options = adaptive_options
+        self._adaptive_options.setdefault('worker_key', self.worker_key)
 
     @gen.coroutine
     def _scale(self, n):
@@ -83,7 +89,8 @@ class ClusterManager(Cluster):
                 # This may not be useful to call scheduler methods in this case
                 # Scheduler interface here may need to be modified
                 to_close = self.scheduler.workers_to_close(
-                    n=len(self.scheduler.workers) - n)
+                    n=len(self.scheduler.workers) - n, minimum=n,
+                    key=self.worker_key)
                 logger.debug("Closing workers: %s", to_close)
                 # Should  be an RPC call here
                 yield self.scheduler.retire_workers(workers=to_close)
@@ -112,3 +119,9 @@ class ClusterManager(Cluster):
         # TODO we should not rely on scheduler loop here, self should have its
         # own loop
         self.scheduler.loop.add_callback(self._scale, n)
+
+    def worker_key(self, worker_state):
+        ''' Callable mapping a WorkerState object to a group, see
+            Scheduler.workers_to_close
+        '''
+        return worker_state
