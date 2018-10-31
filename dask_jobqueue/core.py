@@ -15,7 +15,7 @@ import six
 
 import dask
 import docrep
-from . import ClusterManager
+from .deploy import ClusterManager
 from distributed import LocalCluster
 from distributed.diagnostics.plugin import SchedulerPlugin
 from distributed.utils import format_bytes, parse_bytes, tmpfile, get_ip_interface

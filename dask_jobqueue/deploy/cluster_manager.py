@@ -1,17 +1,18 @@
+import dask
 import logging
 import math
+import os
 
 from tornado import gen
 
 from distributed.deploy.adaptive import Adaptive
-from distributed.deploy import Cluster
 from distributed.utils import log_errors, ignoring, parse_bytes, \
-    PeriodicCallback
+    PeriodicCallback, format_bytes
 
 logger = logging.getLogger(__name__)
 
 
-class ClusterManager(Cluster):
+class ClusterManager(object):
     """ Intermediate Cluster object that should lead to a real ClusterManager
 
     This tries to improve upstream Cluster object and underlines needs for
@@ -38,12 +39,9 @@ class ClusterManager(Cluster):
             ''' Callable mapping a WorkerState object to a group, see
                 Scheduler.workers_to_close
             '''
-<<<<<<< HEAD
     4.  worker_spec dict attribute if scale(cores=...) or scale(memory=...)
         can be used by users.
             worker_spec = {'cores': 4, 'memory': '16 GB'}
-=======
->>>>>>> master
 
     This will provide a general ``scale`` method as well as an IPython widget
     for display.
@@ -60,6 +58,7 @@ class ClusterManager(Cluster):
         - Provide some remote methods:
           - retire_workers(n: int): close enough workers ot have only n
             running at the end. Return the closed workers.
+          - status of connected worker, e.g. scheduler_info()
 
     Examples
     --------
@@ -125,11 +124,22 @@ class ClusterManager(Cluster):
         self._adaptive = Adaptive(self.scheduler, self, **self._adaptive_options)
         return self._adaptive
 
+    @property
+    def scheduler_address(self):
+        return self.scheduler.address
+
+    @property
+    def dashboard_link(self):
+        template = dask.config.get('distributed.dashboard.link')
+        host = self.scheduler.address.split('://')[1].split(':')[0]
+        port = self.scheduler.services['bokeh'].port
+        return template.format(host=host, port=port, **os.environ)
+
     @gen.coroutine
     def _scale(self, n=None, cores=None, memory=None):
         """ Asynchronously called scale method
 
-        This allows to do every operation with a coherent ocntext
+        This allows to do every operation with a coherent context
         """
         with log_errors():
             if [n, cores, memory].count(None) != 2:
@@ -190,6 +200,35 @@ class ClusterManager(Cluster):
         # TODO we should not rely on scheduler loop here, self should have its
         # own loop
         self.scheduler.loop.add_callback(self._scale, n, cores, memory)
+
+    def _widget_status(self):
+        workers = len(self.scheduler.workers)
+        cores = sum(ws.ncores for ws in self.scheduler.workers.values())
+        memory = sum(ws.memory_limit for ws in self.scheduler.workers.values())
+        memory = format_bytes(memory)
+        text = """
+<div>
+  <style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+  </style>
+  <table style="text-align: right;">
+    <tr><th>Workers</th> <td>%d</td></tr>
+    <tr><th>Cores</th> <td>%d</td></tr>
+    <tr><th>Memory</th> <td>%s</td></tr>
+  </table>
+</div>
+""" % (workers, cores, memory)
+        return text
 
     def _widget(self):
         """ Create IPython widget for display within a notebook """
@@ -290,6 +329,9 @@ class ClusterManager(Cluster):
         pc.start()
 
         return box
+
+    def _ipython_display_(self, **kwargs):
+        return self._widget()._ipython_display_(**kwargs)
 
     def worker_key(self, worker_state):
         ''' Callable mapping a WorkerState object to a group, see
