@@ -23,6 +23,7 @@ PBS Deployments
 
    cluster = PBSCluster(processes=18,
                         threads=4,
+                        shebang='#!/usr/bin/env zsh',
                         memory="6GB",
                         project='P48500028',
                         queue='premium',

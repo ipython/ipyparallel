@@ -55,7 +55,7 @@ class SGECluster(JobQueueCluster):
 
         super(SGECluster, self).__init__(**kwargs)
 
-        header_lines = ['#!/usr/bin/env bash']
+        header_lines = []
         if self.name is not None:
             header_lines.append('#$ -N %(name)s')
         if queue is not None:

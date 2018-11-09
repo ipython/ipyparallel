@@ -12,6 +12,7 @@ jobqueue:
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
 
     # OAR resource manager options
+    shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30:00'
@@ -34,6 +35,7 @@ jobqueue:
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
 
     # PBS resource manager options
+    shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30:00'
@@ -56,6 +58,7 @@ jobqueue:
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
 
     # SGE resource manager options
+    shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30:00'
@@ -78,6 +81,7 @@ jobqueue:
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
 
     # SLURM resource manager options
+    shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30:00'
@@ -101,6 +105,7 @@ jobqueue:
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
 
     # PBS resource manager options
+    shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30:00'
@@ -123,6 +128,7 @@ jobqueue:
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
 
     # LSF resource manager options
+    shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30'

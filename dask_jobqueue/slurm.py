@@ -69,7 +69,7 @@ class SLURMCluster(JobQueueCluster):
         super(SLURMCluster, self).__init__(**kwargs)
 
         # Always ask for only one task
-        header_lines = ['#!/usr/bin/env bash']
+        header_lines = []
         # SLURM header build
         if self.name is not None:
             header_lines.append('#SBATCH -J %s' % self.name)

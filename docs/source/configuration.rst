@@ -18,6 +18,7 @@ define a single job:
         # Dask-worker specific keywords
         cores=24,             # Number of cores per job
         memory='100GB',       # Amount of memory per job
+        shebang='#!/usr/bin/env zsh',   # Interpreter for your batch script (default is bash)
         processes=6,          # Number of Python processes to cut up each job
         local_directory='$TMPDIR',  # Location to put temporary data if necessary
         # Job scheduler specific keywords
@@ -52,6 +53,7 @@ recommend using a configuration file like the following:
        cores: 24
        memory: 100GB
        processes: 6
+       shebang: "#!/usr/bin/env zsh"
 
        interface: ib0
        local-directory: $TMPDIR

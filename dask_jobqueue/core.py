@@ -120,6 +120,8 @@ class JobQueueCluster(ClusterManager):
         Other commands to add to script before launching worker.
     python : str
         Python executable used to launch Dask workers.
+    shebang : str
+        Path to desired interpreter for your batch submission script.
     kwargs : dict
         Additional keyword arguments to pass to `LocalCluster`
 
@@ -143,7 +145,7 @@ class JobQueueCluster(ClusterManager):
     """
 
     _script_template = """
-#!/bin/bash
+%(shebang)s
 
 %(job_header)s
 
@@ -171,6 +173,7 @@ class JobQueueCluster(ClusterManager):
                  log_directory=None,
                  walltime=None,
                  threads=None,
+                 shebang=None,
                  python=sys.executable,
                  **kwargs
                  ):
@@ -206,6 +209,8 @@ class JobQueueCluster(ClusterManager):
             env_extra = dask.config.get('jobqueue.%s.env-extra' % self.scheduler_name)
         if log_directory is None:
             log_directory = dask.config.get('jobqueue.%s.log-directory' % self.scheduler_name)
+        if shebang is None:
+            shebang = dask.config.get('jobqueue.%s.shebang' % self.scheduler_name)
 
         if dask.config.get('jobqueue.%s.threads', None):
             warnings.warn(threads_deprecation_message)
@@ -241,6 +246,8 @@ class JobQueueCluster(ClusterManager):
         self.local_cluster.scheduler.add_plugin(self._scheduler_plugin)
 
         self._adaptive = None
+
+        self.shebang = shebang
 
         self._env_header = '\n'.join(env_extra)
 
@@ -313,7 +320,8 @@ class JobQueueCluster(ClusterManager):
 
     def job_script(self):
         """ Construct a job submission script """
-        pieces = {'job_header': self.job_header,
+        pieces = {'shebang': self.shebang,
+                  'job_header': self.job_header,
                   'env_header': self._env_header,
                   'worker_command': self._command_template}
         return self._script_template % pieces

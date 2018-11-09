@@ -73,7 +73,7 @@ class PBSCluster(JobQueueCluster):
         # Try to find a project name from environment variable
         project = project or os.environ.get('PBS_ACCOUNT')
 
-        header_lines = ['#!/usr/bin/env bash']
+        header_lines = []
         # PBS header build
         if self.name is not None:
             header_lines.append('#PBS -N %s' % self.name)

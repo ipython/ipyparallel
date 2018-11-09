@@ -61,7 +61,7 @@ class OARCluster(JobQueueCluster):
 
         super(OARCluster, self).__init__(**kwargs)
 
-        header_lines = ['#!/usr/bin/env bash']
+        header_lines = []
         if self.name is not None:
             header_lines.append('#OAR -n %s' % self.name)
         if queue is not None:
