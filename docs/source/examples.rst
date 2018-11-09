@@ -72,7 +72,7 @@ LSF Deployments
     from dask_jobqueue import LSFCluster
 
     cluster = LSFCluster(queue='general',
-                         project='cpp'
+                         project='cpp',
                          walltime='00:30',
                          cores=15,
                          memory='25GB')
