@@ -89,7 +89,7 @@ jobqueue:
     env-extra: []
     job-cpu: null
     job-mem: null
-    job-extra: {}
+    job-extra: []
     log-directory: null
 
   moab:
