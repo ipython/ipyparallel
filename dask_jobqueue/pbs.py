@@ -53,22 +53,22 @@ class PBSCluster(JobQueueCluster):
     # Override class variables
     submit_command = 'qsub'
     cancel_command = 'qdel'
-    scheduler_name = 'pbs'
 
-    def __init__(self, queue=None, project=None, resource_spec=None, walltime=None, job_extra=None, **kwargs):
+    def __init__(self, queue=None, project=None, resource_spec=None, walltime=None, job_extra=None,
+                 config_name='pbs', **kwargs):
         if queue is None:
-            queue = dask.config.get('jobqueue.%s.queue' % self.scheduler_name)
+            queue = dask.config.get('jobqueue.%s.queue' % config_name)
         if resource_spec is None:
-            resource_spec = dask.config.get('jobqueue.%s.resource-spec' % self.scheduler_name)
+            resource_spec = dask.config.get('jobqueue.%s.resource-spec' % config_name)
         if walltime is None:
-            walltime = dask.config.get('jobqueue.%s.walltime' % self.scheduler_name)
+            walltime = dask.config.get('jobqueue.%s.walltime' % config_name)
         if job_extra is None:
-            job_extra = dask.config.get('jobqueue.%s.job-extra' % self.scheduler_name)
+            job_extra = dask.config.get('jobqueue.%s.job-extra' % config_name)
         if project is None:
-            project = dask.config.get('jobqueue.%s.project' % self.scheduler_name) or os.environ.get('PBS_ACCOUNT')
+            project = dask.config.get('jobqueue.%s.project' % config_name) or os.environ.get('PBS_ACCOUNT')
 
         # Instantiate args and parameters from parent abstract class
-        super(PBSCluster, self).__init__(**kwargs)
+        super(PBSCluster, self).__init__(config_name=config_name, **kwargs)
 
         # Try to find a project name from environment variable
         project = project or os.environ.get('PBS_ACCOUNT')

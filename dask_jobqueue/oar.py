@@ -44,22 +44,22 @@ class OARCluster(JobQueueCluster):
     # Override class variables
     submit_command = 'oarsub'
     cancel_command = 'oardel'
-    scheduler_name = 'oar'
     job_id_regexp = r'OAR_JOB_ID=(?P<job_id>\d+)'
 
-    def __init__(self, queue=None, project=None, resource_spec=None, walltime=None, job_extra=None, **kwargs):
+    def __init__(self, queue=None, project=None, resource_spec=None, walltime=None, job_extra=None,
+                 config_name='oar', **kwargs):
         if queue is None:
-            queue = dask.config.get('jobqueue.%s.queue' % self.scheduler_name)
+            queue = dask.config.get('jobqueue.%s.queue' % config_name)
         if project is None:
-            project = dask.config.get('jobqueue.%s.project' % self.scheduler_name)
+            project = dask.config.get('jobqueue.%s.project' % config_name)
         if resource_spec is None:
-            resource_spec = dask.config.get('jobqueue.%s.resource-spec' % self.scheduler_name)
+            resource_spec = dask.config.get('jobqueue.%s.resource-spec' % config_name)
         if walltime is None:
-            walltime = dask.config.get('jobqueue.%s.walltime' % self.scheduler_name)
+            walltime = dask.config.get('jobqueue.%s.walltime' % config_name)
         if job_extra is None:
-            job_extra = dask.config.get('jobqueue.%s.job-extra' % self.scheduler_name)
+            job_extra = dask.config.get('jobqueue.%s.job-extra' % config_name)
 
-        super(OARCluster, self).__init__(**kwargs)
+        super(OARCluster, self).__init__(config_name=config_name, **kwargs)
 
         header_lines = []
         if self.name is not None:

@@ -50,24 +50,24 @@ class LSFCluster(JobQueueCluster):
     # Override class variables
     submit_command = 'bsub <'
     cancel_command = 'bkill'
-    scheduler_name = 'lsf'
 
-    def __init__(self, queue=None, project=None, ncpus=None, mem=None, walltime=None, job_extra=None, **kwargs):
+    def __init__(self, queue=None, project=None, ncpus=None, mem=None, walltime=None, job_extra=None,
+                 config_name='lsf', **kwargs):
         if queue is None:
-            queue = dask.config.get('jobqueue.%s.queue' % self.scheduler_name)
+            queue = dask.config.get('jobqueue.%s.queue' % config_name)
         if project is None:
-            project = dask.config.get('jobqueue.%s.project' % self.scheduler_name)
+            project = dask.config.get('jobqueue.%s.project' % config_name)
         if ncpus is None:
-            ncpus = dask.config.get('jobqueue.%s.ncpus' % self.scheduler_name)
+            ncpus = dask.config.get('jobqueue.%s.ncpus' % config_name)
         if mem is None:
-            mem = dask.config.get('jobqueue.%s.mem' % self.scheduler_name)
+            mem = dask.config.get('jobqueue.%s.mem' % config_name)
         if walltime is None:
-            walltime = dask.config.get('jobqueue.%s.walltime' % self.scheduler_name)
+            walltime = dask.config.get('jobqueue.%s.walltime' % config_name)
         if job_extra is None:
-            job_extra = dask.config.get('jobqueue.%s.job-extra' % self.scheduler_name)
+            job_extra = dask.config.get('jobqueue.%s.job-extra' % config_name)
 
         # Instantiate args and parameters from parent abstract class
-        super(LSFCluster, self).__init__(**kwargs)
+        super(LSFCluster, self).__init__(config_name=config_name, **kwargs)
 
         header_lines = []
         # LSF header build

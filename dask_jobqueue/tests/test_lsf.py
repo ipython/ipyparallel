@@ -180,6 +180,30 @@ def test_config(loop):  # noqa: F811
             assert '--local-directory /foo' in cluster.job_script()
 
 
+def test_config_name_lsf_takes_custom_config():
+    conf = {'queue': 'myqueue',
+            'project': 'myproject',
+            'ncpus': 1,
+            'cores': 1,
+            'mem': 2,
+            'memory': '2 GB',
+            'walltime': '00:02',
+            'job-extra': [],
+            'name': 'myname',
+            'processes': 1,
+            'interface': None,
+            'death-timeout': None,
+            'local-directory': '/foo',
+            'extra': [],
+            'env-extra': [],
+            'log-directory': None,
+            'shebang': '#!/usr/bin/env bash'}
+
+    with dask.config.set({'jobqueue.lsf-config-name': conf}):
+        with LSFCluster(config_name='lsf-config-name') as cluster:
+            assert cluster.name == 'myname'
+
+
 def test_informative_errors():
     with pytest.raises(ValueError) as info:
         LSFCluster(memory=None, cores=4)

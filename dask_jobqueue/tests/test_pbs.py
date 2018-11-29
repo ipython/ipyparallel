@@ -300,6 +300,32 @@ def test_config(loop):  # noqa: F811
             assert '--local-directory /foo' in cluster.job_script()
 
 
+def test_config_name_pbs_takes_custom_config():
+    conf = {'queue': 'myqueue',
+            'project': 'myproject',
+            'ncpus': 1,
+            'cores': 1,
+            'memory': '2 GB',
+            'walltime': '00:02',
+            'job-extra': [],
+            'name': 'myname',
+            'processes': 1,
+            'interface': None,
+            'death-timeout': None,
+            'local-directory': '/foo',
+            'extra': [],
+            'env-extra': [],
+            'log-directory': None,
+            'shebang': '#!/usr/bin/env bash',
+            'job-cpu': None,
+            'job-mem': None,
+            'resource-spec': None}
+
+    with dask.config.set({'jobqueue.pbs-config-name': conf}):
+        with PBSCluster(config_name='pbs-config-name') as cluster:
+            assert cluster.name == 'myname'
+
+
 def test_informative_errors():
     with pytest.raises(ValueError) as info:
         PBSCluster(memory=None, cores=4)

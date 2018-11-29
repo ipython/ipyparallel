@@ -7,6 +7,8 @@ import pytest
 from distributed import Client
 from distributed.utils_test import loop  # noqa: F401
 
+import dask
+
 from dask_jobqueue import SLURMCluster
 
 from . import QUEUE_WAIT
@@ -145,3 +147,28 @@ def test_adaptive(loop):
                 assert time() < start + QUEUE_WAIT
 
             assert cluster.finished_jobs
+
+
+def test_config_name_slurm_takes_custom_config():
+    conf = {'queue': 'myqueue',
+            'project': 'myproject',
+            'ncpus': 1,
+            'cores': 1,
+            'memory': '2 GB',
+            'walltime': '00:02',
+            'job-extra': [],
+            'name': 'myname',
+            'processes': 1,
+            'interface': None,
+            'death-timeout': None,
+            'local-directory': '/foo',
+            'extra': [],
+            'env-extra': [],
+            'log-directory': None,
+            'shebang': '#!/usr/bin/env bash',
+            'job-cpu': None,
+            'job-mem': None}
+
+    with dask.config.set({'jobqueue.slurm-config-name': conf}):
+        with SLURMCluster(config_name='slurm-config-name') as cluster:
+            assert cluster.name == 'myname'

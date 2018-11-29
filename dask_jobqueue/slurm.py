@@ -50,23 +50,23 @@ class SLURMCluster(JobQueueCluster):
     # Override class variables
     submit_command = 'sbatch --parsable'
     cancel_command = 'scancel'
-    scheduler_name = 'slurm'
 
-    def __init__(self, queue=None, project=None, walltime=None, job_cpu=None, job_mem=None, job_extra=None, **kwargs):
+    def __init__(self, queue=None, project=None, walltime=None, job_cpu=None, job_mem=None, job_extra=None,
+                 config_name='slurm', **kwargs):
         if queue is None:
-            queue = dask.config.get('jobqueue.slurm.queue')
+            queue = dask.config.get('jobqueue.%s.queue' % config_name)
         if project is None:
-            project = dask.config.get('jobqueue.slurm.project')
+            project = dask.config.get('jobqueue.%s.project' % config_name)
         if walltime is None:
-            walltime = dask.config.get('jobqueue.slurm.walltime')
+            walltime = dask.config.get('jobqueue.%s.walltime' % config_name)
         if job_cpu is None:
-            job_cpu = dask.config.get('jobqueue.slurm.job-cpu')
+            job_cpu = dask.config.get('jobqueue.%s.job-cpu' % config_name)
         if job_mem is None:
-            job_mem = dask.config.get('jobqueue.slurm.job-mem')
+            job_mem = dask.config.get('jobqueue.%s.job-mem' % config_name)
         if job_extra is None:
-            job_extra = dask.config.get('jobqueue.slurm.job-extra')
+            job_extra = dask.config.get('jobqueue.%s.job-extra' % config_name)
 
-        super(SLURMCluster, self).__init__(**kwargs)
+        super(SLURMCluster, self).__init__(config_name=config_name, **kwargs)
 
         # Always ask for only one task
         header_lines = []
