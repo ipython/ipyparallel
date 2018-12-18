@@ -1,19 +1,19 @@
 # inspired from https://github.com/PBSPro/pbspro/blob/v18.1.beta/docker/centos7/
 # multi-stage build
 # build script will be triggered
-FROM centos:7.4.1708 AS builder
+FROM centos:7.5.1804 AS builder
 # install dependencies for building
 RUN yum install -y gcc make rpm-build libtool hwloc-devel libX11-devel \
 	libXt-devel libedit-devel libical-devel ncurses-devel perl \
 	postgresql-devel python-devel tcl-devel  tk-devel swig expat-devel \
-    openssl-devel libXext libXft git
+        openssl-devel libXext libXft git postgresql-contrib
 # get known PBS Pro source code
-RUN git clone --branch v14.1.2 https://github.com/pbspro/pbspro.git /src/pbspro
+RUN git clone https://github.com/pbspro/pbspro.git /src/pbspro && cd /src/pbspro && git reset --hard 3f6f2352d2cc88922f09c06cae5cfdef5e410f5f  
 COPY build.sh /
 RUN bash /build.sh
 
 # base image
-FROM centos:7.4.1708
+FROM centos:7.5.1804
 LABEL description="PBS Professional Open Source and conda"
 
 #The pbs master node name, can be overriden if needed
