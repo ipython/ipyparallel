@@ -486,10 +486,10 @@ class JobQueueCluster(ClusterManager):
         jobs += list(self.running_jobs.keys())
         self.stop_jobs(set(jobs))
 
-    def close(self):
+    def close(self, **kwargs):
         ''' Stops all running and pending jobs and stops scheduler '''
         self.stop_all_jobs()
-        self.local_cluster.close()
+        return self.local_cluster.close(**kwargs)
 
     def __enter__(self):
         return self
