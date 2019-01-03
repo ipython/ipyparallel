@@ -53,7 +53,7 @@ can be used, called ``MoabCluster``:
 SGE Deployments
 ---------------
 
-On systems which use SGE as the scheduler, ```SGECluster`` can be used:
+On systems which use SGE as the scheduler, ``SGECluster`` can be used:
 
 .. code-block:: python
 
@@ -110,3 +110,50 @@ SLURM Deployment: Low-priority node usage
                                       'export LANGUAGE="en_US.utf8"',
                                       'export LC_ALL="en_US.utf8"'],
                            job_extra=['--qos="savio_lowprio"'])
+
+
+
+SLURM Deployment: Providing additional arguments to the dask-workers
+-----------------------------------------
+
+Keyword arguments can be passed through to dask-workers. An example of such an
+argument is for the specification of abstract resources, described `here
+<http://distributed.dask.org/en/latest/resources.html>`_. This could be used
+to specify special hardware availibility that the scheduler is not aware of,
+for example GPUs. Below, the arbitrary resources "ssdGB" and "GPU" are
+specified. Notice that the ``extra`` keyword is used to pass through arguments
+to the dask-workers.
+
+.. code-block:: python
+
+    from dask_jobqueue import SLURMCluster
+    from distributed import Client
+    from dask import delayed
+
+    cluster = SLURMCluster(memory='8g',
+                           processes=1,
+                           cores=2,
+                           extra=['--resources ssdGB=200,GPU=2'])
+
+    cluster.start_workers(2)
+    client = Client(cluster)
+
+The client can then be used as normal. Additionally, required resources can be
+specified for certain steps in the processing. For example:
+    
+.. code-block:: python
+
+    def step_1_w_single_GPU(data):
+        return "Step 1 done for: %s" % data
+
+
+    def step_2_w_local_IO(data):
+        return "Step 2 done for: %s" % data
+
+
+    stage_1 = [delayed(step_1_w_single_GPU)(i) for i in range(10)]
+    stage_2 = [delayed(step_2_w_local_IO)(s2) for s2 in stage_1]
+
+    result_stage_2 = client.compute(stage_2,
+                                    resources={tuple(stage_1): {'GPU': 1},
+                                               tuple(stage_2): {'ssdGB': 100}})
