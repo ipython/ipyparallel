@@ -12,6 +12,13 @@ logger = logging.getLogger(__name__)
 class SGECluster(JobQueueCluster):
     __doc__ = docstrings.with_indents(""" Launch Dask on a SGE cluster
 
+    .. note::
+        If you want a specific amount of RAM, both ``memory`` and ``resource_spec``
+        must be specified. The exact syntax of ``resource_spec`` is defined by your
+        GridEngine system administrator. The amount of ``memory`` requested should
+        match the ``resource_spec``, so that Dask's memory management system can
+        perform accurately.
+
     Parameters
     ----------
     queue : str
