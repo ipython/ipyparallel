@@ -53,11 +53,16 @@ can be used, called ``MoabCluster``:
 SGE Deployments
 ---------------
 
-On systems which use SGE as the scheduler, ``SGECluster`` can be used.
+On systems which use SGE as the scheduler, ``SGECluster`` can be used. Note
+that Grid Engine has a slightly involved `history
+<https://en.wikipedia.org/wiki/Univa_Grid_Engine#History>`_ , so there are a
+variety of Grid Engine derivatives. ``SGECluster`` can be used for any
+derivative of Grid Engine, for example: SGE (Son of Grid Engine), Oracle Grid Engine,
+Univa Grid Engine.
 
-SGE systems have a lot of flexibility in how they are configured, hence it is
-not possible to use the ``memory`` keyword argument to automatically specify
-the amount of RAM requested. Instead, you specify the resources desired
+Because the variety of Grid Engine derivatives and configuration deployments,
+it is not possible to use the ``memory`` keyword argument to automatically
+specify the amount of RAM requested. Instead, you specify the resources desired
 according to how your system is configured, using the ``resource_spec`` keyword
 argument, in addition to the ``memory`` keyword argument (which is used by Dask
 internally for memory management, see `this
