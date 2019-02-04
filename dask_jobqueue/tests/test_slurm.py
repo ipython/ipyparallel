@@ -5,7 +5,6 @@ from time import sleep, time
 
 import pytest
 from distributed import Client
-from distributed.utils_test import loop  # noqa: F401
 
 import dask
 
@@ -88,7 +87,7 @@ def test_job_script():
         assert '--nthreads 2 --nprocs 4 --memory-limit 7.00GB' in job_script
 
 
-@pytest.mark.env("slurm")  # noqa: F811
+@pytest.mark.env("slurm")
 def test_basic(loop):
     with SLURMCluster(walltime='00:02:00', cores=2, processes=1, memory='2GB',
                       job_extra=['-D /'], loop=loop) as cluster:
@@ -118,7 +117,7 @@ def test_basic(loop):
                 assert time() < start + QUEUE_WAIT
 
 
-@pytest.mark.env("slurm")  # noqa: F811
+@pytest.mark.env("slurm")
 def test_adaptive(loop):
     with SLURMCluster(walltime='00:02:00', cores=2, processes=1, memory='2GB',
                       job_extra=['-D /'], loop=loop) as cluster:

@@ -4,7 +4,6 @@ from time import sleep, time
 import dask
 import pytest
 from dask.distributed import Client
-from distributed.utils_test import loop  # noqa: F401
 
 from dask_jobqueue import LSFCluster
 
@@ -85,7 +84,7 @@ def test_job_script():
         assert '--nthreads 2 --nprocs 4 --memory-limit 7.00GB' in job_script
 
 
-@pytest.mark.env("lsf")  # noqa: F811
+@pytest.mark.env("lsf")
 def test_basic(loop):
     with LSFCluster(walltime='00:02', processes=1, cores=2, memory='2GB',
                     local_directory='/tmp', loop=loop) as cluster:
@@ -111,7 +110,7 @@ def test_basic(loop):
             assert not cluster.running_jobs
 
 
-@pytest.mark.env("lsf")  # noqa: F811
+@pytest.mark.env("lsf")
 def test_adaptive(loop):
     with LSFCluster(walltime='00:02', processes=1, cores=2, memory='2GB',
                     local_directory='/tmp', loop=loop) as cluster:
@@ -146,7 +145,7 @@ def test_adaptive(loop):
             assert cluster.finished_jobs
 
 
-@pytest.mark.env("lsf")  # noqa: F811
+@pytest.mark.env("lsf")
 def test_adaptive_grouped(loop):
     with LSFCluster(walltime='00:02', processes=1, cores=2, memory='2GB',
                     local_directory='/tmp', loop=loop) as cluster:
@@ -172,7 +171,7 @@ def test_adaptive_grouped(loop):
                 assert time() < start + QUEUE_WAIT
 
 
-def test_config(loop):  # noqa: F811
+def test_config(loop):
     with dask.config.set({'jobqueue.lsf.walltime': '00:02',
                           'jobqueue.lsf.local-directory': '/foo'}):
         with LSFCluster(loop=loop, cores=1, memory='2GB') as cluster:

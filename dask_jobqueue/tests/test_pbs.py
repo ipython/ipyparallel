@@ -6,7 +6,6 @@ from time import sleep, time
 import dask
 import pytest
 from dask.distributed import Client
-from distributed.utils_test import loop  # noqa: F401
 
 from dask_jobqueue import MoabCluster, PBSCluster
 
@@ -86,7 +85,7 @@ def test_job_script(Cluster):
         assert '--nthreads 2 --nprocs 4 --memory-limit 7.00GB' in job_script
 
 
-@pytest.mark.env("pbs")  # noqa: F811
+@pytest.mark.env("pbs")
 def test_basic(loop):
     with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
                     job_extra=['-V'], loop=loop) as cluster:
@@ -118,7 +117,7 @@ def test_basic(loop):
             assert not cluster.running_jobs
 
 
-@pytest.mark.env("pbs")  # noqa: F811
+@pytest.mark.env("pbs")
 def test_scale_cores_memory(loop):
     with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
                     job_extra=['-V'], loop=loop) as cluster:
@@ -150,7 +149,7 @@ def test_scale_cores_memory(loop):
             assert not cluster.running_jobs
 
 
-@pytest.mark.env("pbs")  # noqa: F811
+@pytest.mark.env("pbs")
 def test_basic_scale_edge_cases(loop):
     with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
                     job_extra=['-V'], loop=loop) as cluster:
@@ -168,7 +167,7 @@ def test_basic_scale_edge_cases(loop):
         assert not(cluster.pending_jobs or cluster.running_jobs)
 
 
-@pytest.mark.env("pbs")  # noqa: F811
+@pytest.mark.env("pbs")
 def test_adaptive(loop):
     with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
                     job_extra=['-V'], loop=loop) as cluster:
@@ -193,7 +192,7 @@ def test_adaptive(loop):
             assert cluster.finished_jobs
 
 
-@pytest.mark.env("pbs")  # noqa: F811
+@pytest.mark.env("pbs")
 def test_adaptive_grouped(loop):
     with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
                     job_extra=['-V'], loop=loop) as cluster:
@@ -219,7 +218,7 @@ def test_adaptive_grouped(loop):
                 assert time() < start + QUEUE_WAIT
 
 
-@pytest.mark.env("pbs")  # noqa: F811
+@pytest.mark.env("pbs")
 def test_adaptive_cores_mem(loop):
     with PBSCluster(walltime='00:02:00', processes=1, cores=2, memory='2GB', local_directory='/tmp',
                     job_extra=['-V'], loop=loop) as cluster:
@@ -244,7 +243,7 @@ def test_adaptive_cores_mem(loop):
             assert cluster.finished_jobs
 
 
-@pytest.mark.env("pbs")  # noqa: F811
+@pytest.mark.env("pbs")
 def test_scale_grouped(loop):
     with PBSCluster(walltime='00:02:00', processes=2, cores=2, memory='2GB', local_directory='/tmp',
                     job_extra=['-V'], loop=loop) as cluster:
@@ -292,7 +291,7 @@ def test_scale_grouped(loop):
             assert not cluster.running_jobs
 
 
-def test_config(loop):  # noqa: F811
+def test_config(loop):
     with dask.config.set({'jobqueue.pbs.walltime': '00:02:00',
                           'jobqueue.pbs.local-directory': '/foo'}):
         with PBSCluster(loop=loop, cores=1, memory='2GB') as cluster:
