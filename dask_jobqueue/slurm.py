@@ -48,7 +48,7 @@ class SLURMCluster(JobQueueCluster):
     """, 4)
 
     # Override class variables
-    submit_command = 'sbatch --parsable'
+    submit_command = 'sbatch'
     cancel_command = 'scancel'
 
     def __init__(self, queue=None, project=None, walltime=None, job_cpu=None, job_mem=None, job_extra=None,
