@@ -376,8 +376,8 @@ class TestView(ClusterTestCase):
     def test_abort(self):
         view = self.client[-1]
         ar = view.execute('import time; time.sleep(3)', block=False)
-        ar2 = view.apply_async(lambda : 2)
-        ar3 = view.apply_async(lambda : 3)
+        ar2 = view.apply_async(lambda: 2)
+        ar3 = view.apply_async(lambda: 3)
         view.abort(ar2)
         view.abort(ar3.msg_ids)
         self.assertRaises(error.TaskAborted, ar2.get)
