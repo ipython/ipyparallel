@@ -3,12 +3,14 @@ import sys
 from subprocess import check_output
 import types
 
+import zmq
+from zmq.eventloop import zmqstream
+
 import ipyparallel
+from ipyparallel.util import ioloop
 from ipyparallel.apps import ipengineapp
 from ipykernel.ipkernel import IPythonKernel
 from ipykernel import kernelapp, iostream
-from zmq.eventloop import zmqstream, ioloop
-import zmq
 
 try:
     from unittest.mock import patch, MagicMock, create_autospec

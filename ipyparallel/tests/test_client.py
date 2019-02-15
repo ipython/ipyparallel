@@ -567,7 +567,7 @@ class TestClient(ClusterTestCase):
         self.assertEqual(tot.result(), 285)
 
         # cleanup
-        executor.shutdown()
+        executor.close()
         self.client.stop_dask()
         ar = self.client[:].apply_async(lambda x: x, Reference('distributed_worker'))
         self.assertRaisesRemote(NameError, ar.get)
@@ -578,14 +578,17 @@ class TestClient(ClusterTestCase):
                         lambda x: False):
             with mock.patch('socket.gethostname', lambda: location[0:-1]), \
                  pytest.warns(RuntimeWarning): # should trigger warning
-                self.connect_client()
+                c = self.connect_client()
+                c.close()
             with mock.patch('socket.gethostname', lambda: location), \
-                 pytest.warns(None) as record:  # should not trigger warning
-                self.connect_client()
-                self.assertEqual(len(record), 0)
+                    pytest.warns(None) as record:  # should not trigger warning
+                c = self.connect_client()
+                c.close()
+                assert len(record) == 0
 
     def test_local_ip_true_doesnt_trigger_warning(self):
         with mock.patch('ipyparallel.client.client.is_local_ip',
                         lambda x: True), pytest.warns(None) as record:
-                self.connect_client()
-                self.assertEqual(len(record), 0)
+            c = self.connect_client()
+            c.close()
+            assert len(record) == 0

@@ -38,7 +38,6 @@ except ImportError:
         out,err = p.communicate()
         return out
 
-from zmq.eventloop import ioloop
 
 from traitlets.config.application import Application
 from traitlets.config.configurable import LoggingConfigurable
@@ -51,8 +50,8 @@ from IPython.utils.path import get_home_dir, ensure_dir_exists
 from IPython.utils.process import find_cmd, FindCmdError
 from ipython_genutils.py3compat import iteritems, itervalues
 
+from ..util import ioloop
 from .win32support import forward_read_events
-
 from .winhpcjob import IPControllerTask, IPEngineTask, IPControllerJob, IPEngineSetJob
 
 WINDOWS = os.name == 'nt'

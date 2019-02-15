@@ -412,7 +412,7 @@ class TestView(ClusterTestCase):
             re = globals()['re']
             return re.findall(pat, s)
         
-        self.assertEqual(view.apply_sync(findall, '\w+', 'hello world'), 'hello world'.split())
+        self.assertEqual(view.apply_sync(findall, r'\w+', 'hello world'), 'hello world'.split())
     
     def test_unicode_execute(self):
         """test executing unicode strings"""
@@ -524,8 +524,10 @@ class TestView(ClusterTestCase):
         e0.execute("from IPython.display import Image, HTML")
         ar = e0.execute("Image(data=b'garbage', format='png', width=10)", silent=False)
         er = ar.get()
-        b64data = base64.encodestring(b'garbage').decode('ascii')
-        self.assertEqual(er._repr_png_(), (b64data, dict(width=10)))
+        b64data = base64.b64encode(b'garbage').decode('ascii')
+        data, metadata = er._repr_png_()
+        assert data.strip() == b64data.strip()
+        assert metadata == dict(width=10)
         ar = e0.execute("HTML('<b>bold</b>')", silent=False)
         er = ar.get()
         self.assertEqual(er._repr_html_(), "<b>bold</b>")

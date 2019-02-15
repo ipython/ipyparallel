@@ -123,29 +123,29 @@ class HubFactory(RegistrationFactory):
     """The Configurable for setting up a Hub."""
 
     # port-pairs for monitoredqueues:
-    hb = Tuple(Integer,Integer,config=True,
+    hb = Tuple(Integer(), Integer(), config=True,
         help="""PUB/ROUTER Port pair for Engine heartbeats""")
     def _hb_default(self):
         return tuple(util.select_random_ports(2))
 
-    mux = Tuple(Integer,Integer,config=True,
+    mux = Tuple(Integer(), Integer(), config=True,
         help="""Client/Engine Port pair for MUX queue""")
 
     def _mux_default(self):
         return tuple(util.select_random_ports(2))
 
-    task = Tuple(Integer,Integer,config=True,
+    task = Tuple(Integer(), Integer(), config=True,
         help="""Client/Engine Port pair for Task queue""")
     def _task_default(self):
         return tuple(util.select_random_ports(2))
 
-    control = Tuple(Integer,Integer,config=True,
+    control = Tuple(Integer(), Integer(), config=True,
         help="""Client/Engine Port pair for Control queue""")
 
     def _control_default(self):
         return tuple(util.select_random_ports(2))
 
-    iopub = Tuple(Integer,Integer,config=True,
+    iopub = Tuple(Integer(), Integer(), config=True,
         help="""Client/Engine Port pair for IOPub relay""")
 
     def _iopub_default(self):
