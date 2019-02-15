@@ -6,6 +6,7 @@
 from __future__ import print_function
 
 import collections
+import socket
 from concurrent.futures import Future
 from getpass import getpass
 import json
@@ -87,22 +88,22 @@ class ExecuteReply(RichOutput):
         self._content = content
         self.execution_count = content['execution_count']
         self.metadata = metadata
-    
+
     # RichOutput overrides
-    
+
     @property
     def source(self):
         execute_result = self.metadata['execute_result']
         if execute_result:
             return execute_result.get('source', '')
-    
+
     @property
     def data(self):
         execute_result = self.metadata['execute_result']
         if execute_result:
             return execute_result.get('data', {})
         return {}
-    
+
     @property
     def _metadata(self):
         execute_result = self.metadata['execute_result']
@@ -272,10 +273,10 @@ class Client(HasTraits):
     timeout : float
         time (in seconds) to wait for connection replies from the Hub
         [Default: 10]
-    
+
     Other Parameters
     ----------------
-    
+
     sshserver : str
         A string of the form passed to ssh, i.e. 'server.tld' or 'user@server.tld:port'
         If keyfile or password is specified, and this is not, it will default to
@@ -374,21 +375,21 @@ class Client(HasTraits):
         if context is None:
             context = zmq.Context.instance()
         self._context = context
-        
+
         if 'url_or_file' in extra_args:
             url_file = extra_args['url_or_file']
             warnings.warn("url_or_file arg no longer supported, use url_file", DeprecationWarning)
-        
+
         if url_file and util.is_url(url_file):
             raise ValueError("single urls cannot be specified, url-files must be used.")
 
         self._setup_profile_dir(self.profile, profile_dir, ipython_dir)
-        
+
         no_file_msg = '\n'.join([
         "You have attempted to connect to an IPython Cluster but no Controller could be found.",
         "Please double-check your configuration and ensure that a cluster is running.",
         ])
-        
+
         if self._cd is not None:
             if url_file is None:
                 if not cluster_id:
@@ -413,16 +414,16 @@ class Client(HasTraits):
                     raise IOError(msg)
         if url_file is None:
             raise IOError(no_file_msg)
-        
+
         if not os.path.exists(url_file):
             # Connection file explicitly specified, but not found
             raise IOError("Connection file %r not found. Is a controller running?" % \
                 compress_user(url_file)
             )
-        
+
         with open(url_file) as f:
             cfg = json.load(f)
-        
+
         self._task_scheme = cfg['task_scheme']
 
         # sync defaults from args, json:
@@ -430,25 +431,28 @@ class Client(HasTraits):
             cfg['ssh'] = sshserver
 
         location = cfg.setdefault('location', None)
-        
+
         proto,addr = cfg['interface'].split('://')
         addr = util.disambiguate_ip_address(addr, location)
         cfg['interface'] = "%s://%s" % (proto, addr)
-        
+
         # turn interface,port into full urls:
         for key in ('control', 'task', 'mux', 'iopub', 'notification', 'registration'):
             cfg[key] = cfg['interface'] + ':%i' % cfg[key]
-        
+
         url = cfg['registration']
-        
+
         if location is not None and addr == localhost():
             # location specified, and connection is expected to be local
             location_ip = util.ip_for_host(location)
+
             if not is_local_ip(location_ip) and not sshserver:
                 # load ssh from JSON *only* if the controller is not on
                 # this machine
                 sshserver=cfg['ssh']
-            if not is_local_ip(location_ip) and not sshserver:
+            if not is_local_ip(location_ip) and not sshserver and\
+                    location != socket.gethostname():
+
                 # warn if no ssh specified, but SSH is probably needed
                 # This is only a warning, because the most likely cause
                 # is a local Controller on a laptop whose IP is dynamic
@@ -487,7 +491,7 @@ class Client(HasTraits):
                 "If you are reusing connection files, remove them and start ipcontroller again."
             ])
             raise ValueError(msg.format(exc.message))
-        
+
         self.session = Session(**extra_args)
 
         self._query_socket = self._context.socket(zmq.DEALER)
@@ -507,15 +511,15 @@ class Client(HasTraits):
                                     }
         self._queue_handlers = {'execute_reply' : self._handle_execute_reply,
                                 'apply_reply' : self._handle_apply_reply}
-        
+
         try:
             self._connect(sshserver, ssh_kwargs, timeout)
         except:
             self.close(linger=0)
             raise
-        
+
         # last step: setup magics, if we are in IPython:
-        
+
         ip = get_ipython()
         if ip is None:
             return
@@ -528,7 +532,7 @@ class Client(HasTraits):
     def __del__(self):
         """cleanup sockets, but _not_ context."""
         self.close()
-    
+
     def _setup_profile_dir(self, profile, profile_dir, ipython_dir):
         if ipython_dir is None:
             ipython_dir = get_ipython_dir()
@@ -766,7 +770,7 @@ class Client(HasTraits):
         # construct metadata:
         md = self.metadata[msg_id]
         md.update(self._extract_metadata(msg))
-        
+
         e_outstanding = self._outstanding_dict[md['engine_uuid']]
         if msg_id in e_outstanding:
             e_outstanding.remove(msg_id)
@@ -940,7 +944,7 @@ class Client(HasTraits):
         content = msg['content']
         header = msg['header']
         msg_type = msg['header']['msg_type']
-        
+
         if msg_type == 'status' and msg_id not in self.metadata:
             # ignore status messages if they aren't mine
             return
@@ -973,11 +977,11 @@ class Client(HasTraits):
         else:
             # unhandled msg_type (status, etc.)
             pass
-    
+
     def _send(self, socket, msg_type, content=None, parent=None, ident=None,
               buffers=None, track=False, header=None, metadata=None):
         """Send a message in the IO thread
-        
+
         returns msg object"""
         if self._closed:
             raise IOError("Connections have been closed.")
@@ -991,34 +995,34 @@ class Client(HasTraits):
             self._output_futures[msg_id] = output = MessageFuture(msg_id)
             # hook up metadata
             output.metadata = self.metadata[msg_id]
-            
-        
+
+
         self._futures[msg_id] = future = MessageFuture(msg_id, track=track)
         futures = [future]
-        
+
         if asyncresult:
             future.output = output
             futures.append(output)
             output.metadata['submitted'] = util.utcnow()
-        
+
         def cleanup(f):
             """Purge caches on Future resolution"""
             self.results.pop(msg_id, None)
             self._futures.pop(msg_id, None)
             self._output_futures.pop(msg_id, None)
             self.metadata.pop(msg_id, None)
-            
+
         multi_future(futures).add_done_callback(cleanup)
-        
+
         def _really_send():
             sent = self.session.send(socket, msg, track=track, buffers=buffers, ident=ident)
             if track:
                 future.tracker.set_result(sent['tracker'])
-        
+
         # hand off actual send to IO thread
         self._io_loop.add_callback(_really_send)
         return future
-    
+
     def _send_recv(self, *args, **kwargs):
         """Send a message in the IO thread and return its reply"""
         future = self._send(*args, **kwargs)
@@ -1041,16 +1045,16 @@ class Client(HasTraits):
             raise TypeError("key by int/slice/iterable of ints only, not %s"%(type(key)))
         else:
             return self.direct_view(key)
-    
+
     def __iter__(self):
         """Since we define getitem, Client is iterable
-        
+
         but unless we also define __iter__, it won't work correctly unless engine IDs
         start at zero and are continuous.
         """
         for eid in self.ids:
             yield self.direct_view(eid)
-    
+
     #--------------------------------------------------------------------------
     # Begin public methods
     #--------------------------------------------------------------------------
@@ -1063,18 +1067,18 @@ class Client(HasTraits):
 
     def activate(self, targets='all', suffix=''):
         """Create a DirectView and register it with IPython magics
-        
+
         Defines the magics `%px, %autopx, %pxresult, %%px`
-        
+
         Parameters
         ----------
-        
+
         targets: int, list of ints, or 'all'
             The engines on which the view's magics will run
         suffix: str [default: '']
             The suffix, if any, for the magics.  This allows you to have
             multiple views associated with parallel magics at the same time.
-            
+
             e.g. ``rc.activate(targets=0, suffix='0')`` will give you
             the magics ``%px0``, ``%pxresult0``, etc. for running magics just
             on engine 0.
@@ -1086,7 +1090,7 @@ class Client(HasTraits):
 
     def close(self, linger=None):
         """Close my zmq Sockets
-        
+
         If `linger`, set the zmq LINGER socket option,
         which allows discarding of messages.
         """
@@ -1106,7 +1110,7 @@ class Client(HasTraits):
     def spin_thread(self, interval=1):
         """DEPRECATED, DOES NOTHING"""
         warnings.warn("Client.spin_thread is deprecated now that IO is always in a thread", DeprecationWarning)
-    
+
     def stop_spin_thread(self):
         """DEPRECATED, DOES NOTHING"""
         warnings.warn("Client.spin_thread is deprecated now that IO is always in a thread", DeprecationWarning)
@@ -1115,23 +1119,23 @@ class Client(HasTraits):
         """DEPRECATED, DOES NOTHING"""
         warnings.warn("Client.spin is deprecated now that IO is in a thread", DeprecationWarning)
 
-    
+
     def _await_futures(self, futures, timeout):
         """Wait for a collection of futures"""
         if not futures:
             return True
-        
+
         event = Event()
         if timeout and timeout < 0:
             timeout = None
-        
+
         f = multi_future(futures)
         f.add_done_callback(lambda f: event.set())
         return event.wait(timeout)
-    
+
     def _futures_for_msgs(self, msg_ids):
         """Turn msg_ids into Futures
-        
+
         msg_ids not in futures dict are presumed done.
         """
         futures = []
@@ -1185,13 +1189,13 @@ class Client(HasTraits):
                 theids.add(job)
             if not futures and not theids.intersection(self.outstanding):
                 return True
-        
+
         futures.extend(self._futures_for_msgs(theids))
         return self._await_futures(futures, timeout)
-    
+
     def wait_interactive(self, jobs=None, interval=1., timeout=-1.):
         """Wait interactively for jobs
-        
+
         If no job is specified, will wait for all outstanding jobs to complete.
         """
         if jobs is None:
@@ -1201,7 +1205,7 @@ class Client(HasTraits):
         else:
             ar = self._asyncresult_from_jobs(jobs, owner=False)
         return ar.wait_interactive(interval=interval, timeout=timeout)
-    
+
     #--------------------------------------------------------------------------
     # Control methods
     #--------------------------------------------------------------------------
@@ -1233,14 +1237,14 @@ class Client(HasTraits):
 
         jobs : msg_id, list of msg_ids, or AsyncResult
             The jobs to be aborted
-            
+
             If unspecified/None: abort all outstanding jobs.
 
         """
         block = self.block if block is None else block
         jobs = jobs if jobs is not None else list(self.outstanding)
         targets = self._build_targets(targets)[0]
-        
+
         msg_ids = []
         if isinstance(jobs, string_types + (AsyncResult,)):
             jobs = [jobs]
@@ -1257,7 +1261,7 @@ class Client(HasTraits):
         for t in targets:
             futures.append(self._send(self._control_stream, 'abort_request',
                     content=content, ident=t))
-        
+
         if not block:
             return multi_future(futures)
         else:
@@ -1269,10 +1273,10 @@ class Client(HasTraits):
 
     def shutdown(self, targets='all', restart=False, hub=False, block=None):
         """Terminates one or more engine processes, optionally including the hub.
-        
+
         Parameters
         ----------
-        
+
         targets: list of ints or 'all' [default: all]
             Which engines to shutdown.
         hub: bool [default: False]
@@ -1286,7 +1290,7 @@ class Client(HasTraits):
         from ipyparallel.error import NoEnginesRegistered
         if restart:
             raise NotImplementedError("Engine restart is not yet implemented")
-        
+
         block = self.block if block is None else block
         if hub:
             targets = 'all'
@@ -1294,7 +1298,7 @@ class Client(HasTraits):
             targets = self._build_targets(targets)[0]
         except NoEnginesRegistered:
             targets = []
-        
+
         futures = []
         for t in targets:
             futures.append(self._send(self._control_stream, 'shutdown_request',
@@ -1398,11 +1402,11 @@ class Client(HasTraits):
 
         # Finally, stop all the Workers on the engines
         dview.apply_sync(util.stop_distributed_worker)
-    
+
     # aliases:
     become_distributed = become_dask
     stop_distributed = stop_dask
-    
+
     #--------------------------------------------------------------------------
     # Execution related methods
     #--------------------------------------------------------------------------
@@ -1423,7 +1427,7 @@ class Client(HasTraits):
 
         if self._closed:
             raise RuntimeError("Client cannot be used after its sockets have been closed")
-        
+
         # defaults:
         args = args if args is not None else []
         kwargs = kwargs if kwargs is not None else {}
@@ -1467,7 +1471,7 @@ class Client(HasTraits):
 
         if self._closed:
             raise RuntimeError("Client cannot be used after its sockets have been closed")
-        
+
         # defaults:
         metadata = metadata if metadata is not None else {}
 
@@ -1476,7 +1480,7 @@ class Client(HasTraits):
             raise TypeError("code must be text, not %s" % type(code))
         if not isinstance(metadata, dict):
             raise TypeError("metadata must be dict, not %s" % type(metadata))
-        
+
         content = dict(code=code, silent=bool(silent), user_expressions={})
 
 
@@ -1520,16 +1524,16 @@ class Client(HasTraits):
             targets = self._build_targets(targets)[1]
         return LoadBalancedView(client=self, socket=self._task_stream, targets=targets,
                                 **kwargs)
-    
+
     def executor(self, targets=None):
         """Construct a PEP-3148 Executor with a LoadBalancedView
-        
+
         Parameters
         ----------
 
         targets: list,slice,int,etc. [default: use all engines]
             The subset of engines across which to load-balance execution
-        
+
         Returns
         -------
 
@@ -1542,11 +1546,11 @@ class Client(HasTraits):
         """construct a DirectView object.
 
         If no targets are specified, create a DirectView using all engines.
-        
+
         rc.direct_view('all') is distinguished from rc[:] in that 'all' will
         evaluate the target engines at each execution, whereas rc[:] will connect to
         all *current* engines, and that list will not change.
-        
+
         That is, 'all' will always use all engines, whereas rc[:] will not use
         engines added after the DirectView is constructed.
 
@@ -1569,7 +1573,7 @@ class Client(HasTraits):
     #--------------------------------------------------------------------------
     # Query methods
     #--------------------------------------------------------------------------
-    
+
     def get_result(self, indices_or_msg_ids=None, block=None, owner=True):
         """Retrieve a result by msg_id or history index, wrapped in an AsyncResult object.
 
@@ -1743,7 +1747,7 @@ class Client(HasTraits):
                 if rec.get('received'):
                     md['received'] = util._parse_date(rec['received'])
                 md.update(iodict)
-                
+
                 if rcontent['status'] == 'ok':
                     if header['msg_type'] == 'apply_reply':
                         res,buffers = serialize.deserialize_object(buffers)
@@ -1797,14 +1801,14 @@ class Client(HasTraits):
         """Build a list of msg_ids from the list of engine targets"""
         if not targets: # needed as _build_targets otherwise uses all engines
             return []
-        target_ids = self._build_targets(targets)[0] 
+        target_ids = self._build_targets(targets)[0]
         return [md_id for md_id in self.metadata if self.metadata[md_id]["engine_uuid"] in target_ids]
-    
+
     def _msg_ids_from_jobs(self, jobs=None):
         """Given a 'jobs' argument, convert it to a list of msg_ids.
-        
+
         Can be either one or a list of:
-        
+
         - msg_id strings
         - integer indices to this Client's history
         - AsyncResult objects
@@ -1822,7 +1826,7 @@ class Client(HasTraits):
             else:
                 raise TypeError("Expected msg_id, int, or AsyncResult, got %r" % job)
         return msg_ids
-    
+
     def _asyncresult_from_jobs(self, jobs=None, owner=False):
         """Construct an AsyncResult from msg_ids or asyncresult objects"""
         if not isinstance(jobs, (list, tuple, set, types.GeneratorType)):
@@ -1862,7 +1866,7 @@ class Client(HasTraits):
             if single and futures:
                 futures = futures[0]
             return AsyncResult(self, futures, owner=owner)
-    
+
     def purge_local_results(self, jobs=[], targets=[]):
         """Clears the client caches of results and their metadata.
 
@@ -1877,7 +1881,7 @@ class Client(HasTraits):
         If you must "reget" the results, you can still do so by using
         `client.get_result(msg_id)` or `client.get_result(asyncresult)`. This will
         redownload the results from the hub if they are still available
-        (i.e `client.purge_hub_results(...)` has not been called.        
+        (i.e `client.purge_hub_results(...)` has not been called.
 
         Parameters
         ----------
@@ -1895,7 +1899,7 @@ class Client(HasTraits):
         """
         if not targets and not jobs:
             raise ValueError("Must specify at least one of `targets` and `jobs`")
-        
+
         if jobs == 'all':
             if self.outstanding:
                 raise RuntimeError("Can't purge outstanding tasks: %s" % self.outstanding)
@@ -1954,14 +1958,14 @@ class Client(HasTraits):
 
     def purge_results(self,  jobs=[], targets=[]):
         """Clears the cached results from both the hub and the local client
-                
+
         Individual results can be purged by msg_id, or the entire
         history of specific targets can be purged.
 
-        Use `purge_results('all')` to scrub every cached result from both the Hub's and 
+        Use `purge_results('all')` to scrub every cached result from both the Hub's and
         the Client's db.
-        
-        Equivalent to calling both `purge_hub_results()` and `purge_client_results()` with 
+
+        Equivalent to calling both `purge_hub_results()` and `purge_client_results()` with
         the same arguments.
 
         Parameters
@@ -1979,9 +1983,9 @@ class Client(HasTraits):
 
     def purge_everything(self):
         """Clears all content from previous Tasks from both the hub and the local client
-        
-        In addition to calling `purge_results("all")` it also deletes the history and 
-        other bookkeeping lists.        
+
+        In addition to calling `purge_results("all")` it also deletes the history and
+        other bookkeeping lists.
         """
         self.purge_results("all")
         self.history = []
