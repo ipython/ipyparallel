@@ -15,7 +15,7 @@ import time
 import mock
 
 import pytest
-from tornado.concurrent import Future as TornadoFuture
+import tornado
 
 from IPython import get_ipython
 from ipyparallel.client import client as clientmod
@@ -556,6 +556,9 @@ class TestClient(ClusterTestCase):
     @pytest.mark.skipif(
         sys.version_info[:2] == (3, 4),
         reason="become_dask doesn't work on Python 3.4")
+    @pytest.mark.skipif(
+        tornado.version_info[:2] < (5,),
+        reason="become_dask doesn't work with tornado 4")
     def test_become_dask(self):
         executor = self.client.become_dask()
         reprs = self.client[:].apply_sync(repr, Reference('distributed_worker'))
