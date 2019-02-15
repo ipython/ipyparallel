@@ -12,7 +12,7 @@ cache:
     - $HOME/.cache/pip
 install:
   - pip install --upgrade setuptools pip
-  - pip install --pre --upgrade --upgrade-strategy eager .[test] distributed joblib codecov
+  - pip install --pre --upgrade --upgrade-strategy eager .[test] distributed joblib codecov 'tornado<6'
   - |
     # install pinned tornado
     if [[ ! -z "$TORNADO" ]]; then
