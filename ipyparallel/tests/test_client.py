@@ -12,7 +12,7 @@ import os
 import sys
 from threading import Thread
 import time
-from unittest import mock
+import mock
 
 import pytest
 from tornado.concurrent import Future as TornadoFuture
