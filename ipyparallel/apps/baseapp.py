@@ -128,8 +128,8 @@ class BaseParallelApplication(BaseIPythonApplication):
 
     loop = Instance('tornado.ioloop.IOLoop')
     def _loop_default(self):
-        from zmq.eventloop.ioloop import IOLoop
-        return IOLoop.current()
+        from ipyparallel.util import ioloop
+        return ioloop.IOLoop.current()
 
     aliases = Dict(base_aliases)
     flags = Dict(base_flags)

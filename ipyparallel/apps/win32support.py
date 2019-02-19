@@ -56,7 +56,7 @@ def forward_read_events(fd, context=None):
     """Forward read events from an FD over a socket.
 
     This method wraps a file in a socket pair, so it can
-    be polled for read events by select (specifically zmq.eventloop.ioloop)
+    be polled for read events by select
     """
     if context is None:
         context = zmq.Context.instance()

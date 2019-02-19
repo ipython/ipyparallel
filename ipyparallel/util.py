@@ -13,6 +13,7 @@ except ImportError:
         """no-op decorator when lru_cache is unavailable"""
         return lambda f: f
 
+from distutils.version import LooseVersion as V
 import logging
 import os
 import re
@@ -42,6 +43,11 @@ from decorator import decorator
 from tornado.ioloop import IOLoop
 import zmq
 from zmq.log import handlers
+
+if V(zmq.__version__) < V('17.0'):
+    from zmq.eventloop import ioloop
+else:
+    from tornado import ioloop
 
 from traitlets.log import get_logger
 

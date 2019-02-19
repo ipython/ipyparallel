@@ -13,7 +13,7 @@ import time
 from getpass import getpass
 
 import zmq
-from zmq.eventloop import ioloop, zmqstream
+from zmq.eventloop import zmqstream
 
 from jupyter_client.localinterfaces import localhost
 from traitlets import (
@@ -24,7 +24,7 @@ from ipython_genutils.py3compat import cast_bytes
 
 from ipyparallel.controller.heartmonitor import Heart
 from ipyparallel.factory import RegistrationFactory
-from ipyparallel.util import disambiguate_url
+from ipyparallel.util import disambiguate_url, ioloop
 
 from .kernel import IPythonParallelKernel as Kernel
 from ipykernel.kernelapp import IPKernelApp

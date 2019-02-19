@@ -15,7 +15,7 @@ import time
 import mock
 
 import pytest
-from tornado.concurrent import Future as TornadoFuture
+import tornado
 
 from IPython import get_ipython
 from ipyparallel.client import client as clientmod
@@ -556,6 +556,9 @@ class TestClient(ClusterTestCase):
     @pytest.mark.skipif(
         sys.version_info[:2] == (3, 4),
         reason="become_dask doesn't work on Python 3.4")
+    @pytest.mark.skipif(
+        tornado.version_info[:2] < (5,),
+        reason="become_dask doesn't work with tornado 4")
     def test_become_dask(self):
         executor = self.client.become_dask()
         reprs = self.client[:].apply_sync(repr, Reference('distributed_worker'))
@@ -567,7 +570,7 @@ class TestClient(ClusterTestCase):
         self.assertEqual(tot.result(), 285)
 
         # cleanup
-        executor.shutdown()
+        executor.close()
         self.client.stop_dask()
         ar = self.client[:].apply_async(lambda x: x, Reference('distributed_worker'))
         self.assertRaisesRemote(NameError, ar.get)
@@ -578,14 +581,17 @@ class TestClient(ClusterTestCase):
                         lambda x: False):
             with mock.patch('socket.gethostname', lambda: location[0:-1]), \
                  pytest.warns(RuntimeWarning): # should trigger warning
-                self.connect_client()
+                c = self.connect_client()
+                c.close()
             with mock.patch('socket.gethostname', lambda: location), \
-                 pytest.warns(None) as record:  # should not trigger warning
-                self.connect_client()
-                self.assertEqual(len(record), 0)
+                    pytest.warns(None) as record:  # should not trigger warning
+                c = self.connect_client()
+                assert len(record) == 0, str(record)
+                c.close()
 
     def test_local_ip_true_doesnt_trigger_warning(self):
         with mock.patch('ipyparallel.client.client.is_local_ip',
                         lambda x: True), pytest.warns(None) as record:
-                self.connect_client()
-                self.assertEqual(len(record), 0)
+            c = self.connect_client()
+            assert len(record) == 0, str(record)
+            c.close()

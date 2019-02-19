@@ -5,7 +5,10 @@
 
 from __future__ import print_function
 
-import collections
+try:
+    from collections.abc import Iterable
+except ImportError: # py2
+    from collections import Iterable
 import socket
 from concurrent.futures import Future
 from getpass import getpass
@@ -21,7 +24,6 @@ import warnings
 pjoin = os.path.join
 
 import zmq
-from zmq.eventloop.ioloop import IOLoop
 from zmq.eventloop.zmqstream import ZMQStream
 
 from traitlets.config.configurable import MultipleInstanceError
@@ -49,6 +51,7 @@ from jupyter_client.session import Session
 from ipyparallel import serialize
 from ipyparallel.serialize import PrePickled
 
+from ..util import ioloop
 from .asyncresult import AsyncResult, AsyncHubResult
 from .futures import MessageFuture, multi_future
 from .view import DirectView, LoadBalancedView
@@ -854,7 +857,7 @@ class Client(HasTraits):
                 # no asyncio loop, make one
                 # e.g.
                 asyncio.set_event_loop(asyncio.new_event_loop())
-        loop = IOLoop()
+        loop = ioloop.IOLoop()
         loop.make_current()
         return loop
 
@@ -1173,7 +1176,7 @@ class Client(HasTraits):
             theids = set(self.outstanding)
         else:
             if isinstance(jobs, string_types + (int, AsyncResult)) \
-            or not isinstance(jobs, collections.Iterable):
+            or not isinstance(jobs, Iterable):
                 jobs = [jobs]
             theids = set()
             for job in jobs:

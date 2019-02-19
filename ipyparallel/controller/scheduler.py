@@ -9,11 +9,9 @@ Python Scheduler exists.
 # Distributed under the terms of the Modified BSD License.
 
 import logging
-import sys
 import time
 
 from collections import deque
-from datetime import datetime
 from random import randint, random
 from types import FunctionType
 
@@ -23,7 +21,7 @@ except ImportError:
     numpy = None
 
 import zmq
-from zmq.eventloop import ioloop, zmqstream
+from zmq.eventloop import zmqstream
 
 # local imports
 from decorator import decorator
@@ -34,7 +32,7 @@ from ipython_genutils.py3compat import cast_bytes
 
 from ipyparallel import error, util
 from ipyparallel.factory import SessionFactory
-from ipyparallel.util import connect_logger, local_logger
+from ipyparallel.util import connect_logger, local_logger, ioloop
 
 from .dependency import Dependency
 

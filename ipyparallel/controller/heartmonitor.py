@@ -13,13 +13,12 @@ import uuid
 
 import zmq
 from zmq.devices import ThreadDevice, ThreadMonitoredQueue
-from zmq.eventloop import ioloop, zmqstream
 
 from traitlets.config.configurable import LoggingConfigurable
 from ipython_genutils.py3compat import str_to_bytes
 from traitlets import Set, Instance, Float, Integer, Dict, Bool
 
-from ipyparallel.util import log_errors
+from ipyparallel.util import log_errors, ioloop
 
 class Heart(object):
     """A basic heart object for responding to a HeartMonitor.

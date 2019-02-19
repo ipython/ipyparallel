@@ -34,6 +34,23 @@ class IPythonParallelKernel(IPythonKernel):
         self.shell.configurables.append(data_pub)
         data_pub.session = self.session
         data_pub.pub_socket = self.iopub_socket
+        self.aborted = set()
+
+    def should_handle(self, stream, msg, idents):
+        """Check whether a shell-channel message should be handled
+
+        Allows subclasses to prevent handling of certain messages (e.g. aborted requests).
+        """
+        if not super(IPythonParallelKernel, self).should_handle(stream, msg, idents):
+            return False
+        msg_id = msg['header']['msg_id']
+        if msg_id in self.aborted:
+            msg_type = msg['header']['msg_type']
+            # is it safe to assume a msg_id will not be resubmitted?
+            self.aborted.remove(msg_id)
+            self._send_abort_reply(stream, msg, idents)
+            return False
+        return True
 
     def init_metadata(self, parent):
         """init metadata dict, for execute/apply_reply"""
