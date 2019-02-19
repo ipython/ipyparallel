@@ -16,7 +16,7 @@ RUN bash /build.sh
 FROM centos:7.5.1804
 LABEL description="PBS Professional Open Source and conda"
 
-#The pbs master node name, can be overriden if needed
+#The pbs master node name, can be overridden if needed
 ENV PBS_MASTER pbs_master
 ENV PATH /opt/pbs/bin:/opt/anaconda/bin:$PATH
 ENV LANG en_US.UTF-8

@@ -294,7 +294,7 @@ class JobQueueCluster(ClusterManager):
 
     @property
     def running_jobs(self):
-        """ Jobs with currenly active workers """
+        """ Jobs with currently active workers """
         return self._scheduler_plugin.running_jobs
 
     @property

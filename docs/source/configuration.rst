@@ -81,7 +81,7 @@ You can still override configuration values with keyword arguments
 
 If you have imported ``dask_jobqueue`` then a blank ``jobqueue.yaml`` will be
 added automatically to ``~/.config/dask/jobqueue.yaml``.  You should use the
-section of that configuation file that corresponds to your job scheduler.
+section of that configuration file that corresponds to your job scheduler.
 Above we used PBS, but other job schedulers operate the same way.  You should
 be able to share these with colleagues.  If you can convince your IT staff
 you can also place such a file in ``/etc/dask/`` and it will affect all people

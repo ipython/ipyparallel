@@ -142,7 +142,7 @@ SLURM Deployment: Providing additional arguments to the dask-workers
 Keyword arguments can be passed through to dask-workers. An example of such an
 argument is for the specification of abstract resources, described `here
 <http://distributed.dask.org/en/latest/resources.html>`_. This could be used
-to specify special hardware availibility that the scheduler is not aware of,
+to specify special hardware availability that the scheduler is not aware of,
 for example GPUs. Below, the arbitrary resources "ssdGB" and "GPU" are
 specified. Notice that the ``extra`` keyword is used to pass through arguments
 to the dask-workers.

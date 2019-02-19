@@ -61,7 +61,7 @@ dashboard. Note that you can do SSH tunneling for both Jupyter and Dashboard in
 one command.
 
 A good example of using Jupyter along with dask-jobqueue and the Dashboard is
-availaible below:
+available below:
 
 .. raw:: html
 

@@ -100,7 +100,7 @@ class SLURMCluster(JobQueueCluster):
 
         header_lines.append('JOB_ID=${SLURM_JOB_ID%;*}')
 
-        # Declare class attribute that shall be overriden
+        # Declare class attribute that shall be overridden
         self.job_header = '\n'.join(header_lines)
 
         logger.debug("Job script: \n %s" % self.job_script())

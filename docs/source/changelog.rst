@@ -22,7 +22,7 @@ Changelog
 - Bind scheduler bokeh UI to every network interfaces by default.
 - Adds an OAR job queue system implementation.
 - Adds an LSF job queue system implementation.
-- Adds some convenient methods to JobQueueCluster objetcs: ``__repr__``, 
+- Adds some convenient methods to JobQueueCluster objects: ``__repr__``, 
   ``stop_jobs()``, ``close()``.
 
 
