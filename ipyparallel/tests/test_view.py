@@ -826,8 +826,7 @@ class TestView(ClusterTestCase):
 
     @skip_without('cloudpickle')
     @pytest.mark.xfail(
-        sys.version_info[:2] < (3, 0),
-        reason="cloudpickle doesn't seem to work with py2")
+        reason="cloudpickle doesn't seem to work right now")
     def test_use_cloudpickle(self):
         view = self.client[:]
         view['_a'] = 'engine'
