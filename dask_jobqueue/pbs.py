@@ -95,7 +95,7 @@ class PBSCluster(JobQueueCluster):
             header_lines.append('#PBS -e %s/' % self.log_directory)
             header_lines.append('#PBS -o %s/' % self.log_directory)
         header_lines.extend(['#PBS %s' % arg for arg in job_extra])
-        header_lines.append('JOB_ID=${PBS_JOBID%.*}')
+        header_lines.append('JOB_ID=${PBS_JOBID%%.*}')
 
         # Declare class attribute that shall be overridden
         self.job_header = '\n'.join(header_lines)
