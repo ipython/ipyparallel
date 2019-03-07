@@ -7,6 +7,7 @@ from .slurm import SLURMCluster
 from .sge import SGECluster
 from .lsf import LSFCluster
 from .oar import OARCluster
+from .htcondor import HTCondorCluster
 
 from ._version import get_versions
 __version__ = get_versions()['version']
