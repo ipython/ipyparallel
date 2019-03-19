@@ -22,6 +22,16 @@ and install it from source::
    cd dask-jobqueue
    python setup.py install
 
+Formatting
+----------
+
+When you’re done making changes, check that your changes pass flake8 checks and use black formatting::
+
+   flake8 dask_jobqueue
+   black dask_jobqueue
+
+To get flake8 and black, just pip install them. You can also use pre-commit to add them as pre-commit hooks.
+
 Test
 ----
 

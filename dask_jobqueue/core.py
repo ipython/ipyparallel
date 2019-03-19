@@ -36,11 +36,11 @@ Please specify job size with the following keywords:
 
 
 def _job_id_from_worker_name(name):
-    ''' utility to parse the job ID from the worker name
+    """ utility to parse the job ID from the worker name
 
     template: 'prefix--jobid--suffix'
-    '''
-    _, job_id, _ = name.split('--')
+    """
+    _, job_id, _ = name.split("--")
     return job_id
 
 
@@ -52,7 +52,7 @@ class JobQueuePlugin(SchedulerPlugin):
         self.all_workers = {}
 
     def add_worker(self, scheduler, worker=None, name=None, **kwargs):
-        ''' Run when a new worker enters the cluster'''
+        """ Run when a new worker enters the cluster"""
         logger.debug("adding worker %s", worker)
         w = scheduler.workers[worker]
         job_id = _job_id_from_worker_name(w.name)
@@ -66,18 +66,21 @@ class JobQueuePlugin(SchedulerPlugin):
                 logger.debug("%s is a new job, adding to running_jobs", job_id)
                 self.running_jobs[job_id] = self.pending_jobs.pop(job_id)
             elif job_id in self.finished_jobs:
-                logger.warning('Worker %s restart in Job %s. '
-                               'This can be due to memory issue.', w, job_id)
+                logger.warning(
+                    "Worker %s restart in Job %s. " "This can be due to memory issue.",
+                    w,
+                    job_id,
+                )
                 self.running_jobs[job_id] = self.finished_jobs.pop(job_id)
             else:
-                logger.error('Unknown job_id: %s for worker %s', job_id, w)
+                logger.error("Unknown job_id: %s for worker %s", job_id, w)
                 self.running_jobs[job_id] = {}
 
         # add worker to dict of workers in this job
         self.running_jobs[job_id][w.name] = w
 
     def remove_worker(self, scheduler=None, worker=None, **kwargs):
-        ''' Run when a worker leaves the cluster'''
+        """ Run when a worker leaves the cluster"""
         logger.debug("removing worker %s", worker)
         name, job_id = self.all_workers[worker]
         logger.debug("removing worker name (%s) and job_id (%s)", name, job_id)
@@ -91,7 +94,7 @@ class JobQueuePlugin(SchedulerPlugin):
             self.finished_jobs[job_id] = self.running_jobs.pop(job_id)
 
 
-@docstrings.get_sectionsf('JobQueueCluster')
+@docstrings.get_sectionsf("JobQueueCluster")
 class JobQueueCluster(ClusterManager):
     """ Base class to launch Dask Clusters for Job queues
 
@@ -157,26 +160,27 @@ class JobQueueCluster(ClusterManager):
     # Following class attributes should be overridden by extending classes.
     submit_command = None
     cancel_command = None
-    job_id_regexp = r'(?P<job_id>\d+)'
+    job_id_regexp = r"(?P<job_id>\d+)"
 
-    def __init__(self,
-                 name=None,
-                 cores=None,
-                 memory=None,
-                 processes=None,
-                 interface=None,
-                 death_timeout=None,
-                 local_directory=None,
-                 extra=None,
-                 env_extra=None,
-                 log_directory=None,
-                 walltime=None,
-                 threads=None,
-                 shebang=None,
-                 python=sys.executable,
-                 config_name=None,
-                 **kwargs
-                 ):
+    def __init__(
+        self,
+        name=None,
+        cores=None,
+        memory=None,
+        processes=None,
+        interface=None,
+        death_timeout=None,
+        local_directory=None,
+        extra=None,
+        env_extra=None,
+        log_directory=None,
+        walltime=None,
+        threads=None,
+        shebang=None,
+        python=sys.executable,
+        config_name=None,
+        **kwargs
+    ):
         """ """
         # """
         # This initializer should be considered as Abstract, and never used directly.
@@ -187,51 +191,59 @@ class JobQueueCluster(ClusterManager):
             raise ValueError(threads_deprecation_message)
 
         if config_name is None:
-            raise NotImplementedError('JobQueueCluster is an abstract class that should not be instantiated.')
+            raise NotImplementedError(
+                "JobQueueCluster is an abstract class that should not be instantiated."
+            )
 
         if name is None:
-            name = dask.config.get('jobqueue.%s.name' % config_name)
+            name = dask.config.get("jobqueue.%s.name" % config_name)
         if cores is None:
-            cores = dask.config.get('jobqueue.%s.cores' % config_name)
+            cores = dask.config.get("jobqueue.%s.cores" % config_name)
         if memory is None:
-            memory = dask.config.get('jobqueue.%s.memory' % config_name)
+            memory = dask.config.get("jobqueue.%s.memory" % config_name)
         if processes is None:
-            processes = dask.config.get('jobqueue.%s.processes' % config_name)
+            processes = dask.config.get("jobqueue.%s.processes" % config_name)
         if interface is None:
-            interface = dask.config.get('jobqueue.%s.interface' % config_name)
+            interface = dask.config.get("jobqueue.%s.interface" % config_name)
         if death_timeout is None:
-            death_timeout = dask.config.get('jobqueue.%s.death-timeout' % config_name)
+            death_timeout = dask.config.get("jobqueue.%s.death-timeout" % config_name)
         if local_directory is None:
-            local_directory = dask.config.get('jobqueue.%s.local-directory' % config_name)
+            local_directory = dask.config.get(
+                "jobqueue.%s.local-directory" % config_name
+            )
         if extra is None:
-            extra = dask.config.get('jobqueue.%s.extra' % config_name)
+            extra = dask.config.get("jobqueue.%s.extra" % config_name)
         if env_extra is None:
-            env_extra = dask.config.get('jobqueue.%s.env-extra' % config_name)
+            env_extra = dask.config.get("jobqueue.%s.env-extra" % config_name)
         if log_directory is None:
-            log_directory = dask.config.get('jobqueue.%s.log-directory' % config_name)
+            log_directory = dask.config.get("jobqueue.%s.log-directory" % config_name)
         if shebang is None:
-            shebang = dask.config.get('jobqueue.%s.shebang' % config_name)
+            shebang = dask.config.get("jobqueue.%s.shebang" % config_name)
 
-        if dask.config.get('jobqueue.%s.threads', None):
+        if dask.config.get("jobqueue.%s.threads", None):
             warnings.warn(threads_deprecation_message)
 
         if cores is None:
-            raise ValueError("You must specify how many cores to use per job like ``cores=8``")
+            raise ValueError(
+                "You must specify how many cores to use per job like ``cores=8``"
+            )
 
         if memory is None:
-            raise ValueError("You must specify how much memory to use per job like ``memory='24 GB'``")
+            raise ValueError(
+                "You must specify how much memory to use per job like ``memory='24 GB'``"
+            )
 
         # This attribute should be overridden
         self.job_header = None
 
         if interface:
-            extra += ['--interface', interface]
-            kwargs.setdefault('ip', get_ip_interface(interface))
+            extra += ["--interface", interface]
+            kwargs.setdefault("ip", get_ip_interface(interface))
         else:
-            kwargs.setdefault('ip', '')
+            kwargs.setdefault("ip", "")
 
         # Bokeh diagnostics server should listen on all interfaces
-        kwargs.setdefault('diagnostics_port', ('', 8787))
+        kwargs.setdefault("diagnostics_port", ("", 8787))
         self.local_cluster = LocalCluster(n_workers=0, **kwargs)
 
         # Keep information on process, cores, and memory, for use in subclasses
@@ -248,26 +260,28 @@ class JobQueueCluster(ClusterManager):
 
         self.shebang = shebang
 
-        self._env_header = '\n'.join(env_extra)
+        self._env_header = "\n".join(env_extra)
 
         # dask-worker command line build
-        dask_worker_command = '%(python)s -m distributed.cli.dask_worker' % dict(python=python)
+        dask_worker_command = "%(python)s -m distributed.cli.dask_worker" % dict(
+            python=python
+        )
         command_args = [dask_worker_command, self.scheduler.address]
-        command_args += ['--nthreads', self.worker_process_threads]
+        command_args += ["--nthreads", self.worker_process_threads]
         if processes is not None and processes > 1:
-            command_args += ['--nprocs', processes]
+            command_args += ["--nprocs", processes]
 
-        command_args += ['--memory-limit', self.worker_process_memory]
-        command_args += ['--name', '%s--${JOB_ID}--' % name]
+        command_args += ["--memory-limit", self.worker_process_memory]
+        command_args += ["--name", "%s--${JOB_ID}--" % name]
 
         if death_timeout is not None:
-            command_args += ['--death-timeout', death_timeout]
+            command_args += ["--death-timeout", death_timeout]
         if local_directory is not None:
-            command_args += ['--local-directory', local_directory]
+            command_args += ["--local-directory", local_directory]
         if extra is not None:
             command_args += extra
 
-        self._command_template = ' '.join(map(str, command_args))
+        self._command_template = " ".join(map(str, command_args))
 
         self.log_directory = log_directory
         if self.log_directory is not None:
@@ -281,11 +295,18 @@ class JobQueueCluster(ClusterManager):
         total_workers = total_jobs * self.worker_processes
         running_memory = running_workers * self.worker_memory / self.worker_processes
 
-        return (self.__class__.__name__ +
-                '(cores=%d, memory=%s, workers=%d/%d, jobs=%d/%d)' %
-                (running_cores, format_bytes(running_memory), running_workers,
-                 total_workers, len(self.running_jobs), total_jobs)
-                )
+        return (
+            self.__class__.__name__
+            + "(cores=%d, memory=%s, workers=%d/%d, jobs=%d/%d)"
+            % (
+                running_cores,
+                format_bytes(running_memory),
+                running_workers,
+                total_workers,
+                len(self.running_jobs),
+                total_jobs,
+            )
+        )
 
     @property
     def pending_jobs(self):
@@ -309,27 +330,32 @@ class JobQueueCluster(ClusterManager):
     @property
     def worker_process_memory(self):
         mem = format_bytes(self.worker_memory / self.worker_processes)
-        mem = mem.replace(' ', '')
+        mem = mem.replace(" ", "")
         return mem
 
     @property
     def worker_spec(self):
-        ''' single worker process info needed for scaling on cores or memory '''
-        return {'cores': self.worker_process_threads, 'memory': self.worker_process_memory}
+        """ single worker process info needed for scaling on cores or memory """
+        return {
+            "cores": self.worker_process_threads,
+            "memory": self.worker_process_memory,
+        }
 
     def job_script(self):
         """ Construct a job submission script """
-        pieces = {'shebang': self.shebang,
-                  'job_header': self.job_header,
-                  'env_header': self._env_header,
-                  'worker_command': self._command_template}
+        pieces = {
+            "shebang": self.shebang,
+            "job_header": self.job_header,
+            "env_header": self._env_header,
+            "worker_command": self._command_template,
+        }
         return self._script_template % pieces
 
     @contextmanager
     def job_file(self):
         """ Write job submission script to temporary file """
-        with tmpfile(extension='sh') as fn:
-            with open(fn, 'w') as f:
+        with tmpfile(extension="sh") as fn:
+            with open(fn, "w") as f:
                 logger.debug("writing job script: \n%s", self.job_script())
                 f.write(self.job_script())
             yield fn
@@ -339,14 +365,14 @@ class JobQueueCluster(ClusterManager):
 
     def start_workers(self, n=1):
         """ Start workers and point them to our local scheduler """
-        logger.debug('starting %s workers', n)
+        logger.debug("starting %s workers", n)
         num_jobs = int(math.ceil(n / self.worker_processes))
         for _ in range(num_jobs):
             with self.job_file() as fn:
                 out = self._submit_job(fn)
                 job = self._job_id_from_submit_output(out)
                 if not job:
-                    raise ValueError('Unable to parse jobid from output of %s' % out)
+                    raise ValueError("Unable to parse jobid from output of %s" % out)
                 logger.debug("started job: %s", job)
                 self.pending_jobs[job] = {}
 
@@ -379,24 +405,26 @@ class JobQueueCluster(ClusterManager):
         ------
         RuntimeError if the command exits with a non-zero exit code
         """
-        cmd_str = ' '.join(cmd)
-        logger.debug("Executing the following command to command line\n{}".format(cmd_str))
+        cmd_str = " ".join(cmd)
+        logger.debug(
+            "Executing the following command to command line\n{}".format(cmd_str)
+        )
 
-        proc = subprocess.Popen(cmd,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE,
-                                **kwargs)
+        proc = subprocess.Popen(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
+        )
 
         out, err = proc.communicate()
         if six.PY3:
             out, err = out.decode(), err.decode()
         if proc.returncode != 0:
-            raise RuntimeError('Command exited with non-zero exit code.\n'
-                               'Exit code: {}\n'
-                               'Command:\n{}\n'
-                               'stdout:\n{}\n'
-                               'stderr:\n{}\n'.format(proc.returncode,
-                                                      cmd_str, out, err))
+            raise RuntimeError(
+                "Command exited with non-zero exit code.\n"
+                "Exit code: {}\n"
+                "Command:\n{}\n"
+                "stdout:\n{}\n"
+                "stderr:\n{}\n".format(proc.returncode, cmd_str, out, err)
+            )
         return out
 
     def stop_workers(self, workers):
@@ -407,7 +435,7 @@ class JobQueueCluster(ClusterManager):
         jobs = self._del_pending_jobs()  # stop pending jobs too
         for w in workers:
             if isinstance(w, dict):
-                jobs.append(_job_id_from_worker_name(w['name']))
+                jobs.append(_job_id_from_worker_name(w["name"]))
             else:
                 jobs.append(_job_id_from_worker_name(w.name))
         self.stop_jobs(jobs)
@@ -432,13 +460,16 @@ class JobQueueCluster(ClusterManager):
             self.start_workers(n - active_and_pending)
         else:
             # scale_up should not be called if n < active + pending jobs
-            logger.warning('JobQueueCluster.scale_up was called with a'
-                           ' number of workers lower that what is already'
-                           ' running or pending')
+            logger.warning(
+                "JobQueueCluster.scale_up was called with a"
+                " number of workers lower that what is already"
+                " running or pending"
+            )
 
     def _count_active_and_pending_workers(self):
-        active_and_pending = (self._count_active_workers() +
-                              self._count_pending_workers())
+        active_and_pending = (
+            self._count_active_workers() + self._count_pending_workers()
+        )
         logger.debug("Found %d active/pending workers.", active_and_pending)
         assert len(self.scheduler.workers) <= active_and_pending
         return active_and_pending
@@ -452,7 +483,7 @@ class JobQueueCluster(ClusterManager):
         return self.worker_processes * len(self.pending_jobs)
 
     def scale_down(self, workers, n=None):
-        ''' Close the workers with the given addresses '''
+        """ Close the workers with the given addresses """
         if n is None:
             # Adaptive currently calls directly scale_down, we need to handle this
             # Need to only keep active workers minus those adaptive wants to stop
@@ -461,9 +492,11 @@ class JobQueueCluster(ClusterManager):
         active_and_pending = self._count_active_and_pending_workers()
         n_to_close = active_and_pending - n
         if n_to_close < 0:
-            logger.warning('JobQueueCluster.scale_down was called with'
-                           ' a number of worker greater than what is'
-                           ' already running or pending.')
+            logger.warning(
+                "JobQueueCluster.scale_down was called with"
+                " a number of worker greater than what is"
+                " already running or pending."
+            )
         elif n_to_close <= self._count_pending_workers():
             # We only need to kill some pending jobs,
             to_kill = int(n_to_close / self.worker_processes)
@@ -477,17 +510,17 @@ class JobQueueCluster(ClusterManager):
                     # Get the actual WorkerState
                     worker_states.append(self.scheduler.workers[w])
                 except KeyError:
-                    logger.debug('worker %s is already gone', w)
+                    logger.debug("worker %s is already gone", w)
             self.stop_workers(worker_states)
 
     def stop_all_jobs(self):
-        ''' Stops all running and pending jobs '''
+        """ Stops all running and pending jobs """
         jobs = self._del_pending_jobs()
         jobs += list(self.running_jobs.keys())
         self.stop_jobs(set(jobs))
 
     def close(self, **kwargs):
-        ''' Stops all running and pending jobs and stops scheduler '''
+        """ Stops all running and pending jobs and stops scheduler """
         self.stop_all_jobs()
         return self.local_cluster.close(**kwargs)
 
@@ -508,16 +541,20 @@ class JobQueueCluster(ClusterManager):
     def _job_id_from_submit_output(self, out):
         match = re.search(self.job_id_regexp, out)
         if match is None:
-            msg = ('Could not parse job id from submission command '
-                   "output.\nJob id regexp is {!r}\nSubmission command "
-                   'output is:\n{}'.format(self.job_id_regexp, out))
+            msg = (
+                "Could not parse job id from submission command "
+                "output.\nJob id regexp is {!r}\nSubmission command "
+                "output is:\n{}".format(self.job_id_regexp, out)
+            )
             raise ValueError(msg)
 
-        job_id = match.groupdict().get('job_id')
+        job_id = match.groupdict().get("job_id")
         if job_id is None:
-            msg = ("You need to use a 'job_id' named group in your regexp, e.g. "
-                   "r'(?P<job_id>\\d+)', in your regexp. Your regexp was: "
-                   "{!r}".format(self.job_id_regexp))
+            msg = (
+                "You need to use a 'job_id' named group in your regexp, e.g. "
+                "r'(?P<job_id>\\d+)', in your regexp. Your regexp was: "
+                "{!r}".format(self.job_id_regexp)
+            )
             raise ValueError(msg)
 
         return job_id

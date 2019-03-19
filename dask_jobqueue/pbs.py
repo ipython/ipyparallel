@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 class PBSCluster(JobQueueCluster):
-    __doc__ = docstrings.with_indents(""" Launch Dask on a PBS cluster
+    __doc__ = docstrings.with_indents(
+        """ Launch Dask on a PBS cluster
 
     Parameters
     ----------
@@ -48,57 +49,72 @@ class PBSCluster(JobQueueCluster):
     >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS',
     ...                      local_directory='$TMPDIR',
     ...                      cores=24, processes=6, memory='100GB')
-    """, 4)
+    """,
+        4,
+    )
 
     # Override class variables
-    submit_command = 'qsub'
-    cancel_command = 'qdel'
+    submit_command = "qsub"
+    cancel_command = "qdel"
 
-    def __init__(self, queue=None, project=None, resource_spec=None, walltime=None, job_extra=None,
-                 config_name='pbs', **kwargs):
+    def __init__(
+        self,
+        queue=None,
+        project=None,
+        resource_spec=None,
+        walltime=None,
+        job_extra=None,
+        config_name="pbs",
+        **kwargs
+    ):
         if queue is None:
-            queue = dask.config.get('jobqueue.%s.queue' % config_name)
+            queue = dask.config.get("jobqueue.%s.queue" % config_name)
         if resource_spec is None:
-            resource_spec = dask.config.get('jobqueue.%s.resource-spec' % config_name)
+            resource_spec = dask.config.get("jobqueue.%s.resource-spec" % config_name)
         if walltime is None:
-            walltime = dask.config.get('jobqueue.%s.walltime' % config_name)
+            walltime = dask.config.get("jobqueue.%s.walltime" % config_name)
         if job_extra is None:
-            job_extra = dask.config.get('jobqueue.%s.job-extra' % config_name)
+            job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
         if project is None:
-            project = dask.config.get('jobqueue.%s.project' % config_name) or os.environ.get('PBS_ACCOUNT')
+            project = dask.config.get(
+                "jobqueue.%s.project" % config_name
+            ) or os.environ.get("PBS_ACCOUNT")
 
         # Instantiate args and parameters from parent abstract class
         super(PBSCluster, self).__init__(config_name=config_name, **kwargs)
 
         # Try to find a project name from environment variable
-        project = project or os.environ.get('PBS_ACCOUNT')
+        project = project or os.environ.get("PBS_ACCOUNT")
 
         header_lines = []
         # PBS header build
         if self.name is not None:
-            header_lines.append('#PBS -N %s' % self.name)
+            header_lines.append("#PBS -N %s" % self.name)
         if queue is not None:
-            header_lines.append('#PBS -q %s' % queue)
+            header_lines.append("#PBS -q %s" % queue)
         if project is not None:
-            header_lines.append('#PBS -A %s' % project)
+            header_lines.append("#PBS -A %s" % project)
         if resource_spec is None:
             # Compute default resources specifications
             resource_spec = "select=1:ncpus=%d" % self.worker_cores
             memory_string = pbs_format_bytes_ceil(self.worker_memory)
-            resource_spec += ':mem=' + memory_string
-            logger.info("Resource specification for PBS not set, initializing it to %s" % resource_spec)
+            resource_spec += ":mem=" + memory_string
+            logger.info(
+                "Resource specification for PBS not set, initializing it to %s"
+                % resource_spec
+            )
         if resource_spec is not None:
-            header_lines.append('#PBS -l %s' % resource_spec)
+            header_lines.append("#PBS -l %s" % resource_spec)
         if walltime is not None:
-            header_lines.append('#PBS -l walltime=%s' % walltime)
+            header_lines.append("#PBS -l walltime=%s" % walltime)
         if self.log_directory is not None:
-            header_lines.append('#PBS -e %s/' % self.log_directory)
-            header_lines.append('#PBS -o %s/' % self.log_directory)
-        header_lines.extend(['#PBS %s' % arg for arg in job_extra])
-        header_lines.append('JOB_ID=${PBS_JOBID%%.*}')
+            header_lines.append("#PBS -e %s/" % self.log_directory)
+            header_lines.append("#PBS -o %s/" % self.log_directory)
+        header_lines.extend(["#PBS %s" % arg for arg in job_extra])
+        header_lines.append("JOB_ID=${PBS_JOBID%%.*}")
 
         # Declare class attribute that shall be overridden
-        self.job_header = '\n'.join(header_lines)
+        self.job_header = "\n".join(header_lines)
 
         logger.debug("Job script: \n %s" % self.job_script())
 
@@ -119,10 +135,10 @@ def pbs_format_bytes_ceil(n):
     >>> pbs_format_bytes_ceil(15000000000)
     '14GB'
     """
-    if n >= 10 * (1024**3):
-        return '%dGB' % math.ceil(n / (1024**3))
-    if n >= 10 * (1024**2):
-        return '%dMB' % math.ceil(n / (1024**2))
+    if n >= 10 * (1024 ** 3):
+        return "%dGB" % math.ceil(n / (1024 ** 3))
+    if n >= 10 * (1024 ** 2):
+        return "%dMB" % math.ceil(n / (1024 ** 2))
     if n >= 10 * 1024:
-        return '%dkB' % math.ceil(n / 1024)
-    return '%dB' % n
+        return "%dkB" % math.ceil(n / 1024)
+    return "%dB" % n

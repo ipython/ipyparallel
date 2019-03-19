@@ -5,7 +5,8 @@ from .pbs import PBSCluster
 
 
 class MoabCluster(PBSCluster):
-    __doc__ = docstrings.with_indents("""Launch Dask on a Moab cluster
+    __doc__ = docstrings.with_indents(
+        """Launch Dask on a Moab cluster
 
     Parameters
     ----------
@@ -38,7 +39,9 @@ class MoabCluster(PBSCluster):
     This also works with adaptive clusters.  This automatically launches and kill workers based on load.
 
     >>> cluster.adapt()
-    """, 4)
-    submit_command = 'msub'
-    cancel_command = 'canceljob'
-    scheduler_name = 'moab'
+    """,
+        4,
+    )
+    submit_command = "msub"
+    cancel_command = "canceljob"
+    scheduler_name = "moab"

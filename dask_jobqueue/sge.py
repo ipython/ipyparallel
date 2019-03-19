@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 
 class SGECluster(JobQueueCluster):
-    __doc__ = docstrings.with_indents(""" Launch Dask on a SGE cluster
+    __doc__ = docstrings.with_indents(
+        """ Launch Dask on a SGE cluster
 
     .. note::
         If you want a specific amount of RAM, both ``memory`` and ``resource_spec``
@@ -43,49 +44,60 @@ class SGECluster(JobQueueCluster):
     This also works with adaptive clusters.  This automatically launches and kill workers based on load.
 
     >>> cluster.adapt()
-    """, 4)
+    """,
+        4,
+    )
 
     # Override class variables
-    submit_command = 'qsub -terse'
-    cancel_command = 'qdel'
+    submit_command = "qsub -terse"
+    cancel_command = "qdel"
 
-    def __init__(self, queue=None, project=None, resource_spec=None, walltime=None,
-                 config_name='sge', **kwargs):
+    def __init__(
+        self,
+        queue=None,
+        project=None,
+        resource_spec=None,
+        walltime=None,
+        config_name="sge",
+        **kwargs
+    ):
         if queue is None:
-            queue = dask.config.get('jobqueue.%s.queue' % config_name)
+            queue = dask.config.get("jobqueue.%s.queue" % config_name)
         if project is None:
-            project = dask.config.get('jobqueue.%s.project' % config_name)
+            project = dask.config.get("jobqueue.%s.project" % config_name)
         if resource_spec is None:
-            resource_spec = dask.config.get('jobqueue.%s.resource-spec' % config_name)
+            resource_spec = dask.config.get("jobqueue.%s.resource-spec" % config_name)
         if walltime is None:
-            walltime = dask.config.get('jobqueue.%s.walltime' % config_name)
+            walltime = dask.config.get("jobqueue.%s.walltime" % config_name)
 
         super(SGECluster, self).__init__(config_name=config_name, **kwargs)
 
         header_lines = []
         if self.name is not None:
-            header_lines.append('#$ -N %(name)s')
+            header_lines.append("#$ -N %(name)s")
         if queue is not None:
-            header_lines.append('#$ -q %(queue)s')
+            header_lines.append("#$ -q %(queue)s")
         if project is not None:
-            header_lines.append('#$ -P %(project)s')
+            header_lines.append("#$ -P %(project)s")
         if resource_spec is not None:
-            header_lines.append('#$ -l %(resource_spec)s')
+            header_lines.append("#$ -l %(resource_spec)s")
         if walltime is not None:
-            header_lines.append('#$ -l h_rt=%(walltime)s')
+            header_lines.append("#$ -l h_rt=%(walltime)s")
         if self.log_directory is not None:
-            header_lines.append('#$ -e %(log_directory)s/')
-            header_lines.append('#$ -o %(log_directory)s/')
-        header_lines.extend(['#$ -cwd', '#$ -j y'])
-        header_template = '\n'.join(header_lines)
+            header_lines.append("#$ -e %(log_directory)s/")
+            header_lines.append("#$ -o %(log_directory)s/")
+        header_lines.extend(["#$ -cwd", "#$ -j y"])
+        header_template = "\n".join(header_lines)
 
-        config = {'name': self.name,
-                  'queue': queue,
-                  'project': project,
-                  'processes': self.worker_processes,
-                  'walltime': walltime,
-                  'resource_spec': resource_spec,
-                  'log_directory': self.log_directory}
+        config = {
+            "name": self.name,
+            "queue": queue,
+            "project": project,
+            "processes": self.worker_processes,
+            "walltime": walltime,
+            "resource_spec": resource_spec,
+            "log_directory": self.log_directory,
+        }
         self.job_header = header_template % config
 
         logger.debug("Job script: \n %s" % self.job_script())
