@@ -110,3 +110,30 @@ ARM Stratus
         project: arm
         walltime: 00:30:00 #Adjust this to job size
         job-extra: ['-W group_list=cades-arm']
+        
+SDSC Comet
+----------
+
+San Diego Supercomputer Center's `Comet cluster <https://www.sdsc.edu/support/user_guides/comet.html>`_, available to US scientists via `XSEDE <https://www.xsede.org/>`_.
+Also, note that port 8787 is open both on login and computing nodes, so you can directly access Dask's dashboard.
+
+.. code-block:: yaml
+
+   jobqueue:
+     slurm:
+       name: dask-worker
+
+       # Dask worker options
+       cores: 24                   # Total number of cores per job
+       memory: 120GB               # Total amount of memory per job (total 128GB per node)
+       processes: 1                # Number of Python processes per job
+
+       interface: ib0              # Network interface to use like eth0 or ib0
+       death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
+       local-directory: /scratch/$USER/$SLURM_JOB_ID # local SSD
+
+       # SLURM resource manager options
+       queue: compute
+       # project: xxxxxxx # choose project other than default
+       walltime: '00:30:00'
+       job-mem: 120GB              # Max memory that can be requested to SLURM
