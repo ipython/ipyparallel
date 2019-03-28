@@ -3,6 +3,9 @@
     "project": "ipyparallel",
     "project_url": "https://github.com/ipython/ipyparallel/",
     "repo": "https://github.com/tomoboy/ipyparallel.git",
-    "environment_type": "conda"
+    "environment_type": "conda",
+    "include": [
+        {"python": "3.7", "numpy": "1.15.4"}
+    ]
 }
 

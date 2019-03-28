@@ -1,21 +1,7 @@
-import atexit
 import timeit
-from typing import Callable
-import time
 import ipyparallel as ipp
-import os
-from benchmarks.utils import Controller, client_file_name, \
-    start_n_engines, terminate_engines
-
-
-def wait_for(condition: Callable):
-    for _ in range(300):
-        if condition():
-            break
-        else:
-            time.sleep(.1)
-    assert condition()
-
+from benchmarks.utils import wait_for
+from abc import ABC
 
 def echo(delay=0):
     def inner_echo(x):
@@ -26,56 +12,39 @@ def echo(delay=0):
     return inner_echo
 
 
-class OverheadLatencySuite:
-    controller, client, engines, n = None, None, [], 0
+class OverheadLatencySuite(ABC):
+    client, lview, params = None, None, [[0]]
     param_names = ['number of tasks', 'delay for echo']
     timer = timeit.default_timer
-    params = [[1], [0, .1, 1]]
-
-    def __init__(self, n=1):
-        self.n = n
-        self.params = [[1], [0, .1, 1]]
-
-    def exit_function(self):
-        # print('Exiting')
-        OverheadLatencySuite.controller.terminate()
-        terminate_engines(self.engines)
-        try:
-            os.remove(client_file_name())
-        except FileNotFoundError:
-            pass
+    timeout = 120
 
     def setup(self, *_):
-        # if OverheadLatencySuite.controller is None:
-        #     print('Making a new controller')
-        #     OverheadLatencySuite.controller = Controller()
-            # wait_for(lambda: os.path.exists(client_file_name()))
-            # atexit.register(self.exit_function)
-        self.client = ipp.Client()
-        # self.engines = self.engines + start_n_engines(self.n - len(self.client))
-        wait_for(lambda: len(self.client) >= self.n)
-        self.dview = self.client[:self.n]
+        n = self.params[0][0]
+        self.client = ipp.Client(profile='asv')
+        wait_for(lambda: len(self.client) >= n)
+        self.lview = self.client.load_balanced_view(targets=slice(n))
 
     def teardown(self, *_):
-        self.client.close()
+        if self.client:
+            self.client.close()
 
     def time_n_tasks(self, tasks, delay):
-        self.dview.map_sync(echo(delay), [None] * tasks)
-
-class Engines10(OverheadLatencySuite):
-    def __init__(self):
-        super().__init__(10)
-        self.params = [[10, 100], [0, .1, 1]]
+        self.lview.map_sync(echo(delay), [None] * tasks)
 
 
-class Engines100(OverheadLatencySuite):
-    def __init__(self):
-        super().__init__(100)
-        self.params = [[100, 1000], [0, .1, 1]]
+class Engines1(OverheadLatencySuite):
+    params = [[1, 10], [0, .1, 1]]
 
-
-class Engines100NoDelay(OverheadLatencySuite):
-    def __init__(self):
-        super().__init__(100)
-        self.params = [[100, 1000, 10000, 100000], [0]]
-
+#
+# class Engines10(OverheadLatencySuite):
+#     params = [[10, 100], [0, .1, 1]]
+#
+#
+# class Engines100(OverheadLatencySuite):
+#     params = [[100, 1000], [0, .1, 1]]
+#
+#
+# class Engines100NoDelay(OverheadLatencySuite):
+#     params = [[100, 1000, 10000, 100000], [0]]
+#
+#
