@@ -1,12 +1,14 @@
+import atexit
+import timeit
 from typing import Callable
+import time
 import ipyparallel as ipp
 import os
-from benchmarks.utils import Controller, client_file_name, echo, \
+from benchmarks.utils import Controller, client_file_name, \
     start_n_engines, terminate_engines
 
 
 def wait_for(condition: Callable):
-    import time
     for _ in range(300):
         if condition():
             break
@@ -15,47 +17,65 @@ def wait_for(condition: Callable):
     assert condition()
 
 
-n_engines = [1, 10, 30]
-delays = [0, .1]#, 1]
+def echo(delay=0):
+    def inner_echo(x):
+        import time
+        if delay:
+            time.sleep(delay)
+        return x
+    return inner_echo
 
 
 class OverheadLatencySuite:
-    params = (n_engines, delays)
-    param_names = ['number of engines', 'delay for ech'
-                                        '']
-    controller, engines, client = None, None, None
+    controller, client, engines, n = None, None, [], 0
+    param_names = ['number of tasks', 'delay for echo']
+    timer = timeit.default_timer
+    params = [[1], [0, .1, 1]]
 
+    def __init__(self, n=1):
+        self.n = n
+        self.params = [[1], [0, .1, 1]]
 
-    def setup(self, n, delay):
-        print('param: ', n, delay)
-        self.controller = Controller()
-        self.engines = start_n_engines(n)
-        wait_for(lambda: os.path.exists(client_file_name()))
+    def exit_function(self):
+        # print('Exiting')
+        OverheadLatencySuite.controller.terminate()
+        terminate_engines(self.engines)
+        try:
+            os.remove(client_file_name())
+        except FileNotFoundError:
+            pass
+
+    def setup(self, *_):
+        # if OverheadLatencySuite.controller is None:
+        #     print('Making a new controller')
+        #     OverheadLatencySuite.controller = Controller()
+            # wait_for(lambda: os.path.exists(client_file_name()))
+            # atexit.register(self.exit_function)
         self.client = ipp.Client()
-        wait_for(lambda: len(self.client) == n)
-        self.l_b_view = self.client.load_balanced_view()
+        # self.engines = self.engines + start_n_engines(self.n - len(self.client))
+        wait_for(lambda: len(self.client) >= self.n)
+        self.dview = self.client[:self.n]
 
     def teardown(self, *_):
-        self.client.shutdown(hub=True)
         self.client.close()
-        self.controller.terminate()
-        terminate_engines(self.engines)
-        os.remove(client_file_name())
 
-    def time_one_task_on_n_engines(self, _, delay):
-        self.l_b_view.apply(lambda x: echo(x, delay), None)
+    def time_n_tasks(self, tasks, delay):
+        self.dview.map_sync(echo(delay), [None] * tasks)
 
-    def time_n_tasks_on_n_engines(self, n, delay):
-        self.l_b_view.map(lambda x: echo(x, delay), [None for _ in range(n)])
+class Engines10(OverheadLatencySuite):
+    def __init__(self):
+        super().__init__(10)
+        self.params = [[10, 100], [0, .1, 1]]
 
-    def time_100_tasks_on_n_engines(self, n, delay):
-        self.l_b_view.map(lambda x: echo(x, delay), [None for _ in range(100)])
 
-    def time_1000_tasks_on_n_engines(self, n, delay):
-        self.l_b_view.map(lambda x: echo(x, delay), [None for _ in range(1000)])
+class Engines100(OverheadLatencySuite):
+    def __init__(self):
+        super().__init__(100)
+        self.params = [[100, 1000], [0, .1, 1]]
 
-    # def time_10000_tasks_on_n_engines(self, n, delay): Will take several hours to run with the current paramaters
-    #         self.l_b_view.map(lambda x: echo(*x), [(None, p[1]) for _ in range(10000)])
 
-    def time_10n_tasks_on_n_engines(self, n, delay):
-        self.l_b_view.map(lambda x: echo(x, delay), [None for _ in range(n * 10)])
+class Engines100NoDelay(OverheadLatencySuite):
+    def __init__(self):
+        super().__init__(100)
+        self.params = [[100, 1000, 10000, 100000], [0]]
+
