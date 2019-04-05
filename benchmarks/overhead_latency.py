@@ -18,7 +18,6 @@ class OverheadLatencySuite:
     timeout = 120
 
     def setup(self, *_):
-        raise NotImplementedError
         n = self.params[0][0]
         self.client = ipp.Client(profile='asv')
         wait_for(lambda: len(self.client) >= n)
