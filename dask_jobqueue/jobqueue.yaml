@@ -64,6 +64,7 @@ jobqueue:
     walltime: '00:30:00'
     extra: []
     env-extra: []
+    job-extra: []
     log-directory: null
 
     resource-spec: null

@@ -30,6 +30,9 @@ class SGECluster(JobQueueCluster):
         Request resources and specify job placement. Passed to `#$ -l` option.
     walltime : str
         Walltime for each worker job.
+    job_extra : list
+        List of other SGE options, for example -w e. Each option will be
+        prepended with the #$ prefix.
     %(JobQueueCluster.parameters)s
 
     Examples
@@ -58,6 +61,7 @@ class SGECluster(JobQueueCluster):
         project=None,
         resource_spec=None,
         walltime=None,
+        job_extra=None,
         config_name="sge",
         **kwargs
     ):
@@ -69,6 +73,8 @@ class SGECluster(JobQueueCluster):
             resource_spec = dask.config.get("jobqueue.%s.resource-spec" % config_name)
         if walltime is None:
             walltime = dask.config.get("jobqueue.%s.walltime" % config_name)
+        if job_extra is None:
+            job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
 
         super(SGECluster, self).__init__(config_name=config_name, **kwargs)
 
@@ -87,6 +93,7 @@ class SGECluster(JobQueueCluster):
             header_lines.append("#$ -e %(log_directory)s/")
             header_lines.append("#$ -o %(log_directory)s/")
         header_lines.extend(["#$ -cwd", "#$ -j y"])
+        header_lines.extend(["#$ %s" % arg for arg in job_extra])
         header_template = "\n".join(header_lines)
 
         config = {

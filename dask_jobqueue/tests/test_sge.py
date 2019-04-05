@@ -4,7 +4,6 @@ from time import sleep, time
 
 import pytest
 from distributed import Client
-from distributed.utils_test import loop  # noqa: F401
 
 from dask_jobqueue import SGECluster
 import dask
@@ -12,8 +11,8 @@ import dask
 from . import QUEUE_WAIT
 
 
-@pytest.mark.env("sge")  # noqa: F811
-def test_basic(loop):  # noqa: F811
+@pytest.mark.env("sge")
+def test_basic(loop):
     with SGECluster(
         walltime="00:02:00", cores=8, processes=4, memory="2GB", loop=loop
     ) as cluster:
@@ -70,3 +69,37 @@ def test_config_name_sge_takes_custom_config():
     with dask.config.set({"jobqueue.sge-config-name": conf}):
         with SGECluster(config_name="sge-config-name") as cluster:
             assert cluster.name == "myname"
+
+
+def test_job_script(tmpdir):
+    log_directory = tmpdir.strpath
+    with SGECluster(
+        cores=6,
+        processes=2,
+        memory="12GB",
+        queue="my-queue",
+        project="my-project",
+        walltime="02:00:00",
+        env_extra=["export MY_VAR=my_var"],
+        job_extra=["-w e", "-m e"],
+        log_directory=log_directory,
+        resource_spec="h_vmem=12G,mem_req=12G",
+    ) as cluster:
+        job_script = cluster.job_script()
+        for each in [
+            "--nprocs 2",
+            "--nthreads 3",
+            "--memory-limit 6.00GB",
+            "-q my-queue",
+            "-P my-project",
+            "-l h_rt=02:00:00",
+            "export MY_VAR=my_var",
+            "#$ -w e",
+            "#$ -m e",
+            "#$ -e {}".format(log_directory),
+            "#$ -o {}".format(log_directory),
+            "-l h_vmem=12G,mem_req=12G",
+            "#$ -cwd",
+            "#$ -j y",
+        ]:
+            assert each in job_script
