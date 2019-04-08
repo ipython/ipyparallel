@@ -43,8 +43,8 @@ You can also install directly from git master branch::
 Test
 ----
 
-Test dask-jobqueue with ``py.test``::
+Test dask-jobqueue with ``pytest``::
 
     git clone https://github.com/dask/dask-jobqueue.git
     cd dask-jobqueue
-    py.test dask_jobqueue
+    pytest dask_jobqueue

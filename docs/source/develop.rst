@@ -35,9 +35,9 @@ To get flake8 and black, just pip install them. You can also use pre-commit to a
 Test
 ----
 
-Test using ``py.test``::
+Test using ``pytest``::
 
-   py.test dask-jobqueue --verbose
+   pytest dask-jobqueue --verbose
 
 Test with Job scheduler
 -----------------------

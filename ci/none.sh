@@ -21,7 +21,7 @@ function jobqueue_script {
   if [[ "$TRAVIS_PYTHON_VERSION" =~ ^[3-9].+ ]]; then
      black --exclude versioneer.py --check .
   fi
-  py.test --verbose
+  pytest --verbose
 }
 
 function jobqueue_after_script {
