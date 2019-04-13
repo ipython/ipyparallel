@@ -445,7 +445,7 @@ class JobQueueCluster(ClusterManager):
         logger.debug("Stopping jobs: %s", jobs)
         if jobs:
             jobs = list(jobs)
-            self._call([self.cancel_command] + list(set(jobs)))
+            self._call(shlex.split(self.cancel_command) + list(set(jobs)))
 
         # if any of these jobs were pending, we should remove those now
         for job_id in jobs:
