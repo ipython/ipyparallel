@@ -68,7 +68,7 @@ It should be noted that the the following config file assumes you are running th
 
 Then you will run dask jobqueue directly on that interactive node. Note the distributed section that is set up to avoid having dask write to disk. This was due to some weird behavior with the local filesystem.
 
-Alternatively you may use the experimental `NERSC jupyterhub <https://jupyter-dev.nersc.gov/>`_ which will launch a notebook server on a reserved large memory node of Cori. In this case no special interactive session is needed and dask jobqueue will perform as expected.
+Alternatively you may use the `NERSC jupyterhub <https://jupyter.nersc.gov/>`_ which will launch a notebook server on a reserved large memory node of Cori. In this case no special interactive session is needed and dask jobqueue will perform as expected. You can also access the Dask dashboard directly. See `an example notebook <https://gist.github.com/zonca/76869ea30511cca301c13a33a9e34131>`_
 
 
 .. code-block:: yaml
@@ -84,7 +84,7 @@ Alternatively you may use the experimental `NERSC jupyterhub <https://jupyter-de
     jobqueue:
         slurm:
             cores: 64
-            memory: 128GB
+            memory: 115GB
             processes: 4
             queue: debug
             walltime: '00:10:00'
