@@ -2,6 +2,5 @@
 .idea
 ipyparallel/
 env/
-results/
 html/
 benchmarks/__pycache__/
