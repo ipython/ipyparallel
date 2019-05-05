@@ -1,15 +1,18 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 import datetime
 import sys
 from subprocess import check_call
-
+import os
 import googleapiclient.discovery as gcd
 from typing import List
 
+
+INSTANCE_SUFFIX = '16-16'
 ZONE = 'europe-west1-b'
 PROJECT_NAME = 'jupyter-simula'
-TEMPLATE_NAME = 'ipyparallel-asv-testing'
+TEMPLATE_NAME = 'asv-testing-' + INSTANCE_SUFFIX
 INSTANCE_NAME_PREFIX = 'asv-testing-'
+MACHINE_CONFIGS_DIR = os.path.join(os.getcwd(), 'machine_configs')
 
 compute = gcd.build('compute', 'v1')
 
@@ -43,7 +46,7 @@ def delete_all_instances():
 
 
 def gcloud_run(*args):
-    cmd = ['gcloud', 'compute'] + args
+    cmd = ['gcloud', 'compute'] + list(args)
     print(f'$ {" ".join(cmd)}')
     check_call(cmd)
 
@@ -78,7 +81,7 @@ if __name__ == '__main__':
         current_instance_name = running_instances[-1]
         print(f'Using existing instance with name: {current_instance_name}')
     else:
-        current_instance_name = INSTANCE_NAME_PREFIX + time_stamp()
+        current_instance_name = f'{INSTANCE_NAME_PREFIX+INSTANCE_SUFFIX}-{time_stamp()}'
         print(f'Creating new instance with name: {current_instance_name}')
         gcloud_run(
             'instances',
@@ -86,7 +89,25 @@ if __name__ == '__main__':
             current_instance_name,
             '--source-instance-template',
             TEMPLATE_NAME,
+            '--metadata-from-file',
+            'startup-script=startup_script.sh',
         )
+        for config_name in os.listdir(MACHINE_CONFIGS_DIR):
+            if config_name == TEMPLATE_NAME + '.json':
+                copy_files_to_instance(
+                    current_instance_name,
+                    os.path.join(MACHINE_CONFIGS_DIR, config_name),
+                    directory='~/.asv-machine.json',
+                )
+                break
+        else:
+            print(f'Found no valid machine config for template: {TEMPLATE_NAME}.')
+            exit(1)
+
         copy_files_to_instance(current_instance_name, 'instance_setup.py')
 
-    command_over_ssh(current_instance_name, 'python3', 'instance_setup.py')
+    command_over_ssh(
+        current_instance_name, 'python3', 'instance_setup.py', current_instance_name
+    )
+
+    delete_instance(current_instance_name)
