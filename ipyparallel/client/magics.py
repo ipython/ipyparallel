@@ -40,6 +40,14 @@ from __future__ import print_function
 #-----------------------------------------------------------------------------
 
 import ast
+
+try:
+    from asyncio import coroutine
+except ImportError: # py2
+    def coroutine(f):
+        raise NotImplementedError()
+
+import inspect
 import re
 
 from IPython.core.error import UsageError
@@ -50,6 +58,21 @@ from ipython_genutils.text import dedent
 #-----------------------------------------------------------------------------
 # Definitions of magic functions for use with IPython
 #-----------------------------------------------------------------------------
+
+
+def _iscoroutinefunction(f):
+    """Check if a callable is a coroutine function
+    (either generator-style or async def)
+    """
+    if inspect.isgeneratorfunction(f):
+        return True
+    if (
+        hasattr(inspect, 'iscoroutinefunction') and
+        inspect.iscoroutinefunction(f)
+    ):
+        return True
+    return False
+
 
 
 NO_LAST_RESULT = "%pxresult recalls last %px result, which has not yet been used."
@@ -348,11 +371,22 @@ class ParallelMagics(Magics):
         """Enable %autopx mode by saving the original run_cell and installing
         pxrun_cell.
         """
-        # override run_cell
         self._original_run_cell = self.shell.run_cell
         self._original_run_nodes = self.shell.run_ast_nodes
-        self.shell.run_cell = self.pxrun_cell
-        self.shell.run_ast_nodes = self.pxrun_nodes
+
+        pxrun_cell = self.pxrun_cell
+        if _iscoroutinefunction(self.shell.run_cell):
+            # original is a coroutine,
+            # wrap ours in a coroutine
+            pxrun_cell = coroutine(pxrun_cell)
+        self.shell.run_cell = pxrun_cell
+
+        pxrun_nodes = self.pxrun_nodes
+        if _iscoroutinefunction(self.shell.run_ast_nodes):
+            # original is a coroutine,
+            # wrap ours in a coroutine
+            pxrun_nodes = coroutine(pxrun_nodes)
+        self.shell.run_ast_nodes = pxrun_nodes
 
         self._autopx = True
         print("%autopx enabled")
