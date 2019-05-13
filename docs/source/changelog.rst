@@ -3,6 +3,13 @@
 Changes in IPython Parallel
 ===========================
 
+6.2.4
+-----
+
+- Improve compatibility with ipykernel 5
+- Fix `%autopx` with IPython 7
+- Fix non-local ip warning when using current hostname
+
 6.2.3
 -----
 
