@@ -243,7 +243,7 @@ class JobQueueCluster(ClusterManager):
             kwargs.setdefault("ip", "")
 
         # Bokeh diagnostics server should listen on all interfaces
-        kwargs.setdefault("diagnostics_port", ("", 8787))
+        kwargs.setdefault("dashboard_address", ("", 8787))
         self.local_cluster = LocalCluster(n_workers=0, **kwargs)
 
         # Keep information on process, cores, and memory, for use in subclasses

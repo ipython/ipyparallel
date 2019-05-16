@@ -1,4 +1,4 @@
-dask>=0.18.1
-distributed>=1.22
+dask>=1.2.0
+distributed>=1.27
 docrep
 pre-commit
