@@ -47,6 +47,25 @@ string, like "100 GB".
    cores: 36
    memory: 100GB
 
+Gigabyte vs Gibibyte
+~~~~~~~~~~~~~~~~~~~~
+
+It is important to note that Dask makes the difference between 
+power of 2 and power of 10 when specifying memory. This means that:
+- 1GB = :math:`10^9` bytes
+- 1GiB = :math:`2^30` bytes
+
+``memory`` configuration is interpreted by Dask memory parser, and for most
+JobQueueCluster implementation translated as a resource requirement for job 
+submission. 
+But most job schedulers (this is the case with PBS and Slurm at least) uses
+KB or GB, but mean KiB or GiB. Dask jobqueue takes that into account, so you
+may not find the amount of memory you were expecting when querying your job
+queuing system. To give an example, with PBSCluster, if you specify '20GB' for
+the ``memory`` kwarg, you will end up with a request for 19GB on PBS side. 
+This is because 20GB ~= 18.6GiB, which is rounded up.
+
+This can be avoided by always using 'GiB' in dask-jobqueue configuration.
 
 Processes
 ---------
