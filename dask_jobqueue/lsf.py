@@ -2,6 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 import logging
 import math
+import os
 
 import dask
 
@@ -30,6 +31,9 @@ class LSFCluster(JobQueueCluster):
     job_extra : list
         List of other LSF options, for example -u. Each option will be
         prepended with the #LSF prefix.
+    lsf_units : str
+        Unit system for large units in resource usage set by the
+        LSF_UNIT_FOR_LIMITS in the lsf.conf file of a cluster.
     %(JobQueueCluster.parameters)s
 
     Examples
@@ -62,6 +66,7 @@ class LSFCluster(JobQueueCluster):
         mem=None,
         walltime=None,
         job_extra=None,
+        lsf_units=None,
         config_name="lsf",
         **kwargs
     ):
@@ -77,6 +82,8 @@ class LSFCluster(JobQueueCluster):
             walltime = dask.config.get("jobqueue.%s.walltime" % config_name)
         if job_extra is None:
             job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
+        if lsf_units is None:
+            lsf_units = dask.config.get("jobqueue.%s.lsf-units" % config_name)
 
         # Instantiate args and parameters from parent abstract class
         super(LSFCluster, self).__init__(config_name=config_name, **kwargs)
@@ -112,10 +119,11 @@ class LSFCluster(JobQueueCluster):
             # Compute default memory specifications
             mem = self.worker_memory
             logger.info(
-                "mem specification for LSF not set, initializing it to %s" % mem
+                "mem specification for LSF not set, initializing it to %s bytes" % mem
             )
         if mem is not None:
-            memory_string = lsf_format_bytes_ceil(mem)
+            lsf_units = lsf_units if lsf_units is not None else lsf_detect_units()
+            memory_string = lsf_format_bytes_ceil(mem, lsf_units=lsf_units)
             header_lines.append("#BSUB -M %s" % memory_string)
         if walltime is not None:
             header_lines.append("#BSUB -W %s" % walltime)
@@ -132,7 +140,7 @@ class LSFCluster(JobQueueCluster):
         return self._call(piped_cmd, shell=True)
 
 
-def lsf_format_bytes_ceil(n):
+def lsf_format_bytes_ceil(n, lsf_units="mb"):
     """ Format bytes as text
 
     Convert bytes to megabytes which LSF requires.
@@ -141,10 +149,52 @@ def lsf_format_bytes_ceil(n):
     ----------
     n: int
         Bytes
+    lsf_units: str
+        Units for the memory in 2 character shorthand, kb through eb
 
     Examples
     --------
     >>> lsf_format_bytes_ceil(1234567890)
     '1235'
     """
-    return "%d" % math.ceil(n / (1000 ** 2))
+    lsf_units = lsf_units.lower()[0]
+    converter = {"k": 1, "m": 2, "g": 3, "t": 4, "p": 5, "e": 6, "z": 7}
+    return "%d" % math.ceil(n / (1000 ** converter[lsf_units]))
+
+
+def lsf_detect_units():
+    """ Try to autodetect the unit scaling on an LSF system
+
+    """
+    # Search for automatically, Using docs from LSF 9.1.3 for search/defaults
+    unit = "kb"  # Default fallback unit
+    try:
+        # Start looking for the LSF conf file
+        conf_dir = "/etc"  # Fall back directory
+        # Search the two environment variables the docs say it could be at (likely a typo in docs)
+        for conf_env in ["LSF_ENVDIR", "LSF_CONFDIR"]:
+            conf_search = os.environ.get(conf_env, None)
+            if conf_search is not None:
+                conf_dir = conf_search
+                break
+        conf_path = os.path.join(conf_dir, "lsf.conf")
+        conf_file = open(conf_path, "r").readlines()
+        # Reverse order search (in case defined twice, get the one which will actually be processed)
+        for line in conf_file[::-1]:
+            # Look for very specific line
+            line = line.strip()
+            if not line.strip().startswith("LSF_UNIT_FOR_LIMITS"):
+                continue
+            # Found the line, infer the unit, only first 2 chars after "="
+            unit = line.split("=")[1].lower()[0]
+            break
+        logger.debug(
+            "Setting units to %s from the LSF config file at %s" % (unit, conf_file)
+        )
+    # Trap the lsf.conf does not exist, and the conf file not setup right (i.e. "$VAR=xxx^" regex-form)
+    except (EnvironmentError, IndexError):
+        logger.debug(
+            "Could not find LSF config or config file did not have LSF_UNIT_FOR_LIMITS set. Falling back to "
+            "default unit of %s." % unit
+        )
+    return unit

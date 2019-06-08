@@ -1,11 +1,16 @@
+import os
+from shutil import rmtree
 import sys
+from textwrap import dedent
+import tempfile
 from time import sleep, time
 
 import dask
 import pytest
 from dask.distributed import Client
+from distributed.utils import parse_bytes
 
-from dask_jobqueue import LSFCluster
+from dask_jobqueue import LSFCluster, lsf
 
 from . import QUEUE_WAIT
 
@@ -230,6 +235,7 @@ def test_config_name_lsf_takes_custom_config():
         "memory": "2 GB",
         "walltime": "00:02",
         "job-extra": [],
+        "lsf-units": "TB",
         "name": "myname",
         "processes": 1,
         "interface": None,
@@ -254,3 +260,50 @@ def test_informative_errors():
     with pytest.raises(ValueError) as info:
         LSFCluster(memory="1GB", cores=None)
     assert "cores" in str(info.value)
+
+
+def lsf_unit_detection_helper(expected_unit, conf_text=None):
+    temp_dir = tempfile.mkdtemp()
+    current_lsf_envdir = os.environ.get("LSF_ENVDIR", None)
+    os.environ["LSF_ENVDIR"] = temp_dir
+    if conf_text is not None:
+        with open(os.path.join(temp_dir, "lsf.conf"), "w") as conf_file:
+            conf_file.write(conf_text)
+    memory_string = "13GB"
+    memory_base = parse_bytes(memory_string)
+    correct_memory = lsf.lsf_format_bytes_ceil(memory_base, lsf_units=expected_unit)
+    with LSFCluster(memory=memory_string, cores=1) as cluster:
+        assert "#BSUB -M %s" % correct_memory in cluster.job_header
+    rmtree(temp_dir)
+    if current_lsf_envdir is None:
+        del os.environ["LSF_ENVDIR"]
+    else:
+        os.environ["LSF_ENVDIR"] = current_lsf_envdir
+
+
+@pytest.mark.parametrize(
+    "lsf_units_string,expected_unit",
+    [
+        ("LSF_UNIT_FOR_LIMITS=MB", "mb"),
+        ("LSF_UNIT_FOR_LIMITS=G  # And a comment", "gb"),
+        ("#LSF_UNIT_FOR_LIMITS=NotDetected", "kb"),
+    ],
+)
+def test_lsf_unit_detection(lsf_units_string, expected_unit):
+    conf_text = dedent(
+        """
+        LSB_JOB_MEMLIMIT=Y
+        LSB_MOD_ALL_JOBS=N
+        LSF_PIM_SLEEPTIME_UPDATE=Y
+        LSF_PIM_LINUX_ENHANCE=Y
+        %s
+        LSB_DISABLE_LIMLOCK_EXCL=Y
+        LSB_SUBK_SHOW_EXEC_HOST=Y
+        """
+        % lsf_units_string
+    )
+    lsf_unit_detection_helper(expected_unit, conf_text)
+
+
+def test_lsf_unit_detection_without_file():
+    lsf_unit_detection_helper("kb", conf_text=None)
