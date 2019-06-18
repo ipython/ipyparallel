@@ -5,7 +5,6 @@ import re
 import time
 
 from IPython import get_ipython
-from IPython.core.interactiveshell import InteractiveShell
 from IPython.utils.io import capture_output
 
 import pytest
@@ -13,7 +12,6 @@ import pytest
 import ipyparallel as ipp
 from ipyparallel import AsyncResult
 
-from . import add_engines
 from .clienttest import ClusterTestCase, generate_output
 
 
@@ -241,6 +239,8 @@ class TestParallelMagics(ClusterTestCase):
         self.assertIn('\nOut[', output)
         self.assertIn(': 24690', output)
         ar = v.get_result(-1)
+        # prevent TaskAborted on pulls, due to ZeroDivisionError
+        time.sleep(0.5)
         self.assertEqual(v['a'], 5)
         self.assertEqual(v['b'], 24690)
         self.assertRaisesRemote(ZeroDivisionError, ar.get)

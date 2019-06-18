@@ -1,11 +1,14 @@
 # http://travis-ci.org/#!/ipython/ipyparallel
+dist: xenial
 language: python
 python:
+  - "2.7"
+  - "3.4"
+  - "3.5"
+  - "3.6"
+  - "3.7"
+  - "3.8-dev"
   - "nightly"
-  - 3.6
-  - 2.7
-  - 3.5
-  - 3.4
 sudo: false
 cache:
   directories:
@@ -26,6 +29,7 @@ after_success:
   - codecov
 matrix:
   allow_failures:
+    - python: "3.8-dev"
     - python: "nightly"
   include:
     - python: 3.6

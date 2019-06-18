@@ -31,7 +31,7 @@ from ipyparallel.apps.baseapp import (
     catch_config_error,
 )
 from ipython_genutils.importstring import import_item
-from traitlets import Unicode, Bool, List, Dict, TraitError
+from traitlets import Unicode, Bool, List, Dict, TraitError, observe
 
 from jupyter_client.session import (
     Session, session_aliases, session_flags,
@@ -179,9 +179,10 @@ class IPControllerApp(BaseParallelApplication):
         help="JSON filename where engine connection info will be stored.")
     client_json_file = Unicode('ipcontroller-client.json', config=True,
         help="JSON filename where client connection info will be stored.")
-    
-    def _cluster_id_changed(self, name, old, new):
-        super(IPControllerApp, self)._cluster_id_changed(name, old, new)
+
+    @observe('cluster_id')
+    def _cluster_id_changed(self, change):
+        super(IPControllerApp, self)._cluster_id_changed(change)
         self.engine_json_file = "%s-engine.json" % self.name
         self.client_json_file = "%s-client.json" % self.name
 
@@ -190,8 +191,11 @@ class IPControllerApp(BaseParallelApplication):
     children = List()
     mq_class = Unicode('zmq.devices.ProcessMonitoredQueue')
 
-    def _use_threads_changed(self, name, old, new):
-        self.mq_class = 'zmq.devices.%sMonitoredQueue'%('Thread' if new else 'Process')
+    @observe('use_threads')
+    def _use_threads_changed(self, change):
+        self.mq_class = 'zmq.devices.{}MonitoredQueue'.format(
+            'Thread' if change['new'] else 'Process'
+        )
     
     write_connection_files = Bool(True,
         help="""Whether to write connection files to disk.

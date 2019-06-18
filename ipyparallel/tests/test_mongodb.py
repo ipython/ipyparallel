@@ -39,7 +39,7 @@ def mongo_conn(request):
     return c
 
 
-@pytest.mark.usefixture('mongo_conn')
+@pytest.mark.usefixtures('mongo_conn')
 class TestMongoBackend(test_db.TaskDBTest, TestCase):
     """MongoDB backend tests"""
 
