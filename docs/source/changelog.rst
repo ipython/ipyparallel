@@ -1,6 +1,18 @@
 Changelog
 =========
 
+0.5.0 / 2019-06-20
+------------------
+
+- Keeping up to date with Dask and Distributed (:pr:`268`)
+- Formatting with Black (:pr:`256`, :pr:`248`)
+- Improve some batch scheduler integration (:pr:`274`, :pr:`256`, :pr:`232`)
+- Add HTCondor compatibility (:pr:`245`)
+- Add the possibility to specify named configuration (:pr: `204`)
+- Allow free configuration of Dask diagnostic_port (:pr: `192)`
+- Start work on ClusterManager, see https://github.com/dask/distributed/issues/2235 (:pr:`187`, :pr:`184`, :pr:`183`)
+- A lot of other tiny fixes and improvements(:pr:`277`, :pr:`261`, :pr:`260`, :pr:`250`, :pr:`244`, :pr:`200`, :pr:`189`)
+
 0.4.1 / 2018-10-18
 ------------------
 
