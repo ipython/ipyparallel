@@ -121,10 +121,14 @@ class JobQueueCluster(ClusterManager):
         Additional arguments to pass to `dask-worker`
     env_extra : list
         Other commands to add to script before launching worker.
-    python : str
-        Python executable used to launch Dask workers.
+    log_directory : str
+        Directory to use for job scheduler logs.
     shebang : str
         Path to desired interpreter for your batch submission script.
+    python : str
+        Python executable used to launch Dask workers.
+    config_name : str
+        Section to use from jobqueue.yaml configuration file.
     kwargs : dict
         Additional keyword arguments to pass to `LocalCluster`
 
@@ -174,7 +178,6 @@ class JobQueueCluster(ClusterManager):
         extra=None,
         env_extra=None,
         log_directory=None,
-        walltime=None,
         threads=None,
         shebang=None,
         python=sys.executable,
