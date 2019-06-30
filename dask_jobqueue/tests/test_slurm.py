@@ -136,7 +136,7 @@ def test_basic(loop):
             workers = list(client.scheduler_info()["workers"].values())
             w = workers[0]
             assert w["memory_limit"] == 2e9
-            assert w["ncores"] == 2
+            assert w["nthreads"] == 2
 
             cluster.scale(0)
 

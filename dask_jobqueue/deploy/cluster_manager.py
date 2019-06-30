@@ -44,9 +44,9 @@ class ClusterManager(object):
             ''' Callable mapping a WorkerState object to a group, see
                 Scheduler.workers_to_close
             '''
-    4.  worker_spec dict attribute if scale(cores=...) or scale(memory=...)
+    4.  jobqueue_worker_spec dict attribute if scale(cores=...) or scale(memory=...)
         can be used by users.
-            worker_spec = {'cores': 4, 'memory': '16 GB'}
+            jobqueue_worker_spec = {'cores': 4, 'memory': '16 GB'}
 
     This will provide a general ``scale`` method as well as an IPython widget
     for display.
@@ -58,7 +58,7 @@ class ClusterManager(object):
           communicate with it.
         - Ability to start a local or remote scheduler.
         - Ability to work with different worker pools: in scale, adaptive,
-          worker_spec...
+          jobqueue_worker_spec...
     -   Scheduler
         - Provide some remote methods:
           - retire_workers(n: int): close enough workers ot have only n
@@ -99,8 +99,8 @@ class ClusterManager(object):
         """ Turn on adaptivity
         For keyword arguments see dask.distributed.Adaptive
         Instead of minimum and maximum parameters which apply to the number of
-        worker, If Cluster object implements worker_spec attribute, one can use
-        the following parameters:
+        worker, If Cluster object implements jobqueue_worker_spec attribute, one can
+        use the following parameters:
         Parameters
         ----------
         minimum_cores: int
@@ -190,7 +190,7 @@ class ClusterManager(object):
         """ Scale cluster to n workers or to the given number of cores or
         memory
         number of cores and memory are converted into number of workers using
-        worker_spec attribute.
+        jobqueue_worker_spec attribute.
         Parameters
         ----------
         n: int
@@ -208,7 +208,7 @@ class ClusterManager(object):
         --------
         Cluster.scale_up
         Cluster.scale_down
-        Cluster.worker_spec
+        Cluster.jobqueue_worker_spec
         """
         # TODO we should not rely on scheduler loop here, self should have its
         # own loop
@@ -301,7 +301,7 @@ class ClusterManager(object):
 
         scale_hbox = [HBox([request, scale])]
         adapt_hbox = [HBox([minimum, maximum, adapt])]
-        if hasattr(self, "worker_spec"):
+        if hasattr(self, "jobqueue_worker_spec"):
             scale_hbox.append(HBox([request_cores, scale_cores]))
             scale_hbox.append(HBox([request_memory, scale_memory]))
             adapt_hbox.append(HBox([minimum_cores, maximum_cores, adapt_cores]))
@@ -370,16 +370,18 @@ class ClusterManager(object):
         return worker_state
 
     def _get_nb_workers_from_cores(self, cores):
-        return math.ceil(cores / self.worker_spec["cores"])
+        return math.ceil(cores / self.jobqueue_worker_spec["cores"])
 
     def _get_nb_workers_from_memory(self, memory):
-        return math.ceil(parse_bytes(memory) / parse_bytes(self.worker_spec["memory"]))
+        return math.ceil(
+            parse_bytes(memory) / parse_bytes(self.jobqueue_worker_spec["memory"])
+        )
 
     @property
-    def worker_spec(self):
+    def jobqueue_worker_spec(self):
         """ single worker process info needed for scaling on cores or memory """
         raise NotImplementedError(
-            "{} class does not provide worker_spec "
+            "{} class does not provide jobqueue_worker_spec "
             "attribute, needed for scaling with "
             "cores or memory kwargs.".format(self.__class__.__name__)
         )
