@@ -21,6 +21,7 @@ setup(
     description="Easy deployment of Dask Distributed on job queuing systems "
     "such as PBS, Slurm, or SGE.*",
     url="https://github.com/dask/dask-jobqueue",
+    python_requires=">3.5.0",
     license="BSD 3-Clause",
     packages=["dask_jobqueue"],
     include_package_data=True,

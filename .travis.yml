@@ -9,19 +9,10 @@ services:
   - docker
 matrix:
   include:
-    - python: "2.7"
-      env:
-        - OS=ubuntu-14.04
-        - JOBQUEUE=sge
     - python: "3.6"
       env:
         - OS=ubuntu-14.04
         - JOBQUEUE=sge
-    - python: "2.7"
-      env:
-        - OS=ubuntu-14.04
-        # JOBQUEUE=none is for tests that do not need a cluster to run
-        - JOBQUEUE=none
     - python: "3.6"
       env:
         - OS=ubuntu-14.04
