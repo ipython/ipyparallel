@@ -9,6 +9,7 @@ API
 .. autosummary::
    :toctree: generated/
 
+   HTCondorCluster
    LSFCluster
    MoabCluster
    PBSCluster
