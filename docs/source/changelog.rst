@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.6.0 / 2019-07-06
+------------------
+
+- Drop Python 2 support (:pr:`284`)
+- Fix adaptive compatibility with SpecificationCluster in Distributed 2.0 (:pr:`282`)
+
 0.5.0 / 2019-06-20
 ------------------
 
