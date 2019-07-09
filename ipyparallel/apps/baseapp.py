@@ -23,7 +23,7 @@ from ipython_genutils import py3compat
 from ipython_genutils.py3compat import unicode_type
 from .._version import __version__
 
-from traitlets import Unicode, Bool, Instance, Dict
+from traitlets import Unicode, Bool, Instance, Dict, observe
 
 #-----------------------------------------------------------------------------
 # Module errors
@@ -95,8 +95,10 @@ class BaseParallelApplication(BaseIPythonApplication):
     work_dir = Unicode(py3compat.getcwd(), config=True,
         help='Set the working dir for the process.'
     )
-    def _work_dir_changed(self, name, old, new):
-        self.work_dir = unicode_type(expand_path(new))
+
+    @observe('work_dir')
+    def _work_dir_changed(self, change):
+        self.work_dir = unicode_type(expand_path(change['new']))
 
     log_to_file = Bool(config=True,
         help="whether to log to a file")
@@ -118,10 +120,13 @@ class BaseParallelApplication(BaseIPythonApplication):
         generally work).
         """
     )
-    def _cluster_id_changed(self, name, old, new):
-        self.name = self.__class__.name
-        if new:
-            self.name += '-%s'%new
+
+    @observe('cluster_id')
+    def _cluster_id_changed(self, change):
+        if change['new']:
+            self.name += '{}-{}'.format(self.__class__.name, change['new'])
+        else:
+            self.name = self.__class__.name
 
     def _config_files_default(self):
         return ['ipcontroller_config.py', 'ipengine_config.py', 'ipcluster_config.py']

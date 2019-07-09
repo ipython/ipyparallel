@@ -197,7 +197,7 @@ def is_ip(location):
     
     It could be a hostname.
     """
-    return bool(re.match(location, '(\d+\.){3}\d+'))
+    return bool(re.match(location, r'(\d+\.){3}\d+'))
 
 
 @lru_cache()

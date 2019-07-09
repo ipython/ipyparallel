@@ -27,7 +27,7 @@ from zmq.eventloop import zmqstream
 from decorator import decorator
 from traitlets.config.application import Application
 from traitlets.config.loader import Config
-from traitlets import Instance, Dict, List, Set, Integer, Enum, CBytes
+from traitlets import Instance, Dict, List, Set, Integer, Enum, CBytes, observe
 from ipython_genutils.py3compat import cast_bytes
 
 from ipyparallel import error, util
@@ -173,9 +173,11 @@ class TaskScheduler(SessionFactory):
 help="""select the task scheduler scheme  [default: Python LRU]
         Options are: 'pure', 'lru', 'plainrandom', 'weighted', 'twobin','leastload'"""
     )
-    def _scheme_name_changed(self, old, new):
-        self.log.debug("Using scheme %r"%new)
-        self.scheme = globals()[new]
+
+    @observe('scheme_name')
+    def _scheme_name_changed(self, change):
+        self.log.debug("Using scheme %r" % change['new'])
+        self.scheme = globals()[change['new']]
 
     # input arguments:
     scheme = Instance(FunctionType) # function for determining the destination

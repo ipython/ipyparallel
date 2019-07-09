@@ -18,7 +18,7 @@ from zmq.eventloop import zmqstream
 from jupyter_client.localinterfaces import localhost
 from traitlets import (
     Instance, Dict, Integer, Type, Float, Unicode, CBytes, Bool,
-    default,
+    default, observe
 )
 from ipython_genutils.py3compat import cast_bytes
 
@@ -115,8 +115,10 @@ class EngineFactory(RegistrationFactory):
 
     bident = CBytes()
     ident = Unicode()
-    def _ident_changed(self, name, old, new):
-        self.bident = cast_bytes(new)
+
+    @observe('ident')
+    def _ident_changed(self, change):
+        self.bident = cast_bytes(change['new'])
     using_ssh=Bool(False)
 
 

@@ -28,15 +28,12 @@ from jupyter_client.session import (
 )
 from ipykernel.zmqshell import ZMQInteractiveShell
 
-from traitlets.config.configurable import Configurable
-
 from ipyparallel.engine.log import EnginePUBHandler
 from ipyparallel.engine.engine import EngineFactory
 from ipyparallel.util import disambiguate_ip_address
 
 from ipython_genutils.py3compat import cast_bytes
-from traitlets import Unicode, Dict, List, Float, Instance
-from ipykernel import iostream
+from traitlets import Unicode, Dict, List, Float, Instance, observe
 
 #-----------------------------------------------------------------------------
 # Module level variables
@@ -112,9 +109,10 @@ class IPEngineApp(BaseParallelApplication):
 
     url_file_name = Unicode(u'ipcontroller-engine.json', config=True)
 
-    def _cluster_id_changed(self, name, old, new):
-        if new:
-            base = 'ipcontroller-%s' % new
+    @observe('cluster_id')
+    def _cluster_id_changed(self, change):
+        if change['new']:
+            base = 'ipcontroller-{}'.format(change['new'])
         else:
             base = 'ipcontroller'
         self.url_file_name = "%s-engine.json" % base

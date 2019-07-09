@@ -18,8 +18,9 @@ from IPython.core.profiledir import ProfileDir
 from ipython_genutils.importstring import import_item
 from ipython_genutils.py3compat import string_types
 from IPython.utils.sysinfo import num_cpus
-from traitlets import (Integer, Unicode, Bool, CFloat, Dict, List, Any,
-                                        DottedObjectName)
+from traitlets import (
+    Integer, Unicode, Bool, CFloat, Dict, List, Any, DottedObjectName, observe
+)
 
 from .baseapp import (
     BaseParallelApplication,
@@ -242,11 +243,13 @@ class IPClusterEngines(BaseParallelApplication):
         CPU on your machine""")
 
     engine_launcher = Any(config=True, help="Deprecated, use engine_launcher_class")
-    def _engine_launcher_changed(self, name, old, new):
-        if isinstance(new, string_types):
+
+    @observe('engine_launcher')
+    def _engine_launcher_changed(self, change):
+        if isinstance(change['new'], string_types):
             self.log.warn("WARNING: %s.engine_launcher is deprecated as of 0.12,"
                     " use engine_launcher_class" % self.__class__.__name__)
-            self.engine_launcher_class = new
+            self.engine_launcher_class = change['new']
     engine_launcher_class = DottedObjectName('LocalEngineSetLauncher',
         config=True,
         help="""The class for launching a set of Engines. Change this value
@@ -288,8 +291,9 @@ class IPClusterEngines(BaseParallelApplication):
         Not available on Windows.
         """)
 
-    def _daemonize_changed(self, name, old, new):
-        if new:
+    @observe('daemonize')
+    def _daemonize_changed(self, change):
+        if change['new']:
             self.log_to_file = True
 
     early_shutdown = Integer(30, config=True, help="The timeout (in seconds)")
@@ -457,12 +461,14 @@ class IPClusterStart(IPClusterEngines):
         when the controller listens on all interfaces
         """)
     controller_launcher = Any(config=True, help="Deprecated, use controller_launcher_class")
-    def _controller_launcher_changed(self, name, old, new):
-        if isinstance(new, string_types):
+
+    @observe('controller_launcher')
+    def _controller_launcher_changed(self, change):
+        if isinstance(change['new'], string_types):
             # old 0.11-style config
             self.log.warn("WARNING: %s.controller_launcher is deprecated as of 0.12,"
                     " use controller_launcher_class" % self.__class__.__name__)
-            self.controller_launcher_class = new
+            self.controller_launcher_class = change['new']
     controller_launcher_class = DottedObjectName('LocalControllerLauncher',
         config=True,
         help="""The class for launching a Controller. Change this value if you want

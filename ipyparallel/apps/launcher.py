@@ -39,11 +39,11 @@ except ImportError:
         return out
 
 
-from traitlets.config.application import Application
 from traitlets.config.configurable import LoggingConfigurable
 from IPython.utils.text import EvalFormatter
 from traitlets import (
-    Any, Integer, CFloat, List, Unicode, Dict, Instance, HasTraits, CRegExp
+    Any, Integer, CFloat, List, Unicode, Dict, Instance, HasTraits, CRegExp,
+    observe
 )
 from ipython_genutils.encoding import DEFAULT_ENCODING
 from IPython.utils.path import get_home_dir, ensure_dir_exists
@@ -563,14 +563,16 @@ class SSHLauncher(LocalProcessLauncher):
     to_send = List([], config=True,
         help="List of (local, remote) files to send before starting")
 
-    def _hostname_changed(self, name, old, new):
+    @observe('hostname')
+    def _hostname_changed(self, change):
         if self.user:
-            self.location = u'%s@%s' % (self.user, new)
+            self.location = u'%s@%s' % (self.user, change['new'])
         else:
-            self.location = new
+            self.location = change['new']
 
-    def _user_changed(self, name, old, new):
-        self.location = u'%s@%s' % (new, self.hostname)
+    @observe('user')
+    def _user_changed(self, change):
+        self.location = u'%s@%s' % (change['new'], self.hostname)
 
     def find_args(self):
         return self.ssh_cmd + self.ssh_args + [self.location] + \
@@ -653,11 +655,12 @@ class SSHClusterLauncher(SSHLauncher, ClusterAppMixin):
         If not specified, use calling profile, stripping out possible leading homedir.
         """)
 
-    def _profile_dir_changed(self, name, old, new):
+    @observe('profile_dir')
+    def _profile_dir_changed(self, change):
         if not self.remote_profile_dir:
             # trigger remote_profile_dir_default logic again,
             # in case it was already triggered before profile_dir was set
-            self.remote_profile_dir = self._strip_home(new)
+            self.remote_profile_dir = self._strip_home(change['new'])
 
     @staticmethod
     def _strip_home(path):
@@ -674,8 +677,9 @@ class SSHClusterLauncher(SSHLauncher, ClusterAppMixin):
     def _remote_profile_dir_default(self):
         return self._strip_home(self.profile_dir)
 
-    def _cluster_id_changed(self, name, old, new):
-        if new:
+    @observe('cluster_id')
+    def _cluster_id_changed(self, change):
+        if change['new']:
             raise ValueError("cluster id not supported by SSH launchers")
 
     @property
@@ -1008,9 +1012,14 @@ class WindowsHPCEngineSetLauncher(WindowsHPCLauncher, ClusterAppMixin):
 
 class BatchClusterAppMixin(ClusterAppMixin):
     """ClusterApp mixin that updates the self.context dict, rather than cl-args."""
-    def _profile_dir_changed(self, name, old, new):
-        self.context[name] = new
-    _cluster_id_changed = _profile_dir_changed
+
+    @observe('profile_dir')
+    def _profile_dir_changed(self, change):
+        self._update_context(change)
+
+    @observe('cluster_id')
+    def _cluster_id_changed(self, change):
+        self._update_context(change)
 
     def _profile_dir_default(self):
         self.context['profile_dir'] = ''
@@ -1053,11 +1062,15 @@ class BatchSystemLauncher(BaseLauncher):
     queue = Unicode(u'', config=True,
         help="The batch queue.")
 
-    def _queue_changed(self, name, old, new):
-        self.context[name] = new
+    @observe('queue')
+    def _queue_changed(self, change):
+        self._update_context(change)
 
     n = Integer(1)
-    _n_changed = _queue_changed
+
+    @observe('n')
+    def _n_changed(self, change):
+        self._update_context(change)
 
     # not configurable, override in subclasses
     # Job Array regex
@@ -1088,6 +1101,9 @@ class BatchSystemLauncher(BaseLauncher):
         are set to something other than the default value.
         """
         return dict(n=1, queue=u'', profile_dir=u'', cluster_id=u'')
+
+    def _update_context(self, change):
+        self.context[change['name']] = change['new']
 
     # the Formatter instance for rendering the templates:
     formatter = Instance(EvalFormatter, (), {})
@@ -1190,12 +1206,12 @@ class PBSLauncher(BatchSystemLauncher):
     delete_command = List(['qdel'], config=True,
         help="The PBS delete command ['qdel']")
     job_id_regexp = CRegExp(r'\d+', config=True,
-        help="Regular expresion for identifying the job ID [r'\d+']")
+        help=r"Regular expresion for identifying the job ID [r'\d+']")
 
     batch_file = Unicode(u'')
-    job_array_regexp = CRegExp('#PBS\W+-t\W+[\w\d\-\$]+')
+    job_array_regexp = CRegExp(r'#PBS\W+-t\W+[\w\d\-\$]+')
     job_array_template = Unicode('#PBS -t 1-{n}')
-    queue_regexp = CRegExp('#PBS\W+-q\W+\$?\w+')
+    queue_regexp = CRegExp(r'#PBS\W+-q\W+\$?\w+')
     queue_template = Unicode('#PBS -q {queue}')
 
 
@@ -1235,7 +1251,7 @@ class SlurmLauncher(BatchSystemLauncher):
     delete_command = List(['scancel'], config=True,
         help="The slurm delete command ['scancel']")
     job_id_regexp = CRegExp(r'\d+', config=True,
-        help="Regular expresion for identifying the job ID [r'\d+']")
+        help=r"Regular expresion for identifying the job ID [r'\d+']")
 
     account = Unicode(u"", config=True,
         help="Slurm account to be used")
@@ -1253,33 +1269,37 @@ class SlurmLauncher(BatchSystemLauncher):
     options = Unicode(u"", config=True,
         help="Extra Slurm options")
 
-    def _account_changed(self, name, old, new):
-        self.context[name] = new
+    @observe('account')
+    def _account_changed(self, change):
+        self._update_context(change)
 
-    def _qos_changed(self, name, old, new):
-        self.context[name] = new
+    @observe('qos')
+    def _qos_changed(self, change):
+        self._update_context(change)
 
-    def _timelimit_changed(self, name, old, new):
-        self.context[name] = new
+    @observe('timelimit')
+    def _timelimit_changed(self, change):
+        self._update_context(change)
 
-    def _options_changed(self, name, old, new):
-        self.context[name] = new
+    @observe('options')
+    def _options_changed(self, change):
+        self._update_context(change)
 
     batch_file = Unicode(u'')
 
-    job_array_regexp = CRegExp('#SBATCH\W+(?:--ntasks|-n)[\w\d\-\$]+')
+    job_array_regexp = CRegExp(r'#SBATCH\W+(?:--ntasks|-n)[\w\d\-\$]+')
     job_array_template = Unicode('''#SBATCH --ntasks={n}''')
 
-    queue_regexp = CRegExp('#SBATCH\W+(?:--partition|-p)\W+\$?\w+')
+    queue_regexp = CRegExp(r'#SBATCH\W+(?:--partition|-p)\W+\$?\w+')
     queue_template = Unicode('#SBATCH --partition={queue}')
 
-    account_regexp = CRegExp('#SBATCH\W+(?:--account|-A)\W+\$?\w+')
+    account_regexp = CRegExp(r'#SBATCH\W+(?:--account|-A)\W+\$?\w+')
     account_template = Unicode('#SBATCH --account={account}')
 
-    qos_regexp = CRegExp('#SBATCH\W+--qos\W+\$?\w+')
+    qos_regexp = CRegExp(r'#SBATCH\W+--qos\W+\$?\w+')
     qos_template = Unicode('#SBATCH --qos={qos}')
 
-    timelimit_regexp = CRegExp('#SBATCH\W+(?:--time|-t)\W+\$?\w+')
+    timelimit_regexp = CRegExp(r'#SBATCH\W+(?:--time|-t)\W+\$?\w+')
     timelimit_template = Unicode('#SBATCH --time={timelimit}')
 
     def _insert_options_in_script(self):
@@ -1333,9 +1353,9 @@ srun %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 
 class SGELauncher(PBSLauncher):
     """Sun GridEngine is a PBS clone with slightly different syntax"""
-    job_array_regexp = CRegExp('#\$\W+\-t')
+    job_array_regexp = CRegExp(r'#\$\W+\-t')
     job_array_template = Unicode('#$ -t 1-{n}')
-    queue_regexp = CRegExp('#\$\W+-q\W+\$?\w+')
+    queue_regexp = CRegExp(r'#\$\W+-q\W+\$?\w+')
     queue_template = Unicode('#$ -q {queue}')
 
 
@@ -1376,12 +1396,12 @@ class LSFLauncher(BatchSystemLauncher):
     delete_command = List(['bkill'], config=True,
                           help="The PBS delete command ['bkill']")
     job_id_regexp = CRegExp(r'\d+', config=True,
-                            help="Regular expresion for identifying the job ID [r'\d+']")
+                            help=r"Regular expresion for identifying the job ID [r'\d+']")
 
     batch_file = Unicode(u'')
-    job_array_regexp = CRegExp('#BSUB[ \t]-J+\w+\[\d+-\d+\]')
+    job_array_regexp = CRegExp(r'#BSUB[ \t]-J+\w+\[\d+-\d+\]')
     job_array_template = Unicode('#BSUB -J ipengine[1-{n}]')
-    queue_regexp = CRegExp('#BSUB[ \t]+-q[ \t]+\w+')
+    queue_regexp = CRegExp(r'#BSUB[ \t]+-q[ \t]+\w+')
     queue_template = Unicode('#BSUB -q {queue}')
 
     def start(self, n):
@@ -1459,11 +1479,11 @@ class HTCondorLauncher(BatchSystemLauncher):
     delete_command = List(['condor_rm'], config=True,
         help="The HTCondor delete command ['condor_rm']")
     job_id_regexp = CRegExp(r'(\d+)\.$', config=True,
-        help="Regular expression for identifying the job ID [r'(\d+)\.$']")
+        help=r"Regular expression for identifying the job ID [r'(\d+)\.$']")
     job_id_regexp_group = Integer(1, config=True,
         help="""The group we wish to match in job_id_regexp [1]""")
 
-    job_array_regexp = CRegExp('queue\W+\$')
+    job_array_regexp = CRegExp(r'queue\W+\$')
     job_array_template = Unicode('queue {n}')
 
 

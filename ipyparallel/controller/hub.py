@@ -23,8 +23,9 @@ from ..util import extract_dates
 from jupyter_client.localinterfaces import localhost
 from ipython_genutils.py3compat import cast_bytes, unicode_type, iteritems, buffer_to_bytes_py2
 from traitlets import (
-        HasTraits, Any, Instance, Integer, Unicode, Dict, Set, Tuple, DottedObjectName
-        )
+    HasTraits, Any, Instance, Integer, Unicode, Dict, Set, Tuple,
+    DottedObjectName, observe
+)
 
 from ipyparallel import error, util
 from ipyparallel.factory import RegistrationFactory
@@ -213,7 +214,9 @@ class HubFactory(RegistrationFactory):
     db = Instance('ipyparallel.controller.dictdb.BaseDB', allow_none=True)
     heartmonitor = Instance('ipyparallel.controller.heartmonitor.HeartMonitor', allow_none=True)
 
-    def _ip_changed(self, name, old, new):
+    @observe('ip')
+    def _ip_changed(self, change):
+        new = change['new']
         self.engine_ip = new
         self.client_ip = new
         self.monitor_ip = new
@@ -222,7 +225,9 @@ class HubFactory(RegistrationFactory):
     def _update_monitor_url(self):
         self.monitor_url = "%s://%s:%i" % (self.monitor_transport, self.monitor_ip, self.mon_port)
 
-    def _transport_changed(self, name, old, new):
+    @observe('transport')
+    def _transport_changed(self, change):
+        new = change['new']
         self.engine_transport = new
         self.client_transport = new
         self.monitor_transport = new
