@@ -1,5 +1,8 @@
 import socket
-import mock
+try:
+    from unittest import mock
+except ImportError:
+    import mock
 from ipyparallel import util
 from jupyter_client.localinterfaces import localhost, public_ips
 
