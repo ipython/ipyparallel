@@ -44,6 +44,10 @@ save resources when not actively computing.
 
    cluster.adapt(minimum=6, maximum=90)  # auto-scale between 6 and 90 workers
 
+More details
+------------
+A good entry point to know more about how to use ``dask-jobqueue`` is
+:ref:`talks-and-tutorials`.
 
 .. toctree::
    :maxdepth: 1
@@ -51,6 +55,7 @@ save resources when not actively computing.
 
    install
    interactive
+   talks-and-tutorials
    howitworks
    configuration
 
