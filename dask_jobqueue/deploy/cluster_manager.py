@@ -1,7 +1,5 @@
-import dask
 import logging
 import math
-import os
 
 from tornado import gen
 
@@ -12,6 +10,7 @@ from distributed.utils import (
     parse_bytes,
     PeriodicCallback,
     format_bytes,
+    format_dashboard_link,
 )
 
 logger = logging.getLogger(__name__)
@@ -141,10 +140,9 @@ class ClusterManager(object):
 
     @property
     def dashboard_link(self):
-        template = dask.config.get("distributed.dashboard.link")
         host = self.scheduler.address.split("://")[1].split(":")[0]
-        port = self.scheduler.services["bokeh"].port
-        return template.format(host=host, port=port, **os.environ)
+        port = self.scheduler.services["dashboard"].port
+        return format_dashboard_link(host, port)
 
     @gen.coroutine
     def _scale(self, n=None, cores=None, memory=None):
@@ -267,7 +265,7 @@ class ClusterManager(object):
 
         layout = Layout(width="150px")
 
-        if "bokeh" in self.scheduler.services:
+        if "dashboard" in self.scheduler.services:
             link = self.dashboard_link
             link = '<p><b>Dashboard: </b><a href="%s" target="_blank">%s</a></p>\n' % (
                 link,

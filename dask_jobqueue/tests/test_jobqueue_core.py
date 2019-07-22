@@ -85,6 +85,14 @@ def test_repr(Cluster):
         assert "workers=0" in cluster_repr
 
 
+@pytest.mark.parametrize(
+    "Cluster", [PBSCluster, MoabCluster, SLURMCluster, SGECluster, LSFCluster]
+)
+def test_dashboard_link(Cluster):
+    with Cluster(cores=1, memory="1GB") as cluster:
+        assert re.match(r"http://\d+\.\d+\.\d+.\d+:\d+/status", cluster.dashboard_link)
+
+
 def test_forward_ip():
     ip = "127.0.0.1"
     with PBSCluster(
