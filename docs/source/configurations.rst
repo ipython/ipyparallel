@@ -137,3 +137,46 @@ Also, note that port 8787 is open both on login and computing nodes, so you can 
        # project: xxxxxxx # choose project other than default
        walltime: '00:30:00'
        job-mem: 120GB              # Max memory that can be requested to SLURM
+
+
+Ifremer DATARMOR
+----------------
+
+See `this <https://wwz.ifremer.fr/pcdm/Equipement>`_ (French) or `this
+<https://translate.google.com/translate?sl=auto&tl=en&u=https%3A%2F%2Fwwz.ifremer.fr%2Fpcdm%2FEquipement>`_
+(English through Google Translate) for more details about the Ifremer DATARMOR
+cluster.
+
+See `this <https://github.com/dask/dask-jobqueue/issues/292>`_ for more details
+about this ``dask-jobqueue`` config.
+
+.. code-block:: yaml
+
+   jobqueue:
+     pbs:
+       name: dask-worker
+
+       # Dask worker options
+       # number of processes and core have to be equal to avoid using multiple
+       # threads in a single dask worker. Using threads can generate netcdf file
+       # access errors.
+       cores: 28
+       processes: 28
+       # this is using all the memory of a single node and corresponds to about
+       # 4GB / dask worker. If you need more memory than this you have to decrease
+       # cores and processes above
+       memory: 120GB
+       interface: ib0
+       # This should be a local disk attach to your worker node and not a network
+       # mounted disk. See
+       # https://jobqueue.dask.org/en/latest/configuration-setup.html#local-storage
+       # for more details.
+       local-directory: $TMPDIR
+
+       # PBS resource manager options
+       queue: mpi_1
+       project: myPROJ
+       walltime: '48:00:00'
+       resource-spec: select=1:ncpus=28:mem=120GB
+       # disable email
+       job-extra: ['-m n']
