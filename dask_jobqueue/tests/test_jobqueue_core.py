@@ -101,7 +101,7 @@ def test_forward_ip():
         cores=8,
         memory="28GB",
         name="dask-worker",
-        ip=ip,
+        host=ip,
     ) as cluster:
         assert cluster.local_cluster.scheduler.ip == ip
 

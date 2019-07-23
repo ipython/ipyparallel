@@ -241,9 +241,9 @@ class JobQueueCluster(ClusterManager):
 
         if interface:
             extra += ["--interface", interface]
-            kwargs.setdefault("ip", get_ip_interface(interface))
+            kwargs.setdefault("host", get_ip_interface(interface))
         else:
-            kwargs.setdefault("ip", "")
+            kwargs.setdefault("host", "")
 
         # Bokeh diagnostics server should listen on all interfaces
         kwargs.setdefault("dashboard_address", ("", 8787))
