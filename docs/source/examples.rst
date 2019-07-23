@@ -16,13 +16,13 @@ PBS Deployments
    cluster = PBSCluster(queue='regular',
                         project='DaskOnPBS',
                         local_directory='$TMPDIR',
-                        threads=4,
+                        cores=24,
                         processes=6,
                         memory='16GB',
                         resource_spec='select=1:ncpus=24:mem=100GB')
 
-   cluster = PBSCluster(processes=18,
-                        threads=4,
+   cluster = PBSCluster(cores=24,
+                        processes=6,
                         shebang='#!/usr/bin/env zsh',
                         memory="6GB",
                         project='P48500028',
@@ -42,8 +42,8 @@ can be used, called ``MoabCluster``:
    import os
    from dask_jobqueue import MoabCluster
 
-   cluster = MoabCluster(processes=6,
-                         threads=1,
+   cluster = MoabCluster(cores=6,
+                         processes=6,
                          project='gfdl_m',
                          memory='16G',
                          resource_spec='pmem=96G',
@@ -107,8 +107,8 @@ SLURM Deployments
 
    from dask_jobqueue import SLURMCluster
 
-   cluster = SLURMCluster(processes=4,
-                          threads=2,
+   cluster = SLURMCluster(cores=8,
+                          processes=4,
                           memory="16GB",
                           project="woodshole",
                           walltime="01:00:00",
@@ -124,8 +124,8 @@ SLURM Deployment: Low-priority node usage
 
     from dask_jobqueue import SLURMCluster
 
-    cluster = SLURMCluster(processes=6,
-                           threads=4,
+    cluster = SLURMCluster(cores=24,
+                           processes=6,
                            memory="16GB",
                            project="co_laika",
                            queue='savio2_bigmem',
