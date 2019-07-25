@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.6.1 / 2019-07-25
+------------------
+
+- more fixes related to ``distributed >= 2`` changes (:pr:`278`, :pr:`291`)
+- ``distributed >= 2.1`` is now required (:pr:`295`)
+- remove deprecated ``threads`` parameter from all the ``Cluster`` classes (:pr:`297`)
+- doc improvements (:pr:`290`, :pr:`294`, :pr:`296`)
+
 0.6.0 / 2019-07-06
 ------------------
 
