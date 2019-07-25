@@ -7,7 +7,6 @@ import re
 import shlex
 import subprocess
 import sys
-import warnings
 from collections import OrderedDict
 from contextlib import contextmanager
 
@@ -22,17 +21,6 @@ from distributed.utils import format_bytes, parse_bytes, tmpfile, get_ip_interfa
 
 logger = logging.getLogger(__name__)
 docstrings = docrep.DocstringProcessor()
-
-
-threads_deprecation_message = """
-The threads keyword has been removed and the memory keyword has changed.
-
-Please specify job size with the following keywords:
-
--  cores: total cores per job, across all processes
--  memory: total memory per job, across all processes
--  processes: number of processes to launch, splitting the quantities above
-""".strip()
 
 
 def _job_id_from_worker_name(name):
@@ -178,7 +166,6 @@ class JobQueueCluster(ClusterManager):
         extra=None,
         env_extra=None,
         log_directory=None,
-        threads=None,
         shebang=None,
         python=sys.executable,
         config_name=None,
@@ -189,9 +176,6 @@ class JobQueueCluster(ClusterManager):
         # This initializer should be considered as Abstract, and never used directly.
         # """
         super(JobQueueCluster, self).__init__()
-
-        if threads is not None:
-            raise ValueError(threads_deprecation_message)
 
         if config_name is None:
             raise NotImplementedError(
@@ -222,9 +206,6 @@ class JobQueueCluster(ClusterManager):
             log_directory = dask.config.get("jobqueue.%s.log-directory" % config_name)
         if shebang is None:
             shebang = dask.config.get("jobqueue.%s.shebang" % config_name)
-
-        if dask.config.get("jobqueue.%s.threads", None):
-            warnings.warn(threads_deprecation_message)
 
         if cores is None:
             raise ValueError(
