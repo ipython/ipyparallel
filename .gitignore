@@ -12,3 +12,4 @@ log
 *.swo
 .cache/
 .pytest_cache
+docs/source/generated
