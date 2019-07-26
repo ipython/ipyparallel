@@ -12,6 +12,7 @@ API
    HTCondorCluster
    LSFCluster
    MoabCluster
+   OARCluster
    PBSCluster
    SGECluster
    SLURMCluster
