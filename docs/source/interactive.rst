@@ -44,7 +44,7 @@ Viewing the Dask Dashboard
 Whether or not you are using dask-jobqueue in Jupyter, IPython or other tools,
 at one point you will want to have access to Dask dashboard. Once you've
 started a cluster and connected a client to it using commands described in
-`Example`_), inspecting ``client`` object will give you the Dashboard URL,
+:ref:`example`), inspecting ``client`` object will give you the Dashboard URL,
 for example ``http://172.16.23.102:8787/status``. The Dask Dashboard may be
 accessible by clicking the link displayed, otherwise, you'll have to use SSH
 tunneling:

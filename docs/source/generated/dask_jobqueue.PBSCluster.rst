@@ -42,8 +42,6 @@ dask\_jobqueue.PBSCluster
       ~PBSCluster.running_jobs
       ~PBSCluster.scheduler
       ~PBSCluster.scheduler_address
-      ~PBSCluster.scheduler_name
       ~PBSCluster.submit_command
-      ~PBSCluster.worker_threads
    
    

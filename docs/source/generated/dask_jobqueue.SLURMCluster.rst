@@ -42,8 +42,5 @@ dask\_jobqueue.SLURMCluster
       ~SLURMCluster.running_jobs
       ~SLURMCluster.scheduler
       ~SLURMCluster.scheduler_address
-      ~SLURMCluster.scheduler_name
       ~SLURMCluster.submit_command
-      ~SLURMCluster.worker_threads
-   
    

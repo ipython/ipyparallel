@@ -42,8 +42,6 @@ dask\_jobqueue.SGECluster
       ~SGECluster.running_jobs
       ~SGECluster.scheduler
       ~SGECluster.scheduler_address
-      ~SGECluster.scheduler_name
       ~SGECluster.submit_command
-      ~SGECluster.worker_threads
    
    

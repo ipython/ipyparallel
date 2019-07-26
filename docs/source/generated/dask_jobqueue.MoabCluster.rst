@@ -42,8 +42,6 @@ dask\_jobqueue.MoabCluster
       ~MoabCluster.running_jobs
       ~MoabCluster.scheduler
       ~MoabCluster.scheduler_address
-      ~MoabCluster.scheduler_name
       ~MoabCluster.submit_command
-      ~MoabCluster.worker_threads
    
    

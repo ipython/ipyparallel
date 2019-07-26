@@ -142,12 +142,12 @@ Also, note that port 8787 is open both on login and computing nodes, so you can 
 Ifremer DATARMOR
 ----------------
 
-See `this <https://wwz.ifremer.fr/pcdm/Equipement>`_ (French) or `this
-<https://translate.google.com/translate?sl=auto&tl=en&u=https%3A%2F%2Fwwz.ifremer.fr%2Fpcdm%2FEquipement>`_
+See `this <https://wwz.ifremer.fr/pcdm/Equipement>`__ (French) or `this
+<https://translate.google.com/translate?sl=auto&tl=en&u=https%3A%2F%2Fwwz.ifremer.fr%2Fpcdm%2FEquipement>`__
 (English through Google Translate) for more details about the Ifremer DATARMOR
 cluster.
 
-See `this <https://github.com/dask/dask-jobqueue/issues/292>`_ for more details
+See `this <https://github.com/dask/dask-jobqueue/issues/292>`__ for more details
 about this ``dask-jobqueue`` config.
 
 .. code-block:: yaml

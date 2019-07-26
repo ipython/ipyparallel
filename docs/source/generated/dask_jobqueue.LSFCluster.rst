@@ -42,8 +42,6 @@ dask\_jobqueue.LSFCluster
       ~LSFCluster.running_jobs
       ~LSFCluster.scheduler
       ~LSFCluster.scheduler_address
-      ~LSFCluster.scheduler_name
       ~LSFCluster.submit_command
-      ~LSFCluster.worker_threads
    
    

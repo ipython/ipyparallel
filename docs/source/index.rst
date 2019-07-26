@@ -9,6 +9,9 @@ systems typically found in high performance supercomputers, academic research
 institutions, and other clusters.  It provides a convenient interface that is
 accessible from interactive systems like Jupyter notebooks, or batch jobs.
 
+
+.. _example:
+
 Example
 -------
 
