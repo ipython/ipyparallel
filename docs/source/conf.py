@@ -6,6 +6,8 @@
 # full list see the documentation:
 # http://www.sphinx-doc.org/en/stable/config
 
+from dask_jobqueue import __version__ as version
+
 # -- Path setup --------------------------------------------------------------
 
 # If extensions (or modules to document with autodoc) are in another directory,
@@ -23,8 +25,6 @@ author = u"Dask-jobqueue Development Team"
 project = u"Dask-jobqueue"
 copyright = u"2018, Anaconda, Inc. and contributors"
 
-
-from dask_jobqueue import __version__ as version
 
 # The full version, including alpha/beta/rc tags.
 # release = '0.1.0'
@@ -198,3 +198,13 @@ extlinks = {
     "issue": ("https://github.com/dask/dask-jobqueue/issues/%s", "GH#"),
     "pr": ("https://github.com/dask/dask-jobqueue/pull/%s", "GH#"),
 }
+
+
+# Temporary work-around for spacing problem between parameter and parameter
+# type in the doc, see https://github.com/numpy/numpydoc/issues/215. The bug
+# has been fixed in sphinx (https://github.com/sphinx-doc/sphinx/pull/5976) but
+# through a change in sphinx basic.css except rtd_theme does not use basic.css.
+# In an ideal world, this would get fixed in this PR:
+# https://github.com/readthedocs/sphinx_rtd_theme/pull/747/files
+def setup(app):
+    app.add_stylesheet("basic.css")
