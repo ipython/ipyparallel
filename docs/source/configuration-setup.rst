@@ -189,6 +189,15 @@ interfaces using the ``ifconfig`` UNIX command
    ib0         Link encap:Infiniband                           # Fast InfiniBand
                inet addr:172.42.0.101
 
+Note: on some clusters ``ifconfig`` may need root access. You can use this python
+code to list all the network interfaces instead:
+
+.. code-block:: python
+
+   import psutil
+   psutil.net_if_addrs()
+
+
 Alternatively, your IT administrators will have this information.
 
 
