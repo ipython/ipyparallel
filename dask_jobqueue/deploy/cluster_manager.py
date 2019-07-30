@@ -131,7 +131,10 @@ class ClusterManager(object):
             elif maximum_memory is not None:
                 kwargs["maximum"] = self._get_nb_workers_from_memory(maximum_memory)
         self._adaptive_options.update(kwargs)
-        self._adaptive = Adaptive(self.scheduler, self, **self._adaptive_options)
+        try:
+            self._adaptive = Adaptive(self.scheduler, self, **self._adaptive_options)
+        except Exception:
+            self._adaptive = Adaptive(self, **self._adaptive_options)
         return self._adaptive
 
     @property
@@ -383,3 +386,7 @@ class ClusterManager(object):
             "attribute, needed for scaling with "
             "cores or memory kwargs.".format(self.__class__.__name__)
         )
+
+    @property
+    def loop(self):
+        return self.scheduler.loop

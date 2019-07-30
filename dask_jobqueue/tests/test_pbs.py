@@ -401,3 +401,8 @@ def test_informative_errors():
     with pytest.raises(ValueError) as info:
         PBSCluster(memory="1GB", cores=None)
     assert "cores" in str(info.value)
+
+
+def test_adapt(loop):
+    with PBSCluster(loop, cores=1, memory="1 GB") as cluster:
+        cluster.adapt()
