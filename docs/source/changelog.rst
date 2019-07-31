@@ -1,6 +1,12 @@
 Changelog
 =========
 
+0.6.2 / 2019-07-31
+------------------
+
+-  Update documentation
+-  Ensure compatibility with Dask 2.2 (:pr:`303`)
+
 0.6.1 / 2019-07-25
 ------------------
 
@@ -48,7 +54,7 @@ Changelog
 - Bind scheduler bokeh UI to every network interfaces by default.
 - Adds an OAR job queue system implementation.
 - Adds an LSF job queue system implementation.
-- Adds some convenient methods to JobQueueCluster objects: ``__repr__``, 
+- Adds some convenient methods to JobQueueCluster objects: ``__repr__``,
   ``stop_jobs()``, ``close()``.
 
 
