@@ -78,7 +78,7 @@ class SLURMCluster(JobQueueCluster):
         if job_extra is None:
             job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
 
-        super(SLURMCluster, self).__init__(config_name=config_name, **kwargs)
+        super().__init__(config_name=config_name, **kwargs)
 
         # Always ask for only one task
         header_lines = []

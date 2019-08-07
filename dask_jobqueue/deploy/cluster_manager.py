@@ -16,7 +16,7 @@ from distributed.utils import (
 logger = logging.getLogger(__name__)
 
 
-class ClusterManager(object):
+class ClusterManager:
     """ Intermediate Cluster object that should lead to a real ClusterManager
 
     This tries to improve upstream Cluster object and underlines needs for

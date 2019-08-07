@@ -97,8 +97,8 @@ def run_command(commands, args, cwd=None, verbose=False, hide_stderr=False, env=
             print("unable to find command, tried %s" % (commands,))
         return None, None
     stdout = p.communicate()[0].strip()
-    if sys.version_info[0] >= 3:
-        stdout = stdout.decode()
+    stdout = stdout.decode()
+
     if p.returncode != 0:
         if verbose:
             print("unable to run %s (error)" % dispcmd)

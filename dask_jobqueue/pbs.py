@@ -81,7 +81,7 @@ class PBSCluster(JobQueueCluster):
             ) or os.environ.get("PBS_ACCOUNT")
 
         # Instantiate args and parameters from parent abstract class
-        super(PBSCluster, self).__init__(config_name=config_name, **kwargs)
+        super().__init__(config_name=config_name, **kwargs)
 
         # Try to find a project name from environment variable
         project = project or os.environ.get("PBS_ACCOUNT")
