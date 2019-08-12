@@ -30,6 +30,8 @@ def reduce_code(co):
             co.co_lnotab, co.co_freevars, co.co_cellvars]
     if sys.version_info[0] >= 3:
         args.insert(1, co.co_kwonlyargcount)
+    if sys.version_info > (3, 8, 0, 'alpha', 3):
+        args.insert(1, co.co_posonlyargcount)
     return code_ctor, tuple(args)
 
 copyreg.pickle(types.CodeType, reduce_code)
