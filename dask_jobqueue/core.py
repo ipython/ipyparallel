@@ -552,3 +552,7 @@ class JobQueueCluster(ClusterManager):
     @property
     def scheduler_comm(self):
         return self.local_cluster.scheduler_comm
+
+    @property
+    def scheduler_info(self):
+        return self.local_cluster.scheduler_info
