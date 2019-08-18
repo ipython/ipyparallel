@@ -1,6 +1,14 @@
 Changelog
 =========
 
+0.6.3 / 2019-08-18
+------------------
+
+-  Remove lingering Python 2 specific code (:pr:`308`)
+-  Adds scheduler_info from local_cluster (:pr:`313`)
+-  Remove __future__ imports since we depend on Python >3.5 (:pr:`311`)
+-  Remove Python 3 check for black in CI (:pr:`315`)
+
 0.6.2 / 2019-07-31
 ------------------
 
