@@ -4,16 +4,17 @@ Changelog
 0.6.3 / 2019-08-18
 ------------------
 
--  Remove lingering Python 2 specific code (:pr:`308`)
--  Adds scheduler_info from local_cluster (:pr:`313`)
--  Remove __future__ imports since we depend on Python >3.5 (:pr:`311`)
--  Remove Python 3 check for black in CI (:pr:`315`)
+- Compatibility with Dask 2.3.0: add scheduler_info from
+  local_cluster (:pr:`313`)
+- Remove lingering Python 2 specific code (:pr:`308`)
+- Remove __future__ imports since we depend on Python >3.5 (:pr:`311`)
+- Remove Python 3 check for black in CI (:pr:`315`)
 
 0.6.2 / 2019-07-31
 ------------------
 
--  Update documentation
--  Ensure compatibility with Dask 2.2 (:pr:`303`)
+- Ensure compatibility with Dask 2.2 (:pr:`303`)
+- Update documentation
 
 0.6.1 / 2019-07-25
 ------------------
