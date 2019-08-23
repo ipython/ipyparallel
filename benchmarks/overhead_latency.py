@@ -2,12 +2,15 @@ import timeit
 import ipyparallel as ipp
 from benchmarks.utils import wait_for
 
+
 def echo(delay=0):
     def inner_echo(x):
         import time
+
         if delay:
             time.sleep(delay)
         return x
+
     return inner_echo
 
 
@@ -28,28 +31,30 @@ class OverheadLatencySuite:
             self.client.close()
 
 
-def timing_decorator(Cls):
-    setattr(Cls, 'time_n_tasks', lambda self, tasks, delay:
-    self.lview.map_sync(echo(delay), [None] * tasks))
-    return Cls
+def timing_decorator(cls):
+    setattr(
+        cls,
+        'time_n_tasks',
+        lambda self, tasks, delay: self.lview.map_sync(echo(delay), [None] * tasks),
+    )
+    return cls
 
 
 @timing_decorator
 class Engines1(OverheadLatencySuite):
-    params = [[1, 10], [0, .1, 1]]
+    params = [[1, 10], [0, 0.1, 1]]
 
 
 @timing_decorator
 class Engines10(OverheadLatencySuite):
-    params = [[10, 100], [0, .1, 1]]
+    params = [[10, 100], [0, 0.1, 1]]
 
 
 @timing_decorator
 class Engines100(OverheadLatencySuite):
-    params = [[100, 1000], [0, .1, 1]]
+    params = [[100, 1000], [0, 0.1, 1]]
 
 
 @timing_decorator
 class Engines100NoDelay(OverheadLatencySuite):
     params = [[100, 1000, 10000, 100000], [0]]
-

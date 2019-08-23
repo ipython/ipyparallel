@@ -21,8 +21,6 @@ def cmd_run(*args):
 
 
 if __name__ == '__main__':
-    CURRENT_INSTANCE_NAME = sys.argv[1]
-
     cmd_run(
         'wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh'
     )  # Download miniconda
@@ -32,12 +30,10 @@ if __name__ == '__main__':
     cmd_run(
         f'git clone -q https://{GITHUB_TOKEN}@{ASV_TESTS_REPO}'
     )  # Get benchmarks from repo
-
-    while not os.path.isfile('/etc/startup_script_finished'):
-        time.sleep(1)  # Wait for startup script to finish
-
+    print('Finished cloning benchmark repo')
     # Installing ipyparallel from the dev branch
     cmd_run(f'pip install -q git+https://{GITHUB_TOKEN}@{IPYPARALLEL_REPO}')
+    print('Installed ipyparallel')
     # Create profile for ipyparallel, (should maybe be copied if we want some cusom values here)
     cmd_run('ipython profile create --parallel --profile=asv')
 
@@ -45,11 +41,4 @@ if __name__ == '__main__':
     cmd_run('ipcluster start -n 100 --daemon --profile=asv')  # Starting 100 engines
     cmd_run('asv run')
     cmd_run('ipcluster stop --profile=asv')
-    cmd_run('git config user.email "boyum90@gmail.com"')
-    cmd_run('git config user.name "Tom-Olav Boyum"')
-    cmd_run('git add .')
-    cmd_run(
-        'git', 'commit', '-m', f'"Benchmarking results ran on {CURRENT_INSTANCE_NAME}"'
-    )
-    cmd_run('git push -q')
     # run asv benchmarks
