@@ -122,7 +122,7 @@ def run_on_instance(template_name):
     gcloud_run(
         'scp',
         '--recurse',
-        f'{current_instance_name}:~/ipyparallel_master_project/results/{template_name}',
+        f'{current_instance_name}:~/ipyparallel_master_project/results/{template_name}/.',
         os.path.abspath(result_dir),
         f'--zone={ZONE}',
         instance_name=current_instance_name,

@@ -42,19 +42,19 @@ def timing_decorator(cls):
 
 @timing_decorator
 class Engines1(OverheadLatencySuite):
-    params = [[1, 10], [0, 0.1, 1]]
+    params = [[1, 10, 100, 1000], [0, 0.1, 1]]
 
 
 @timing_decorator
 class Engines10(OverheadLatencySuite):
-    params = [[10, 100], [0, 0.1, 1]]
+    params = [[1, 10, 100, 1000], [0, 0.1, 1]]
 
 
 @timing_decorator
 class Engines100(OverheadLatencySuite):
-    params = [[100, 1000], [0, 0.1, 1]]
+    params = [[1, 10, 100, 1000], [0, 0.1, 1]]
 
 
 @timing_decorator
 class Engines100NoDelay(OverheadLatencySuite):
-    params = [[100, 1000, 10000, 100000], [0]]
+    params = [[1, 10, 100, 1000, 10000, 100000], [0]]
