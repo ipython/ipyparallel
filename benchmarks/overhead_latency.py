@@ -20,11 +20,13 @@ class OverheadLatencySuite:
     timer = timeit.default_timer
     timeout = 120
 
+    def __init__(self, n):
+        self.n = n
+
     def setup(self, *_):
-        n = self.params[0][0]
         self.client = ipp.Client(profile='asv')
-        wait_for(lambda: len(self.client) >= n)
-        self.lview = self.client.load_balanced_view(targets=slice(n))
+        wait_for(lambda: len(self.client) >= self.n)
+        self.lview = self.client.load_balanced_view(targets=slice(self.n))
 
     def teardown(self, *_):
         if self.client:
@@ -42,19 +44,31 @@ def timing_decorator(cls):
 
 @timing_decorator
 class Engines1(OverheadLatencySuite):
-    params = [[1, 10, 100, 1000], [0, 0.1, 1]]
+    def __init__(self):
+        super().__init__(1)
+
+    params = [[1, 10, 100], [0, 0.1, 1]]
 
 
 @timing_decorator
 class Engines10(OverheadLatencySuite):
-    params = [[1, 10, 100, 1000], [0, 0.1, 1]]
+    def __init__(self):
+        super().__init__(10)
+
+    params = [[1, 10, 100], [0, 0.1, 1]]
 
 
 @timing_decorator
 class Engines100(OverheadLatencySuite):
+    def __init__(self):
+        super().__init__(100)
+
     params = [[1, 10, 100, 1000], [0, 0.1, 1]]
 
 
 @timing_decorator
 class Engines100NoDelay(OverheadLatencySuite):
+    def __init__(self):
+        super().__init__(100)
+
     params = [[1, 10, 100, 1000, 10000, 100000], [0]]
