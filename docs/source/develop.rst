@@ -37,7 +37,7 @@ Test
 
 Test using ``pytest``::
 
-   pytest dask-jobqueue --verbose
+   pytest dask_jobqueue --verbose
 
 Test with Job scheduler
 -----------------------
