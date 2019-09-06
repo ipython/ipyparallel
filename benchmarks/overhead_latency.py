@@ -18,7 +18,7 @@ class OverheadLatencySuite:
     client, lview, params = None, None, [[0]]
     param_names = ["number of tasks", "delay for echo"]
     timer = timeit.default_timer
-    timeout = 120
+    timeout = 200
 
     def __init__(self, n):
         self.n = n
@@ -42,29 +42,28 @@ def timing_decorator(cls):
     return cls
 
 
-#
-# @timing_decorator
-# class Engines1(OverheadLatencySuite):
-#     def __init__(self):
-#         super().__init__(1)
-#
-#     params = [[1, 10, 100], [0, 0.1, 1]]
-#
-#
-# @timing_decorator
-# class Engines10(OverheadLatencySuite):
-#     def __init__(self):
-#         super().__init__(10)
-#
-#     params = [[1, 10, 100], [0, 0.1, 1]]
-#
-#
-# @timing_decorator
-# class Engines100(OverheadLatencySuite):
-#     def __init__(self):
-#         super().__init__(100)
-#
-#     params = [[1, 10, 100, 1000], [0, 0.1, 1]]
+@timing_decorator
+class Engines1(OverheadLatencySuite):
+    def __init__(self):
+        super().__init__(1)
+
+    params = [[1, 10, 100], [0, 0.1, 1]]
+
+
+@timing_decorator
+class Engines10(OverheadLatencySuite):
+    def __init__(self):
+        super().__init__(10)
+
+    params = [[1, 10, 100], [0, 0.1, 1]]
+
+
+@timing_decorator
+class Engines100(OverheadLatencySuite):
+    def __init__(self):
+        super().__init__(100)
+
+    params = [[1, 10, 100, 1000], [0, 0.1, 1]]
 
 
 class Engines100NoDelay(OverheadLatencySuite):
