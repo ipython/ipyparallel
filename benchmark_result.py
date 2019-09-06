@@ -7,12 +7,12 @@ from utils import seconds_to_ms
 
 class BenchMarkResult:
     def __init__(self, benchmark_results_file_name):
-        with open(benchmark_results_file_name, 'r') as results_file:
+        with open(benchmark_results_file_name, "r") as results_file:
             results_data = json.load(results_file)
         self.date = datetime.fromtimestamp(
-            results_data['date'] // 1000
+            results_data["date"] // 1000
         )  # Date is in ms
-        self.machine_config = results_data['params']
+        self.machine_config = results_data["params"]
         self.results_dict = {
             benchmark_name: [
                 Result(
@@ -22,12 +22,12 @@ class BenchMarkResult:
                     number_of_tasks,
                     delay,
                 ) in zip(
-                    result_data['result'],
-                    result_data['stats'],
-                    product(result_data['params'][0], result_data['params'][1]),
+                    result_data["result"],
+                    result_data["stats"],
+                    product(result_data["params"][0], result_data["params"][1]),
                 )
             ]
-            for benchmark_name, result_data in results_data['results'].items()
+            for benchmark_name, result_data in results_data["results"].items()
         }
 
 
