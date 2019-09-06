@@ -6,7 +6,6 @@ import os
 import googleapiclient.discovery as gcd
 from typing import List
 import multiprocessing as mp
-from random import uniform
 from time import sleep
 from logger import get_file_name
 
