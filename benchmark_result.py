@@ -3,11 +3,12 @@ from datetime import datetime
 from itertools import product
 import os
 from utils import seconds_to_ms
+import pickle
 
 RESULTS_DIR = "results"
 
 
-class BenchMarkResult:
+class BenchmarkResult:
     def __init__(self, benchmark_results_file_name):
         with open(benchmark_results_file_name, "r") as results_file:
             results_data = json.load(results_file)
@@ -54,7 +55,7 @@ class Result:
 
 def get_benchmark_results():
     return {
-        dir_content: BenchMarkResult(
+        dir_content: BenchmarkResult(
             os.path.join(os.getcwd(), RESULTS_DIR, dir_content, file_name)
         )
         for dir_content in os.listdir("results")
@@ -68,5 +69,5 @@ def get_benchmark_results():
 
 
 if __name__ == "__main__":
-    results = get_benchmark_results()
-    print()
+    with open("saved_results.pkl", "wb") as saved_results:
+        pickle.dump(get_benchmark_results(), saved_results)
