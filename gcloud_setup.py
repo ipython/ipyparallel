@@ -1,13 +1,14 @@
 # /Users/tomo/anaconda3/envs/master_thesis/bin/python
-import datetime
 import sys
+
+from benchmarks.utils import time_stamp
 from subprocess import check_call
 import os
 import googleapiclient.discovery as gcd
 from typing import List
 import multiprocessing as mp
 from time import sleep
-from logger import get_file_name
+from logger import get_gcloud_log_file_name
 
 CORE_NUMBERS_FOR_TEMPLATES = [16, 32, 64]
 ZONE = "europe-west1-b"
@@ -25,12 +26,6 @@ def generate_template_name(number_of_cores_and_ram):
 def get_running_instance_names() -> List[str]:
     result = compute.instances().list(project=PROJECT_NAME, zone=ZONE).execute()
     return [item["name"] for item in result["items"]] if "items" in result else []
-
-
-def time_stamp() -> str:
-    return (
-        str(datetime.datetime.now()).split(".")[0].replace(" ", "-").replace(":", "-")
-    )
 
 
 def delete_instance(instance_name) -> dict:
@@ -55,8 +50,8 @@ def gcloud_run(*args, instance_name=""):
     print(f'$ {" ".join(cmd)}')
     check_call(
         cmd,
-        stdout=open(get_file_name(instance_name) + ".log", "a+"),
-        stderr=open(f"{get_file_name(instance_name)}_error.out", "a+"),
+        stdout=open(get_gcloud_log_file_name(instance_name) + ".log", "a+"),
+        stderr=open(f"{get_gcloud_log_file_name(instance_name)}_error.out", "a+"),
     )
 
 

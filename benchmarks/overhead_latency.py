@@ -1,17 +1,6 @@
 import timeit
 import ipyparallel as ipp
-from benchmarks.utils import wait_for
-
-
-def echo(delay=0):
-    def inner_echo(x):
-        import time
-
-        if delay:
-            time.sleep(delay)
-        return x
-
-    return inner_echo
+from benchmarks.utils import wait_for, echo
 
 
 class OverheadLatencySuite:

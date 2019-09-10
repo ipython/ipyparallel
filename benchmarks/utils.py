@@ -1,3 +1,5 @@
+import datetime
+
 import time
 from typing import Callable
 
@@ -7,5 +9,22 @@ def wait_for(condition: Callable):
         if condition():
             break
         else:
-            time.sleep(.1)
+            time.sleep(0.1)
     assert condition()
+
+
+def time_stamp() -> str:
+    return (
+        str(datetime.datetime.now()).split(".")[0].replace(" ", "-").replace(":", "-")
+    )
+
+
+def echo(delay=0):
+    def inner_echo(x):
+        import time
+
+        if delay:
+            time.sleep(delay)
+        return x
+
+    return inner_echo

@@ -22,5 +22,5 @@ class ThroughputSuite:
 class NumpyArrayBroadcast(ThroughputSuite):
     params = [[1, 10, 50, 100], [10, 1000, 10_000, 100_000, 1_000_000, 10_000_000]]
 
-    def time_broadcast(self, engines, numBytes):
-        self.client[:engines]["x"] = np.array([0] * numBytes, dtype=np.int8)
+    def time_broadcast(self, engines, num_bytes):
+        self.client[:engines]["x"] = np.array([0] * num_bytes, dtype=np.int8)
