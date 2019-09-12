@@ -1,4 +1,3 @@
-import sys
 import ipyparallel as ipp
 import numpy as np
 from ipyparallel_master_project.benchmarks.utils import echo
@@ -18,7 +17,7 @@ def run_profiling():
     for x in range(1, 5):
         profile_many_empty_tasks(lview, 10 ** x)
     for x in range(1, 7):
-        profile_tasks_with_large_data(client, 10 ** x)
+        profile_tasks_with_large_data(client, 20 ** x)
 
 
 if __name__ == "__main__":

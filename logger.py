@@ -1,6 +1,6 @@
 from datetime import date
 import os
-from benchmarks.utils import time_stamp
+from ipyparallel_master_project.benchmarks.utils import time_stamp
 
 LOGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
 GCLOUD_DIR = os.path.join(LOGS_DIR, 'gcloud_output')

@@ -1,0 +1,3 @@
+check out: work-stealing as a strategy for optimization,
+also watermark to send more task to each engines task queue to hide the latency of
+sending tasks
