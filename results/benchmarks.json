@@ -1,6 +1,6 @@
 {
     "overhead_latency.EchoManyArguments.time_echo_with_many_arguments": {
-        "code": "class EchoManyArguments:\n    def time_echo_with_many_arguments(self, number_of_arguments):\n        self.lview.map(\n            lambda x: echo_many_arguments(*x),\n            [\n                (np.empty(0) for n in range(number_of_arguments))\n                for x in range(self.NUMBER_OF_ENGINES)\n            ]\n        )\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
+        "code": "class EchoManyArguments:\n    def time_echo_with_many_arguments(self, number_of_arguments):\n        self.lview.map(\n            lambda x: echo_many_arguments(*x),\n            [\n                (np.empty(1, dtype=np.int8) for n in range(number_of_arguments))\n                for x in range(self.NUMBER_OF_ENGINES)\n            ]\n        )\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
         "min_run_count": 2,
         "name": "overhead_latency.EchoManyArguments.time_echo_with_many_arguments",
         "number": 0,
@@ -25,11 +25,11 @@
         "timeout": 200,
         "type": "time",
         "unit": "seconds",
-        "version": "0bf31070c086d9c1cb94f5eb73a13cd15e4e13aa992c5aa3beb25035374823d0",
+        "version": "a6c1ace98a616678e60b08aab6a358dc4e42a59e66fb07d8c298efa97b72599c",
         "warmup_time": -1
     },
     "overhead_latency.Engines1.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.lview.map_sync(echo(delay), np.empty(tasks)),\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
+        "code": "class <locals>:\n    lambda self, tasks, delay: self.lview.map_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
         "min_run_count": 2,
         "name": "overhead_latency.Engines1.time_n_tasks",
         "number": 0,
@@ -55,11 +55,11 @@
         "timeout": 200,
         "type": "time",
         "unit": "seconds",
-        "version": "cd3f339b74e5a85c11315fadf7d7c2a7164fc030d2f9f3e56075bc2c34acfd06",
+        "version": "cf35601bc27ca919d0c4726d3b9f61372f3274e2f45798c29dfff4ff3ea01357",
         "warmup_time": -1
     },
     "overhead_latency.Engines10.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.lview.map_sync(echo(delay), np.empty(tasks)),\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
+        "code": "class <locals>:\n    lambda self, tasks, delay: self.lview.map_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
         "min_run_count": 2,
         "name": "overhead_latency.Engines10.time_n_tasks",
         "number": 0,
@@ -85,11 +85,11 @@
         "timeout": 200,
         "type": "time",
         "unit": "seconds",
-        "version": "cd3f339b74e5a85c11315fadf7d7c2a7164fc030d2f9f3e56075bc2c34acfd06",
+        "version": "cf35601bc27ca919d0c4726d3b9f61372f3274e2f45798c29dfff4ff3ea01357",
         "warmup_time": -1
     },
     "overhead_latency.Engines100.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.lview.map_sync(echo(delay), np.empty(tasks)),\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
+        "code": "class <locals>:\n    lambda self, tasks, delay: self.lview.map_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
         "min_run_count": 2,
         "name": "overhead_latency.Engines100.time_n_tasks",
         "number": 0,
@@ -116,11 +116,11 @@
         "timeout": 200,
         "type": "time",
         "unit": "seconds",
-        "version": "cd3f339b74e5a85c11315fadf7d7c2a7164fc030d2f9f3e56075bc2c34acfd06",
+        "version": "cf35601bc27ca919d0c4726d3b9f61372f3274e2f45798c29dfff4ff3ea01357",
         "warmup_time": -1
     },
     "overhead_latency.Engines100NoDelay.time_n_task_non_blocking": {
-        "code": "class Engines100NoDelay:\n    def time_n_task_non_blocking(self, tasks, _):\n        self.lview.map(echo(0), np.empty(tasks), block=False)\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
+        "code": "class Engines100NoDelay:\n    def time_n_task_non_blocking(self, tasks, _):\n        self.lview.map(echo(0), [None] * tasks, block=False)\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
         "min_run_count": 2,
         "name": "overhead_latency.Engines100NoDelay.time_n_task_non_blocking",
         "number": 0,
@@ -146,11 +146,11 @@
         "timeout": 200,
         "type": "time",
         "unit": "seconds",
-        "version": "297b945e29260bdef66ebb305ea692d992037f5def4f29471f9440fe832c2142",
+        "version": "108fcf3b30db77d973aa6ced5c2c10f80b3786d12550b25163fab7e16113c3ba",
         "warmup_time": -1
     },
     "overhead_latency.Engines100NoDelay.time_n_tasks": {
-        "code": "class Engines100NoDelay:\n    def time_n_tasks(self, tasks, _):\n        self.lview.map_sync(echo(0))\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
+        "code": "class Engines100NoDelay:\n    def time_n_tasks(self, tasks, _):\n        self.lview.map_sync(echo(0), [None] * tasks)\n\nclass OverheadLatencySuite:\n    def setup(self, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= self.n)\n        self.lview = self.client.load_balanced_view(targets=slice(self.n))",
         "min_run_count": 2,
         "name": "overhead_latency.Engines100NoDelay.time_n_tasks",
         "number": 0,
@@ -176,7 +176,7 @@
         "timeout": 200,
         "type": "time",
         "unit": "seconds",
-        "version": "dddf0bf37992f8393286f2310a36f8eee85ebcb980343688d55df867cc661841",
+        "version": "dfbe3c521a3c62ef30d24cab40fba1639b535269c99b86a571f497a414b25983",
         "warmup_time": -1
     },
     "throughput.NumpyArrayBroadcast.time_broadcast": {

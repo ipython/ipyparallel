@@ -71,18 +71,17 @@ class Engines100NoDelay(OverheadLatencySuite):
 
 class EchoManyArguments(OverheadLatencySuite):
     NUMBER_OF_ENGINES = 16
-
-    def __init__(self):
-        super().__init__(self.NUMBER_OF_ENGINES)
-
     params = [2, 4, 8, 16, 32, 64, 128, 255]
     param_names = ['Number of arguments']
+
+    def __init__(self):
+        super().__init__(EchoManyArguments.NUMBER_OF_ENGINES)
 
     def time_echo_with_many_arguments(self, number_of_arguments):
         self.lview.map(
             lambda x: echo_many_arguments(*x),
             [
                 (np.empty(1, dtype=np.int8) for n in range(number_of_arguments))
-                for x in range(self.NUMBER_OF_ENGINES)
+                for x in range(self.n)
             ]
         )
