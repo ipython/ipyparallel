@@ -28,3 +28,7 @@ def echo(delay=0):
         return x
 
     return inner_echo
+
+
+def echo_many_arguments(*args):
+    return args

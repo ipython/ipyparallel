@@ -1,6 +1,7 @@
 import timeit
 import ipyparallel as ipp
-from benchmarks.utils import wait_for, echo
+import numpy as np
+from benchmarks.utils import wait_for, echo, echo_many_arguments
 
 
 class OverheadLatencySuite:
@@ -26,7 +27,7 @@ def timing_decorator(cls):
     setattr(
         cls,
         "time_n_tasks",
-        lambda self, tasks, delay: self.lview.map_sync(echo(delay), [None] * tasks),
+        lambda self, tasks, delay: self.lview.map_sync(echo(delay), np.empty(tasks)),
     )
     return cls
 
@@ -62,4 +63,26 @@ class Engines100NoDelay(OverheadLatencySuite):
     params = [[1, 10, 100, 1000, 10000], [0]]
 
     def time_n_tasks(self, tasks, _):
-        self.lview.map_sync(echo(0), [None] * tasks),
+        self.lview.map_sync(echo(0))
+
+    def time_n_task_non_blocking(self, tasks, _):
+        self.lview.map(echo(0), np.empty(tasks), block=False)
+
+
+class EchoManyArguments(OverheadLatencySuite):
+    NUMBER_OF_ENGINES = 16
+
+    def __init__(self):
+        super().__init__(self.NUMBER_OF_ENGINES)
+
+    params = [2, 4, 8, 16, 32, 64, 128, 255]
+    param_names = ['Number of arguments']
+
+    def time_echo_with_many_arguments(self, number_of_arguments):
+        self.lview.map(
+            lambda x: echo_many_arguments(*x),
+            [
+                (np.empty(0) for n in range(number_of_arguments))
+                for x in range(self.NUMBER_OF_ENGINES)
+            ]
+        )
