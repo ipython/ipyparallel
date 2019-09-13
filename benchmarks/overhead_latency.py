@@ -27,7 +27,7 @@ def timing_decorator(cls):
     setattr(
         cls,
         "time_n_tasks",
-        lambda self, tasks, delay: self.lview.map_sync(echo(delay), np.empty(tasks)),
+        lambda self, tasks, delay: self.lview.map_sync(echo(delay), [None] * tasks),
     )
     return cls
 
@@ -63,10 +63,10 @@ class Engines100NoDelay(OverheadLatencySuite):
     params = [[1, 10, 100, 1000, 10000], [0]]
 
     def time_n_tasks(self, tasks, _):
-        self.lview.map_sync(echo(0))
+        self.lview.map_sync(echo(0), [None] * tasks)
 
     def time_n_task_non_blocking(self, tasks, _):
-        self.lview.map(echo(0), np.empty(tasks), block=False)
+        self.lview.map(echo(0), [None] * tasks, block=False)
 
 
 class EchoManyArguments(OverheadLatencySuite):
@@ -82,7 +82,7 @@ class EchoManyArguments(OverheadLatencySuite):
         self.lview.map(
             lambda x: echo_many_arguments(*x),
             [
-                (np.empty(0) for n in range(number_of_arguments))
+                (np.empty(1, dtype=np.int8) for n in range(number_of_arguments))
                 for x in range(self.NUMBER_OF_ENGINES)
             ]
         )
