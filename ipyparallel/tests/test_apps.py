@@ -38,6 +38,11 @@ def bind_kernel(engineapp):
         app.shell_port = app.iopub_port = app.stdin_port = 0
         app._bind_socket = types.MethodType(kernelapp.IPKernelApp._bind_socket,
                                             app)
+        if hasattr(kernelapp.IPKernelApp, '_try_bind_socket'):
+            app._try_bind_socket = types.MethodType(
+                kernelapp.IPKernelApp._try_bind_socket,
+                app,
+            )
         app.transport = 'tcp'
         app.ip = 'localhost'
         app.init_heartbeat.return_value = None
