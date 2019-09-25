@@ -110,4 +110,4 @@ def test_config_name_oar_takes_custom_config():
 
     with dask.config.set({"jobqueue.oar-config-name": conf}):
         with OARCluster(config_name="oar-config-name") as cluster:
-            assert cluster.name == "myname"
+            assert cluster.job_name == "myname"

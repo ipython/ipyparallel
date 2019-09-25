@@ -5,40 +5,12 @@ import shlex
 import dask
 from distributed.utils import parse_bytes
 
-from .core import JobQueueCluster, docstrings
+from .core import JobQueueCluster, Job, job_parameters, cluster_parameters
 
 logger = logging.getLogger(__name__)
 
 
-class HTCondorCluster(JobQueueCluster):
-    __doc__ = docstrings.with_indents(
-        """ Launch Dask on an HTCondor cluster with a shared file system
-
-    Parameters
-    ----------
-    disk : str
-        Total amount of disk per job
-    job_extra : dict
-        Extra submit file attributes for the job
-    %(JobQueueCluster.parameters)s
-
-    Examples
-    --------
-    >>> from dask_jobqueue.htcondor import HTCondorCluster
-    >>> cluster = HTCondorCluster(cores=24, memory="4GB", disk="4GB")
-    >>> cluster.scale(10)
-
-    >>> from dask.distributed import Client
-    >>> client = Client(cluster)
-
-    This also works with adaptive clusters.  This automatically launches and kill workers based on load.
-    HTCondor can take longer to start jobs than other batch systems - tune Adaptive parameters accordingly.
-
-    >>> cluster.adapt(minimum=5, startup_cost='60s')
-    """,
-        4,
-    )
-
+class HTCondorJob(Job):
     _script_template = """
 %(shebang)s
 
@@ -57,7 +29,9 @@ Executable = %(executable)s
     # Python (can't find its libs), so we have to go through the shell.
     executable = "/bin/sh"
 
-    def __init__(self, disk=None, job_extra=None, config_name="htcondor", **kwargs):
+    def __init__(
+        self, *args, disk=None, job_extra=None, config_name="htcondor", **kwargs
+    ):
         if disk is None:
             disk = dask.config.get("jobqueue.%s.disk" % config_name)
         if disk is None:
@@ -71,7 +45,7 @@ Executable = %(executable)s
             self.job_extra = job_extra
 
         # Instantiate args and parameters from parent abstract class
-        super().__init__(config_name=config_name, **kwargs)
+        super().__init__(*args, config_name=config_name, **kwargs)
 
         env_extra = kwargs.get("env_extra", None)
         if env_extra is None:
@@ -220,3 +194,34 @@ def quote_environment(env):
         entries.append("%s=%s" % (k, qv))
 
     return " ".join(entries)
+
+
+class HTCondorCluster(JobQueueCluster):
+    __doc__ = """ Launch Dask on an HTCondor cluster with a shared file system
+
+    Parameters
+    ----------
+    disk : str
+        Total amount of disk per job
+    job_extra : dict
+        Extra submit file attributes for the job
+    {job}
+    {cluster}
+
+    Examples
+    --------
+    >>> from dask_jobqueue.htcondor import HTCondorCluster
+    >>> cluster = HTCondorCluster(cores=24, memory="4GB", disk="4GB")
+    >>> cluster.scale(jobs=10)  # ask for 10 jobs
+
+    >>> from dask.distributed import Client
+    >>> client = Client(cluster)
+
+    This also works with adaptive clusters.  This automatically launches and kill workers based on load.
+
+    >>> cluster.adapt(maximum_jobs=20)
+    """.format(
+        job=job_parameters, cluster=cluster_parameters
+    )
+    job_cls = HTCondorJob
+    config_name = "htcondor"

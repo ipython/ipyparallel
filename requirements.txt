@@ -1,3 +1,2 @@
-dask>=2
-distributed>=2.1
-docrep
+dask>=2.3
+distributed>=2.3

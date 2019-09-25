@@ -23,11 +23,20 @@ object is instantiated:
         walltime='02:00:00',
    )
 
-You then ask for more workers using the ``scale`` command:
+These parameters specify the characteristics of a *single job* or a *single
+compute node*, rather than the characteristics of your computation as a whole.
+It hasn't actually launched any jobs yet.
+For the full computation, you will then ask for a number of jobs using the
+``scale`` command:
 
 .. code-block:: python
 
-   cluster.scale(36)
+   cluster.scale(jobs=2)  # launch 2 jobs, each of which starts 6 worker processes
+   cluster.scale(cores=48)  # Or specify cores or memory directly
+   cluster.scale(memory="200 GB")  # Or specify cores or memory directly
+
+You can either specify the number of jobs, or the total number of cores or
+memory that you want.
 
 The cluster generates a traditional job script and submits that an appropriate
 number of times to the job queue.  You can see the job script that it will

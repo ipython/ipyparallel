@@ -1,1 +1,1 @@
-QUEUE_WAIT = 15  # seconds
+QUEUE_WAIT = 60  # seconds

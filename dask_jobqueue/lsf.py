@@ -4,60 +4,18 @@ import os
 
 import dask
 
-from .core import JobQueueCluster, docstrings
+from .core import Job, JobQueueCluster, job_parameters, cluster_parameters
 
 logger = logging.getLogger(__name__)
 
 
-class LSFCluster(JobQueueCluster):
-    __doc__ = docstrings.with_indents(
-        """ Launch Dask on a LSF cluster
-
-    Parameters
-    ----------
-    queue : str
-        Destination queue for each worker job. Passed to `#BSUB -q` option.
-    project : str
-        Accounting string associated with each worker job. Passed to
-        `#BSUB -P` option.
-    ncpus : int
-        Number of cpus. Passed to `#BSUB -n` option.
-    mem : int
-        Request memory in bytes. Passed to `#BSUB -M` option.
-    walltime : str
-        Walltime for each worker job in HH:MM. Passed to `#BSUB -W` option.
-    job_extra : list
-        List of other LSF options, for example -u. Each option will be
-        prepended with the #LSF prefix.
-    lsf_units : str
-        Unit system for large units in resource usage set by the
-        LSF_UNIT_FOR_LIMITS in the lsf.conf file of a cluster.
-    %(JobQueueCluster.parameters)s
-
-    Examples
-    --------
-    >>> from dask_jobqueue import LSFCluster
-    >>> cluster = LSFcluster(queue='general', project='DaskonLSF',
-    ...                      cores=15, memory='25GB')
-    >>> cluster.scale(10)  # this may take a few seconds to launch
-
-    >>> from dask.distributed import Client
-    >>> client = Client(cluster)
-
-    This also works with adaptive clusters.  This automatically launches and
-    kill workers based on load.
-
-    >>> cluster.adapt()
-    """,
-        4,
-    )
-
-    # Override class variables
-    submit_command = "bsub <"
+class LSFJob(Job):
+    submit_command = "bsub"
     cancel_command = "bkill"
 
     def __init__(
         self,
+        *args,
         queue=None,
         project=None,
         ncpus=None,
@@ -84,12 +42,12 @@ class LSFCluster(JobQueueCluster):
             lsf_units = dask.config.get("jobqueue.%s.lsf-units" % config_name)
 
         # Instantiate args and parameters from parent abstract class
-        super().__init__(config_name=config_name, **kwargs)
+        super().__init__(*args, config_name=config_name, **kwargs)
 
         header_lines = []
         # LSF header build
         if self.name is not None:
-            header_lines.append("#BSUB -J %s" % self.name)
+            header_lines.append("#BSUB -J %s" % self.job_name)
         if self.log_directory is not None:
             header_lines.append(
                 "#BSUB -e %s/%s-%%J.err" % (self.log_directory, self.name or "worker")
@@ -132,10 +90,6 @@ class LSFCluster(JobQueueCluster):
         self.job_header = "\n".join(header_lines)
 
         logger.debug("Job script: \n %s" % self.job_script())
-
-    def _submit_job(self, script_filename):
-        piped_cmd = [self.submit_command + " " + script_filename + " 2> /dev/null"]
-        return self._call(piped_cmd, shell=True)
 
 
 def lsf_format_bytes_ceil(n, lsf_units="mb"):
@@ -196,3 +150,49 @@ def lsf_detect_units():
             "default unit of %s." % unit
         )
     return unit
+
+
+class LSFCluster(JobQueueCluster):
+    __doc__ = """ Launch Dask on a LSF cluster
+
+    Parameters
+    ----------
+    queue : str
+        Destination queue for each worker job. Passed to `#BSUB -q` option.
+    project : str
+        Accounting string associated with each worker job. Passed to
+        `#BSUB -P` option.
+    {job}
+    ncpus : int
+        Number of cpus. Passed to `#BSUB -n` option.
+    mem : int
+        Request memory in bytes. Passed to `#BSUB -M` option.
+    walltime : str
+        Walltime for each worker job in HH:MM. Passed to `#BSUB -W` option.
+    {cluster}
+    job_extra : list
+        List of other LSF options, for example -u. Each option will be
+        prepended with the #LSF prefix.
+    lsf_units : str
+        Unit system for large units in resource usage set by the
+        LSF_UNIT_FOR_LIMITS in the lsf.conf file of a cluster.
+
+    Examples
+    --------
+    >>> from dask_jobqueue import LSFCluster
+    >>> cluster = LSFCluster(queue='general', project='DaskonLSF',
+    ...                      cores=15, memory='25GB')
+    >>> cluster.scale(jobs=10)  # ask for 10 jobs
+
+    >>> from dask.distributed import Client
+    >>> client = Client(cluster)
+
+    This also works with adaptive clusters.  This automatically launches and
+    kill workers based on load.
+
+    >>> cluster.adapt(maximum_jobs=20)
+    """.format(
+        job=job_parameters, cluster=cluster_parameters
+    )
+    job_cls = LSFJob
+    config_name = "lsf"

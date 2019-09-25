@@ -4,59 +4,44 @@ import os
 
 import dask
 
-from .core import JobQueueCluster, docstrings
+from .core import Job, JobQueueCluster, job_parameters, cluster_parameters
 
 logger = logging.getLogger(__name__)
 
 
-class PBSCluster(JobQueueCluster):
-    __doc__ = docstrings.with_indents(
-        """ Launch Dask on a PBS cluster
+def pbs_format_bytes_ceil(n):
+    """ Format bytes as text.
 
-    Parameters
-    ----------
-    queue : str
-        Destination queue for each worker job. Passed to `#PBS -q` option.
-    project : str
-        Accounting string associated with each worker job. Passed to
-        `#PBS -A` option.
-    resource_spec : str
-        Request resources and specify job placement. Passed to `#PBS -l`
-        option.
-    walltime : str
-        Walltime for each worker job.
-    job_extra : list
-        List of other PBS options, for example -j oe. Each option will be prepended with the #PBS prefix.
-    %(JobQueueCluster.parameters)s
+    PBS expects KiB, MiB or Gib, but names it KB, MB, GB whereas Dask makes the difference between KB and KiB.
 
-    Examples
-    --------
-    >>> from dask_jobqueue import PBSCluster
-    >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS', cores=12)
-    >>> cluster.scale(10)  # this may take a few seconds to launch
+    >>> pbs_format_bytes_ceil(1)
+    '1B'
+    >>> pbs_format_bytes_ceil(1234)
+    '1234B'
+    >>> pbs_format_bytes_ceil(12345678)
+    '13MB'
+    >>> pbs_format_bytes_ceil(1234567890)
+    '1177MB'
+    >>> pbs_format_bytes_ceil(15000000000)
+    '14GB'
+    """
+    if n >= 10 * (1024 ** 3):
+        return "%dGB" % math.ceil(n / (1024 ** 3))
+    if n >= 10 * (1024 ** 2):
+        return "%dMB" % math.ceil(n / (1024 ** 2))
+    if n >= 10 * 1024:
+        return "%dkB" % math.ceil(n / 1024)
+    return "%dB" % n
 
-    >>> from dask.distributed import Client
-    >>> client = Client(cluster)
 
-    This also works with adaptive clusters.  This automatically launches and kill workers based on load.
-
-    >>> cluster.adapt()
-
-    It is a good practice to define local_directory to your PBS system scratch directory:
-
-    >>> cluster = PBSCluster(queue='regular', project='DaskOnPBS',
-    ...                      local_directory='$TMPDIR',
-    ...                      cores=24, processes=6, memory='100GB')
-    """,
-        4,
-    )
-
-    # Override class variables
+class PBSJob(Job):
     submit_command = "qsub"
     cancel_command = "qdel"
+    config_name = "pbs"
 
     def __init__(
         self,
+        *args,
         queue=None,
         project=None,
         resource_spec=None,
@@ -79,15 +64,15 @@ class PBSCluster(JobQueueCluster):
             ) or os.environ.get("PBS_ACCOUNT")
 
         # Instantiate args and parameters from parent abstract class
-        super().__init__(config_name=config_name, **kwargs)
+        super().__init__(*args, config_name=config_name, **kwargs)
 
         # Try to find a project name from environment variable
         project = project or os.environ.get("PBS_ACCOUNT")
 
         header_lines = []
         # PBS header build
-        if self.name is not None:
-            header_lines.append("#PBS -N %s" % self.name)
+        if self.job_name is not None:
+            header_lines.append("#PBS -N %s" % self.job_name)
         if queue is not None:
             header_lines.append("#PBS -q %s" % queue)
         if project is not None:
@@ -117,26 +102,39 @@ class PBSCluster(JobQueueCluster):
         logger.debug("Job script: \n %s" % self.job_script())
 
 
-def pbs_format_bytes_ceil(n):
-    """ Format bytes as text.
+class PBSCluster(JobQueueCluster):
+    __doc__ = """ Launch Dask on a PBS cluster
 
-    PBS expects KiB, MiB or Gib, but names it KB, MB, GB whereas Dask makes the difference between KB and KiB.
+    Parameters
+    ----------
+    queue : str
+        Destination queue for each worker job. Passed to `#PBS -q` option.
+    project : str
+        Accounting string associated with each worker job. Passed to `#PBS -A` option.
+    {job}
+    {cluster}
+    resource_spec : str
+        Request resources and specify job placement. Passed to `#PBS -l` option.
+    walltime : str
+        Walltime for each worker job.
+    job_extra : list
+        List of other PBS options. Each option will be prepended with the #PBS prefix.
 
-    >>> pbs_format_bytes_ceil(1)
-    '1B'
-    >>> pbs_format_bytes_ceil(1234)
-    '1234B'
-    >>> pbs_format_bytes_ceil(12345678)
-    '13MB'
-    >>> pbs_format_bytes_ceil(1234567890)
-    '1177MB'
-    >>> pbs_format_bytes_ceil(15000000000)
-    '14GB'
-    """
-    if n >= 10 * (1024 ** 3):
-        return "%dGB" % math.ceil(n / (1024 ** 3))
-    if n >= 10 * (1024 ** 2):
-        return "%dMB" % math.ceil(n / (1024 ** 2))
-    if n >= 10 * 1024:
-        return "%dkB" % math.ceil(n / 1024)
-    return "%dB" % n
+    Examples
+    --------
+    >>> from dask_jobqueue import PBSCluster
+    >>> cluster = PBSCluster(queue='regular', project="myproj", cores=24,
+    ...     memory="500 GB")
+    >>> cluster.scale(jobs=10)  # ask for 10 jobs
+
+    >>> from dask.distributed import Client
+    >>> client = Client(cluster)
+
+    This also works with adaptive clusters.  This automatically launches and kill workers based on load.
+
+    >>> cluster.adapt(maximum_jobs=20)
+    """.format(
+        job=job_parameters, cluster=cluster_parameters
+    )
+    job_cls = PBSJob
+    config_name = "pbs"

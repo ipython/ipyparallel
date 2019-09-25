@@ -2,59 +2,18 @@ import logging
 
 import dask
 
-from .core import JobQueueCluster, docstrings
+from .core import Job, JobQueueCluster, job_parameters, cluster_parameters
 
 logger = logging.getLogger(__name__)
 
 
-class SGECluster(JobQueueCluster):
-    __doc__ = docstrings.with_indents(
-        """ Launch Dask on a SGE cluster
-
-    .. note::
-        If you want a specific amount of RAM, both ``memory`` and ``resource_spec``
-        must be specified. The exact syntax of ``resource_spec`` is defined by your
-        GridEngine system administrator. The amount of ``memory`` requested should
-        match the ``resource_spec``, so that Dask's memory management system can
-        perform accurately.
-
-    Parameters
-    ----------
-    queue : str
-        Destination queue for each worker job. Passed to `#$ -q` option.
-    project : str
-        Accounting string associated with each worker job. Passed to `#$ -A` option.
-    resource_spec : str
-        Request resources and specify job placement. Passed to `#$ -l` option.
-    walltime : str
-        Walltime for each worker job.
-    job_extra : list
-        List of other SGE options, for example -w e. Each option will be
-        prepended with the #$ prefix.
-    %(JobQueueCluster.parameters)s
-
-    Examples
-    --------
-    >>> from dask_jobqueue import SGECluster
-    >>> cluster = SGECluster(queue='regular')
-    >>> cluster.scale(10)  # this may take a few seconds to launch
-
-    >>> from dask.distributed import Client
-    >>> client = Client(cluster)
-
-    This also works with adaptive clusters.  This automatically launches and kill workers based on load.
-
-    >>> cluster.adapt()
-    """,
-        4,
-    )
-
-    # Override class variables
-    submit_command = "qsub -terse"
+class SGEJob(Job):
+    submit_command = "qsub"
     cancel_command = "qdel"
 
     def __init__(
         self,
+        *args,
         queue=None,
         project=None,
         resource_spec=None,
@@ -74,11 +33,11 @@ class SGECluster(JobQueueCluster):
         if job_extra is None:
             job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
 
-        super().__init__(config_name=config_name, **kwargs)
+        super().__init__(*args, config_name=config_name, **kwargs)
 
         header_lines = []
-        if self.name is not None:
-            header_lines.append("#$ -N %(name)s")
+        if self.job_name is not None:
+            header_lines.append("#$ -N %(job-name)s")
         if queue is not None:
             header_lines.append("#$ -q %(queue)s")
         if project is not None:
@@ -95,7 +54,7 @@ class SGECluster(JobQueueCluster):
         header_template = "\n".join(header_lines)
 
         config = {
-            "name": self.name,
+            "job-name": self.job_name,
             "queue": queue,
             "project": project,
             "processes": self.worker_processes,
@@ -106,3 +65,53 @@ class SGECluster(JobQueueCluster):
         self.job_header = header_template % config
 
         logger.debug("Job script: \n %s" % self.job_script())
+
+
+class SGECluster(JobQueueCluster):
+    __doc__ = """ Launch Dask on an SGE cluster
+
+    .. note::
+        If you want a specific amount of RAM, both ``memory`` and ``resource_spec``
+        must be specified. The exact syntax of ``resource_spec`` is defined by your
+        GridEngine system administrator. The amount of ``memory`` requested should
+        match the ``resource_spec``, so that Dask's memory management system can
+        perform accurately.
+
+    Parameters
+    ----------
+    queue : str
+        Destination queue for each worker job. Passed to `#$ -q` option.
+    project : str
+        Accounting string associated with each worker job. Passed to `#$ -A` option.
+    {job}
+    {cluster}
+    resource_spec : str
+        Request resources and specify job placement. Passed to `#$ -l` option.
+    walltime : str
+        Walltime for each worker job.
+    job_extra : list
+        List of other SGE options, for example -w e. Each option will be
+        prepended with the #$ prefix.
+
+    Examples
+    --------
+    >>> from dask_jobqueue import SGECluster
+    >>> cluster = SGECluster(
+    ...     queue='regular',
+    ...     project="myproj",
+    ...     cores=24,
+    ...     memory="500 GB"
+    ... )
+    >>> cluster.scale(jobs=10)  # ask for 10 jobs
+
+    >>> from dask.distributed import Client
+    >>> client = Client(cluster)
+
+    This also works with adaptive clusters.  This automatically launches and kill workers based on load.
+
+    >>> cluster.adapt(maximum_jobs=20)
+    """.format(
+        job=job_parameters, cluster=cluster_parameters
+    )
+    job_cls = SGEJob
+    config_name = "sge"

@@ -25,7 +25,6 @@ def test_header():
         assert "#BSUB -W 00:02" in cluster.job_header
         assert "#BSUB -q" not in cluster.job_header
         assert "#BSUB -P" not in cluster.job_header
-        assert "--name dask-worker--${JOB_ID}--" in cluster.job_script()
 
     with LSFCluster(
         queue="general",
@@ -249,7 +248,7 @@ def test_config_name_lsf_takes_custom_config():
 
     with dask.config.set({"jobqueue.lsf-config-name": conf}):
         with LSFCluster(config_name="lsf-config-name") as cluster:
-            assert cluster.name == "myname"
+            assert cluster.job_name == "myname"
 
 
 def test_informative_errors():

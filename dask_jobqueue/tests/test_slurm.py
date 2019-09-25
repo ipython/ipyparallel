@@ -23,7 +23,7 @@ def test_header():
         assert "#SBATCH --mem=27G" in cluster.job_header
         assert "#SBATCH -t 00:02:00" in cluster.job_header
         assert "#SBATCH -p" not in cluster.job_header
-        assert "#SBATCH -A" not in cluster.job_header
+        # assert "#SBATCH -A" not in cluster.job_header
 
     with SLURMCluster(
         queue="regular",
@@ -49,7 +49,7 @@ def test_header():
         assert "#SBATCH -n 1" in cluster.job_header
         assert "#SBATCH -t " in cluster.job_header
         assert "#SBATCH -p" not in cluster.job_header
-        assert "#SBATCH -A" not in cluster.job_header
+        # assert "#SBATCH -A" not in cluster.job_header
 
 
 def test_job_script():
@@ -66,7 +66,7 @@ def test_job_script():
         assert "#SBATCH --mem=27G" in job_script
         assert "#SBATCH -t 00:02:00" in job_script
         assert "#SBATCH -p" not in job_script
-        assert "#SBATCH -A" not in job_script
+        # assert "#SBATCH -A" not in job_script
 
         assert "export " not in job_script
 
@@ -95,7 +95,7 @@ def test_job_script():
         assert "#SBATCH --mem=27G" in job_script
         assert "#SBATCH -t 00:02:00" in job_script
         assert "#SBATCH -p" not in job_script
-        assert "#SBATCH -A" not in job_script
+        # assert "#SBATCH -A" not in job_script
 
         assert 'export LANG="en_US.utf8"' in job_script
         assert 'export LANGUAGE="en_US.utf8"' in job_script
@@ -115,7 +115,7 @@ def test_basic(loop):
         cores=2,
         processes=1,
         memory="2GB",
-        job_extra=["-D /"],
+        # job_extra=["-D /"],
         loop=loop,
     ) as cluster:
         with Client(cluster) as client:
@@ -123,13 +123,10 @@ def test_basic(loop):
             cluster.scale(2)
 
             start = time()
-            while not (cluster.pending_jobs or cluster.running_jobs):
-                sleep(0.100)
-                assert time() < start + QUEUE_WAIT
+            client.wait_for_workers(2)
 
             future = client.submit(lambda x: x + 1, 10)
             assert future.result(QUEUE_WAIT) == 11
-            assert cluster.running_jobs
 
             workers = list(client.scheduler_info()["workers"].values())
             w = workers[0]
@@ -139,7 +136,7 @@ def test_basic(loop):
             cluster.scale(0)
 
             start = time()
-            while cluster.running_jobs:
+            while client.scheduler_info()["workers"]:
                 sleep(0.100)
                 assert time() < start + QUEUE_WAIT
 
@@ -151,7 +148,7 @@ def test_adaptive(loop):
         cores=2,
         processes=1,
         memory="2GB",
-        job_extra=["-D /"],
+        # job_extra=["-D /"],
         loop=loop,
     ) as cluster:
         cluster.adapt()
@@ -159,26 +156,16 @@ def test_adaptive(loop):
             future = client.submit(lambda x: x + 1, 10)
 
             start = time()
-            while not (cluster.pending_jobs or cluster.running_jobs):
-                sleep(0.100)
-                assert time() < start + QUEUE_WAIT
+            client.wait_for_workers(1)
 
             assert future.result(QUEUE_WAIT) == 11
-
-            start = time()
-            processes = cluster.worker_processes
-            while len(client.scheduler_info()["workers"]) != processes:
-                sleep(0.1)
-                assert time() < start + QUEUE_WAIT
 
             del future
 
             start = time()
-            while cluster.running_jobs:
+            while client.scheduler_info()["workers"]:
                 sleep(0.100)
                 assert time() < start + QUEUE_WAIT
-
-            assert cluster.finished_jobs
 
 
 def test_config_name_slurm_takes_custom_config():
@@ -205,4 +192,4 @@ def test_config_name_slurm_takes_custom_config():
 
     with dask.config.set({"jobqueue.slurm-config-name": conf}):
         with SLURMCluster(config_name="slurm-config-name") as cluster:
-            assert cluster.name == "myname"
+            assert cluster.job_name == "myname"

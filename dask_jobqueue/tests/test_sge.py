@@ -19,13 +19,13 @@ def test_basic(loop):
             cluster.scale(2)
 
             start = time()
-            while not (cluster.pending_jobs or cluster.running_jobs):
+            while not client.scheduler_info()["workers"]:
                 sleep(0.100)
                 assert time() < start + QUEUE_WAIT
 
             future = client.submit(lambda x: x + 1, 10)
             assert future.result(QUEUE_WAIT) == 11
-            assert cluster.running_jobs
+            assert len(client.scheduler_info()["workers"]) > 0
 
             workers = list(client.scheduler_info()["workers"].values())
             w = workers[0]
@@ -35,7 +35,7 @@ def test_basic(loop):
             cluster.scale(0)
 
             start = time()
-            while cluster.running_jobs:
+            while client.scheduler_info()["workers"]:
                 sleep(0.100)
                 assert time() < start + QUEUE_WAIT
 
@@ -65,7 +65,7 @@ def test_config_name_sge_takes_custom_config():
 
     with dask.config.set({"jobqueue.sge-config-name": conf}):
         with SGECluster(config_name="sge-config-name") as cluster:
-            assert cluster.name == "myname"
+            assert cluster.job_name == "myname"
 
 
 def test_job_script(tmpdir):
@@ -107,19 +107,20 @@ def test_complex_cancel_command(loop):
     with SGECluster(
         walltime="00:02:00", cores=1, processes=1, memory="2GB", loop=loop
     ) as cluster:
-        username = "root"
-        cluster.cancel_command = "qdel -u {}".format(username)
+        with Client(cluster) as client:
+            username = "root"
+            cluster.cancel_command = "qdel -u {}".format(username)
 
-        cluster.scale(2)
+            cluster.scale(2)
 
-        start = time()
-        while not cluster.running_jobs:
-            sleep(0.100)
-            assert time() < start + QUEUE_WAIT
+            start = time()
+            while not client.scheduler_info()["workers"]:
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT
 
-        cluster.stop_all_jobs()
+            cluster.scale(0)
 
-        start = time()
-        while cluster.running_jobs:
-            sleep(0.100)
-            assert time() < start + QUEUE_WAIT
+            start = time()
+            while client.scheduler_info()["workers"]:
+                sleep(0.100)
+                assert time() < start + QUEUE_WAIT

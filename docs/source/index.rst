@@ -19,7 +19,7 @@ Example
 
    from dask_jobqueue import PBSCluster
    cluster = PBSCluster()
-   cluster.scale(10)         # Ask for ten workers
+   cluster.scale(jobs=10)    # Deploy ten single-node jobs
 
    from dask.distributed import Client
    client = Client(cluster)  # Connect this local process to remote workers
@@ -45,7 +45,8 @@ save resources when not actively computing.
 
 .. code-block:: python
 
-   cluster.adapt(minimum=6, maximum=90)  # auto-scale between 6 and 90 workers
+   cluster.adapt(minimum_jobs=10, maximum_jobs=100)  # auto-scale between 10 and 100 jobs
+   cluster.adapt(maximum_memory="10 TB")  # or use core/memory limits
 
 More details
 ------------

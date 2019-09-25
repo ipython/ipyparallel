@@ -1,6 +1,25 @@
 Changelog
 =========
 
+0.7.0 / 2019-XX-XX
+------------------
+
+-   Base Dask-Jobqueue on top of the core ``dask.distributed.SpecCluster`` class
+    (:pr:`307`)
+
+    This is nearly complete reimplementation of the dask-jobqueue logic on top
+    of more centralized logic.  This improves standardization and adds new
+    features, but does include the following **breaking changes**:
+
+    -   The ``cluster.stop_all_jobs()`` method has been removed.
+        Please use ``cluster.scale(0)`` instead.
+    -   The attributes ``running_jobs``, ``pending_jobs``, and
+        ``cancelled_jobs`` have been removed.  These have been moved upstream to
+        the ``dask.distributed.SpecCluster`` class instead as ``workers`` and
+        ``worker_spec``, as well as ``.plan``, ``.requested``, and ``.observed``.
+    -   The ``name`` attribute has been moved to ``job_name``.
+
+
 0.6.3 / 2019-08-18
 ------------------
 
