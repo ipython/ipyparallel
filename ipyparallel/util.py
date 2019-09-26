@@ -487,7 +487,7 @@ def become_dask_worker(ip, port, nanny=False, **kwargs):
     else:
         w = Worker(ip, port, **kwargs)
     shell.user_ns['dask_worker'] = shell.user_ns['distributed_worker'] = kernel.distributed_worker = w
-    w.start(0)
+    kernel.io_loop.add_callback(w.start)
 
 
 def stop_distributed_worker():

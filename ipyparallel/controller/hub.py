@@ -14,6 +14,7 @@ import os
 import sys
 import time
 
+from tornado.gen import coroutine
 import zmq
 from zmq.eventloop.zmqstream import ZMQStream
 
@@ -522,6 +523,7 @@ class Hub(SessionFactory):
             self.log.error("Unrecognized monitor topic: %r", switch)
 
     @util.log_errors
+    @coroutine
     def dispatch_query(self, msg):
         """Route registration requests and queries from clients."""
         try:
@@ -556,7 +558,9 @@ class Hub(SessionFactory):
             return
         
         try:
-            handler(idents, msg)
+            f = handler(idents, msg)
+            if f:
+                yield f
         except Exception:
             content = error.wrap_exception()
             self.log.error("Error handling request: %r", msg_type, exc_info=True)
@@ -1456,16 +1460,15 @@ class Hub(SessionFactory):
                                             parent=msg, ident=client_id,
                                             buffers=buffers)
 
+    @coroutine
     def become_dask(self, client_id, msg):
         """Start a dask.distributed Scheduler."""
         if self.distributed_scheduler is None:
             kwargs = msg['content'].get('scheduler_args', {})
             self.log.info("Becoming dask.distributed scheduler: %s", kwargs)
             from distributed import Scheduler
-            port = msg['content'].get('port', 0)
-            kwargs['loop'] = self.loop
             self.distributed_scheduler = scheduler = Scheduler(**kwargs)
-            f = scheduler.start(port)
+            yield scheduler.start()
         content = {
             'status': 'ok',
             'ip': self.distributed_scheduler.ip,
