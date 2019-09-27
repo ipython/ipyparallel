@@ -24,7 +24,7 @@ install:
   - 'pip install --only-binary :all: matplotlib || echo "no matplotlib"'
   - pip freeze
 script:
-  - pytest --maxfail=3 --cov ipyparallel -vsx ipyparallel/tests
+  - pytest --maxfail=3 --cov ipyparallel -vx ipyparallel/tests
 after_success:
   - codecov
 matrix:
