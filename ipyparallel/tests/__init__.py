@@ -20,7 +20,7 @@ from ipyparallel.apps.launcher import (LocalProcessLauncher,
 
 # globals
 launchers = []
-blackhole = open(os.devnull, 'w')
+
 
 # Launcher class
 class TestProcessLauncher(LocalProcessLauncher):
@@ -29,8 +29,8 @@ class TestProcessLauncher(LocalProcessLauncher):
         if self.state == 'before':
             # Store stdout & stderr to show with failing tests.
             # This is defined in IPython.testing.iptest
-            self.process = Popen(self.args,
-                stdout=blackhole, stderr=STDOUT,
+            self.process = Popen(
+                self.args,
                 env=os.environ,
                 cwd=self.work_dir
             )
@@ -61,7 +61,7 @@ def setup():
     
     cp = TestProcessLauncher()
     cp.cmd_and_args = ipcontroller_cmd_argv + \
-                ['--profile=iptest', '--log-level=20', '--ping=250', '--dictdb']
+                ['--profile=iptest', '--log-level=10', '--ping=250', '--dictdb']
     cp.start()
     launchers.append(cp)
     tic = time.time()
@@ -90,7 +90,8 @@ def add_engines(n=1, profile='iptest', total=False):
         ep = TestProcessLauncher()
         ep.cmd_and_args = ipengine_cmd_argv + [
             '--profile=%s' % profile,
-            '--InteractiveShell.colors=nocolor'
+            '--InteractiveShell.colors=nocolor',
+            '--log-level=10',
             ]
         ep.start()
         launchers.append(ep)
@@ -129,5 +130,4 @@ def teardown():
                 p.signal(SIGKILL)
             except:
                 print("couldn't shutdown process: ", p)
-    blackhole.close()
 
