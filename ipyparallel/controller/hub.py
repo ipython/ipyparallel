@@ -14,7 +14,7 @@ import os
 import sys
 import time
 
-from tornado.gen import coroutine
+from tornado.gen import coroutine, maybe_future
 import zmq
 from zmq.eventloop.zmqstream import ZMQStream
 
@@ -565,7 +565,7 @@ class Hub(SessionFactory):
         try:
             f = handler(idents, msg)
             if f:
-                yield f
+                yield gen.maybe_future(f)
         except Exception:
             content = error.wrap_exception()
             self.log.error("Error handling request: %r", msg_type, exc_info=True)
