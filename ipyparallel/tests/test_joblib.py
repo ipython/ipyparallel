@@ -12,7 +12,7 @@ try:
     import joblib
     from joblib import Parallel, delayed
     from ipyparallel.client._joblib import IPythonParallelBackend
-except ImportError:
+except (ImportError, TypeError):
     have_joblib = False
 else:
     have_joblib = True
