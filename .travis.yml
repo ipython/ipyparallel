@@ -15,7 +15,7 @@ cache:
     - $HOME/.cache/pip
 install:
   - pip install --upgrade setuptools pip
-  - pip install --pre --upgrade --upgrade-strategy eager .[test] distributed joblib codecov 'tornado<6'
+  - pip install --pre --upgrade --upgrade-strategy eager .[test] distributed joblib codecov
   - |
     # install pinned tornado
     if [[ ! -z "$TORNADO" ]]; then
@@ -34,5 +34,7 @@ matrix:
   include:
     - python: 3.6
       env: TORNADO="4.5.3"
+    - python: 3.6
+      env: TORNADO="5.1.1"
     - python: 2.7
       env: TORNADO="4.5.3"
