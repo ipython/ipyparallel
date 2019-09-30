@@ -16,7 +16,7 @@ def get_dir(main_dir):
 
 
 def get_profiling_log_file_name():
-    return os.path.join(get_dir(PROFILING_DIR), f'cProfile_{time_stamp()}')
+    return os.path.join(get_dir(PROFILING_DIR), f'profiling_{time_stamp()}')
 
 
 def get_gcloud_log_file_name(instance_name):

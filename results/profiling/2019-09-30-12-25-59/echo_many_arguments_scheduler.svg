@@ -1,0 +1,308 @@
+<?xml version="1.0" standalone="no"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd"><svg version="1.1" width="1200" height="694" onload="init(evt)" viewBox="0 0 1200 694" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><!--Flame graph stack visualization. See https://github.com/brendangregg/FlameGraph for latest version, and http://www.brendangregg.com/flamegraphs.html for examples.--><!--NOTES: --><defs><linearGradient id="background" y1="0" y2="1" x1="0" x2="0"><stop stop-color="#eeeeee" offset="5%"/><stop stop-color="#eeeeb0" offset="95%"/></linearGradient></defs><style type="text/css">
+text { font-family:"Verdana"; font-size:12px; fill:rgb(0,0,0); }
+#title { text-anchor:middle; font-size:17px; }
+#search { opacity:0.1; cursor:pointer; }
+#search:hover, #search.show { opacity:1; }
+#subtitle { text-anchor:middle; font-color:rgb(160,160,160); }
+#unzoom { cursor:pointer; }
+#frames > *:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+.hide { display:none; }
+.parent { opacity:0.5; }
+</style><script type="text/ecmascript"><![CDATA[var nametype = 'Function:';
+var fontsize = 12;
+var fontwidth = 0.59;
+var xpad = 10;
+var inverted = true;
+var searchcolor = 'rgb(230,0,230)';]]><![CDATA["use strict";
+var details, searchbtn, unzoombtn, matchedtxt, svg, searching;
+function init(evt) {
+    details = document.getElementById("details").firstChild;
+    searchbtn = document.getElementById("search");
+    unzoombtn = document.getElementById("unzoom");
+    matchedtxt = document.getElementById("matched");
+    svg = document.getElementsByTagName("svg")[0];
+    searching = 0;
+}
+
+window.addEventListener("click", function(e) {
+	var target = find_group(e.target);
+	if (target) {
+        if (target.nodeName == "a") {
+            if (e.ctrlKey === false) return;
+            e.preventDefault();
+        }
+        if (target.classList.contains("parent")) unzoom();
+        zoom(target);
+    }
+    else if (e.target.id == "unzoom") unzoom();
+    else if (e.target.id == "search") search_prompt();
+}, false)
+
+// mouse-over for info
+// show
+window.addEventListener("mouseover", function(e) {
+	var target = find_group(e.target);
+	if (target) details.nodeValue = nametype + " " + g_to_text(target);
+}, false)
+// clear
+window.addEventListener("mouseout", function(e) {
+	var target = find_group(e.target);
+	if (target) details.nodeValue = ' ';
+}, false)
+// ctrl-F for search
+window.addEventListener("keydown",function (e) {
+    if (e.keyCode === 114 || (e.ctrlKey && e.keyCode === 70)) {
+        e.preventDefault();
+        search_prompt();
+    }
+}, false)
+// functions
+function find_child(node, selector) {
+	var children = node.querySelectorAll(selector);
+	if (children.length) return children[0];
+	return;
+}
+function find_group(node) {
+	var parent = node.parentElement;
+	if (!parent) return;
+	if (parent.id == "frames") return node;
+	return find_group(parent);
+}
+function orig_save(e, attr, val) {
+    if (e.attributes["_orig_" + attr] != undefined) return;
+    if (e.attributes[attr] == undefined) return;
+    if (val == undefined) val = e.attributes[attr].value;
+    e.setAttribute("_orig_" + attr, val);
+}
+function orig_load(e, attr) {
+    if (e.attributes["_orig_"+attr] == undefined) return;
+    e.attributes[attr].value = e.attributes["_orig_" + attr].value;
+    e.removeAttribute("_orig_" + attr);
+}
+function g_to_text(e) {
+    var text = find_child(e, "title").firstChild.nodeValue;
+    return (text)
+}
+function g_to_func(e) {
+    var func = g_to_text(e);
+    // if there's any manipulation we want to do to the function
+    // name before it's searched, do it here before returning.
+    return (func);
+}
+function update_text(e) {
+    var r = find_child(e, "rect");
+    var t = find_child(e, "text");
+    var w = parseFloat(r.attributes.width.value) -3;
+    var txt = find_child(e, "title").textContent.replace(/\\([^(]*\\)\$/,"");
+    t.attributes.x.value = parseFloat(r.attributes.x.value) + 3;
+    // Smaller than this size won't fit anything
+    if (w < 2 * fontsize * fontwidth) {
+        t.textContent = "";
+        return;
+    }
+    t.textContent = txt;
+    // Fit in full text width
+    if (/^ *\$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+        return;
+    for (var x = txt.length - 2; x > 0; x--) {
+        if (t.getSubStringLength(0, x + 2) <= w) {
+            t.textContent = txt.substring(0, x) + "..";
+            return;
+        }
+    }
+    t.textContent = "";
+}
+// zoom
+function zoom_reset(e) {
+    if (e.attributes != undefined) {
+        orig_load(e, "x");
+        orig_load(e, "width");
+    }
+    if (e.childNodes == undefined) return;
+    for(var i = 0, c = e.childNodes; i < c.length; i++) {
+        zoom_reset(c[i]);
+    }
+}
+function zoom_child(e, x, ratio) {
+    if (e.attributes != undefined) {
+        if (e.attributes.x != undefined) {
+            orig_save(e, "x");
+            e.attributes.x.value = (parseFloat(e.attributes.x.value) - x - xpad) * ratio + xpad;
+            if(e.tagName == "text")
+                e.attributes.x.value = find_child(e.parentNode, "rect[x]").attributes.x.value + 3;
+        }
+        if (e.attributes.width != undefined) {
+            orig_save(e, "width");
+            e.attributes.width.value = parseFloat(e.attributes.width.value) * ratio;
+        }
+    }
+    if (e.childNodes == undefined) return;
+    for(var i = 0, c = e.childNodes; i < c.length; i++) {
+        zoom_child(c[i], x - xpad, ratio);
+    }
+}
+function zoom_parent(e) {
+    if (e.attributes) {
+        if (e.attributes.x != undefined) {
+            orig_save(e, "x");
+            e.attributes.x.value = xpad;
+        }
+        if (e.attributes.width != undefined) {
+            orig_save(e, "width");
+            e.attributes.width.value = parseInt(svg.width.baseVal.value) - (xpad*2);
+        }
+    }
+    if (e.childNodes == undefined) return;
+    for(var i = 0, c = e.childNodes; i < c.length; i++) {
+        zoom_parent(c[i]);
+    }
+}
+function zoom(node) {
+    var attr = find_child(node, "rect").attributes;
+    var width = parseFloat(attr.width.value);
+    var xmin = parseFloat(attr.x.value);
+    var xmax = parseFloat(xmin + width);
+    var ymin = parseFloat(attr.y.value);
+    var ratio = (svg.width.baseVal.value - 2 * xpad) / width;
+    // XXX: Workaround for JavaScript float issues (fix me)
+    var fudge = 0.0001;
+    unzoombtn.classList.remove("hide");
+    var el = document.getElementById("frames").children;
+    for (var i = 0; i < el.length; i++) {
+        var e = el[i];
+        var a = find_child(e, "rect").attributes;
+        var ex = parseFloat(a.x.value);
+        var ew = parseFloat(a.width.value);
+        // Is it an ancestor
+        if (!inverted) {
+            var upstack = parseFloat(a.y.value) > ymin;
+        } else {
+            var upstack = parseFloat(a.y.value) < ymin;
+        }
+        if (upstack) {
+            // Direct ancestor
+            if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+                e.classList.add("parent");
+                zoom_parent(e);
+                update_text(e);
+            }
+            // not in current path
+            else
+                e.classList.add("hide");
+        }
+        // Children maybe
+        else {
+            // no common path
+            if (ex < xmin || ex + fudge >= xmax) {
+                e.classList.add("hide");
+            }
+            else {
+                zoom_child(e, xmin, ratio);
+                update_text(e);
+            }
+        }
+    }
+}
+function unzoom() {
+    unzoombtn.classList.add("hide");
+    var el = document.getElementById("frames").children;
+    for(var i = 0; i < el.length; i++) {
+        el[i].classList.remove("parent");
+        el[i].classList.remove("hide");
+        zoom_reset(el[i]);
+        update_text(el[i]);
+    }
+}
+// search
+function reset_search() {
+    var el = document.querySelectorAll("#frames rect");
+    for (var i = 0; i < el.length; i++) {
+        orig_load(el[i], "fill")
+    }
+}
+function search_prompt() {
+    if (!searching) {
+        var term = prompt("Enter a search term (regexp " +
+            "allowed, eg: ^ext4_)", "");
+        if (term != null) {
+            search(term)
+        }
+    } else {
+        reset_search();
+        searching = 0;
+        searchbtn.classList.remove("show");
+        searchbtn.firstChild.nodeValue = "Search"
+        matchedtxt.classList.add("hide");
+        matchedtxt.firstChild.nodeValue = ""
+    }
+}
+function search(term) {
+    var re = new RegExp(term);
+    var el = document.getElementById("frames").children;
+    var matches = new Object();
+    var maxwidth = 0;
+    for (var i = 0; i < el.length; i++) {
+        var e = el[i];
+        var func = g_to_func(e);
+        var rect = find_child(e, "rect");
+        if (func == null || rect == null)
+            continue;
+        // Save max width. Only works as we have a root frame
+        var w = parseFloat(rect.attributes.width.value);
+        if (w > maxwidth)
+            maxwidth = w;
+        if (func.match(re)) {
+            // highlight
+            var x = parseFloat(rect.attributes.x.value);
+            orig_save(rect, "fill");
+            rect.attributes.fill.value = searchcolor;
+            // remember matches
+            if (matches[x] == undefined) {
+                matches[x] = w;
+            } else {
+                if (w > matches[x]) {
+                    // overwrite with parent
+                    matches[x] = w;
+                }
+            }
+            searching = 1;
+        }
+    }
+    if (!searching)
+        return;
+    searchbtn.classList.add("show");
+    searchbtn.firstChild.nodeValue = "Reset Search";
+    // calculate percent matched, excluding vertical overlap
+    var count = 0;
+    var lastx = -1;
+    var lastw = 0;
+    var keys = Array();
+    for (k in matches) {
+        if (matches.hasOwnProperty(k))
+            keys.push(k);
+    }
+    // sort the matched frames by their x location
+    // ascending, then width descending
+    keys.sort(function(a, b){
+        return a - b;
+    });
+    // Step through frames saving only the biggest bottom-up frames
+    // thanks to the sort order. This relies on the tree property
+    // where children are always smaller than their parents.
+    var fudge = 0.0001;	// JavaScript floating point
+    for (var k in keys) {
+        var x = parseFloat(keys[k]);
+        var w = matches[keys[k]];
+        if (x >= lastx + lastw - fudge) {
+            count += w;
+            lastx = x;
+            lastw = w;
+        }
+    }
+    // display matched percent
+    matchedtxt.classList.remove("hide");
+    var pct = 100 * count / maxwidth;
+    if (pct != 100) pct = pct.toFixed(1);
+    matchedtxt.firstChild.nodeValue = "Matched: " + pct + "%";
+}
+]]></script><rect x="0" y="0" width="1200" height="694" fill="url(#background)"/><text id="title" x="600.00" y="24.00">py-spy</text><text id="details" x="10.00" y="677.00"> </text><text id="unzoom" class="hide" x="10.00" y="24.00">Reset Zoom</text><text id="search" x="1090.00" y="24.00">Search</text><text id="matched" x="1090.00" y="677.00"> </text><g id="frames"><g><title>&lt;lambda&gt; (jupyter_client/session.py) (1 samples, 6.67%)</title><rect x="246" y="500" width="78" height="15" fill="rgb(214,109,43)"/><text x="249.00" y="510.50">&lt;lambda&gt; ..</text></g><g><title>loads (zmq/utils/jsonapi.py) (1 samples, 6.67%)</title><rect x="246" y="516" width="78" height="15" fill="rgb(239,116,31)"/><text x="249.00" y="526.50">loads (zm..</text></g><g><title>__get__ (traitlets/traitlets.py) (1 samples, 6.67%)</title><rect x="324" y="500" width="79" height="15" fill="rgb(209,224,4)"/><text x="327.00" y="510.50">__get__ (..</text></g><g><title>get (traitlets/traitlets.py) (1 samples, 6.67%)</title><rect x="324" y="516" width="79" height="15" fill="rgb(214,56,34)"/><text x="327.00" y="526.50">get (trai..</text></g><g><title>deserialize (jupyter_client/session.py) (3 samples, 20.00%)</title><rect x="246" y="484" width="236" height="15" fill="rgb(213,56,40)"/><text x="249.00" y="494.50">deserialize (jupyter_client/ses..</text></g><g><title>extract_dates (jupyter_client/jsonutil.py) (1 samples, 6.67%)</title><rect x="403" y="500" width="79" height="15" fill="rgb(221,85,18)"/><text x="406.00" y="510.50">extract_d..</text></g><g><title>extract_dates (jupyter_client/jsonutil.py) (1 samples, 6.67%)</title><rect x="403" y="516" width="79" height="15" fill="rgb(225,185,33)"/><text x="406.00" y="526.50">extract_d..</text></g><g><title>parse_date (jupyter_client/jsonutil.py) (1 samples, 6.67%)</title><rect x="403" y="532" width="79" height="15" fill="rgb(217,107,53)"/><text x="406.00" y="542.50">parse_dat..</text></g><g><title>available_engines (ipyparallel/controller/scheduler.py) (1 samples, 6.67%)</title><rect x="482" y="516" width="78" height="15" fill="rgb(243,54,13)"/><text x="485.00" y="526.50">available..</text></g><g><title>dispatch_result (decorator.py:decorator-gen-153&gt;) (5 samples, 33.33%)</title><rect x="246" y="436" width="393" height="15" fill="rgb(230,182,16)"/><text x="249.00" y="446.50">dispatch_result (decorator.py:decorator-gen-153&gt;)</text></g><g><title>log_errors (ipyparallel/util.py) (5 samples, 33.33%)</title><rect x="246" y="452" width="393" height="15" fill="rgb(212,190,33)"/><text x="249.00" y="462.50">log_errors (ipyparallel/util.py)</text></g><g><title>dispatch_result (ipyparallel/controller/scheduler.py) (5 samples, 33.33%)</title><rect x="246" y="468" width="393" height="15" fill="rgb(220,100,41)"/><text x="249.00" y="478.50">dispatch_result (ipyparallel/controller/scheduler.py)</text></g><g><title>handle_result (ipyparallel/controller/scheduler.py) (2 samples, 13.33%)</title><rect x="482" y="484" width="157" height="15" fill="rgb(238,178,11)"/><text x="485.00" y="494.50">handle_result (ipypa..</text></g><g><title>update_graph (ipyparallel/controller/scheduler.py) (2 samples, 13.33%)</title><rect x="482" y="500" width="157" height="15" fill="rgb(252,141,50)"/><text x="485.00" y="510.50">update_graph (ipypar..</text></g><g><title>maybe_run (ipyparallel/controller/scheduler.py) (1 samples, 6.67%)</title><rect x="560" y="516" width="79" height="15" fill="rgb(206,225,6)"/><text x="563.00" y="526.50">maybe_run..</text></g><g><title>submit_task (ipyparallel/controller/scheduler.py) (1 samples, 6.67%)</title><rect x="560" y="532" width="79" height="15" fill="rgb(227,156,48)"/><text x="563.00" y="542.50">submit_ta..</text></g><g><title>send (jupyter_client/session.py) (1 samples, 6.67%)</title><rect x="560" y="548" width="79" height="15" fill="rgb(239,137,7)"/><text x="563.00" y="558.50">send (jup..</text></g><g><title>serialize (jupyter_client/session.py) (1 samples, 6.67%)</title><rect x="560" y="564" width="79" height="15" fill="rgb(245,148,48)"/><text x="563.00" y="574.50">serialize..</text></g><g><title>&lt;lambda&gt; (jupyter_client/session.py) (1 samples, 6.67%)</title><rect x="560" y="580" width="79" height="15" fill="rgb(212,89,19)"/><text x="563.00" y="590.50">&lt;lambda&gt; ..</text></g><g><title>dumps (zmq/utils/jsonapi.py) (1 samples, 6.67%)</title><rect x="560" y="596" width="79" height="15" fill="rgb(214,172,21)"/><text x="563.00" y="606.50">dumps (zm..</text></g><g><title>dumps (simplejson/__init__.py) (1 samples, 6.67%)</title><rect x="560" y="612" width="79" height="15" fill="rgb(251,203,26)"/><text x="563.00" y="622.50">dumps (si..</text></g><g><title>encode (simplejson/encoder.py) (1 samples, 6.67%)</title><rect x="560" y="628" width="79" height="15" fill="rgb(222,155,28)"/><text x="563.00" y="638.50">encode (s..</text></g><g><title>iterencode (simplejson/encoder.py) (1 samples, 6.67%)</title><rect x="560" y="644" width="79" height="15" fill="rgb(242,223,21)"/><text x="563.00" y="654.50">iterencod..</text></g><g><title>deserialize (jupyter_client/session.py) (1 samples, 6.67%)</title><rect x="639" y="484" width="79" height="15" fill="rgb(247,91,41)"/><text x="642.00" y="494.50">deseriali..</text></g><g><title>extract_dates (jupyter_client/jsonutil.py) (1 samples, 6.67%)</title><rect x="639" y="500" width="79" height="15" fill="rgb(214,114,20)"/><text x="642.00" y="510.50">extract_d..</text></g><g><title>extract_dates (jupyter_client/jsonutil.py) (1 samples, 6.67%)</title><rect x="639" y="516" width="79" height="15" fill="rgb(206,162,45)"/><text x="642.00" y="526.50">extract_d..</text></g><g><title>parse_date (jupyter_client/jsonutil.py) (1 samples, 6.67%)</title><rect x="639" y="532" width="79" height="15" fill="rgb(224,132,21)"/><text x="642.00" y="542.50">parse_dat..</text></g><g><title>parse (dateutil/parser/_parser.py) (1 samples, 6.67%)</title><rect x="639" y="548" width="79" height="15" fill="rgb(221,2,21)"/><text x="642.00" y="558.50">parse (da..</text></g><g><title>parse (dateutil/parser/_parser.py) (1 samples, 6.67%)</title><rect x="639" y="564" width="79" height="15" fill="rgb(207,123,14)"/><text x="642.00" y="574.50">parse (da..</text></g><g><title>_parse (dateutil/parser/_parser.py) (1 samples, 6.67%)</title><rect x="639" y="580" width="79" height="15" fill="rgb(229,148,17)"/><text x="642.00" y="590.50">_parse (d..</text></g><g><title>split (dateutil/parser/_parser.py) (1 samples, 6.67%)</title><rect x="639" y="596" width="79" height="15" fill="rgb(240,142,13)"/><text x="642.00" y="606.50">split (da..</text></g><g><title>__next__ (dateutil/parser/_parser.py) (1 samples, 6.67%)</title><rect x="639" y="612" width="79" height="15" fill="rgb(247,98,50)"/><text x="642.00" y="622.50">__next__ ..</text></g><g><title>get_token (dateutil/parser/_parser.py) (1 samples, 6.67%)</title><rect x="639" y="628" width="79" height="15" fill="rgb(232,69,34)"/><text x="642.00" y="638.50">get_token..</text></g><g><title>isnum (dateutil/parser/_parser.py) (1 samples, 6.67%)</title><rect x="639" y="644" width="79" height="15" fill="rgb(230,123,4)"/><text x="642.00" y="654.50">isnum (da..</text></g><g><title>_run_callback (zmq/eventloop/zmqstream.py) (7 samples, 46.67%)</title><rect x="246" y="420" width="550" height="15" fill="rgb(231,29,46)"/><text x="249.00" y="430.50">_run_callback (zmq/eventloop/zmqstream.py)</text></g><g><title>dispatch_submission (decorator.py:decorator-gen-152&gt;) (2 samples, 13.33%)</title><rect x="639" y="436" width="157" height="15" fill="rgb(210,30,9)"/><text x="642.00" y="446.50">dispatch_submission ..</text></g><g><title>log_errors (ipyparallel/util.py) (2 samples, 13.33%)</title><rect x="639" y="452" width="157" height="15" fill="rgb(212,221,32)"/><text x="642.00" y="462.50">log_errors (ipyparal..</text></g><g><title>dispatch_submission (ipyparallel/controller/scheduler.py) (2 samples, 13.33%)</title><rect x="639" y="468" width="157" height="15" fill="rgb(231,23,30)"/><text x="642.00" y="478.50">dispatch_submission ..</text></g><g><title>send_multipart (zmq/eventloop/zmqstream.py) (1 samples, 6.67%)</title><rect x="718" y="484" width="78" height="15" fill="rgb(233,138,32)"/><text x="721.00" y="494.50">send_mult..</text></g><g><title>_handle_recv (zmq/eventloop/zmqstream.py) (11 samples, 73.33%)</title><rect x="246" y="404" width="865" height="15" fill="rgb(247,9,20)"/><text x="249.00" y="414.50">_handle_recv (zmq/eventloop/zmqstream.py)</text></g><g><title>recv_multipart (zmq/sugar/socket.py) (4 samples, 26.67%)</title><rect x="796" y="420" width="315" height="15" fill="rgb(210,201,15)"/><text x="799.00" y="430.50">recv_multipart (zmq/sugar/socket.py)</text></g><g><title>all (15 samples, 100%)</title><rect x="10" y="36" width="1180" height="15" fill="rgb(240,135,15)"/><text x="13.00" y="46.50"></text></g><g><title>_run_module_as_main (runpy.py) (15 samples, 100.00%)</title><rect x="10" y="52" width="1180" height="15" fill="rgb(247,27,0)"/><text x="13.00" y="62.50">_run_module_as_main (runpy.py)</text></g><g><title>_run_code (runpy.py) (15 samples, 100.00%)</title><rect x="10" y="68" width="1180" height="15" fill="rgb(214,179,13)"/><text x="13.00" y="78.50">_run_code (runpy.py)</text></g><g><title>&lt;module&gt; (ipyparallel/controller/__main__.py) (15 samples, 100.00%)</title><rect x="10" y="84" width="1180" height="15" fill="rgb(207,145,2)"/><text x="13.00" y="94.50">&lt;module&gt; (ipyparallel/controller/__main__.py)</text></g><g><title>main (ipyparallel/controller/__main__.py) (15 samples, 100.00%)</title><rect x="10" y="100" width="1180" height="15" fill="rgb(253,180,2)"/><text x="13.00" y="110.50">main (ipyparallel/controller/__main__.py)</text></g><g><title>launch_new_instance (ipyparallel/apps/ipcontrollerapp.py) (15 samples, 100.00%)</title><rect x="10" y="116" width="1180" height="15" fill="rgb(206,207,24)"/><text x="13.00" y="126.50">launch_new_instance (ipyparallel/apps/ipcontrollerapp.py)</text></g><g><title>launch_instance (traitlets/config/application.py) (15 samples, 100.00%)</title><rect x="10" y="132" width="1180" height="15" fill="rgb(222,98,39)"/><text x="13.00" y="142.50">launch_instance (traitlets/config/application.py)</text></g><g><title>start (ipyparallel/apps/ipcontrollerapp.py) (15 samples, 100.00%)</title><rect x="10" y="148" width="1180" height="15" fill="rgb(217,190,36)"/><text x="13.00" y="158.50">start (ipyparallel/apps/ipcontrollerapp.py)</text></g><g><title>start (multiprocessing/process.py) (15 samples, 100.00%)</title><rect x="10" y="164" width="1180" height="15" fill="rgb(224,69,49)"/><text x="13.00" y="174.50">start (multiprocessing/process.py)</text></g><g><title>_Popen (multiprocessing/context.py) (15 samples, 100.00%)</title><rect x="10" y="180" width="1180" height="15" fill="rgb(250,54,31)"/><text x="13.00" y="190.50">_Popen (multiprocessing/context.py)</text></g><g><title>_Popen (multiprocessing/context.py) (15 samples, 100.00%)</title><rect x="10" y="196" width="1180" height="15" fill="rgb(210,179,5)"/><text x="13.00" y="206.50">_Popen (multiprocessing/context.py)</text></g><g><title>__init__ (multiprocessing/popen_fork.py) (15 samples, 100.00%)</title><rect x="10" y="212" width="1180" height="15" fill="rgb(207,3,9)"/><text x="13.00" y="222.50">__init__ (multiprocessing/popen_fork.py)</text></g><g><title>_launch (multiprocessing/popen_fork.py) (15 samples, 100.00%)</title><rect x="10" y="228" width="1180" height="15" fill="rgb(248,123,23)"/><text x="13.00" y="238.50">_launch (multiprocessing/popen_fork.py)</text></g><g><title>_bootstrap (multiprocessing/process.py) (15 samples, 100.00%)</title><rect x="10" y="244" width="1180" height="15" fill="rgb(223,10,17)"/><text x="13.00" y="254.50">_bootstrap (multiprocessing/process.py)</text></g><g><title>run (multiprocessing/process.py) (15 samples, 100.00%)</title><rect x="10" y="260" width="1180" height="15" fill="rgb(254,214,0)"/><text x="13.00" y="270.50">run (multiprocessing/process.py)</text></g><g><title>launch_scheduler (ipyparallel/controller/scheduler.py) (15 samples, 100.00%)</title><rect x="10" y="276" width="1180" height="15" fill="rgb(243,31,5)"/><text x="13.00" y="286.50">launch_scheduler (ipyparallel/controller/scheduler.py)</text></g><g><title>start (tornado/platform/asyncio.py) (15 samples, 100.00%)</title><rect x="10" y="292" width="1180" height="15" fill="rgb(228,107,47)"/><text x="13.00" y="302.50">start (tornado/platform/asyncio.py)</text></g><g><title>run_forever (asyncio/base_events.py) (15 samples, 100.00%)</title><rect x="10" y="308" width="1180" height="15" fill="rgb(243,10,9)"/><text x="13.00" y="318.50">run_forever (asyncio/base_events.py)</text></g><g><title>_run_once (asyncio/base_events.py) (15 samples, 100.00%)</title><rect x="10" y="324" width="1180" height="15" fill="rgb(210,135,53)"/><text x="13.00" y="334.50">_run_once (asyncio/base_events.py)</text></g><g><title>_run (asyncio/events.py) (15 samples, 100.00%)</title><rect x="10" y="340" width="1180" height="15" fill="rgb(250,70,16)"/><text x="13.00" y="350.50">_run (asyncio/events.py)</text></g><g><title>_run_callback (tornado/ioloop.py) (15 samples, 100.00%)</title><rect x="10" y="356" width="1180" height="15" fill="rgb(247,100,19)"/><text x="13.00" y="366.50">_run_callback (tornado/ioloop.py)</text></g><g><title>&lt;lambda&gt; (zmq/eventloop/zmqstream.py) (15 samples, 100.00%)</title><rect x="10" y="372" width="1180" height="15" fill="rgb(247,134,1)"/><text x="13.00" y="382.50">&lt;lambda&gt; (zmq/eventloop/zmqstream.py)</text></g><g><title>_handle_events (zmq/eventloop/zmqstream.py) (15 samples, 100.00%)</title><rect x="10" y="388" width="1180" height="15" fill="rgb(227,140,10)"/><text x="13.00" y="398.50">_handle_events (zmq/eventloop/zmqstream.py)</text></g><g><title>_rebuild_io_state (zmq/eventloop/zmqstream.py) (1 samples, 6.67%)</title><rect x="1111" y="404" width="79" height="15" fill="rgb(209,124,35)"/><text x="1114.00" y="414.50">_rebuild_..</text></g><g><title>_update_handler (zmq/eventloop/zmqstream.py) (1 samples, 6.67%)</title><rect x="1111" y="420" width="79" height="15" fill="rgb(206,115,1)"/><text x="1114.00" y="430.50">_update_h..</text></g><g><title>add_callback (tornado/platform/asyncio.py) (1 samples, 6.67%)</title><rect x="1111" y="436" width="79" height="15" fill="rgb(254,126,13)"/><text x="1114.00" y="446.50">add_callb..</text></g><g><title>call_soon (asyncio/base_events.py) (1 samples, 6.67%)</title><rect x="1111" y="452" width="79" height="15" fill="rgb(235,112,35)"/><text x="1114.00" y="462.50">call_soon..</text></g><g><title>_call_soon (asyncio/base_events.py) (1 samples, 6.67%)</title><rect x="1111" y="468" width="79" height="15" fill="rgb(218,145,32)"/><text x="1114.00" y="478.50">_call_soo..</text></g></g></svg>
