@@ -306,3 +306,9 @@ def test_lsf_unit_detection(lsf_units_string, expected_unit):
 
 def test_lsf_unit_detection_without_file():
     lsf_unit_detection_helper("kb", conf_text=None)
+
+
+@pytest.mark.parametrize("stdin", [True, False])
+def test_stdin(stdin):
+    with dask.config.set({"jobqueue.lsf.use-stdin": stdin}):
+        assert lsf.use_stdin() is stdin

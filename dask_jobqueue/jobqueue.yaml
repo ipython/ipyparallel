@@ -140,6 +140,7 @@ jobqueue:
     job-extra: []
     log-directory: null
     lsf-units: null
+    use-stdin: null
 
   htcondor:
     name: dask-worker
