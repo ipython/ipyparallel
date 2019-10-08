@@ -490,6 +490,20 @@ class JobQueueCluster(SpecCluster):
         return self._dummy_job.job_name
 
     def scale(self, n=None, jobs=0, memory=None, cores=None):
+        """ Scale cluster to specified configurations.
+
+        Parameters
+        ----------
+        n : int
+           Target number of workers
+        jobs : int
+           Target number of jobs
+        memory : str
+           Target amount of memory
+        cores : int
+           Target number of cores
+
+        """
         if n is not None:
             jobs = int(math.ceil(n / self._dummy_job.worker_processes))
 
@@ -498,6 +512,30 @@ class JobQueueCluster(SpecCluster):
     def adapt(
         self, *args, minimum_jobs: int = None, maximum_jobs: int = None, **kwargs
     ):
+        """ Scale Dask cluster automatically based on scheduler activity.
+
+        Parameters
+        ----------
+        minimum : int
+           Minimum number of workers to keep around for the cluster
+        maximum : int
+           Maximum number of workers to keep around for the cluster
+        minimum_memory : str
+           Minimum amount of memory for the cluster
+        maximum_memory : str
+           Maximum amount of memory for the cluster
+        minimum_jobs : int
+           Minimum number of jobs
+        maximum_jobs : int
+           Maximum number of jobs
+        **kwargs :
+           Extra parameters to pass to dask.distributed.Adaptive
+
+        See Also
+        --------
+        dask.distributed.Adaptive : for more keyword arguments
+        """
+
         if minimum_jobs is not None:
             kwargs["minimum"] = minimum_jobs * self._dummy_job.worker_processes
         if maximum_jobs is not None:
