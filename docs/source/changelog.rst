@@ -1,7 +1,7 @@
 Changelog
 =========
 
-0.7.0 / 2019-XX-XX
+0.7.0 / 2019-10-09
 ------------------
 
 -   Base Dask-Jobqueue on top of the core ``dask.distributed.SpecCluster`` class
@@ -18,6 +18,10 @@ Changelog
         the ``dask.distributed.SpecCluster`` class instead as ``workers`` and
         ``worker_spec``, as well as ``.plan``, ``.requested``, and ``.observed``.
     -   The ``name`` attribute has been moved to ``job_name``.
+-   Update `.scale()` and `.adapt()` docstrings (:pr:`346`)
+-   Update interactive docs (:pr:`340`)
+-   Improve error message when cores or memory is not specified (:pr:`331`)
+-   Fix Python 3.5.0 support in setup.py (:pr:`317`)
 
 
 0.6.3 / 2019-08-18
