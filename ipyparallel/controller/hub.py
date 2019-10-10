@@ -565,7 +565,7 @@ class Hub(SessionFactory):
         try:
             f = handler(idents, msg)
             if f:
-                yield gen.maybe_future(f)
+                yield maybe_future(f)
         except Exception:
             content = error.wrap_exception()
             self.log.error("Error handling request: %r", msg_type, exc_info=True)
