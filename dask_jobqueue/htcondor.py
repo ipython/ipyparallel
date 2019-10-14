@@ -19,9 +19,11 @@ class HTCondorJob(Job):
 Environment = "%(quoted_environment)s"
 Arguments = "%(quoted_arguments)s"
 Executable = %(executable)s
+
+Queue
 """.lstrip()
 
-    submit_command = "condor_submit -queue 1 -file"
+    submit_command = "condor_submit"
     cancel_command = "condor_rm"
     job_id_regexp = r"(?P<job_id>\d+\.\d+)"
 
