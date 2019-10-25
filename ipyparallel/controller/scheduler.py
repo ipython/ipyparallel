@@ -36,6 +36,9 @@ from ipyparallel.util import connect_logger, local_logger, ioloop
 
 from .dependency import Dependency
 
+import jupyter_client.session
+jupyter_client.session.extract_dates = lambda obj: obj
+
 @decorator
 def logged(f,self,*args,**kwargs):
     # print ("#--------------------")
@@ -615,7 +618,7 @@ help="""select the task scheduler scheme  [default: Python LRU]
     # Result Handling
     #-----------------------------------------------------------------------
     
-    
+
     @util.log_errors
     def dispatch_result(self, raw_msg):
         """dispatch method for result replies"""

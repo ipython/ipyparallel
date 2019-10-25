@@ -55,7 +55,8 @@ from ..util import ioloop
 from .asyncresult import AsyncResult, AsyncHubResult
 from .futures import MessageFuture, multi_future
 from .view import DirectView, LoadBalancedView
-
+import jupyter_client.session
+jupyter_client.session.extract_dates = lambda obj: obj
 #--------------------------------------------------------------------------
 # Decorators for Client methods
 #--------------------------------------------------------------------------

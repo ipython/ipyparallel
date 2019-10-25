@@ -14,6 +14,7 @@ import os
 import sys
 import time
 
+from jupyter_client.jsonutil import parse_date
 from tornado.gen import coroutine, maybe_future
 import zmq
 from zmq.eventloop.zmqstream import ZMQStream
@@ -28,6 +29,7 @@ from traitlets import (
     DottedObjectName, observe
 )
 
+from datetime import datetime
 from ipyparallel import error, util
 from ipyparallel.factory import RegistrationFactory
 
@@ -70,9 +72,15 @@ def empty_record():
         'stderr': '',
     }
 
+def ensure_date_is_parsed(header):
+    if not isinstance(header['date'], datetime):
+        header['date'] = parse_date(header['date'])
+
 def init_record(msg):
     """Initialize a TaskRecord based on a request."""
     header = msg['header']
+
+    ensure_date_is_parsed(header)
     return {
         'msg_id' : header['msg_id'],
         'header' : header,
@@ -686,6 +694,7 @@ class Hub(SessionFactory):
         # update record anyway, because the unregistration could have been premature
         rheader = msg['header']
         md = msg['metadata']
+        ensure_date_is_parsed(rheader)
         completed = util.ensure_timezone(rheader['date'])
         started = extract_dates(md.get('started', None))
         result = {
@@ -792,6 +801,7 @@ class Hub(SessionFactory):
                     self.completed[eid].append(msg_id)
                 if msg_id in self.tasks[eid]:
                     self.tasks[eid].remove(msg_id)
+            ensure_date_is_parsed(header)
             completed = util.ensure_timezone(header['date'])
             started = extract_dates(md.get('started', None))
             result = {
