@@ -8,8 +8,28 @@ ALL_RESULTS_DIRECTORY = os.path.join(master_project_path, 'results', 'profiling'
 
 def get_latest_results_dir():
     return os.path.join(
-        ALL_RESULTS_DIRECTORY,
-        max(dirname for dirname in os.listdir(ALL_RESULTS_DIRECTORY)),
+        'results',
+        'profiling',
+        max(
+            dirname
+            for dirname in os.listdir(ALL_RESULTS_DIRECTORY)
+            if 'initial_results' not in dirname
+        ),
+    )
+
+
+def get_initial_results_dir():
+    return os.path.join(
+        'results',
+        'profiling',
+        next(
+            (
+                dirname
+                for dirname in os.listdir(ALL_RESULTS_DIRECTORY)
+                if 'initial_results' in dirname
+            ),
+            max(dirname for dirname in os.listdir(ALL_RESULTS_DIRECTORY)),
+        ),
     )
 
 

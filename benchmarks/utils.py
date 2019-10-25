@@ -5,12 +5,13 @@ from typing import Callable
 
 
 def wait_for(condition: Callable):
-    for _ in range(450):
+    for _ in range(750):
         if condition():
             break
         else:
             time.sleep(0.1)
-    assert condition()
+    if not condition():
+        raise TimeoutError('wait_for took to long to finish')
 
 
 def time_stamp() -> str:
