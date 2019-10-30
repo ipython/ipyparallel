@@ -140,7 +140,7 @@ jobqueue:
     job-extra: []
     log-directory: null
     lsf-units: null
-    use-stdin: null
+    use-stdin: null             # (bool) How jobs are launched, i.e. 'bsub jobscript.sh' or 'bsub < jobscript.sh'
 
   htcondor:
     name: dask-worker

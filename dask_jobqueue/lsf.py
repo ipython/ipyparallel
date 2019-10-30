@@ -29,6 +29,7 @@ class LSFJob(Job):
         job_extra=None,
         lsf_units=None,
         config_name="lsf",
+        use_stdin=None,
         **kwargs
     ):
         if queue is None:
@@ -45,6 +46,12 @@ class LSFJob(Job):
             job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
         if lsf_units is None:
             lsf_units = dask.config.get("jobqueue.%s.lsf-units" % config_name)
+
+        if use_stdin is None:
+            use_stdin = dask.config.get("jobqueue.%s.use-stdin" % config_name)
+        if use_stdin is None:
+            use_stdin = lsf_version() < "10"
+        self.use_stdin = use_stdin
 
         # Instantiate args and parameters from parent abstract class
         super().__init__(*args, config_name=config_name, **kwargs)
@@ -97,7 +104,7 @@ class LSFJob(Job):
         logger.debug("Job script: \n %s" % self.job_script())
 
     async def _submit_job(self, script_filename):
-        if use_stdin():
+        if self.use_stdin:
             piped_cmd = [self.submit_command + "< " + script_filename + " 2> /dev/null"]
             return self._call(piped_cmd, shell=True)
         else:
@@ -189,12 +196,29 @@ class LSFCluster(JobQueueCluster):
     lsf_units : str
         Unit system for large units in resource usage set by the
         LSF_UNIT_FOR_LIMITS in the lsf.conf file of a cluster.
+    use_stdin : bool
+        LSF's ``bsub`` command allows us to launch a job by passing it as an
+        argument (``bsub /tmp/jobscript.sh``) or feeding it to stdin
+        (``bsub < /tmp/jobscript.sh``).  Depending on your cluster's configuration
+        and/or shared filesystem setup, one of those methods may not work,
+        forcing you to use the other one.  This option controls which method
+        ``dask-jobqueue`` will use to submit jobs via ``bsub``.
+
+        In particular, if your cluster fails to launch and the LSF log contains
+        an error message similar to the following:
+
+        .. code-block::
+
+            /home/someuser/.lsbatch/1571869562.66512066: line 8: /tmp/tmpva_yau8m.sh: No such file or directory
+
+        ...then try passing ``use_stdin=True`` here or setting ``use-stdin: true``
+        in your ``jobqueue.lsf`` config section.
 
     Examples
     --------
     >>> from dask_jobqueue import LSFCluster
     >>> cluster = LSFCluster(queue='general', project='DaskonLSF',
-    ...                      cores=15, memory='25GB')
+    ...                      cores=15, memory='25GB', use_stdin=True)
     >>> cluster.scale(jobs=10)  # ask for 10 jobs
 
     >>> from dask.distributed import Client
@@ -209,13 +233,6 @@ class LSFCluster(JobQueueCluster):
     )
     job_cls = LSFJob
     config_name = "lsf"
-
-
-def use_stdin():
-    if dask.config.get("jobqueue.lsf.use-stdin") is not None:
-        return dask.config.get("jobqueue.lsf.use-stdin")
-
-    return lsf_version() < "10"
 
 
 @toolz.memoize

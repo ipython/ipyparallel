@@ -217,11 +217,41 @@ def test_adaptive_grouped(loop):
 
 def test_config(loop):
     with dask.config.set(
-        {"jobqueue.lsf.walltime": "00:02", "jobqueue.lsf.local-directory": "/foo"}
+        {
+            "jobqueue.lsf.walltime": "00:02",
+            "jobqueue.lsf.local-directory": "/foo",
+            "jobqueue.lsf.use-stdin": True,
+        }
     ):
         with LSFCluster(loop=loop, cores=1, memory="2GB") as cluster:
             assert "00:02" in cluster.job_script()
             assert "--local-directory /foo" in cluster.job_script()
+            assert cluster._dummy_job.use_stdin
+
+
+@pytest.mark.parametrize(
+    "config_value,constructor_value",
+    [
+        (None, False),
+        (None, True),
+        (True, None),
+        (False, None),
+        (True, False),  # Constuctor overrides config
+    ],
+)
+def test_use_stdin(loop, config_value, constructor_value):
+    """
+    Verify that use-stdin is respected when passed via the
+    config OR the LSFCluster() constructor
+    """
+    with dask.config.set({"jobqueue.lsf.use-stdin": config_value}):
+        with LSFCluster(
+            loop=loop, cores=1, memory="2GB", use_stdin=constructor_value
+        ) as cluster:
+            if constructor_value is not None:
+                assert cluster._dummy_job.use_stdin == constructor_value
+            else:
+                assert cluster._dummy_job.use_stdin == config_value
 
 
 def test_config_name_lsf_takes_custom_config():
@@ -244,6 +274,7 @@ def test_config_name_lsf_takes_custom_config():
         "env-extra": [],
         "log-directory": None,
         "shebang": "#!/usr/bin/env bash",
+        "use-stdin": None,
     }
 
     with dask.config.set({"jobqueue.lsf-config-name": conf}):
@@ -306,9 +337,3 @@ def test_lsf_unit_detection(lsf_units_string, expected_unit):
 
 def test_lsf_unit_detection_without_file():
     lsf_unit_detection_helper("kb", conf_text=None)
-
-
-@pytest.mark.parametrize("stdin", [True, False])
-def test_stdin(stdin):
-    with dask.config.set({"jobqueue.lsf.use-stdin": stdin}):
-        assert lsf.use_stdin() is stdin
