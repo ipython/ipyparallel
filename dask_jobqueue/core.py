@@ -182,10 +182,12 @@ class Job(ProcessInterface, abc.ABC):
             shebang = dask.config.get("jobqueue.%s.shebang" % config_name)
 
         if cores is None or memory is None:
+            job_class_name = self.__class__.__name__
+            cluster_class_name = job_class_name.replace("Job", "Cluster")
             raise ValueError(
                 "You must specify how much cores and memory per job you want to use, for example:\n"
                 "cluster = {}(cores={}, memory={!r})".format(
-                    self.__class__.__name__, cores or 8, memory or "24GB"
+                    cluster_class_name, cores or 8, memory or "24GB"
                 )
             )
 
