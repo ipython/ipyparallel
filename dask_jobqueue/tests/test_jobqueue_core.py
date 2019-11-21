@@ -3,8 +3,11 @@ import shutil
 import socket
 import sys
 import re
+import psutil
 
 import pytest
+
+import dask
 
 from dask_jobqueue import (
     JobQueueCluster,
@@ -15,12 +18,15 @@ from dask_jobqueue import (
     LSFCluster,
     OARCluster,
 )
+from dask_jobqueue.core import Job
+from dask_jobqueue.local import LocalCluster
 
 from dask_jobqueue.sge import SGEJob
 
 
 def test_errors():
-    with pytest.raises(ValueError, match="Job type.*job_cls="):
+    match = re.compile("Job type.*job_cls", flags=re.DOTALL)
+    with pytest.raises(ValueError, match=match):
         JobQueueCluster(cores=4)
 
 
@@ -207,3 +213,44 @@ def test_cluster_has_cores_and_memory(Cluster):
 
     with pytest.raises(ValueError, match=base_regex + r"cores=4, memory='\d+GB'"):
         Cluster(cores=4)
+
+
+@pytest.mark.asyncio
+async def test_config_interface():
+    net_if_addrs = psutil.net_if_addrs()
+    interface = list(net_if_addrs.keys())[0]
+    with dask.config.set({"jobqueue.local.interface": interface}):
+        cluster = LocalCluster(cores=1, memory="2GB", asynchronous=True)
+        await cluster
+        expected = "'interface': {!r}".format(interface)
+        assert expected in str(cluster.scheduler_spec)
+        cluster.scale(1)
+        assert expected in str(cluster.worker_spec)
+
+
+# TODO where to put these tests
+def test_job_without_config_name():
+    class MyJob(Job):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+    with pytest.raises(ValueError, match="config_name.+MyJob"):
+        MyJob(cores=1, memory="1GB")
+
+    class MyJobWithNoneConfigName(MyJob):
+        config_name = None
+
+    with pytest.raises(ValueError, match="config_name.+MyJobWithNoneConfigName"):
+        MyJobWithNoneConfigName(cores=1, memory="1GB")
+
+    with pytest.raises(ValueError, match="config_name.+MyJobWithNoneConfigName"):
+        JobQueueCluster(job_cls=MyJobWithNoneConfigName, cores=1, memory="1GB")
+
+
+def test_cluster_without_job_cls():
+    class MyCluster(JobQueueCluster):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+
+    with pytest.raises(ValueError, match="job_cls.+MyCluster"):
+        MyCluster(cores=1, memory="1GB")

@@ -31,28 +31,29 @@ Queue
     # Python (can't find its libs), so we have to go through the shell.
     executable = "/bin/sh"
 
-    def __init__(
-        self, *args, disk=None, job_extra=None, config_name="htcondor", **kwargs
-    ):
+    config_name = "htcondor"
+
+    def __init__(self, *args, disk=None, job_extra=None, config_name=None, **kwargs):
+        super().__init__(*args, config_name=config_name, **kwargs)
+
         if disk is None:
-            disk = dask.config.get("jobqueue.%s.disk" % config_name)
+            disk = dask.config.get("jobqueue.%s.disk" % self.config_name)
         if disk is None:
             raise ValueError(
                 "You must specify how much disk to use per job like ``disk='1 GB'``"
             )
         self.worker_disk = parse_bytes(disk)
         if job_extra is None:
-            self.job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name, {})
+            self.job_extra = dask.config.get(
+                "jobqueue.%s.job-extra" % self.config_name, {}
+            )
         else:
             self.job_extra = job_extra
-
-        # Instantiate args and parameters from parent abstract class
-        super().__init__(*args, config_name=config_name, **kwargs)
 
         env_extra = kwargs.get("env_extra", None)
         if env_extra is None:
             env_extra = dask.config.get(
-                "jobqueue.%s.env-extra" % config_name, default=[]
+                "jobqueue.%s.env-extra" % self.config_name, default=[]
             )
         self.env_dict = self.env_lines_to_dict(env_extra)
         self.env_dict["JOB_ID"] = "$F(MY.JobId)"

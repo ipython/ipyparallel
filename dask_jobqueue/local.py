@@ -32,7 +32,7 @@ class LocalJob(Job):
         resource_spec=None,
         walltime=None,
         job_extra=None,
-        config_name="local",
+        config_name=None,
         **kwargs
     ):
         # Instantiate args and parameters from parent abstract class

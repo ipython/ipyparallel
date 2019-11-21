@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 class SGEJob(Job):
     submit_command = "qsub"
     cancel_command = "qdel"
+    config_name = "sge"
 
     def __init__(
         self,
@@ -19,21 +20,23 @@ class SGEJob(Job):
         resource_spec=None,
         walltime=None,
         job_extra=None,
-        config_name="sge",
+        config_name=None,
         **kwargs
     ):
-        if queue is None:
-            queue = dask.config.get("jobqueue.%s.queue" % config_name)
-        if project is None:
-            project = dask.config.get("jobqueue.%s.project" % config_name)
-        if resource_spec is None:
-            resource_spec = dask.config.get("jobqueue.%s.resource-spec" % config_name)
-        if walltime is None:
-            walltime = dask.config.get("jobqueue.%s.walltime" % config_name)
-        if job_extra is None:
-            job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
-
         super().__init__(*args, config_name=config_name, **kwargs)
+
+        if queue is None:
+            queue = dask.config.get("jobqueue.%s.queue" % self.config_name)
+        if project is None:
+            project = dask.config.get("jobqueue.%s.project" % self.config_name)
+        if resource_spec is None:
+            resource_spec = dask.config.get(
+                "jobqueue.%s.resource-spec" % self.config_name
+            )
+        if walltime is None:
+            walltime = dask.config.get("jobqueue.%s.walltime" % self.config_name)
+        if job_extra is None:
+            job_extra = dask.config.get("jobqueue.%s.job-extra" % self.config_name)
 
         header_lines = []
         if self.job_name is not None:
@@ -114,4 +117,3 @@ class SGECluster(JobQueueCluster):
         job=job_parameters, cluster=cluster_parameters
     )
     job_cls = SGEJob
-    config_name = "sge"

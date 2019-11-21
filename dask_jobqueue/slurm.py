@@ -12,6 +12,7 @@ class SLURMJob(Job):
     # Override class variables
     submit_command = "sbatch"
     cancel_command = "scancel"
+    config_name = "slurm"
 
     def __init__(
         self,
@@ -22,23 +23,23 @@ class SLURMJob(Job):
         job_cpu=None,
         job_mem=None,
         job_extra=None,
-        config_name="slurm",
+        config_name=None,
         **kwargs
     ):
-        if queue is None:
-            queue = dask.config.get("jobqueue.%s.queue" % config_name)
-        if project is None:
-            project = dask.config.get("jobqueue.%s.project" % config_name)
-        if walltime is None:
-            walltime = dask.config.get("jobqueue.%s.walltime" % config_name)
-        if job_cpu is None:
-            job_cpu = dask.config.get("jobqueue.%s.job-cpu" % config_name)
-        if job_mem is None:
-            job_mem = dask.config.get("jobqueue.%s.job-mem" % config_name)
-        if job_extra is None:
-            job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
-
         super().__init__(*args, config_name=config_name, **kwargs)
+
+        if queue is None:
+            queue = dask.config.get("jobqueue.%s.queue" % self.config_name)
+        if project is None:
+            project = dask.config.get("jobqueue.%s.project" % self.config_name)
+        if walltime is None:
+            walltime = dask.config.get("jobqueue.%s.walltime" % self.config_name)
+        if job_cpu is None:
+            job_cpu = dask.config.get("jobqueue.%s.job-cpu" % self.config_name)
+        if job_mem is None:
+            job_mem = dask.config.get("jobqueue.%s.job-mem" % self.config_name)
+        if job_extra is None:
+            job_extra = dask.config.get("jobqueue.%s.job-extra" % self.config_name)
 
         header_lines = []
         # SLURM header build

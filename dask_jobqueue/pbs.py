@@ -47,24 +47,25 @@ class PBSJob(Job):
         resource_spec=None,
         walltime=None,
         job_extra=None,
-        config_name="pbs",
+        config_name=None,
         **kwargs
     ):
+        super().__init__(*args, config_name=config_name, **kwargs)
+
         if queue is None:
-            queue = dask.config.get("jobqueue.%s.queue" % config_name)
+            queue = dask.config.get("jobqueue.%s.queue" % self.config_name)
         if resource_spec is None:
-            resource_spec = dask.config.get("jobqueue.%s.resource-spec" % config_name)
+            resource_spec = dask.config.get(
+                "jobqueue.%s.resource-spec" % self.config_name
+            )
         if walltime is None:
-            walltime = dask.config.get("jobqueue.%s.walltime" % config_name)
+            walltime = dask.config.get("jobqueue.%s.walltime" % self.config_name)
         if job_extra is None:
-            job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
+            job_extra = dask.config.get("jobqueue.%s.job-extra" % self.config_name)
         if project is None:
             project = dask.config.get(
-                "jobqueue.%s.project" % config_name
+                "jobqueue.%s.project" % self.config_name
             ) or os.environ.get("PBS_ACCOUNT")
-
-        # Instantiate args and parameters from parent abstract class
-        super().__init__(*args, config_name=config_name, **kwargs)
 
         # Try to find a project name from environment variable
         project = project or os.environ.get("PBS_ACCOUNT")

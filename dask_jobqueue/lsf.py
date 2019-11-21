@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 class LSFJob(Job):
     submit_command = "bsub"
     cancel_command = "bkill"
+    config_name = "lsf"
 
     def __init__(
         self,
@@ -28,33 +29,32 @@ class LSFJob(Job):
         walltime=None,
         job_extra=None,
         lsf_units=None,
-        config_name="lsf",
+        config_name=None,
         use_stdin=None,
         **kwargs
     ):
+        super().__init__(*args, config_name=config_name, **kwargs)
+
         if queue is None:
-            queue = dask.config.get("jobqueue.%s.queue" % config_name)
+            queue = dask.config.get("jobqueue.%s.queue" % self.config_name)
         if project is None:
-            project = dask.config.get("jobqueue.%s.project" % config_name)
+            project = dask.config.get("jobqueue.%s.project" % self.config_name)
         if ncpus is None:
-            ncpus = dask.config.get("jobqueue.%s.ncpus" % config_name)
+            ncpus = dask.config.get("jobqueue.%s.ncpus" % self.config_name)
         if mem is None:
-            mem = dask.config.get("jobqueue.%s.mem" % config_name)
+            mem = dask.config.get("jobqueue.%s.mem" % self.config_name)
         if walltime is None:
-            walltime = dask.config.get("jobqueue.%s.walltime" % config_name)
+            walltime = dask.config.get("jobqueue.%s.walltime" % self.config_name)
         if job_extra is None:
-            job_extra = dask.config.get("jobqueue.%s.job-extra" % config_name)
+            job_extra = dask.config.get("jobqueue.%s.job-extra" % self.config_name)
         if lsf_units is None:
-            lsf_units = dask.config.get("jobqueue.%s.lsf-units" % config_name)
+            lsf_units = dask.config.get("jobqueue.%s.lsf-units" % self.config_name)
 
         if use_stdin is None:
-            use_stdin = dask.config.get("jobqueue.%s.use-stdin" % config_name)
+            use_stdin = dask.config.get("jobqueue.%s.use-stdin" % self.config_name)
         if use_stdin is None:
             use_stdin = lsf_version() < "10"
         self.use_stdin = use_stdin
-
-        # Instantiate args and parameters from parent abstract class
-        super().__init__(*args, config_name=config_name, **kwargs)
 
         header_lines = []
         # LSF header build
