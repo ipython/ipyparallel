@@ -1,6 +1,16 @@
 Changelog
 =========
 
+Devlopment version
+------------------
+
+- ``LSFCluster``: add ``use_stdin`` to ``LSFCluster``. This switches between
+  ``bsub < job_script`` and ``bsub job_script`` to launch a ``LSF`` job
+  (:pr:`360`).
+- ``HTCondorCluster``: support older ``HTCondor`` versions without ``-file``
+  argument (:pr:`351`).
+
+
 0.7.0 / 2019-10-09
 ------------------
 
