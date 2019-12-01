@@ -4,24 +4,30 @@ Changelog
 0.7.0 / 2019-10-09
 ------------------
 
--   Base Dask-Jobqueue on top of the core ``dask.distributed.SpecCluster`` class
-    (:pr:`307`)
+- Base Dask-Jobqueue on top of the core ``dask.distributed.SpecCluster`` class
+  (:pr:`307`)
 
-    This is nearly complete reimplementation of the dask-jobqueue logic on top
-    of more centralized logic.  This improves standardization and adds new
-    features, but does include the following **breaking changes**:
+  This is nearly complete reimplementation of the dask-jobqueue logic on top
+  of more centralized logic.  This improves standardization and adds new
+  features, but does include the following **breaking changes**:
 
-    -   The ``cluster.stop_all_jobs()`` method has been removed.
-        Please use ``cluster.scale(0)`` instead.
-    -   The attributes ``running_jobs``, ``pending_jobs``, and
-        ``cancelled_jobs`` have been removed.  These have been moved upstream to
-        the ``dask.distributed.SpecCluster`` class instead as ``workers`` and
-        ``worker_spec``, as well as ``.plan``, ``.requested``, and ``.observed``.
-    -   The ``name`` attribute has been moved to ``job_name``.
--   Update `.scale()` and `.adapt()` docstrings (:pr:`346`)
--   Update interactive docs (:pr:`340`)
--   Improve error message when cores or memory is not specified (:pr:`331`)
--   Fix Python 3.5.0 support in setup.py (:pr:`317`)
+  + The ``cluster.start_workers`` method has been removed. Use
+    ``cluster.scale`` instead.
+  + The ``cluster.stop_all_jobs()`` method has been removed.
+    Please use ``cluster.scale(0)`` instead.
+  + The attributes ``running_jobs``, ``pending_jobs``, and
+    ``cancelled_jobs`` have been removed.  These have been moved upstream to
+    the ``dask.distributed.SpecCluster`` class instead as ``workers`` and
+    ``worker_spec``, as well as ``.plan``, ``.requested``, and ``.observed``.
+  + The ``name`` attribute has been moved to ``job_name``.
+- You can now specify jobs in ``.scale`` and ``.adapt``: for example
+  ``cluster.scale(jobs=2)`` and ``cluster.adapt(minimum_jobs=0,
+  maximum_jobs=10)``. Specifying scaling in terms of jobs is generally more
+  intuitive than in terms of Dask workers. This was part of :pr:`307`.
+- Update ``.scale()`` and ``.adapt()`` docstrings (:pr:`346`)
+- Update interactive docs (:pr:`340`)
+- Improve error message when cores or memory is not specified (:pr:`331`)
+- Fix Python 3.5.0 support in setup.py (:pr:`317`)
 
 
 0.6.3 / 2019-08-18
