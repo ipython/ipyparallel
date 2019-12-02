@@ -244,7 +244,7 @@ class Job(ProcessInterface, abc.ABC):
         config_name = getattr(cls, "config_name", None)
         if config_name is None:
             raise ValueError(
-                "The class {} is required to have 'config_name' class variable.\n"
+                "The class {} is required to have a 'config_name' class variable.\n"
                 "If you have created this class, please add a 'config_name' class variable.\n"
                 "If not this may be a bug, feel free to create an issue at: "
                 "https://github.com/dask/dask-jobqueue/issues/new".format(cls)
