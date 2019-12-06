@@ -1,7 +1,7 @@
 # /Users/tomo/anaconda3/envs/master_thesis/bin/python
 import sys
 
-from benchmarks.utils import time_stamp
+from benchmarks.utils import get_time_stamp
 from subprocess import check_call
 import os
 import googleapiclient.discovery as gcd
@@ -73,7 +73,7 @@ def command_over_ssh(instance_name, *args):
 
 
 def run_on_instance(template_name):
-    current_instance_name = f"{template_name}-{time_stamp()}"
+    current_instance_name = f"{template_name}-{get_time_stamp()}"
     print(f"Creating new instance with name: {current_instance_name}")
 
     gcloud_run(

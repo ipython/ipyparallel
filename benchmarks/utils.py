@@ -14,7 +14,7 @@ def wait_for(condition: Callable):
         raise TimeoutError('wait_for took to long to finish')
 
 
-def time_stamp() -> str:
+def get_time_stamp() -> str:
     return (
         str(datetime.datetime.now()).split(".")[0].replace(" ", "-").replace(":", "-")
     )

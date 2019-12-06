@@ -1,5 +1,6 @@
 import sys
 import os
+import atexit
 
 master_project_path = os.path.abspath(
     os.path.join(os.path.dirname(__file__), os.pardir)  # '..'
@@ -7,11 +8,11 @@ master_project_path = os.path.abspath(
 master_project_parent = os.path.abspath(
     os.path.join(master_project_path, os.pardir)  # '..'
 )
-from benchmarks.utils import wait_for, time_stamp
-from logger import get_profiling_log_file_name
-import profiling.view_profiling_results as view_results
+from ipyparallel_master_project.benchmarks.utils import wait_for, time_stamp
+from ipyparallel_master_project.logger import get_profiling_log_file_name
+import ipyparallel_master_project.profiling.view_profiling_results as view_results
 from subprocess import check_call, check_output, Popen
-import profiling.profiling_code as profiling_code
+import ipyparallel_master_project.profiling.profiling_code as profiling_code
 import ipyparallel as ipp
 
 
@@ -49,12 +50,30 @@ def start_cmd(cmd, blocking=True):
     )
 
 
-profiling_tasks = [
+def stop_cluster():
+    if '-s' not in sys.argv:
+        start_cmd(f'ipcluster stop --profile=asv')
+
+
+atexit.register(stop_cluster)
+
+PROFILING_TASKS = [
     'many_empty_tasks',
     'many_empty_tasks_non_blocking',
     'tasks_with_large_data',
     'echo_many_arguments',
 ]
+
+VIEW_TYPES = ['direct', 'load_balanced']
+
+
+def get_tasks_to_execute(program_arguments):
+    return (
+        [f'{program_arguments[2]} {view}' for view in VIEW_TYPES]
+        if len(program_arguments) >= 2
+        else [f'{task} {view}' for task in PROFILING_TASKS for view in VIEW_TYPES]
+    )
+
 
 if __name__ == "__main__":
 
@@ -76,21 +95,19 @@ if __name__ == "__main__":
 
     controller_pid = check_output('pgrep -f ipyparallel.controller', shell=True)
     scheduler_pid = max((int(x) for x in controller_pid.decode('utf-8').split()))
-    tasks_to_execute = profiling_tasks if len(sys.argv) <= 2 else [sys.argv[2]]
-    for task_name in tasks_to_execute:
+
+    for task_name in get_tasks_to_execute(sys.argv):
         scheduler_output_path = os.path.join(
-            CURRENT_RESULTS_DIR, f'{task_name}_scheduler.svg'
+            CURRENT_RESULTS_DIR, f'{task_name.replace(" ", "_")}_scheduler.svg'
         )
         client_output_path = os.path.join(
-            CURRENT_RESULTS_DIR, f'{task_name}_client.svg'
+            CURRENT_RESULTS_DIR, f'{task_name.replace(" ", "_")}_client.svg'
         )
-        start_cmd(
+        p = start_cmd(
             f'sudo py-spy --function -d 30 --flame {scheduler_output_path} --pid {scheduler_pid}',
             blocking=False,
         )
         start_cmd(
             f'sudo py-spy --function -d 30 --flame {client_output_path} -- python {PROFILING_CODE_PATH} {task_name}'
         )
-
-    if '-s' not in sys.argv:
-        start_cmd(f'ipcluster stop --profile=asv')
+        p.wait()

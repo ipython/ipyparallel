@@ -1,9 +1,12 @@
 import time
 
-from subprocess import check_call
+from subprocess import check_call, Popen
 import ipyparallel as ipp
 
 n = 20
+# controller = Popen(['ipcontroller', '--debug', 'profile=asv'])
+
+
 check_call(f'ipcluster start -n {n} --daemon --profile=asv --debug', shell=True)
 c = ipp.Client(profile='asv')
 seen = -1
