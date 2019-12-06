@@ -36,7 +36,7 @@ def test_command_template():
             "%s -m distributed.cli.dask_worker" % (sys.executable)
             in cluster._dummy_job._command_template
         )
-        assert " --nthreads 2" in cluster._dummy_job._command_template
+        assert " --nthreads 1" in cluster._dummy_job._command_template
         assert " --memory-limit " in cluster._dummy_job._command_template
         assert " --name " in cluster._dummy_job._command_template
 
@@ -254,3 +254,17 @@ def test_cluster_without_job_cls():
 
     with pytest.raises(ValueError, match="job_cls.+MyCluster"):
         MyCluster(cores=1, memory="1GB")
+
+
+@pytest.mark.parametrize(
+    "Cluster",
+    [PBSCluster, MoabCluster, SLURMCluster, SGECluster, LSFCluster, OARCluster],
+)
+def test_default_number_of_worker_processes(Cluster):
+    with Cluster(cores=4, memory="4GB") as cluster:
+        assert " --nprocs 4" in cluster.job_script()
+        assert " --nthreads 1" in cluster.job_script()
+
+    with Cluster(cores=6, memory="4GB") as cluster:
+        assert " --nprocs 3" in cluster.job_script()
+        assert " --nthreads 2" in cluster.job_script()

@@ -9,7 +9,10 @@ Devlopment version
   (:pr:`360`).
 - ``HTCondorCluster``: support older ``HTCondor`` versions without ``-file``
   argument (:pr:`351`).
-
+- all cluster classes: ``processes`` parameter default has changed. By default,
+  ``processes ~= sqrt(cores)`` so that the number of processes and the number
+  of threads per process is roughly the same. Old default was to use one
+  process and only threads, i.e. ``proccesses=1``, ``threads_per_process=cores``.
 
 0.7.0 / 2019-10-09
 ------------------
