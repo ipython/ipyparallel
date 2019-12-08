@@ -1,6 +1,8 @@
 import timeit
 import ipyparallel as ipp
 import numpy as np
+
+from benchmarks.constants import DEFAULT_NUMBER_OF_ENGINES
 from benchmarks.utils import wait_for, echo, echo_many_arguments
 
 
@@ -78,18 +80,18 @@ class Engines10LoadBalanced(
     pass
 
 
-# class Engines100DirectView(
-#     make_engine_class(OverHeadLatencyDirectView, 100, [[1, 10, 100, 1000], [0, 0.1, 1]])
-# ):
-#     pass
-#
-#
-# class Engines100LoadBalanced(
-#     make_engine_class(
-#         OverHeadLatencyLoadBalanced, 100, [[1, 10, 100, 1000], [0, 0.1, 1]]
-#     )
-# ):
-#     pass
+class Engines100DirectView(
+    make_engine_class(OverHeadLatencyDirectView, 100, [[1, 10, 100, 1000], [0, 0.1, 1]])
+):
+    pass
+
+
+class Engines100LoadBalanced(
+    make_engine_class(
+        OverHeadLatencyLoadBalanced, 100, [[1, 10, 100, 1000], [0, 0.1, 1]]
+    )
+):
+    pass
 
 
 def make_no_delay_engine_class(base_class, n, engine_params):
@@ -130,7 +132,7 @@ def create_echo_many_arguments_class(base_class):
         param_names = ['Number of arguments']
 
         def __init__(self):
-            super().__init__(16)
+            super().__init__(DEFAULT_NUMBER_OF_ENGINES)
 
         def time_echo_with_many_arguments(self, number_of_arguments):
             self.view.map(
