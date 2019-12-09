@@ -3,7 +3,7 @@ import os
 
 GITHUB_TOKEN = "***REMOVED***"  # Token for machine user
 ASV_TESTS_REPO = "github.com/tomoboy/ipyparallel_master_project.git"
-IPYPARALLEL_REPO = "github.com/tomoboy/ipyparallel.git@dev"
+IPYPARALLEL_REPO = "github.com/tomoboy/ipyparallel.git"
 
 
 DEFAULT_MINICONDA_PATH = os.path.join(os.getcwd(), "miniconda3/bin/:")
@@ -37,6 +37,6 @@ if __name__ == "__main__":
 
     os.chdir("ipyparallel_master_project")
     cmd_run("ipcluster start -n 100 --daemon --profile=asv")  # Starting 100 engines
-    cmd_run("asv run")
+    cmd_run("asv run master..dev")
     cmd_run("ipcluster stop --profile=asv")
     # run asv benchmarks

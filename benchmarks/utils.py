@@ -30,6 +30,3 @@ def echo(delay=0):
 
     return inner_echo
 
-
-def echo_many_arguments(*args):
-    return args

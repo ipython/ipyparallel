@@ -3,7 +3,7 @@ import ipyparallel as ipp
 import numpy as np
 
 from benchmarks.constants import DEFAULT_NUMBER_OF_ENGINES
-from benchmarks.utils import wait_for, echo, echo_many_arguments
+from benchmarks.utils import wait_for, echo
 
 
 class OverheadLatencyBase:
@@ -126,6 +126,17 @@ class Engines100NoDelayDirectView(
     pass
 
 
+def echo_many_arguments(view, number_of_arguments, n):
+    view.map(
+        lambda *x: x,
+        [
+            tuple(np.empty(1, dtype=np.int8) for n in range(number_of_arguments))
+            for x in range(n)
+        ],
+        block=False,
+    )
+
+
 def create_echo_many_arguments_class(base_class):
     class EchoManyArguments(base_class):
         params = [2, 4, 8, 16, 32, 64, 128, 255]
@@ -135,16 +146,7 @@ def create_echo_many_arguments_class(base_class):
             super().__init__(DEFAULT_NUMBER_OF_ENGINES)
 
         def time_echo_with_many_arguments(self, number_of_arguments):
-            self.view.map(
-                lambda x: echo_many_arguments(*x),
-                [
-                    tuple(
-                        np.empty(1, dtype=np.int8) for n in range(number_of_arguments)
-                    )
-                    for x in range(self.n)
-                ],
-                block=False,
-            )
+            echo_many_arguments(self.view, number_of_arguments, self.n)
 
     return EchoManyArguments
 
