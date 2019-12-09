@@ -85,6 +85,7 @@ Failed to connect because no Controller could be found.
 Please double-check your profile and ensure that a cluster is running.
 """
 
+
 class ExecuteReply(RichOutput):
     """wrapper for finished Execute results"""
     def __init__(self, msg_id, content, metadata):
