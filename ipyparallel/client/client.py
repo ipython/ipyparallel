@@ -7,7 +7,7 @@ from __future__ import print_function
 
 try:
     from collections.abc import Iterable
-except ImportError: # py2
+except ImportError:  # py2
     from collections import Iterable
 import socket
 from concurrent.futures import Future
@@ -37,10 +37,7 @@ from jupyter_client.localinterfaces import localhost, is_local_ip
 from IPython.paths import get_ipython_dir
 from IPython.utils.path import compress_user
 from ipython_genutils.py3compat import cast_bytes, string_types, xrange, iteritems
-from traitlets import (
-    HasTraits, Instance, Unicode,
-    Dict, List, Bool, Set, Any
-)
+from traitlets import HasTraits, Instance, Unicode, Dict, List, Bool, Set, Any
 from decorator import decorator
 
 from ipyparallel import Reference
@@ -54,12 +51,12 @@ from ipyparallel.serialize import PrePickled
 from ..util import ioloop
 from .asyncresult import AsyncResult, AsyncHubResult
 from .futures import MessageFuture, multi_future
-from .view import DirectView, LoadBalancedView
+from .view import DirectView, LoadBalancedView, BroadCastView
 import jupyter_client.session
 jupyter_client.session.extract_dates = lambda obj: obj
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 # Decorators for Client methods
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 
 
 @decorator
@@ -75,9 +72,10 @@ def unpack_message(f, self, msg_parts):
             pprint(msg)
         return f(self, msg)
 
-#--------------------------------------------------------------------------
+
+# --------------------------------------------------------------------------
 # Classes
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 
 
 _no_connection_file_msg = """
