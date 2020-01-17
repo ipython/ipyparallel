@@ -128,7 +128,7 @@ class View(HasTraits):
             return 1
         else:
             return len(self.client)
-    
+
     def set_flags(self, **kwargs):
         """set my attribute flags by keyword.
 
@@ -819,6 +819,7 @@ class DirectView(View):
         Parameters
         ----------
         
+
         suffix: str [default: '']
             The suffix, if any, for the magics.  This allows you to have
             multiple views associated with parallel magics at the same time.
@@ -845,7 +846,9 @@ class BroadCastView(View):
 
     @sync_results
     @save_ids
-    def _really_apply(self, f, args=None, kwargs=None, targets=None, block=None, track=None):
+    def _really_apply(self, f, args=None, kwargs=None, block=None, track=None,
+                                        after=None, follow=None, timeout=None,
+                                        targets=None, retries=None):
         args = [] if args is None else args
         kwargs = {} if kwargs is None else kwargs
         block = self.block if block is None else block
@@ -859,10 +862,13 @@ class BroadCastView(View):
         pargs = [PrePickled(arg) for arg in args]
         pkwargs = {k: PrePickled(v) for k, v in kwargs.items()}
 
-    
+        after = self._render_dependency(after)
+        follow = self._render_dependency(follow)
+        metadata = dict(after=after, follow=follow, timeout=timeout, targets=idents, retries=retries, is_broadcast=True)
+
         future = self.client.send_apply_request(
                 self._socket, pf, pargs, pkwargs,
-                track=track, ident=idents, metadata={'is_broadcast': True})
+                track=track, ident=idents, metadata=metadata)
         futures.append(future)
         if isinstance(targets, int):
             futures = futures[0]
@@ -877,7 +883,43 @@ class BroadCastView(View):
 
     def map(self, f, *sequences, **kwargs):
         pass
-    
+
+    def _validate_dependency(self, dep):
+        """validate a dependency.
+
+        For use in `set_flags`.
+        """
+        if dep is None or isinstance(dep, string_types + (AsyncResult, Dependency)):
+            return True
+        elif isinstance(dep, (list,set, tuple)):
+            for d in dep:
+                if not isinstance(d, string_types + (AsyncResult,)):
+                    return False
+        elif isinstance(dep, dict):
+            if set(dep.keys()) != set(Dependency().as_dict().keys()):
+                return False
+            if not isinstance(dep['msg_ids'], list):
+                return False
+            for d in dep['msg_ids']:
+                if not isinstance(d, string_types):
+                    return False
+        else:
+            return False
+
+        return True
+
+    def _render_dependency(self, dep):
+        """helper for building jsonable dependencies from various input forms."""
+        if isinstance(dep, Dependency):
+            return dep.as_dict()
+        elif isinstance(dep, AsyncResult):
+            return dep.msg_ids
+        elif dep is None:
+            return []
+        else:
+            # pass to Dependency constructor
+            return list(Dependency(dep))
+
 
 
 class LoadBalancedView(View):

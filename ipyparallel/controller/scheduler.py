@@ -15,6 +15,7 @@ from collections import deque
 from random import randint, random
 from types import FunctionType
 
+
 try:
     import numpy
 except ImportError:
@@ -110,7 +111,6 @@ def leastload(loads):
 #---------------------------------------------------------------------
 # Classes
 #---------------------------------------------------------------------
-
 
 # store empty default dependency:
 MET = Dependency([])
@@ -620,7 +620,7 @@ help="""select the task scheduler scheme  [default: Python LRU]
     
 
     @util.log_errors
-    def dispatch_result(self, raw_msg):
+    def dispatch_result(self, raw_msg): # maybe_dispatch_reults ?
         """dispatch method for result replies"""
         try:
             idents,msg = self.session.feed_identities(raw_msg, copy=False)
@@ -836,15 +836,194 @@ def launch_scheduler(in_addr, out_addr, mon_addr, not_addr, reg_addr, config=Non
         else:
             log = local_logger(logname, loglevel)
 
-    scheduler = TaskScheduler(client_stream=ins, engine_stream=outs,
+    scheduler = BroadCastScheduler(client_stream=ins, engine_stream=outs,
                             mon_stream=mons, notifier_stream=nots,
                             query_stream=querys,
                             loop=loop, log=log,
                             config=config)
+
+    # scheduler = TaskScheduler(client_stream=ins, engine_stream=outs,
+    #                         mon_stream=mons, notifier_stream=nots,
+    #                         query_stream=querys,
+    #                         loop=loop, log=log,
+    #                         config=config)
+
+    # TODO: How to start broadcastScheduler?
     scheduler.start()
     if not in_thread:
         try:
             loop.start()
         except KeyboardInterrupt:
             scheduler.log.critical("Interrupted, exiting...")
+
+
+class BroadCastScheduler(TaskScheduler):
+    jobs_running_on_targets = {}
+    accumulated_results = {}
+
+    @util.log_errors
+    def dispatch_submission(self, raw_msg):
+        self.notifier_stream.flush()
+        try:
+            idents, msg = self.session.feed_identities(raw_msg, copy=False)
+            msg = self.session.deserialize(msg, content=False, copy=False)
+        except Exception as e:
+            self.log.error("task::Invaid task msg: %r" % raw_msg, exc_info=True)
+            return
+
+        # send to monitor
+        self.mon_stream.send_multipart([b'intask'] + raw_msg, copy=False)
+
+        header = msg['header']
+        md = msg['metadata']
+        msg_id = header['msg_id']
+
+        # get targets as a set of bytes objects
+        # from a list of unicode objects
+        targets = md.get('targets', [])
+        targets = set(map(cast_bytes, targets))
+
+        retries = md.get('retries', 0)
+
+        self.accumulated_results[msg_id] = []
+
+        new_msg_ids = []
+        for target in targets:
+            target_string = target.decode('utf-8')
+            msg_and_target_id = f'{msg_id}_{target_string}'
+            self.all_ids.add(msg_and_target_id)
+            self.retries[msg_and_target_id]= retries
+            new_msg_ids.append((msg_id, target, msg_and_target_id))
+
+        after = md.get('after', None)
+        if after:
+            after = Dependency(after)
+            if after.all:
+                if after.success:
+                    after = Dependency(after.difference(self.all_completed),
+                                       success=after.success,
+                                       failure=after.failure,
+                                       all=after.all,
+                                       )
+                if after.failure:
+                    after = Dependency(after.difference(self.all_failed),
+                                       success=after.success,
+                                       failure=after.failure,
+                                       all=after.all,
+                                       )
+            if after.check(self.all_completed, self.all_failed):
+                # recast as empty set, if `after` already met,
+                # to prevent unnecessary set comparisons
+                after = MET
+        else:
+            after = MET
+
+        # location dependencies
+        follow = Dependency(md.get('follow', []))
+
+        timeout = md.get('timeout', None)
+        if timeout:
+            timeout = float(timeout)
+        md['original_msg_id'] = msg_id
+
+        jobs = []
+        self.jobs_running_on_targets[msg_id] = []
+
+        for msg_id, target, msg_and_target_id in new_msg_ids:
+            self.jobs_running_on_targets[msg_id].append(msg_and_target_id)
+            jobs.append(Job(msg_id=msg_and_target_id, raw_msg=raw_msg, idents=idents, msg=msg,
+                  header=header, targets=[target], after=after, follow=follow,
+                  timeout=timeout, metadata=md))
+
+        # # validate and reduce dependencies:
+        # for dep in after, follow:
+        #     if not dep:  # empty dependency
+        #         continue
+        #     # check valid:
+        #     if msg_id in dep or dep.difference(self.all_ids):
+        #         self.queue_map[msg_id] = job
+        #         return self.fail_unreachable(msg_id, error.InvalidDependency)
+        #     # check if unreachable:
+        #     if dep.unreachable(self.all_completed, self.all_failed):
+        #         self.queue_map[msg_id] = job
+        #         return self.fail_unreachable(msg_id)
+
+        if after.check(self.all_completed, self.all_failed):
+            # time deps already met, try to run
+            for job in jobs:
+                if not self.maybe_run(job):
+                    # can't run yet
+                    if job.msg_id not in self.all_failed:
+                        # could have failed as unreachable
+                        self.save_unmet(job)
+        else:
+            for job in jobs:
+                self.save_unmet(job)
+
+    @util.log_errors
+    def dispatch_result(self, raw_msg):
+        """ Dispatch method for result replies"""
+        try:
+            idents, msg = self.session.feed_identities(raw_msg, copy=False)
+            msg = self.session.deserialize(msg, content=False, copy=False)
+            engine = idents[0]
+
+        except Exception:
+            self.log.error("task::Invalid result: %r", raw_msg, exc_info=True)
+            return
+        md = msg['metadata']
+        parent = msg['parent_header']
+        if md.get('dependencies_met', True):
+            success = (md['status'] == 'ok')
+            msg_id = parent['msg_id']
+            msg_and_target_id = f'{msg_id}_{engine.decode("utf-8")}'
+            retries = self.retries[msg_and_target_id]
+            if not success and retries > 0:
+                # failed
+                self.retries[msg_and_target_id] = retries - 1
+                self.handle_unmet_dependency(idents, parent)
+            else:
+                del self.retries[msg_and_target_id]
+                # relay to client and update graph
+                self.handle_result(idents, parent, raw_msg, msg_and_target_id, success)
+                # send to Hub monitor
+                self.mon_stream.send_multipart([b'outtask'] + raw_msg, copy=False)
+        else:
+            self.handle_unmet_dependency(idents, parent)
+
+    def handle_result(self, idents, parent, raw_msg, msg_and_target_id, success=True):
+        """handle a real task result, either success or failure"""
+        engine = idents[0]
+        client = idents[1]
+        # swap_ids for ROUTER-ROUTER mirror
+        raw_msg[:2] = [client, engine]
+        # print (map(str, raw_msg[:4]))
+        # now, update our data structures
+        msg_id = parent['msg_id']
+        self.all_completed.add(msg_and_target_id)
+        if success:
+            self.all_completed.add(msg_and_target_id)
+            self.accumulated_results[msg_id].append(raw_msg[2:])
+        else:
+            self.all_failed.add(msg_and_target_id)
+            self.accumulated_results[msg_id].append(None)# Probably choose another value here
+
+        if all(
+                msg_and_target_id in self.all_completed
+                or msg_and_target_id in self.all_failed
+                for msg_and_target_id in self.jobs_running_on_targets[msg_id]
+        ):
+            accumulated_msg = raw_msg[:2] + self.accumulated_results[msg_id]
+            self.client_stream.send_multipart(raw_msg, copy=False)
+            self.all_done.add(msg_id)
+            self.update_graph(msg_id, success) #?
+
+
+    def submit_task(self, job, indices=None):
+        targets = [self.targets[i] for i in indices] # Should only be on target, consider changing
+        # send job to engines
+        for target in targets:
+            self.engine_stream.send(target, flags=zmq.SNDMORE, copy=False)
+            self.engine_stream.send_multipart(job.raw_msg, copy=False)
+
 

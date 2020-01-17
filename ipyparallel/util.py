@@ -123,7 +123,7 @@ def log_errors(f, self, *args, **kwargs):
     """
     try:
         return f(self, *args, **kwargs)
-    except Exception:
+    except Exception as e:
         self.log.error("Uncaught exception in %r" % f, exc_info=True)
     
 

@@ -1570,8 +1570,27 @@ class Client(HasTraits):
             targets = self._build_targets(targets)[1]
         if single:
             targets = targets[0]
-        return DirectView(client=self, socket=self._mux_stream, targets=targets,
-                          **kwargs)
+        return DirectView(
+            client=self, socket=self._mux_stream, targets=targets, **kwargs
+        )
+
+    def broadcast_view(self, targets='all', **kwargs):
+        """construct a BroadCastView object.
+        If no arguments are specified, create a BroadCastView using all engines
+        using all engines.
+
+        Parameters
+        ----------
+
+        targets: list,slice,int,etc. [default: use all engines]
+            The subset of engines across which to load-balance execution
+        kwargs: passed to BroadCastView
+        """
+        targets = self._build_targets(targets)[1]
+
+        return BroadCastView(
+            client=self, socket=self._task_stream, targets=targets, **kwargs
+        )
 
     #--------------------------------------------------------------------------
     # Query methods
