@@ -286,8 +286,8 @@ def get_echo_many_arguments_source(benchmark_results=None):
 
 
 if __name__ == "__main__":
+    results = get_benchmark_results()
     get_time_n_tasks_source()
     source = get_echo_many_arguments_source()
-    results = get_benchmark_results()
     with open("saved_results.pkl", "wb") as saved_results:
         pickle.dump(get_benchmark_results(), saved_results)
