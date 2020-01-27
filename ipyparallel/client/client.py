@@ -51,7 +51,7 @@ from ipyparallel.serialize import PrePickled
 from ..util import ioloop
 from .asyncresult import AsyncResult, AsyncHubResult
 from .futures import MessageFuture, multi_future
-from .view import DirectView, LoadBalancedView, BroadCastView
+from .view import DirectView, LoadBalancedView, BroadcastView
 import jupyter_client.session
 jupyter_client.session.extract_dates = lambda obj: obj
 # --------------------------------------------------------------------------
@@ -65,6 +65,9 @@ def unpack_message(f, self, msg_parts):
     idents, msg = self.session.feed_identities(msg_parts, copy=False)
     try:
         msg = self.session.deserialize(msg, content=True, copy=False)
+        if 'is_broadcast' in msg['metadata'] and msg['metadata']['is_broadcast']:
+            msg['parent_header']['msg_id'] =\
+                f'{msg["parent_header"]["msg_id"]}_{msg["metadata"]["engine"]}'
     except:
         self.log.error("Invalid Message", exc_info=True)
     else:
@@ -981,6 +984,21 @@ class Client(HasTraits):
             # unhandled msg_type (status, etc.)
             pass
 
+    def create_message_futures(self, msg_id, async_result=False, track=False):
+        msg_future = MessageFuture(msg_id, track=track)
+        futures = [msg_future]
+        self._futures[msg_id] = msg_future
+        if async_result:
+            output = MessageFuture(msg_id)
+            # add future for output
+            self._output_futures[msg_id] = output
+            # hook up metadata
+            output.metadata = self.metadata[msg_id]
+            output.metadata['submitted'] = util.utcnow()
+            msg_future.output = output
+            futures.append(output)
+        return futures
+
     def _send(self, socket, msg_type, content=None, parent=None, ident=None,
               buffers=None, track=False, header=None, metadata=None):
         """Send a message in the IO thread
@@ -991,22 +1009,12 @@ class Client(HasTraits):
         msg = self.session.msg(msg_type, content=content, parent=parent,
                                header=header, metadata=metadata)
         msg_id = msg['header']['msg_id']
-        asyncresult = False
-        if msg_type in {'execute_request', 'apply_request'}:
-            asyncresult = True
-            # add future for output
-            self._output_futures[msg_id] = output = MessageFuture(msg_id)
-            # hook up metadata
-            output.metadata = self.metadata[msg_id]
 
-
-        self._futures[msg_id] = future = MessageFuture(msg_id, track=track)
-        futures = [future]
-
-        if asyncresult:
-            future.output = output
-            futures.append(output)
-            output.metadata['submitted'] = util.utcnow()
+        futures = self.create_message_futures(
+            msg_id,
+            async_result=msg_type in {'execute_request', 'apply_request'},
+            track=track
+        )
 
         def cleanup(f):
             """Purge caches on Future resolution"""
@@ -1020,11 +1028,11 @@ class Client(HasTraits):
         def _really_send():
             sent = self.session.send(socket, msg, track=track, buffers=buffers, ident=ident)
             if track:
-                future.tracker.set_result(sent['tracker'])
+                futures[0].tracker.set_result(sent['tracker'])
 
         # hand off actual send to IO thread
         self._io_loop.add_callback(_really_send)
-        return future
+        return futures[0]
 
     def _send_recv(self, *args, **kwargs):
         """Send a message in the IO thread and return its reply"""
@@ -1588,7 +1596,7 @@ class Client(HasTraits):
         """
         targets = self._build_targets(targets)[1]
 
-        return BroadCastView(
+        return BroadcastView(
             client=self, socket=self._task_stream, targets=targets, **kwargs
         )
 

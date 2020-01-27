@@ -37,9 +37,11 @@ from jupyter_client.session import (
     Session, session_aliases, session_flags,
 )
 
+from ipyparallel.controller.broadcast_scheduler import BroadcastSchedulerNonCoalescing
 from ipyparallel.controller.heartmonitor import HeartMonitor
 from ipyparallel.controller.hub import HubFactory
-from ipyparallel.controller.scheduler import TaskScheduler,launch_scheduler
+from ipyparallel.controller.scheduler import launch_scheduler
+from ipyparallel.controller.task_scheduler import TaskScheduler
 from ipyparallel.controller.dictdb import DictDB
 
 from ipyparallel.util import disambiguate_url
@@ -398,7 +400,7 @@ class IPControllerApp(BaseParallelApplication):
 
         else:
             self.log.info("task::using Python %s Task scheduler"%scheme)
-            sargs = (f.client_url('task'), f.engine_url('task'),
+            sargs = (BroadcastSchedulerNonCoalescing, f.client_url('task'), f.engine_url('task'),
                     monitor_url, disambiguate_url(f.client_url('notification')),
                     disambiguate_url(f.client_url('registration')),
             )

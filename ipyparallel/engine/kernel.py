@@ -52,12 +52,18 @@ class IPythonParallelKernel(IPythonKernel):
             return False
         return True
 
+    def is_broadcast(self, parent):
+        return 'metadata' in parent and 'is_broadcast' in parent['metadata']\
+               and parent['metadata']['is_broadcast']
+
     def init_metadata(self, parent):
         """init metadata dict, for execute/apply_reply"""
         return {
             'started': utcnow(),
             'dependencies_met' : True,
             'engine' : self.ident,
+            'is_broadcast': self.is_broadcast(parent)
+
         }
 
     def finish_metadata(self, parent, metadata, reply_content):
@@ -86,7 +92,6 @@ class IPythonParallelKernel(IPythonKernel):
             return
 
         md = self.init_metadata(parent)
-
         reply_content, result_buf = self.do_apply(content, bufs, msg_id, md)
 
         # put 'ok'/'error' status in header, for scheduler introspection:

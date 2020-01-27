@@ -231,7 +231,7 @@ class EngineFactory(RegistrationFactory):
             heart = Heart(hb_ping, hb_pong, hb_monitor , heart_id=identity)
             heart.start()
 
-            # create Shell Connections (MUX, Task, etc.):
+            # create Shell Connections (MUX, Task, etc.):# TODO: Extend for broadcast
             shell_addrs = url('mux'), url('task')
 
             # Use only one shell stream for mux and tasks

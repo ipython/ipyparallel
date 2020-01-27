@@ -270,7 +270,7 @@ class HubFactory(RegistrationFactory):
         if 'TaskScheduler.scheme_name' in self.config:
             scheme = self.config.TaskScheduler.scheme_name
         else:
-            from .scheduler import TaskScheduler
+            from .task_scheduler import TaskScheduler
             scheme = TaskScheduler.scheme_name.default_value
         
         # build connection dicts
