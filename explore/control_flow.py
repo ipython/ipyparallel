@@ -1,5 +1,6 @@
 import ipyparallel as ipp
 
+
 def main():
     client = ipp.Client(profile='asv')
     # direct_view = client[:]
@@ -9,11 +10,10 @@ def main():
     # print(result.get())
     # print(direct_view_result.get())
     broad_cast_view = client.broadcast_view()
-    bc_result = broad_cast_view.apply(lambda x: x * 2, 13)
+    bc_result = broad_cast_view.apply(
+        lambda x: f'The answer to Life, the Universe and Everything: {x * 2}', 21
+    )
     print(bc_result.get())
-
-
-
 
 
 if __name__ == '__main__':
