@@ -6,8 +6,12 @@ from ipyparallel.controller.scheduler import Scheduler
 
 
 class BroadcastSchedulerNonCoalescing(Scheduler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(**kwargs)
+        self.log.info('Broadcast Scheduler Started')
     @util.log_errors
     def dispatch_submission(self, raw_msg):
+
         try:
             idents, msg_list = self.session.feed_identities(raw_msg, copy=False)
             msg = self.session.deserialize(msg_list, content=False, copy=False)

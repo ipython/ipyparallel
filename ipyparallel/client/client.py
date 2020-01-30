@@ -65,9 +65,6 @@ def unpack_message(f, self, msg_parts):
     idents, msg = self.session.feed_identities(msg_parts, copy=False)
     try:
         msg = self.session.deserialize(msg, content=True, copy=False)
-        if 'is_broadcast' in msg['metadata'] and msg['metadata']['is_broadcast']:
-            msg['parent_header']['msg_id'] =\
-                f'{msg["parent_header"]["msg_id"]}_{msg["metadata"]["engine"]}'
     except:
         self.log.error("Invalid Message", exc_info=True)
     else:
@@ -362,6 +359,7 @@ class Client(HasTraits):
     _notification_socket=Instance('zmq.Socket', allow_none=True)
     _mux_socket=Instance('zmq.Socket', allow_none=True)
     _task_socket=Instance('zmq.Socket', allow_none=True)
+    _broadcast_non_coalescing_socket=Instance('zmq.Socket', allow_none=True)
     _task_scheme=Unicode()
     _closed = False
 
@@ -443,7 +441,7 @@ class Client(HasTraits):
         cfg['interface'] = "%s://%s" % (proto, addr)
 
         # turn interface,port into full urls:
-        for key in ('control', 'task', 'mux', 'iopub', 'notification', 'registration'):
+        for key in ('control', 'task', 'mux', 'iopub', 'notification', 'registration', 'broadcast_non_coalescing'):
             cfg[key] = cfg['interface'] + ':%i' % cfg[key]
 
         url = cfg['registration']
@@ -651,6 +649,9 @@ class Client(HasTraits):
 
             self._task_socket = self._context.socket(zmq.DEALER)
             connect_socket(self._task_socket, cfg['task'])
+
+            self._broadcast_non_coalescing_socket = self._context.socket(zmq.DEALER)
+            connect_socket(self._broadcast_non_coalescing_socket, cfg['broadcast_non_coalescing'])
 
             self._notification_socket = self._context.socket(zmq.SUB)
             self._notification_socket.setsockopt(zmq.SUBSCRIBE, b'')
@@ -884,6 +885,8 @@ class Client(HasTraits):
         self._iopub_stream.on_recv(self._dispatch_iopub, copy=False)
         self._notification_stream = ZMQStream(self._notification_socket, self._io_loop)
         self._notification_stream.on_recv(self._dispatch_notification, copy=False)
+        self._broadcast_non_coalescing_stream = ZMQStream(self._broadcast_non_coalescing_socket, self._io_loop)
+        self._broadcast_non_coalescing_stream.on_recv(self._dispatch_broadcast_reply, copy=False)
 
     def _start_io_thread(self):
         """Start IOLoop in a background thread."""
@@ -936,6 +939,19 @@ class Client(HasTraits):
         handler = self._queue_handlers.get(msg_type, None)
         if handler is None:
             raise KeyError("Unhandled reply message type: %s" % msg_type)
+        else:
+            handler(msg)
+
+    @unpack_message
+    def _dispatch_broadcast_reply(self, msg):
+        if 'is_broadcast' in msg['metadata'] and msg['metadata']['is_broadcast']:
+            msg['parent_header']['msg_id'] =\
+                f'{msg["parent_header"]["msg_id"]}_{msg["metadata"]["engine"]}'
+
+        msg_type = msg['header']['msg_type']
+        handler = self._queue_handlers.get(msg_type, None)
+        if handler is None:
+            raise KeyError(f'Unhandled reply message type: {msg_type}')
         else:
             handler(msg)
 
@@ -1597,7 +1613,7 @@ class Client(HasTraits):
         targets = self._build_targets(targets)[1]
 
         return BroadcastView(
-            client=self, socket=self._task_stream, targets=targets, **kwargs
+            client=self, socket=self._broadcast_non_coalescing_stream, targets=targets, **kwargs
         )
 
     #--------------------------------------------------------------------------

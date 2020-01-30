@@ -231,14 +231,15 @@ class EngineFactory(RegistrationFactory):
             heart = Heart(hb_ping, hb_pong, hb_monitor , heart_id=identity)
             heart.start()
 
-            # create Shell Connections (MUX, Task, etc.):# TODO: Extend for broadcast
-            shell_addrs = url('mux'), url('task')
+            # create Shell Connections (MUX, Task, etc.):
+            shell_addrs = url('mux'), url('task'), url('broadcast_non_coalescing')
 
             # Use only one shell stream for mux and tasks
             stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
             stream.setsockopt(zmq.IDENTITY, identity)
+
             shell_streams = [stream]
-            for addr in shell_addrs:
+            for addr in shell_addrs: # TODO: Possibly problematic
                 connect(stream, addr)
 
             # control stream:

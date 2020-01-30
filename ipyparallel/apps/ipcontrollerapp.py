@@ -141,11 +141,11 @@ class IPControllerApp(BaseParallelApplication):
     description = _description
     examples = _examples
     classes = [ProfileDir, Session, HubFactory, TaskScheduler, HeartMonitor, DictDB] + real_dbs
-    
+
     # change default to True
     auto_create = Bool(True, config=True,
         help="""Whether to create profile dir if it doesn't exist.""")
-    
+
     reuse_files = Bool(False, config=True,
         help="""Whether to reuse existing json connection files.
         If False, connection files will be removed on a clean exit.
@@ -198,7 +198,7 @@ class IPControllerApp(BaseParallelApplication):
         self.mq_class = 'zmq.devices.{}MonitoredQueue'.format(
             'Thread' if change['new'] else 'Process'
         )
-    
+
     write_connection_files = Bool(True,
         help="""Whether to write connection files to disk.
         True in all cases other than runs with `reuse_files=True` *after the first*
@@ -207,7 +207,7 @@ class IPControllerApp(BaseParallelApplication):
 
     aliases = Dict(aliases)
     flags = Dict(flags)
-    
+
 
     def save_connection_dict(self, fname, cdict):
         """save a connection dict to json file."""
@@ -216,48 +216,48 @@ class IPControllerApp(BaseParallelApplication):
         with open(fname, 'w') as f:
             f.write(json.dumps(cdict, indent=2))
         os.chmod(fname, stat.S_IRUSR|stat.S_IWUSR)
-    
+
     def load_config_from_json(self):
         """load config from existing json connector files."""
         c = self.config
         self.log.debug("loading config from JSON")
-        
+
         # load engine config
-        
+
         fname = os.path.join(self.profile_dir.security_dir, self.engine_json_file)
         self.log.info("loading connection info from %s", fname)
         with open(fname) as f:
             ecfg = json.loads(f.read())
-        
+
         # json gives unicode, Session.key wants bytes
         c.Session.key = ecfg['key'].encode('ascii')
-        
+
         xport,ip = ecfg['interface'].split('://')
-        
+
         c.HubFactory.engine_ip = ip
         c.HubFactory.engine_transport = xport
-        
+
         self.location = ecfg['location']
         if not self.engine_ssh_server:
             self.engine_ssh_server = ecfg['ssh']
-        
+
         # load client config
-        
+
         fname = os.path.join(self.profile_dir.security_dir, self.client_json_file)
         self.log.info("loading connection info from %s", fname)
         with open(fname) as f:
             ccfg = json.loads(f.read())
-        
+
         for key in ('key', 'registration', 'pack', 'unpack', 'signature_scheme'):
             assert ccfg[key] == ecfg[key], "mismatch between engine and client info: %r" % key
-        
+
         xport, ip = ccfg['interface'].split('://')
-        
+
         c.HubFactory.client_transport = xport
         c.HubFactory.client_ip = ip
         if not self.ssh_server:
             self.ssh_server = ccfg['ssh']
-        
+
         # load port config:
         c.HubFactory.regport = ecfg['registration']
         c.HubFactory.hb = (ecfg['hb_ping'], ecfg['hb_pong'])
@@ -266,7 +266,7 @@ class IPControllerApp(BaseParallelApplication):
         c.HubFactory.task = (ccfg['task'], ecfg['task'])
         c.HubFactory.iopub = (ccfg['iopub'], ecfg['iopub'])
         c.HubFactory.notifier_port = ccfg['notification']
-    
+
     def cleanup_connection_files(self):
         if self.reuse_files:
             self.log.debug("leaving JSON connection files for reuse")
@@ -280,7 +280,7 @@ class IPControllerApp(BaseParallelApplication):
                 self.log.error("Failed to cleanup connection file: %s", e)
             else:
                 self.log.debug(u"removed %s", f)
-    
+
     def load_secondary_config(self):
         """secondary config, loading from JSON and setting defaults"""
         if self.reuse_files:
@@ -292,15 +292,15 @@ class IPControllerApp(BaseParallelApplication):
                 # successfully loaded config from JSON, and reuse=True
                 # no need to wite back the same file
                 self.write_connection_files = False
-                
+
         self.log.debug("Config changed")
         self.log.debug(repr(self.config))
-        
+
     def init_hub(self):
         c = self.config
-        
+
         self.do_import_statements()
-        
+
         try:
             self.factory = HubFactory(config=c, log=self.log)
             # self.start_logging()
@@ -310,7 +310,7 @@ class IPControllerApp(BaseParallelApplication):
         except Exception:
             self.log.error("Couldn't construct the Controller", exc_info=True)
             self.exit(1)
-        
+
         if self.write_connection_files:
             # save to new json config files
             f = self.factory
@@ -321,12 +321,12 @@ class IPControllerApp(BaseParallelApplication):
                 'unpack'    : f.session.unpacker,
                 'signature_scheme' : f.session.signature_scheme,
             }
-            
+
             cdict = {'ssh' : self.ssh_server}
             cdict.update(f.client_info)
             cdict.update(base)
             self.save_connection_dict(self.client_json_file, cdict)
-            
+
             edict = {'ssh' : self.engine_ssh_server}
             edict.update(f.engine_info)
             edict.update(base)
@@ -340,10 +340,23 @@ class IPControllerApp(BaseParallelApplication):
         # have the same value
         self.config.Session.key = self.factory.session.key
 
+    def launch_python_scheduler(self, sargs, children):
+        kwargs = dict(logname='scheduler', loglevel=self.log_level,
+                      log_url=self.log_url, config=dict(self.config))
+        if 'Process' in self.mq_class:
+            # run the Python scheduler in a Process
+            q = Process(target=launch_scheduler, args=sargs, kwargs=kwargs)
+            q.daemon = True
+            children.append(q)
+        else:
+            # single-threaded Controller
+            kwargs['in_thread'] = True
+            launch_scheduler(*sargs, **kwargs)
+
     def init_schedulers(self):
         children = self.children
         mq = import_item(str(self.mq_class))
-        
+
         f = self.factory
         ident = f.session.bsession
         # disambiguate url, in case of *
@@ -361,7 +374,7 @@ class IPControllerApp(BaseParallelApplication):
 
         # Multiplexer Queue (in a Process)
         q = mq(zmq.ROUTER, zmq.ROUTER, zmq.PUB, b'in', b'out')
-        
+
         q.bind_in(f.client_url('mux'))
         q.setsockopt_in(zmq.IDENTITY, b'mux_in')
         q.bind_out(f.engine_url('mux'))
@@ -400,28 +413,29 @@ class IPControllerApp(BaseParallelApplication):
 
         else:
             self.log.info("task::using Python %s Task scheduler"%scheme)
-            sargs = (BroadcastSchedulerNonCoalescing, f.client_url('task'), f.engine_url('task'),
+            sargs = (TaskScheduler, f.client_url('task'), f.engine_url('task'),
                     monitor_url, disambiguate_url(f.client_url('notification')),
                     disambiguate_url(f.client_url('registration')),
             )
-            kwargs = dict(logname='scheduler', loglevel=self.log_level,
-                            log_url = self.log_url, config=dict(self.config))
-            if 'Process' in self.mq_class:
-                # run the Python scheduler in a Process
-                q = Process(target=launch_scheduler, args=sargs, kwargs=kwargs)
-                q.daemon=True
-                children.append(q)
-            else:
-                # single-threaded Controller
-                kwargs['in_thread'] = True
-                launch_scheduler(*sargs, **kwargs)
-        
+            self.launch_python_scheduler(sargs, children)
+
+        sargs = (
+            BroadcastSchedulerNonCoalescing,
+            f.client_url('broadcast_non_coalescing'),
+            f.engine_url('broadcast_non_coalescing'),
+            monitor_url,
+            disambiguate_url(f.client_url('notification')),
+            disambiguate_url(f.client_url('registration'))
+        )
+
+        self.launch_python_scheduler(sargs, children)
+
         # set unlimited HWM for all relay devices
         if hasattr(zmq, 'SNDHWM'):
             q = children[0]
             q.setsockopt_in(zmq.RCVHWM, 0)
             q.setsockopt_out(zmq.SNDHWM, 0)
-            
+
             for q in children[1:]:
                 if not hasattr(q, 'setsockopt_in'):
                     continue
@@ -430,7 +444,7 @@ class IPControllerApp(BaseParallelApplication):
                 q.setsockopt_out(zmq.SNDHWM, 0)
                 q.setsockopt_out(zmq.RCVHWM, 0)
                 q.setsockopt_mon(zmq.SNDHWM, 0)
-            
+
 
     def terminate_children(self):
         child_procs = []
@@ -447,12 +461,12 @@ class IPControllerApp(BaseParallelApplication):
                 except OSError:
                     # already dead
                     pass
-    
+
     def handle_signal(self, sig, frame):
         self.log.critical("Received signal %i, shutting down", sig)
         self.terminate_children()
         self.loop.stop()
-    
+
     def init_signal(self):
         for sig in (SIGINT, SIGABRT, SIGTERM):
             signal(sig, self.handle_signal)
@@ -476,7 +490,7 @@ class IPControllerApp(BaseParallelApplication):
             handler.root_topic = 'controller'
             handler.setLevel(self.log_level)
             self.log.addHandler(handler)
-    
+
     @catch_config_error
     def initialize(self, argv=None):
         super(IPControllerApp, self).initialize(argv)
@@ -484,7 +498,7 @@ class IPControllerApp(BaseParallelApplication):
         self.load_secondary_config()
         self.init_hub()
         self.init_schedulers()
-    
+
     def start(self):
         # Start the subprocesses:
         self.factory.start()
@@ -502,7 +516,7 @@ class IPControllerApp(BaseParallelApplication):
             self.log.critical("Interrupted, Exiting...\n")
         finally:
             self.cleanup_connection_files()
-            
+
 
 def launch_new_instance(*args, **kwargs):
     """Create and run the IPython controller"""
@@ -510,7 +524,7 @@ def launch_new_instance(*args, **kwargs):
         # make sure we don't get called from a multiprocessing subprocess
         # this can result in infinite Controllers being started on Windows
         # which doesn't have a proper fork, so multiprocessing is wonky
-        
+
         # this only comes up when IPython has been installed using vanilla
         # setuptools, and *not* distribute.
         import multiprocessing

@@ -113,6 +113,8 @@ def launch_scheduler(
         # for safety with multiprocessing
         ctx = zmq.Context()
         loop = ioloop.IOLoop()
+
+
     ins = ZMQStream(ctx.socket(zmq.ROUTER), loop)
     util.set_hwm(ins, 0)
     ins.setsockopt(zmq.IDENTITY, identity + b'_in')
@@ -153,14 +155,6 @@ def launch_scheduler(
         log=log,
         config=config,
     )
-
-    # scheduler = TaskScheduler(client_stream=ins, engine_stream=outs,
-    #                         mon_stream=mons, notifier_stream=nots,
-    #                         query_stream=querys,
-    #                         loop=loop, log=log,
-    #                         config=config)
-
-    # TODO: How to start broadcastScheduler?
     scheduler.start()
     if not in_thread:
         try:
