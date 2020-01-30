@@ -14,7 +14,7 @@ def main():
         )
     ]
 
-    for i in range(16):
+    for i in range(1):
         ps.append(
             Popen(
                 ['ipengine', '--debug', '--profile=asv'],
