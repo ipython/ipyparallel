@@ -94,7 +94,7 @@ def launch_scheduler(
     logname='root',
     log_url=None,
     loglevel=logging.DEBUG,
-    identity=b'task',
+    identity=None,
     in_thread=False,
 ):
 
@@ -117,12 +117,14 @@ def launch_scheduler(
 
     ins = ZMQStream(ctx.socket(zmq.ROUTER), loop)
     util.set_hwm(ins, 0)
-    ins.setsockopt(zmq.IDENTITY, identity + b'_in')
+    if identity:
+        ins.setsockopt(zmq.IDENTITY, identity + b'_in')
     ins.bind(in_addr)
 
     outs = ZMQStream(ctx.socket(zmq.ROUTER), loop)
     util.set_hwm(outs, 0)
-    outs.setsockopt(zmq.IDENTITY, identity + b'_out')
+    if identity:
+        outs.setsockopt(zmq.IDENTITY, identity + b'_out')
     outs.bind(out_addr)
     mons = zmqstream.ZMQStream(ctx.socket(zmq.PUB), loop)
     util.set_hwm(mons, 0)
