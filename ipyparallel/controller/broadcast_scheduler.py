@@ -22,7 +22,7 @@ class BroadcastSchedulerNonCoalescing(Scheduler):
             return
 
         # send to monitor
-        self.mon_stream.send_multipart([b'intask'] + raw_msg, copy=False)
+        self.mon_stream.send_multipart([b'inbcast'] + raw_msg, copy=False)
 
         header = msg['header']
         metadata = msg['metadata']
@@ -33,11 +33,14 @@ class BroadcastSchedulerNonCoalescing(Scheduler):
         for target in targets:
             msg_and_target_id = f'{original_msg_id}_{target}'
             self.all_ids.add(msg_and_target_id)
+            new_idents = [cast_bytes(target)] + idents
+
             header['msg_id'] = msg_and_target_id
-            raw_msg[1] = self.session.pack(header)
-            #TODO: Might have to change raw_msg to add new msg_id
-            self.engine_stream.send(cast_bytes(target), flags=zmq.SNDMORE, copy=False)
-            self.engine_stream.send_multipart(raw_msg, copy=False)
+            new_msg_list = self.session.serialize(msg, ident=new_idents)
+            new_msg_list.extend(msg['buffers'])
+
+            self.log.debug("Sending %r", new_msg_list)
+            self.engine_stream.send_multipart(new_msg_list, copy=False)
 
     @util.log_errors
     def dispatch_result(self, raw_msg):
@@ -68,4 +71,4 @@ class BroadcastSchedulerNonCoalescing(Scheduler):
         self.all_done.add(msg_and_target_id)
 
         # send to Hub monitor TODO:Figure out if this is needed
-        self.mon_stream.send_multipart([b'outtask'] + raw_msg, copy=False)
+        self.mon_stream.send_multipart([b'outbcast'] + raw_msg, copy=False)

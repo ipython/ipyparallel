@@ -237,9 +237,11 @@ class EngineFactory(RegistrationFactory):
             # Use only one shell stream for mux and tasks
             stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
             stream.setsockopt(zmq.IDENTITY, identity)
+            self.log.debug("Setting shell identity %r", identity)
 
             shell_streams = [stream]
             for addr in shell_addrs: # TODO: Possibly problematic
+                self.log.info("Connecting shell to %s", addr)
                 connect(stream, addr)
 
             # control stream:

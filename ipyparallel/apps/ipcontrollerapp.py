@@ -340,18 +340,25 @@ class IPControllerApp(BaseParallelApplication):
         # have the same value
         self.config.Session.key = self.factory.session.key
 
-    def launch_python_scheduler(self, sargs, children):
-        kwargs = dict(logname='scheduler', loglevel=self.log_level,
-                      log_url=self.log_url, config=dict(self.config))
+    def launch_python_scheduler(self, scheduler_args, children):
+        kwargs = {}
+        kwargs.update(scheduler_args)
+        kwargs.update(
+            dict(
+                logname='scheduler',
+                loglevel=self.log_level,
+                log_url=self.log_url,config=dict(self.config),
+            )
+        )
         if 'Process' in self.mq_class:
             # run the Python scheduler in a Process
-            q = Process(target=launch_scheduler, args=sargs, kwargs=kwargs)
+            q = Process(target=launch_scheduler, kwargs=kwargs)
             q.daemon = True
             children.append(q)
         else:
             # single-threaded Controller
             kwargs['in_thread'] = True
-            launch_scheduler(*sargs, **kwargs)
+            launch_scheduler(**kwargs)
 
     def init_schedulers(self):
         children = self.children
@@ -413,22 +420,28 @@ class IPControllerApp(BaseParallelApplication):
 
         else:
             self.log.info("task::using Python %s Task scheduler"%scheme)
-            sargs = (TaskScheduler, f.client_url('task'), f.engine_url('task'),
-                    monitor_url, disambiguate_url(f.client_url('notification')),
-                    disambiguate_url(f.client_url('registration')),
+            scheduler_args = dict(
+                scheduler_class=TaskScheduler,
+                in_addr=f.client_url('task'),
+                out_addr=f.engine_url('task'),
+                mon_addr=monitor_url,
+                not_addr=disambiguate_url(f.client_url('notification')),
+                reg_addr=disambiguate_url(f.client_url('registration')),
+                identity=b'task',
             )
-            self.launch_python_scheduler(sargs, children)
+            self.launch_python_scheduler(scheduler_args, children)
 
-        sargs = (
-            BroadcastSchedulerNonCoalescing,
-            f.client_url('broadcast_non_coalescing'),
-            f.engine_url('broadcast_non_coalescing'),
-            monitor_url,
-            disambiguate_url(f.client_url('notification')),
-            disambiguate_url(f.client_url('registration'))
+        scheduler_args = dict(
+            scheduler_class=BroadcastSchedulerNonCoalescing,
+            in_addr=f.client_url('broadcast_non_coalescing'),
+            out_addr=f.engine_url('broadcast_non_coalescing'),
+            mon_addr=monitor_url,
+            not_addr=disambiguate_url(f.client_url('notification')),
+            reg_addr=disambiguate_url(f.client_url('registration')),
+            identity=b'broadcast_non_coalescing',
         )
 
-        self.launch_python_scheduler(sargs, children)
+        self.launch_python_scheduler(scheduler_args, children)
 
         # set unlimited HWM for all relay devices
         if hasattr(zmq, 'SNDHWM'):

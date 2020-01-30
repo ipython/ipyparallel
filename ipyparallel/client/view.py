@@ -860,16 +860,18 @@ class BroadcastView(DirectView):
         pargs = [PrePickled(arg) for arg in args]
         pkwargs = {k: PrePickled(v) for k, v in kwargs.items()}
 
-        metadata = dict(targets=idents, is_broadcast=True)
+        s_idents = [ident.decode("utf8") for ident in idents]
+
+        metadata = dict(targets=s_idents, is_broadcast=True)
 
         original_future = self.client.send_apply_request(
                 self._socket, pf, pargs, pkwargs,
-                track=track, ident=idents, metadata=metadata)
+                track=track, metadata=metadata)
 
         original_msg_id = original_future.msg_id
 
-        for ident in idents:
-            msg_and_target_id = f'{original_msg_id}_{ident.decode("utf-8")}'
+        for ident in s_idents:
+            msg_and_target_id = f'{original_msg_id}_{ident}'
             future = self.client.create_message_futures(msg_and_target_id, async_result=True, track=True)
             self.client.outstanding.add(msg_and_target_id)
             self.outstanding.add(msg_and_target_id)
