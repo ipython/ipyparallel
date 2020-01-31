@@ -886,7 +886,7 @@ class Client(HasTraits):
         self._notification_stream = ZMQStream(self._notification_socket, self._io_loop)
         self._notification_stream.on_recv(self._dispatch_notification, copy=False)
         self._broadcast_non_coalescing_stream = ZMQStream(self._broadcast_non_coalescing_socket, self._io_loop)
-        self._broadcast_non_coalescing_stream.on_recv(self._dispatch_broadcast_reply, copy=False)
+        self._broadcast_non_coalescing_stream.on_recv(self._dispatch_reply, copy=False)
 
     def _start_io_thread(self):
         """Start IOLoop in a background thread."""
@@ -939,19 +939,6 @@ class Client(HasTraits):
         handler = self._queue_handlers.get(msg_type, None)
         if handler is None:
             raise KeyError("Unhandled reply message type: %s" % msg_type)
-        else:
-            handler(msg)
-
-    @unpack_message
-    def _dispatch_broadcast_reply(self, msg):
-        if 'is_broadcast' in msg['metadata'] and msg['metadata']['is_broadcast']:
-            msg['parent_header']['msg_id'] =\
-                f'{msg["parent_header"]["msg_id"]}_{msg["metadata"]["engine"]}'
-
-        msg_type = msg['header']['msg_type']
-        handler = self._queue_handlers.get(msg_type, None)
-        if handler is None:
-            raise KeyError(f'Unhandled reply message type: {msg_type}')
         else:
             handler(msg)
 
