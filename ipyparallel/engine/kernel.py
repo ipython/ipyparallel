@@ -100,7 +100,7 @@ class IPythonParallelKernel(IPythonKernel):
         # flush i/o
         sys.stdout.flush()
         sys.stderr.flush()
-        self.log.info('ENGINE SENDING APPLY_REPLY', md)
+        self.log.debug('engine: sending apply_reply')
         self.session.send(stream, u'apply_reply', reply_content,
                     parent=parent, ident=ident, buffers=result_buf, metadata=md)
 

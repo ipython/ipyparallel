@@ -443,6 +443,8 @@ class Hub(SessionFactory):
                                 b'out': self.save_queue_result,
                                 b'intask': self.save_task_request,
                                 b'outtask': self.save_task_result,
+                                b'inbcast': self.save_broadcast_request,
+                                b'outbcast': self.save_broadcast_result,
                                 b'tracktask': self.save_task_destination,
                                 b'incontrol': _passer,
                                 b'outcontrol': _passer,
@@ -720,6 +722,76 @@ class Hub(SessionFactory):
         except Exception:
             self.log.error("DB Error updating record %r", msg_id, exc_info=True)
 
+
+    #--------------------- Broadcast traffic ------------------------------
+    def save_broadcast_request(self, idents, msg):
+        client_id = idents[0]
+
+        try:
+            msg = self.session.deserialize(msg)
+        except Exception as e:
+            self.log.error(f'broadcast:: client {client_id} sent invalid broadcast message:'
+                           f' {msg}', exc_info=True)
+            return
+
+        record = init_record(msg)
+
+        record['client_uuid'] = msg['header']['session']
+        header = msg['header']
+        msg_id = header['msg_id']
+        self.pending.add(msg_id)
+
+        try:
+            self.db.add_record(msg_id, record)
+        except Exception as e:
+            self.log.error(f'DB Error adding record {msg_id}', exc_info=True)
+
+    def save_broadcast_result(self, idents, msg):
+        client_id = idents[0]
+        try:
+            msg = self.session.deserialize(msg)
+        except Exception as e:
+            self.log.error(f'broadcast::invalid broadcast result message send to {client_id}:'
+                           f'')
+
+        # save the result of a completed broadcast
+        parent = msg['parent_header']
+        if not parent:
+            self.log.warn(f'Broadcast message {msg} had no parent')
+            return
+        msg_id = parent['msg_id']
+        header = msg['header']
+        md = msg['metadata']
+        engine_uuid = md.get('engine', u'')
+        eid = self.by_ident.get(cast_bytes(engine_uuid), None)
+        status = md.get('status', None)
+
+        if msg_id in self.pending:
+            self.log.info(f'broadcast:: broadcast {msg_id} finished on {eid}')
+            self.pending.remove(msg_id)
+            self.all_completed.add(msg_id)
+            if eid is not None and status != 'aborted':
+                self.completed[eid].append(msg_id)
+            ensure_date_is_parsed(header)
+            completed = util.ensure_timezone(header['date'])
+            started = extract_dates(md.get('started', None))
+            result = {
+                'result_header': header,
+                'result_metadata': msg['metadata'],
+                'result_content': msg['content'],
+                'started': started,
+                'completed': completed,
+                'received': util.utcnow(),
+                'engine_uuid': engine_uuid,
+                'result_buffers': msg['buffers']
+            }
+
+            try:
+                self.db.update_record(msg_id, result)
+            except Exception as e:
+                self.log.error(f'DB Error saving broadcast result {msg_id}', msg_id, exc_info=True)
+        else:
+            self.log.debug(f'broadcast::unknown broadcast {msg_id} finished')
 
     #--------------------- Task Queue Traffic ------------------------------
 
