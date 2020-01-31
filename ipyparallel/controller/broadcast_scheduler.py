@@ -22,7 +22,6 @@ class BroadcastSchedulerNonCoalescing(Scheduler):
             return
 
         # send to monitor
-        self.mon_stream.send_multipart([b'inbcast'] + raw_msg, copy=False)
 
         header = msg['header']
         metadata = msg['metadata']
@@ -39,6 +38,7 @@ class BroadcastSchedulerNonCoalescing(Scheduler):
             new_msg_list = self.session.serialize(msg, ident=new_idents)
             new_msg_list.extend(msg['buffers'])
 
+            self.mon_stream.send_multipart([b'inbcast'] + new_msg_list, copy=False)
             self.log.debug("Sending %r", new_msg_list)
             self.engine_stream.send_multipart(new_msg_list, copy=False)
 
@@ -47,7 +47,7 @@ class BroadcastSchedulerNonCoalescing(Scheduler):
         try:
             idents, msg = self.session.feed_identities(raw_msg, copy=False)
             msg = self.session.deserialize(msg, content=False, copy=False)
-            engine, client = idents[:2] # TODO: Make sure this is actually engine
+            engine, client = idents[:2]
         except Exception as e:
             self.log.error(
                 f'broadcast::Invalid broadcast msg: {raw_msg}', exc_info=True
@@ -55,20 +55,17 @@ class BroadcastSchedulerNonCoalescing(Scheduler):
             return
 
         metadata = msg['metadata']
-        parent = msg['parent_header']
+        msg_id = msg['parent_header']['msg_id']
 
-        original_msg_id = parent['msg_id']
-        msg_and_target_id = f'{original_msg_id}_{engine.decode("utf-8")}'
         success = metadata['status'] == 'ok'
         if success:
-            self.all_completed.add(msg_and_target_id)
+            self.all_completed.add(msg_id)
         else:
-            self.all_failed.add(msg_and_target_id)
+            self.all_failed.add(msg_id)
 
         # swap ids for ROUTER-ROUTER mirror
         raw_msg[:2] = [client, engine]
         self.client_stream.send_multipart(raw_msg, copy=False)
-        self.all_done.add(msg_and_target_id)
+        self.all_done.add(msg_id)
 
-        # send to Hub monitor TODO:Figure out if this is needed
         self.mon_stream.send_multipart([b'outbcast'] + raw_msg, copy=False)
