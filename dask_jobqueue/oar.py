@@ -71,7 +71,7 @@ class OARJob(Job):
 
         logger.debug("Job script: \n %s" % self.job_script())
 
-    def _submit_job(self, fn):
+    async def _submit_job(self, fn):
         # OAR specificity: the submission script needs to exist on the worker
         # when the job starts on the worker. This is different from other
         # schedulers that only need the script on the submission node at

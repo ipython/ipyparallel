@@ -1,8 +1,8 @@
 Changelog
 =========
 
-Devlopment version
-------------------
+Development version
+-------------------
 
 - ``LSFCluster``: add ``use_stdin`` to ``LSFCluster``. This switches between
   ``bsub < job_script`` and ``bsub job_script`` to launch a ``LSF`` job
@@ -13,6 +13,7 @@ Devlopment version
   ``processes ~= sqrt(cores)`` so that the number of processes and the number
   of threads per process is roughly the same. Old default was to use one
   process and only threads, i.e. ``proccesses=1``, ``threads_per_process=cores``.
+- fix bug (forgotten async def) in ``OARCluster._submit_job`` (:pr:`380`).
 
 0.7.0 / 2019-10-09
 ------------------
