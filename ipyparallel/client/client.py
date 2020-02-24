@@ -51,7 +51,7 @@ from ipyparallel.serialize import PrePickled
 from ..util import ioloop
 from .asyncresult import AsyncResult, AsyncHubResult
 from .futures import MessageFuture, multi_future
-from .view import DirectView, LoadBalancedView, BroadcastView
+from .view import DirectView, LoadBalancedView, BroadcastViewNonCoalescing, BroadcastViewCoalescing
 import jupyter_client.session
 jupyter_client.session.extract_dates = lambda obj: obj
 # --------------------------------------------------------------------------
@@ -360,6 +360,8 @@ class Client(HasTraits):
     _mux_socket=Instance('zmq.Socket', allow_none=True)
     _task_socket=Instance('zmq.Socket', allow_none=True)
     _broadcast_non_coalescing_socket=Instance('zmq.Socket', allow_none=True)
+    _broadcast_coalescing_socket=Instance('zmq.Socket', allow_none=True)
+
     _task_scheme=Unicode()
     _closed = False
 
@@ -441,7 +443,15 @@ class Client(HasTraits):
         cfg['interface'] = "%s://%s" % (proto, addr)
 
         # turn interface,port into full urls:
-        for key in ('control', 'task', 'mux', 'iopub', 'notification', 'registration', 'broadcast_non_coalescing'):
+        for key in (
+                'control',
+                'task',
+                'mux',
+                'iopub',
+                'notification',
+                'registration',
+                'broadcast_non_coalescing',
+                'broadcast_coalescing'):
             cfg[key] = cfg['interface'] + ':%i' % cfg[key]
 
         url = cfg['registration']
@@ -651,7 +661,12 @@ class Client(HasTraits):
             connect_socket(self._task_socket, cfg['task'])
 
             self._broadcast_non_coalescing_socket = self._context.socket(zmq.DEALER)
-            connect_socket(self._broadcast_non_coalescing_socket, cfg['broadcast_non_coalescing'])
+            connect_socket(self._broadcast_non_coalescing_socket,
+                           cfg['broadcast_non_coalescing'])
+
+            self._broadcast_coalescing_socket = self._context.socket(zmq.DEALER)
+            connect_socket(self._broadcast_coalescing_socket,
+                           cfg['broadcast_coalescing'])
 
             self._notification_socket = self._context.socket(zmq.SUB)
             self._notification_socket.setsockopt(zmq.SUBSCRIBE, b'')
@@ -697,11 +712,12 @@ class Client(HasTraits):
               'follow' : msg_meta.get('follow', []),
               'after' : msg_meta.get('after', []),
               'status' : content['status'],
+              'is_broadcast_non_coalescing': msg_meta.get('is_broadcast_non_coalescing', False),
+              'is_broadcast_coalescing': msg_meta.get('is_broadcast_coalescing', False)
             }
 
         if md['engine_uuid'] is not None:
             md['engine_id'] = self._engines.get(md['engine_uuid'], None)
-
         if 'date' in parent:
             md['submitted'] = parent['date']
         if 'started' in msg_meta:
@@ -807,7 +823,13 @@ class Client(HasTraits):
     def _handle_apply_reply(self, msg):
         """Save the reply to an apply_request into our results."""
         parent = msg['parent_header']
-        msg_id = parent['msg_id']
+
+        md = msg['metadata']
+        if md.get('is_broadcast_non_coalescing', False) or md.get('is_broadcast_coalescing'):
+            msg_id = msg['metadata']['original_msg_id']
+        else:
+            msg_id = parent['msg_id']
+
         future = self._futures.get(msg_id, None)
         if msg_id not in self.outstanding:
             if msg_id in self.history:
@@ -829,9 +851,15 @@ class Client(HasTraits):
         if msg_id in e_outstanding:
             e_outstanding.remove(msg_id)
 
+
         # construct result:
         if content['status'] == 'ok':
-            self.results[msg_id] = serialize.deserialize_object(msg['buffers'])[0]
+            if md.get('is_broadcast_coalescing', False):
+                self.results[msg_id] = serialize.deserialize_object(
+                    msg['buffers'], try_to_extract_all=True
+                )
+            else:
+                self.results[msg_id] = serialize.deserialize_object(msg['buffers'])[0]
         elif content['status'] == 'aborted':
             self.results[msg_id] = error.TaskAborted(msg_id)
             out_future = self._output_futures.get(msg_id)
@@ -885,8 +913,13 @@ class Client(HasTraits):
         self._iopub_stream.on_recv(self._dispatch_iopub, copy=False)
         self._notification_stream = ZMQStream(self._notification_socket, self._io_loop)
         self._notification_stream.on_recv(self._dispatch_notification, copy=False)
-        self._broadcast_non_coalescing_stream = ZMQStream(self._broadcast_non_coalescing_socket, self._io_loop)
+
+        self._broadcast_non_coalescing_stream = ZMQStream(
+            self._broadcast_non_coalescing_socket, self._io_loop)
         self._broadcast_non_coalescing_stream.on_recv(self._dispatch_reply, copy=False)
+        self._broadcast_coalescing_stream = ZMQStream(
+            self._broadcast_coalescing_socket, self._io_loop)
+        self._broadcast_coalescing_stream.on_recv(self._dispatch_reply, copy=False)
 
     def _start_io_thread(self):
         """Start IOLoop in a background thread."""
@@ -1585,7 +1618,7 @@ class Client(HasTraits):
             client=self, socket=self._mux_stream, targets=targets, **kwargs
         )
 
-    def broadcast_view(self, targets='all', **kwargs):
+    def broadcast_view(self, targets='all', is_coalescing=False, **kwargs):
         """construct a BroadCastView object.
         If no arguments are specified, create a BroadCastView using all engines
         using all engines.
@@ -1595,13 +1628,17 @@ class Client(HasTraits):
 
         targets: list,slice,int,etc. [default: use all engines]
             The subset of engines across which to load-balance execution
+        is_coalescing: scheduler collects all messages from engines and returns them as one
         kwargs: passed to BroadCastView
         """
         targets = self._build_targets(targets)[1]
 
-        return BroadcastView(
-            client=self, socket=self._broadcast_non_coalescing_stream, targets=targets, **kwargs
-        )
+        return BroadcastViewCoalescing(
+            client=self, socket=self._broadcast_coalescing_stream, targets=targets, **kwargs
+        ) if is_coalescing else BroadcastViewNonCoalescing(
+            client=self,
+            socket=self._broadcast_non_coalescing_stream,
+            targets=targets, **kwargs)
 
     #--------------------------------------------------------------------------
     # Query methods

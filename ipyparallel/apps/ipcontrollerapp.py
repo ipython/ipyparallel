@@ -37,7 +37,8 @@ from jupyter_client.session import (
     Session, session_aliases, session_flags,
 )
 
-from ipyparallel.controller.broadcast_scheduler import BroadcastSchedulerNonCoalescing
+from ipyparallel.controller.broadcast_scheduler import BroadcastSchedulerNonCoalescing, \
+    BroadcastSchedulerCoalescing
 from ipyparallel.controller.heartmonitor import HeartMonitor
 from ipyparallel.controller.hub import HubFactory
 from ipyparallel.controller.scheduler import launch_scheduler
@@ -439,6 +440,18 @@ class IPControllerApp(BaseParallelApplication):
             not_addr=disambiguate_url(f.client_url('notification')),
             reg_addr=disambiguate_url(f.client_url('registration')),
             identity=b'broadcast_non_coalescing',
+        )
+
+        self.launch_python_scheduler(scheduler_args, children)
+
+        scheduler_args = dict(
+            scheduler_class=BroadcastSchedulerCoalescing,
+            in_addr=f.client_url('broadcast_coalescing'),
+            out_addr=f.engine_url('broadcast_coalescing'),
+            mon_addr=monitor_url,
+            not_addr=disambiguate_url(f.client_url('notification')),
+            reg_addr=disambiguate_url(f.client_url('registration')),
+            identity=b'broadcast_coalescing',
         )
 
         self.launch_python_scheduler(scheduler_args, children)

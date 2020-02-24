@@ -232,7 +232,7 @@ class EngineFactory(RegistrationFactory):
             heart.start()
 
             # create Shell Connections (MUX, Task, etc.):
-            shell_addrs = url('mux'), url('task'), url('broadcast_non_coalescing')
+            shell_addrs = url('mux'), url('task'), url('broadcast_non_coalescing'), url('broadcast_coalescing')
 
             # Use only one shell stream for mux and tasks
             stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)

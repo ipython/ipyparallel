@@ -52,9 +52,8 @@ class IPythonParallelKernel(IPythonKernel):
             return False
         return True
 
-    def is_broadcast(self, parent):
-        return 'metadata' in parent and 'is_broadcast' in parent['metadata']\
-               and parent['metadata']['is_broadcast']
+    def extract_original_msg_id(self, parent):
+        return parent.get('metadata', {}).get('original_msg_id', '')
 
     def init_metadata(self, parent):
         """init metadata dict, for execute/apply_reply"""
@@ -62,8 +61,9 @@ class IPythonParallelKernel(IPythonKernel):
             'started': utcnow(),
             'dependencies_met' : True,
             'engine' : self.ident,
-            'is_broadcast': self.is_broadcast(parent)
-
+            'is_broadcast_non_coalescing': parent.get('metadata', {}).get('is_broadcast_non_coalescing', False),
+            'is_broadcast_coalescing': parent.get('metadata', {}).get('is_broadcast_coalescing', False),
+            'original_msg_id': self.extract_original_msg_id(parent)
         }
 
     def finish_metadata(self, parent, metadata, reply_content):

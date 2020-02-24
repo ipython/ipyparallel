@@ -152,7 +152,14 @@ class HubFactory(RegistrationFactory):
     broadcast_non_coalescing = Tuple(Integer(), Integer(), config=True,
         help="""Client/Engine Port pair for BroadcastNonCoalescing queue""")
 
+
     def _broadcast_non_coalescing_default(self):
+        return tuple(util.select_random_ports(2))
+
+    broadcast_coalescing = Tuple(Integer(), Integer(), config=True,
+            help="""Client/Engine Port pair for BroadcastCoalescing queue""")
+
+    def _broadcast_coalescing_default(self):
         return tuple(util.select_random_ports(2))
 
     control = Tuple(Integer(), Integer(), config=True,
@@ -280,7 +287,7 @@ class HubFactory(RegistrationFactory):
             scheme = TaskScheduler.scheme_name.default_value
         
         # build connection dicts
-        engine = self.engine_info = { # TODO: Add broadcast
+        engine = self.engine_info = {
             'interface'     : "%s://%s" % (self.engine_transport, self.engine_ip),
             'registration'  : self.regport,
             'control'       : self.control[1],
@@ -289,7 +296,8 @@ class HubFactory(RegistrationFactory):
             'hb_pong'       : self.hb[1],
             'task'          : self.task[1],
             'iopub'         : self.iopub[1],
-            'broadcast_non_coalescing': self.broadcast_non_coalescing[1]
+            'broadcast_non_coalescing': self.broadcast_non_coalescing[1],
+            'broadcast_coalescing': self.broadcast_coalescing[1]
             }
 
         client = self.client_info = {
@@ -301,7 +309,8 @@ class HubFactory(RegistrationFactory):
             'task_scheme'   : scheme,
             'iopub'         : self.iopub[0],
             'notification'  : self.notifier_port,
-            'broadcast_non_coalescing': self.broadcast_non_coalescing[0]
+            'broadcast_non_coalescing': self.broadcast_non_coalescing[0],
+            'broadcast_coalescing': self.broadcast_coalescing[0]
             }
         
         self.log.debug("Hub engine addrs: %s", self.engine_info)
@@ -726,7 +735,6 @@ class Hub(SessionFactory):
     #--------------------- Broadcast traffic ------------------------------
     def save_broadcast_request(self, idents, msg):
         client_id = idents[0]
-
         try:
             msg = self.session.deserialize(msg)
         except Exception as e:
