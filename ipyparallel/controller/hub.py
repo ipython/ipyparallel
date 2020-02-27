@@ -595,10 +595,10 @@ class Hub(SessionFactory):
         triggers unregistration"""
         self.log.debug("heartbeat::handle_heart_failure(%r)", heart)
         eid = self.hearts.get(heart, None)
-        uuid = self.engines[eid].uuid
         if eid is None:
             self.log.info("heartbeat::ignoring heart failure %r (not an engine or already dead)", heart)
         else:
+            uuid = self.engines[eid].uuid
             self.unregister_engine(heart, dict(content=dict(id=eid, queue=uuid)))
 
     #----------------------- MUX Queue Traffic ------------------------------
