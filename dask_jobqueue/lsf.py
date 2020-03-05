@@ -55,8 +55,6 @@ class LSFJob(Job):
 
         if use_stdin is None:
             use_stdin = dask.config.get("jobqueue.%s.use-stdin" % self.config_name)
-        if use_stdin is None:
-            use_stdin = lsf_version() < "10"
         self.use_stdin = use_stdin
 
         header_lines = []
