@@ -26,7 +26,8 @@ class LocalJob(Job):
 
     def __init__(
         self,
-        *args,
+        scheduler=None,
+        name=None,
         queue=None,
         project=None,
         resource_spec=None,
@@ -36,7 +37,13 @@ class LocalJob(Job):
         **kwargs
     ):
         # Instantiate args and parameters from parent abstract class
-        super().__init__(*args, config_name=config_name, shebang="", **kwargs)
+        super().__init__(
+            scheduler=scheduler,
+            name=name,
+            config_name=config_name,
+            shebang="",
+            **kwargs
+        )
 
         # Declare class attribute that shall be overridden
         self.job_header = ""

@@ -21,7 +21,8 @@ class LSFJob(Job):
 
     def __init__(
         self,
-        *args,
+        scheduler=None,
+        name=None,
         queue=None,
         project=None,
         ncpus=None,
@@ -33,7 +34,9 @@ class LSFJob(Job):
         use_stdin=None,
         **kwargs
     ):
-        super().__init__(*args, config_name=config_name, **kwargs)
+        super().__init__(
+            scheduler=scheduler, name=name, config_name=config_name, **kwargs
+        )
 
         if queue is None:
             queue = dask.config.get("jobqueue.%s.queue" % self.config_name)

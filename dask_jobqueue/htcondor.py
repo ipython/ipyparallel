@@ -33,8 +33,18 @@ Queue
 
     config_name = "htcondor"
 
-    def __init__(self, *args, disk=None, job_extra=None, config_name=None, **kwargs):
-        super().__init__(*args, config_name=config_name, **kwargs)
+    def __init__(
+        self,
+        scheduler=None,
+        name=None,
+        disk=None,
+        job_extra=None,
+        config_name=None,
+        **kwargs
+    ):
+        super().__init__(
+            scheduler=scheduler, name=name, config_name=config_name, **kwargs
+        )
 
         if disk is None:
             disk = dask.config.get("jobqueue.%s.disk" % self.config_name)
