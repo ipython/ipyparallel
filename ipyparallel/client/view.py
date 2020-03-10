@@ -933,6 +933,46 @@ class BroadcastViewCoalescing(DirectView):
         return ar
 
 
+class ExponentialView(DirectView):
+    def __init__(self, client=None, socket=None, targets=None):
+        super().__init__(client=client, socket=socket, targets=targets)
+
+    @sync_results
+    @save_ids
+    def _really_apply(self, f, args=None, kwargs=None, block=None, track=None,
+                      targets=None):
+        args = [] if args is None else args
+        kwargs = {} if kwargs is None else kwargs
+        block = self.block if block is None else block
+        track = self.track if track is None else track
+        targets = self.targets if targets is None else targets
+
+        idents, _targets = self.client._build_targets(targets)
+
+        pf = PrePickled(f)
+        pargs = [PrePickled(arg) for arg in args]
+        pkwargs = {k: PrePickled(v) for k, v in kwargs.items()}
+
+        s_idents = [ident.decode("utf8") for ident in idents]
+
+        metadata = dict(targets=s_idents)
+
+        message_future = self.client.send_apply_request(
+            self._socket, pf, pargs, pkwargs,
+            track=track, metadata=metadata)
+
+        self.client.outstanding.add(message_future.msg_id)
+
+        ar = AsyncResult(self.client, message_future, fname=getname(f),
+                         targets=_targets,
+                         owner=True)
+        if block:
+            try:
+                return ar.get()
+            except KeyboardInterrupt:
+                pass
+        return ar
+
 class LoadBalancedView(View):
     """An load-balancing View that only executes via the Task scheduler.
 

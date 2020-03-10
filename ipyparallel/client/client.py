@@ -51,7 +51,8 @@ from ipyparallel.serialize import PrePickled
 from ..util import ioloop
 from .asyncresult import AsyncResult, AsyncHubResult
 from .futures import MessageFuture, multi_future
-from .view import DirectView, LoadBalancedView, BroadcastViewNonCoalescing, BroadcastViewCoalescing
+from .view import DirectView, LoadBalancedView, BroadcastViewNonCoalescing, \
+    BroadcastViewCoalescing, ExponentialView
 import jupyter_client.session
 jupyter_client.session.extract_dates = lambda obj: obj
 # --------------------------------------------------------------------------
@@ -361,6 +362,8 @@ class Client(HasTraits):
     _task_socket=Instance('zmq.Socket', allow_none=True)
     _broadcast_non_coalescing_socket=Instance('zmq.Socket', allow_none=True)
     _broadcast_coalescing_socket=Instance('zmq.Socket', allow_none=True)
+    _sub_scheduler_socket = Instance('zmq.Socket', allow_none=True)
+
 
     _task_scheme=Unicode()
     _closed = False
@@ -451,7 +454,9 @@ class Client(HasTraits):
                 'notification',
                 'registration',
                 'broadcast_non_coalescing',
-                'broadcast_coalescing'):
+                'broadcast_coalescing',
+                'sub_scheduler',
+        ):
             cfg[key] = cfg['interface'] + ':%i' % cfg[key]
 
         url = cfg['registration']
@@ -667,6 +672,9 @@ class Client(HasTraits):
             self._broadcast_coalescing_socket = self._context.socket(zmq.DEALER)
             connect_socket(self._broadcast_coalescing_socket,
                            cfg['broadcast_coalescing'])
+
+            self._sub_scheduler_socket = self._context.socket(zmq.DEALER)
+            connect_socket(self._sub_scheduler_socket, cfg['sub_scheduler'])
 
             self._notification_socket = self._context.socket(zmq.SUB)
             self._notification_socket.setsockopt(zmq.SUBSCRIBE, b'')
@@ -917,9 +925,15 @@ class Client(HasTraits):
         self._broadcast_non_coalescing_stream = ZMQStream(
             self._broadcast_non_coalescing_socket, self._io_loop)
         self._broadcast_non_coalescing_stream.on_recv(self._dispatch_reply, copy=False)
+
         self._broadcast_coalescing_stream = ZMQStream(
             self._broadcast_coalescing_socket, self._io_loop)
         self._broadcast_coalescing_stream.on_recv(self._dispatch_reply, copy=False)
+
+        self._sub_scheduler_stream = ZMQStream(
+            self._sub_scheduler_socket, self._io_loop)
+
+        self._sub_scheduler_stream.on_recv(self._dispatch_reply, copy=False)
 
     def _start_io_thread(self):
         """Start IOLoop in a background thread."""
@@ -1640,6 +1654,10 @@ class Client(HasTraits):
             socket=self._broadcast_non_coalescing_stream,
             targets=targets, **kwargs)
 
+    def exponential_view(self, targets='all', **kwargs):
+        return ExponentialView(
+            client=self, socket=self._sub_scheduler_stream, targets=targets, **kwargs
+        )
     #--------------------------------------------------------------------------
     # Query methods
     #--------------------------------------------------------------------------

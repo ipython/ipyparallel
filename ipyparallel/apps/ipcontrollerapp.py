@@ -39,6 +39,7 @@ from jupyter_client.session import (
 
 from ipyparallel.controller.broadcast_scheduler import BroadcastSchedulerNonCoalescing, \
     BroadcastSchedulerCoalescing
+from ipyparallel.controller.exponential_scheduler import ExponentialScheduler
 from ipyparallel.controller.heartmonitor import HeartMonitor
 from ipyparallel.controller.hub import HubFactory
 from ipyparallel.controller.scheduler import launch_scheduler
@@ -342,24 +343,15 @@ class IPControllerApp(BaseParallelApplication):
         self.config.Session.key = self.factory.session.key
 
     def launch_python_scheduler(self, scheduler_args, children):
-        kwargs = {}
-        kwargs.update(scheduler_args)
-        kwargs.update(
-            dict(
-                logname='scheduler',
-                loglevel=self.log_level,
-                log_url=self.log_url,config=dict(self.config),
-            )
-        )
         if 'Process' in self.mq_class:
             # run the Python scheduler in a Process
-            q = Process(target=launch_scheduler, kwargs=kwargs)
+            q = Process(target=launch_scheduler, kwargs=scheduler_args)
             q.daemon = True
             children.append(q)
         else:
             # single-threaded Controller
-            kwargs['in_thread'] = True
-            launch_scheduler(**kwargs)
+            scheduler_args['in_thread'] = True
+            launch_scheduler(**scheduler_args)
 
     def init_schedulers(self):
         children = self.children
@@ -421,40 +413,42 @@ class IPControllerApp(BaseParallelApplication):
 
         else:
             self.log.info("task::using Python %s Task scheduler"%scheme)
-            scheduler_args = dict(
-                scheduler_class=TaskScheduler,
-                in_addr=f.client_url('task'),
-                out_addr=f.engine_url('task'),
-                mon_addr=monitor_url,
-                not_addr=disambiguate_url(f.client_url('notification')),
-                reg_addr=disambiguate_url(f.client_url('registration')),
-                identity=b'task',
-            )
-            self.launch_python_scheduler(scheduler_args, children)
+            self.launch_python_scheduler(self.get_python_scheduler_args('task', f, TaskScheduler, monitor_url)
+                                         , children)
 
-        scheduler_args = dict(
-            scheduler_class=BroadcastSchedulerNonCoalescing,
-            in_addr=f.client_url('broadcast_non_coalescing'),
-            out_addr=f.engine_url('broadcast_non_coalescing'),
-            mon_addr=monitor_url,
-            not_addr=disambiguate_url(f.client_url('notification')),
-            reg_addr=disambiguate_url(f.client_url('registration')),
-            identity=b'broadcast_non_coalescing',
-        )
+        self.launch_python_scheduler(self.get_python_scheduler_args(
+            'broadcast_non_coalescing', f, BroadcastSchedulerNonCoalescing, monitor_url
+        ), children)
 
-        self.launch_python_scheduler(scheduler_args, children)
+        self.launch_python_scheduler(self.get_python_scheduler_args(
+            'broadcast_coalescing', f, BroadcastSchedulerCoalescing, monitor_url
+        ), children)
 
-        scheduler_args = dict(
-            scheduler_class=BroadcastSchedulerCoalescing,
-            in_addr=f.client_url('broadcast_coalescing'),
-            out_addr=f.engine_url('broadcast_coalescing'),
-            mon_addr=monitor_url,
-            not_addr=disambiguate_url(f.client_url('notification')),
-            reg_addr=disambiguate_url(f.client_url('registration')),
-            identity=b'broadcast_coalescing',
-        )
+        sub_scheduler_ids = [bytes(f'sub_scheduler_{i}', 'utf8') for i in range(7)]
 
-        self.launch_python_scheduler(scheduler_args, children)
+        self.launch_python_scheduler(self.get_python_scheduler_args(
+            'sub_scheduler', f, ExponentialScheduler, monitor_url,
+            identity=sub_scheduler_ids[0],
+            is_root=True,
+            is_sub_scheduler=True,
+            connected_sub_schedulers=sub_scheduler_ids[1:3],
+        ), children)
+
+        self.launch_python_scheduler(self.get_python_scheduler_args(
+            'sub_scheduler', f, ExponentialScheduler, monitor_url,
+            identity=sub_scheduler_ids[1],
+            is_leaf=True,
+            is_sub_scheduler=True,
+            connect=True
+        ), children)
+
+        self.launch_python_scheduler(self.get_python_scheduler_args(
+            'sub_scheduler', f, ExponentialScheduler, monitor_url,
+            identity=sub_scheduler_ids[2],
+            is_leaf=True,
+            is_sub_scheduler=True,
+            connect=True
+        ), children)
 
         # set unlimited HWM for all relay devices
         if hasattr(zmq, 'SNDHWM'):
@@ -542,6 +536,40 @@ class IPControllerApp(BaseParallelApplication):
             self.log.critical("Interrupted, Exiting...\n")
         finally:
             self.cleanup_connection_files()
+
+    def get_python_scheduler_args(
+            self,
+            scheduler_name,
+            factory,
+            scheduler_class,
+            monitor_url,
+            identity=None,
+            is_leaf=False,
+            is_root=False,
+            connected_sub_schedulers=None,
+            is_sub_scheduler=False,
+            connect=False,
+    ):
+        return {
+            'scheduler_class': scheduler_class,
+            'in_addr': factory.client_url(scheduler_name),
+            'out_addr': factory.engine_url(scheduler_name),
+            'mon_addr': monitor_url,
+            'not_addr': disambiguate_url(factory.client_url('notification')),
+            'reg_addr': disambiguate_url(factory.client_url('registration')),
+            'identity': identity if identity else bytes(scheduler_name, 'utf8'),
+            'is_leaf': is_leaf,
+            'is_root': is_root,
+            'connected_sub_schedulers': connected_sub_schedulers
+            if connected_sub_schedulers
+            else [],
+            'is_sub_scheduler': is_sub_scheduler,
+            'logname': 'scheduler',
+            'loglevel': self.log_level,
+            'log_url': self.log_url,
+            'config': dict(self.config),
+            'connect': connect
+        }
 
 
 def launch_new_instance(*args, **kwargs):

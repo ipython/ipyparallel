@@ -162,6 +162,12 @@ class HubFactory(RegistrationFactory):
     def _broadcast_coalescing_default(self):
         return tuple(util.select_random_ports(2))
 
+    sub_scheduler = Tuple(Integer(), Integer(), config=True,
+                             help="Port pair for queue from client through sub schedulers to engines")
+
+    def _sub_scheduler_default(self):
+        return tuple(util.select_random_ports(2))
+
     control = Tuple(Integer(), Integer(), config=True,
         help="""Client/Engine Port pair for Control queue""")
 
@@ -297,7 +303,8 @@ class HubFactory(RegistrationFactory):
             'task'          : self.task[1],
             'iopub'         : self.iopub[1],
             'broadcast_non_coalescing': self.broadcast_non_coalescing[1],
-            'broadcast_coalescing': self.broadcast_coalescing[1]
+            'broadcast_coalescing': self.broadcast_coalescing[1],
+            'sub_scheduler': self.sub_scheduler[1],
             }
 
         client = self.client_info = {
@@ -310,7 +317,8 @@ class HubFactory(RegistrationFactory):
             'iopub'         : self.iopub[0],
             'notification'  : self.notifier_port,
             'broadcast_non_coalescing': self.broadcast_non_coalescing[0],
-            'broadcast_coalescing': self.broadcast_coalescing[0]
+            'broadcast_coalescing': self.broadcast_coalescing[0],
+            'sub_scheduler': self.sub_scheduler[0],
             }
         
         self.log.debug("Hub engine addrs: %s", self.engine_info)

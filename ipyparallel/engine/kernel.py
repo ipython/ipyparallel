@@ -98,6 +98,7 @@ class IPythonParallelKernel(IPythonKernel):
         md = self.finish_metadata(parent, md, reply_content)
 
         # flush i/o
+        self.log.info(f'ENGINE apply request, ident: {ident}')
         sys.stdout.flush()
         sys.stderr.flush()
         self.log.debug('engine: sending apply_reply')

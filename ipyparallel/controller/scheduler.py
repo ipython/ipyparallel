@@ -24,6 +24,7 @@ from ipyparallel import util
 from ipyparallel.util import connect_logger, local_logger, ioloop
 
 import jupyter_client.session
+
 jupyter_client.session.extract_dates = lambda obj: obj
 from jupyter_client.session import SessionFactory
 
@@ -82,7 +83,6 @@ class Scheduler(SessionFactory):
         raise NotImplementedError("Implement in subclasses")
 
 
-
 def launch_scheduler(
     scheduler_class,
     in_addr,
@@ -96,6 +96,11 @@ def launch_scheduler(
     loglevel=logging.DEBUG,
     identity=None,
     in_thread=False,
+    is_leaf=False,
+    is_root=False,
+    connected_sub_schedulers=None,
+    is_sub_scheduler=False,
+    connect=False
 ):
 
     ZMQStream = zmqstream.ZMQStream
@@ -114,18 +119,25 @@ def launch_scheduler(
         ctx = zmq.Context()
         loop = ioloop.IOLoop()
 
-
     ins = ZMQStream(ctx.socket(zmq.ROUTER), loop)
     util.set_hwm(ins, 0)
     if identity:
         ins.setsockopt(zmq.IDENTITY, identity + b'_in')
-    ins.bind(in_addr)
+    if connect:
+        ins.connect(in_addr)
+    else:
+        ins.bind(in_addr)
 
     outs = ZMQStream(ctx.socket(zmq.ROUTER), loop)
     util.set_hwm(outs, 0)
+
     if identity:
         outs.setsockopt(zmq.IDENTITY, identity + b'_out')
-    outs.bind(out_addr)
+    if connect:
+        outs.connect(out_addr)
+    else:
+        outs.bind(out_addr)
+
     mons = zmqstream.ZMQStream(ctx.socket(zmq.PUB), loop)
     util.set_hwm(mons, 0)
     mons.connect(mon_addr)
@@ -147,7 +159,7 @@ def launch_scheduler(
         else:
             log = local_logger(logname, loglevel)
 
-    scheduler = scheduler_class(
+    scheduler_args = dict(
         client_stream=ins,
         engine_stream=outs,
         mon_stream=mons,
@@ -157,6 +169,18 @@ def launch_scheduler(
         log=log,
         config=config,
     )
+    if is_sub_scheduler:
+        scheduler_args.update(
+            dict(
+                is_leaf=is_leaf,
+                is_root=is_root,
+                connected_sub_schedulers=connected_sub_schedulers,
+                identity=identity
+            )
+        )
+
+    scheduler = scheduler_class(**scheduler_args)
+
     scheduler.start()
     if not in_thread:
         try:

@@ -232,7 +232,12 @@ class EngineFactory(RegistrationFactory):
             heart.start()
 
             # create Shell Connections (MUX, Task, etc.):
-            shell_addrs = url('mux'), url('task'), url('broadcast_non_coalescing'), url('broadcast_coalescing')
+            shell_addrs = \
+                url('mux'),\
+                url('task'),\
+                url('broadcast_non_coalescing'),\
+                url('broadcast_coalescing'),\
+                url('sub_scheduler')
 
             # Use only one shell stream for mux and tasks
             stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
@@ -240,7 +245,7 @@ class EngineFactory(RegistrationFactory):
             self.log.debug("Setting shell identity %r", identity)
 
             shell_streams = [stream]
-            for addr in shell_addrs: # TODO: Possibly problematic
+            for addr in shell_addrs:
                 self.log.info("Connecting shell to %s", addr)
                 connect(stream, addr)
 
