@@ -82,29 +82,18 @@ class Scheduler(SessionFactory):
     def dispatch_submission(self, raw_msg):
         raise NotImplementedError("Implement in subclasses")
 
+ZMQStream = zmqstream.ZMQStream
 
-def launch_scheduler(
-    scheduler_class,
-    in_addr,
-    out_addr,
-    mon_addr,
-    not_addr,
-    reg_addr,
-    config=None,
-    logname='root',
-    log_url=None,
-    loglevel=logging.DEBUG,
-    identity=None,
-    in_thread=False,
-    is_leaf=False,
-    is_root=False,
-    connected_sub_schedulers=None,
-    is_sub_scheduler=False,
-    connect=False
+def get_common_scheduler_streams(
+        mon_addr,
+        not_addr,
+        reg_addr,
+        config,
+        logname,
+        log_url,
+        loglevel,
+        in_thread,
 ):
-
-    ZMQStream = zmqstream.ZMQStream
-
     if config:
         # unwrap dict back into Config
         config = Config(config)
@@ -118,28 +107,7 @@ def launch_scheduler(
         # for safety with multiprocessing
         ctx = zmq.Context()
         loop = ioloop.IOLoop()
-
-    ins = ZMQStream(ctx.socket(zmq.ROUTER), loop)
-    util.set_hwm(ins, 0)
-    if identity:
-        ins.setsockopt(zmq.IDENTITY, identity + b'_in')
-    if connect:
-        ins.connect(in_addr)
-    else:
-        ins.bind(in_addr)
-
-    outs = ZMQStream(ctx.socket(zmq.ROUTER), loop)
-    util.set_hwm(outs, 0)
-
-    if identity:
-        outs.setsockopt(zmq.IDENTITY, identity + b'_out')
-    if connect:
-        outs.connect(out_addr)
-    else:
-        outs.bind(out_addr)
-
     mons = zmqstream.ZMQStream(ctx.socket(zmq.PUB), loop)
-    util.set_hwm(mons, 0)
     mons.connect(mon_addr)
     nots = zmqstream.ZMQStream(ctx.socket(zmq.SUB), loop)
     nots.setsockopt(zmq.SUBSCRIBE, b'')
@@ -158,8 +126,51 @@ def launch_scheduler(
             )
         else:
             log = local_logger(logname, loglevel)
+    return config, ctx, loop, mons, nots, querys, log
 
-    scheduler_args = dict(
+
+def launch_scheduler(
+    scheduler_class,
+    in_addr,
+    out_addr,
+    mon_addr,
+    not_addr,
+    reg_addr,
+    config=None,
+    logname='root',
+    log_url=None,
+    loglevel=logging.DEBUG,
+    identity=None,
+    in_thread=False,
+):
+    config, ctx, loop, mons, nots, querys, log = get_common_scheduler_streams(
+        mon_addr,
+        not_addr,
+        reg_addr,
+        config,
+        logname,
+        log_url,
+        loglevel,
+        in_thread
+    )
+
+    util.set_hwm(mons, 0)
+    ins = ZMQStream(ctx.socket(zmq.ROUTER), loop)
+    util.set_hwm(ins, 0)
+    if identity:
+        ins.setsockopt(zmq.IDENTITY, identity + b'_in')
+    else:
+        ins.bind(in_addr)
+
+    outs = ZMQStream(ctx.socket(zmq.ROUTER), loop)
+    util.set_hwm(outs, 0)
+
+    if identity:
+        outs.setsockopt(zmq.IDENTITY, identity + b'_out')
+    else:
+        outs.bind(out_addr)
+
+    scheduler = scheduler_class(
         client_stream=ins,
         engine_stream=outs,
         mon_stream=mons,
@@ -167,19 +178,8 @@ def launch_scheduler(
         query_stream=querys,
         loop=loop,
         log=log,
-        config=config,
+        config=config
     )
-    if is_sub_scheduler:
-        scheduler_args.update(
-            dict(
-                is_leaf=is_leaf,
-                is_root=is_root,
-                connected_sub_schedulers=connected_sub_schedulers,
-                identity=identity
-            )
-        )
-
-    scheduler = scheduler_class(**scheduler_args)
 
     scheduler.start()
     if not in_thread:
@@ -187,3 +187,31 @@ def launch_scheduler(
             loop.start()
         except KeyboardInterrupt:
             scheduler.log.critical("Interrupted, exiting...")
+
+def launch_tree_spanning_scheduler(
+        in_addr,
+        out_addrs,
+        mon_addr,
+        not_addr,
+        reg_addr,
+        config=None,
+        loglevel=logging.DEBUG,
+        log_url=None,
+        is_leaf=False,
+        is_root=False,
+        in_thread=False,
+):
+    config, ctx, loop, mons, nots, querys, log = get_common_scheduler_streams(
+        mon_addr,
+        not_addr,
+        reg_addr,
+        config,
+        'scheduler',
+        log_url,
+        loglevel,
+        in_thread
+    )
+    ins = ZMQStream(ctx.socket(zmq.ROUTER), loop)
+    util.set_hwm(ins, 0)
+
+
