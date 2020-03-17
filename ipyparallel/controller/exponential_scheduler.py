@@ -91,5 +91,6 @@ class ExponentialScheduler(Scheduler):
                 self.mon_stream.send_multipart([b'inexpo'] + new_msg_list, copy=False)
                 self.engine_stream.send_multipart(new_msg_list, copy=False)
 
+    @util.log_errors
     def dispatch_result(self, raw_msg):
-        self.log.info(f'expo: {self.id} received {raw_msg}')
+        self.log.info(f'EXPO: received {raw_msg}')

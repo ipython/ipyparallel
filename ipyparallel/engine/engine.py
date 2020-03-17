@@ -205,7 +205,10 @@ class EngineFactory(RegistrationFactory):
         def url(key):
             """get zmq url for given channel"""
             return str(info["interface"] + ":%i" % info[key])
-        
+
+        def urls(keys):
+            return (url(key) for key in keys)
+
         if content['status'] == 'ok':
             if self.id is not None and content['id'] != self.id:
                 self.log.warning("Did not get the requested id: %i != %i", content['id'], self.id)
@@ -232,12 +235,10 @@ class EngineFactory(RegistrationFactory):
             heart.start()
 
             # create Shell Connections (MUX, Task, etc.):
-            shell_addrs = \
-                url('mux'),\
-                url('task'),\
-                url('broadcast_non_coalescing'),\
-                url('broadcast_coalescing'),\
-                url('sub_scheduler')
+            shell_addrs = (url('mux'), url('task'), url('broadcast_non_coalescing'),
+                url('broadcast_coalescing')) + urls('sub_schedulers')
+
+            self.log.info(f'ENGINE: shell_addrs: {shell_addrs}')
 
             # Use only one shell stream for mux and tasks
             stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)

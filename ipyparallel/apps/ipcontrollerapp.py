@@ -137,6 +137,8 @@ aliases = dict(
 aliases.update(base_aliases)
 aliases.update(session_aliases)
 
+SPANNING_TREE_SCHEDULER_DEPTH = 2
+
 class IPControllerApp(BaseParallelApplication):
 
     name = u'ipcontroller'
@@ -424,31 +426,9 @@ class IPControllerApp(BaseParallelApplication):
             'broadcast_coalescing', f, BroadcastSchedulerCoalescing, monitor_url
         ), children)
 
-        sub_scheduler_ids = [bytes(f'sub_scheduler_{i}', 'utf8') for i in range(7)]
-
-        self.launch_python_scheduler(self.get_python_scheduler_args(
-            'sub_scheduler', f, ExponentialScheduler, monitor_url,
-            identity=sub_scheduler_ids[0],
-            is_root=True,
-            is_sub_scheduler=True,
-            connected_sub_schedulers=sub_scheduler_ids[1:3],
-        ), children)
-
-        self.launch_python_scheduler(self.get_python_scheduler_args(
-            'sub_scheduler', f, ExponentialScheduler, monitor_url,
-            identity=sub_scheduler_ids[1],
-            is_leaf=True,
-            is_sub_scheduler=True,
-            connect=True
-        ), children)
-
-        self.launch_python_scheduler(self.get_python_scheduler_args(
-            'sub_scheduler', f, ExponentialScheduler, monitor_url,
-            identity=sub_scheduler_ids[2],
-            is_leaf=True,
-            is_sub_scheduler=True,
-            connect=True
-        ), children)
+        self.launch_spanning_tree_schedulers(
+            f, monitor_url, children
+        )
 
         # set unlimited HWM for all relay devices
         if hasattr(zmq, 'SNDHWM'):
@@ -544,11 +524,6 @@ class IPControllerApp(BaseParallelApplication):
             scheduler_class,
             monitor_url,
             identity=None,
-            is_leaf=False,
-            is_root=False,
-            connected_sub_schedulers=None,
-            is_sub_scheduler=False,
-            connect=False,
     ):
         return {
             'scheduler_class': scheduler_class,
@@ -558,18 +533,19 @@ class IPControllerApp(BaseParallelApplication):
             'not_addr': disambiguate_url(factory.client_url('notification')),
             'reg_addr': disambiguate_url(factory.client_url('registration')),
             'identity': identity if identity else bytes(scheduler_name, 'utf8'),
-            'is_leaf': is_leaf,
-            'is_root': is_root,
-            'connected_sub_schedulers': connected_sub_schedulers
-            if connected_sub_schedulers
-            else [],
-            'is_sub_scheduler': is_sub_scheduler,
             'logname': 'scheduler',
             'loglevel': self.log_level,
             'log_url': self.log_url,
             'config': dict(self.config),
-            'connect': connect
         }
+
+    def launch_spanning_tree_schedulers(self, factory, monitor_url, children):
+
+
+
+
+
+
 
 
 def launch_new_instance(*args, **kwargs):
