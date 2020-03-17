@@ -1,6 +1,5 @@
 language: python
-dist: trusty
-sudo: required
+dist: xenial
 
 notifications:
   email: false
@@ -11,25 +10,17 @@ matrix:
   include:
     - python: "3.6"
       env:
-        - OS=ubuntu-14.04
         - JOBQUEUE=sge
     - python: "3.6"
       env:
-        - OS=ubuntu-14.04
         # JOBQUEUE=none is for tests that do not need a cluster to run
         - JOBQUEUE=none
     - python: "3.6"
       env:
-        - OS=ubuntu-14.04
         - JOBQUEUE=pbs
     - python: "3.6"
       env:
-        - OS=ubuntu-14.04
         - JOBQUEUE=slurm
-
-env:
-  global:
-    - DOCKER_COMPOSE_VERSION=1.6.0
 
 before_install:
   - set -e

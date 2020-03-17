@@ -11,7 +11,6 @@ RUN curl -o miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-L
 ENV PATH /opt/anaconda/bin:$PATH
 ARG PYTHON_VERSION
 RUN conda install -c conda-forge python=$PYTHON_VERSION dask distributed pytest pytest-asyncio && conda clean -tipy
-RUN pip install git+https://github.com/dask/distributed --upgrade --no-deps
 
 COPY ./setup-slave.sh /
 COPY ./*.sh /
