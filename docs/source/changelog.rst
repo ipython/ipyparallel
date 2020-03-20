@@ -4,17 +4,20 @@ Changelog
 Development version
 -------------------
 
-- ``LSFCluster``: add ``use_stdin`` to ``LSFCluster``. This switches between
-  ``bsub < job_script`` and ``bsub job_script`` to launch a ``LSF`` job
-  (:pr:`360`).
-- ``HTCondorCluster``: support older ``HTCondor`` versions without ``-file``
-  argument (:pr:`351`).
 - all cluster classes: ``processes`` parameter default has changed. By default,
   ``processes ~= sqrt(cores)`` so that the number of processes and the number
   of threads per process is roughly the same. Old default was to use one
-  process and only threads, i.e. ``proccesses=1``, ``threads_per_process=cores``.
-- fix bug (forgotten async def) in ``OARCluster._submit_job`` (:pr:`380`).
+  process and only threads, i.e. ``proccesses=1``,
+  ``threads_per_process=cores``. (:pr:`375`)
+- all cluster classes: ``interface`` was ignored when set in a config file.
+  (:pr:`366`)
+- ``LSFCluster``: add ``use_stdin`` to ``LSFCluster``. This switches between
+  ``bsub < job_script`` and ``bsub job_script`` to launch a ``LSF`` job
+  (:pr:`360`).
 - ``LSFCluster``: switch to ``use_stdin=True`` (:pr:`388`).
+- ``HTCondorCluster``: support older ``HTCondor`` versions without ``-file``
+  argument (:pr:`351`).
+- ``OARCluster``: fix bug (forgotten async def) in ``OARCluster._submit_job`` (:pr:`380`).
 
 0.7.0 / 2019-10-09
 ------------------
