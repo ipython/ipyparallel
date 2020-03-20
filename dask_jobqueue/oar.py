@@ -68,7 +68,6 @@ class OARJob(Job):
         full_resource_spec = ",".join(resource_spec_list)
         header_lines.append("#OAR -l %s" % full_resource_spec)
         header_lines.extend(["#OAR %s" % arg for arg in job_extra])
-        header_lines.append("JOB_ID=${OAR_JOB_ID}")
 
         self.job_header = "\n".join(header_lines)
 

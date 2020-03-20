@@ -37,7 +37,6 @@ def test_job_script():
         assert 'MY.JobId = "$(ClusterId).$(ProcId)"' in job_script
         assert "LANG=en_US.utf8" in job_script
         assert "LC_ALL=en_US.utf8" in job_script
-        assert "JOB_ID=$F(MY.JobId)" in job_script
         assert "export" not in job_script
         assert "+Extra = True" in job_script
 

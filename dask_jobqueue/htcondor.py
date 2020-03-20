@@ -66,7 +66,6 @@ Queue
                 "jobqueue.%s.env-extra" % self.config_name, default=[]
             )
         self.env_dict = self.env_lines_to_dict(env_extra)
-        self.env_dict["JOB_ID"] = "$F(MY.JobId)"
 
         self.job_header_dict = {
             "MY.DaskWorkerName": '"htcondor--$F(MY.JobId)--"',

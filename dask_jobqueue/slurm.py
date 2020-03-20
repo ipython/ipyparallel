@@ -79,8 +79,6 @@ class SLURMJob(Job):
             header_lines.append("#SBATCH -t %s" % walltime)
         header_lines.extend(["#SBATCH %s" % arg for arg in job_extra])
 
-        header_lines.append("\nJOB_ID=${SLURM_JOB_ID%;*}")
-
         # Declare class attribute that shall be overridden
         self.job_header = "\n".join(header_lines)
 
