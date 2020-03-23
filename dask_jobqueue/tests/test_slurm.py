@@ -193,3 +193,22 @@ def test_config_name_slurm_takes_custom_config():
     with dask.config.set({"jobqueue.slurm-config-name": conf}):
         with SLURMCluster(config_name="slurm-config-name") as cluster:
             assert cluster.job_name == "myname"
+
+
+@pytest.mark.env("slurm")
+def test_different_interfaces_on_scheduler_and_workers(loop):
+    with SLURMCluster(
+        walltime="00:02:00",
+        cores=1,
+        memory="2GB",
+        interface="eth0:worker",
+        scheduler_options={"interface": "eth0:scheduler"},
+        loop=loop,
+    ) as cluster:
+        cluster.scale(jobs=1)
+        with Client(cluster) as client:
+            future = client.submit(lambda x: x + 1, 10)
+
+            client.wait_for_workers(1)
+
+            assert future.result(QUEUE_WAIT) == 11

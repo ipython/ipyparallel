@@ -11,6 +11,16 @@ function jobqueue_before_install {
 
     docker ps -a
     docker images
+    show_network_interfaces
+}
+
+function show_network_interfaces {
+    for c in slurmctld c1 c2; do
+        echo '------------------------------------------------------------'
+        echo docker container: $c
+        docker exec -it $c python -c 'import psutil; print(psutil.net_if_addrs().keys())'
+        echo '------------------------------------------------------------'
+    done
 }
 
 function jobqueue_install {

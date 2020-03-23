@@ -129,10 +129,12 @@ dashboard is valuable to help you understand the state of your computation and
 cluster.
 
 Typically, the dashboard is served on a separate port from Jupyter, and so can
-be used whether you choose to use Jupyter or not.  If you want to open up a
+be used whether you choose to use Jupyter or not. If you want to open up a
 connection to see the dashboard you can do so with SSH Tunneling as described
-above.  The dashboard's default port is at ``8787``, and is configurable with
-the ``dashboard_address=`` keyword to the Dask Jobqueue cluster objects.
+above. The dashboard's default port is at ``8787``, and is configurable by
+using the ``scheduler_options`` parameter in the Dask Jobqueue cluster object.
+For example ``scheduler_options={'dashboard_address': ':12435'}`` would use
+12435 for the web dasboard port.
 
 However, Jupyter is also able to proxy the dashboard connection through the
 Jupyter server, allowing you to access the dashboard at

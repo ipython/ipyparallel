@@ -4,6 +4,11 @@ Changelog
 Development version
 -------------------
 
+- all cluster classes: add ``scheduler_options`` allows to pass parameters to
+  the Dask scheduler. For example ``scheduler_options={'interface': 'eth0',
+  dashboard_addresses=':12435')`` (:pr:`384`). Breaking change: using ``port``
+  or ``dashboard_addresses`` arguments raises an error. They have to be passed
+  through ``scheduler_options``.
 - all cluster classes: ``processes`` parameter default has changed. By default,
   ``processes ~= sqrt(cores)`` so that the number of processes and the number
   of threads per process is roughly the same. Old default was to use one

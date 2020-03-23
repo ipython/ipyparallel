@@ -12,6 +12,8 @@ services:
       MYSQL_PASSWORD: password
     volumes:
       - var_lib_mysql:/var/lib/mysql
+    networks:
+      common-network:
 
   slurmdbd:
     build: .
@@ -26,6 +28,8 @@ services:
       - "6819"
     depends_on:
       - mysql
+    networks:
+      common-network:
 
   slurmctld:
     build: .
@@ -42,6 +46,11 @@ services:
       - "6817"
     depends_on:
       - "slurmdbd"
+    networks:
+      common-network:
+        ipv4_address: 10.1.1.10
+    cap_add:
+      - NET_ADMIN
 
   c1:
     build: .
@@ -57,6 +66,11 @@ services:
       - "6818"
     depends_on:
       - "slurmctld"
+    networks:
+      common-network:
+        ipv4_address: 10.1.1.11
+    cap_add:
+      - NET_ADMIN
 
   c2:
     build: .
@@ -72,6 +86,11 @@ services:
       - "6818"
     depends_on:
       - "slurmctld"
+    networks:
+      common-network:
+        ipv4_address: 10.1.1.12
+    cap_add:
+      - NET_ADMIN
 
 volumes:
   etc_munge:
@@ -79,3 +98,11 @@ volumes:
   slurm_jobdir:
   var_lib_mysql:
   var_log_slurm:
+
+networks:
+  common-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.1.1.0/24

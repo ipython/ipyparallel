@@ -84,7 +84,7 @@ def test_forward_ip():
         cores=8,
         memory="28GB",
         name="dask-worker",
-        host=ip,
+        scheduler_options={"host": ip},
     ) as cluster:
         assert cluster.scheduler.ip == ip
 
@@ -268,3 +268,78 @@ def test_default_number_of_worker_processes(Cluster):
     with Cluster(cores=6, memory="4GB") as cluster:
         assert " --nprocs 3" in cluster.job_script()
         assert " --nthreads 2" in cluster.job_script()
+
+
+@pytest.mark.parametrize(
+    "Cluster",
+    [PBSCluster, MoabCluster, SLURMCluster, SGECluster, LSFCluster, OARCluster],
+)
+def test_scheduler_options(Cluster):
+    net_if_addrs = psutil.net_if_addrs()
+    interface = list(net_if_addrs.keys())[0]
+    port = 8804
+
+    with Cluster(
+        cores=1, memory="1GB", scheduler_options={"interface": interface, "port": port}
+    ) as cluster:
+        scheduler_options = cluster.scheduler_spec["options"]
+        assert scheduler_options["interface"] == interface
+        assert scheduler_options["port"] == port
+
+
+@pytest.mark.parametrize(
+    "Cluster",
+    [PBSCluster, MoabCluster, SLURMCluster, SGECluster, LSFCluster, OARCluster],
+)
+def test_scheduler_options_interface(Cluster):
+    net_if_addrs = psutil.net_if_addrs()
+    scheduler_interface = list(net_if_addrs.keys())[0]
+    worker_interface = "worker-interface"
+    scheduler_host = socket.gethostname()
+
+    with Cluster(cores=1, memory="1GB", interface=scheduler_interface) as cluster:
+        scheduler_options = cluster.scheduler_spec["options"]
+        worker_options = cluster.new_spec["options"]
+        assert scheduler_options["interface"] == scheduler_interface
+        assert worker_options["interface"] == scheduler_interface
+
+    with Cluster(
+        cores=1,
+        memory="1GB",
+        interface=worker_interface,
+        scheduler_options={"interface": scheduler_interface},
+    ) as cluster:
+        scheduler_options = cluster.scheduler_spec["options"]
+        worker_options = cluster.new_spec["options"]
+        assert scheduler_options["interface"] == scheduler_interface
+        assert worker_options["interface"] == worker_interface
+
+    with Cluster(
+        cores=1,
+        memory="1GB",
+        interface=worker_interface,
+        scheduler_options={"host": scheduler_host},
+    ) as cluster:
+        scheduler_options = cluster.scheduler_spec["options"]
+        assert scheduler_options.get("interface") is None
+        assert scheduler_options["host"] == scheduler_host
+        assert worker_options["interface"] == worker_interface
+
+
+@pytest.mark.parametrize(
+    "Cluster",
+    [PBSCluster, MoabCluster, SLURMCluster, SGECluster, LSFCluster, OARCluster],
+)
+def test_cluster_error_scheduler_arguments_should_use_scheduler_options(Cluster):
+    scheduler_host = socket.gethostname()
+    message_template = "pass {!r} through 'scheduler_options'"
+
+    message = message_template.format("host")
+    with pytest.raises(ValueError, match=message):
+        with Cluster(cores=1, memory="1GB", host=scheduler_host):
+            pass
+
+    message = message_template.format("dashboard_address")
+    with pytest.raises(ValueError, match=message):
+        with Cluster(cores=1, memory="1GB", dashboard_address=":8787"):
+            pass
