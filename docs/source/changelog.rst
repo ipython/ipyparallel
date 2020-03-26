@@ -16,10 +16,10 @@ Development version
   ``threads_per_process=cores``. (:pr:`375`)
 - all cluster classes: ``interface`` was ignored when set in a config file.
   (:pr:`366`)
+- ``LSFCluster``: switch to ``use_stdin=True`` by default (:pr:`388`).
 - ``LSFCluster``: add ``use_stdin`` to ``LSFCluster``. This switches between
   ``bsub < job_script`` and ``bsub job_script`` to launch a ``LSF`` job
   (:pr:`360`).
-- ``LSFCluster``: switch to ``use_stdin=True`` (:pr:`388`).
 - ``HTCondorCluster``: support older ``HTCondor`` versions without ``-file``
   argument (:pr:`351`).
 - ``OARCluster``: fix bug (forgotten async def) in ``OARCluster._submit_job`` (:pr:`380`).
