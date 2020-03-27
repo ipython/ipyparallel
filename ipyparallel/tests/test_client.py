@@ -589,12 +589,12 @@ class TestClient(ClusterTestCase):
             with mock.patch('socket.gethostname', lambda: location), \
                     pytest.warns(None) as record:  # should not trigger warning
                 c = self.connect_client()
-                assert len(record) == 0, str(record)
+                assert len(record) == 0, str([str(w) for w in record])
                 c.close()
 
     def test_local_ip_true_doesnt_trigger_warning(self):
         with mock.patch('ipyparallel.client.client.is_local_ip',
                         lambda x: True), pytest.warns(None) as record:
             c = self.connect_client()
-            assert len(record) == 0, str(record)
+            assert len(record) == 0, str([str(w) for w in record])
             c.close()
