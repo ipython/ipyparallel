@@ -39,9 +39,10 @@ from jupyter_client.session import (
 
 from ipyparallel.controller.broadcast_scheduler import BroadcastSchedulerNonCoalescing, \
     BroadcastSchedulerCoalescing
-from ipyparallel.controller.exponential_scheduler import ExponentialScheduler
+from ipyparallel.controller.exponential_scheduler import SpanningTreeScheduler, \
+    SPANNING_TREE_SCHEDULER_DEPTH, launch_spanning_tree_scheduler
 from ipyparallel.controller.heartmonitor import HeartMonitor
-from ipyparallel.controller.hub import HubFactory
+from ipyparallel.controller.hub import HubFactory, get_number_of_non_leaf_schedulers
 from ipyparallel.controller.scheduler import launch_scheduler
 from ipyparallel.controller.task_scheduler import TaskScheduler
 from ipyparallel.controller.dictdb import DictDB
@@ -137,7 +138,7 @@ aliases = dict(
 aliases.update(base_aliases)
 aliases.update(session_aliases)
 
-SPANNING_TREE_SCHEDULER_DEPTH = 2
+
 
 class IPControllerApp(BaseParallelApplication):
 
@@ -541,12 +542,54 @@ class IPControllerApp(BaseParallelApplication):
 
     def launch_spanning_tree_schedulers(self, factory, monitor_url, children):
 
+        def launch_in_thread_or_process(scheduler_args):
 
+            if 'Process' in self.mq_class:
+                # run the Python scheduler in a Process
+                q = Process(target=launch_spanning_tree_scheduler, kwargs=scheduler_args)
+                q.daemon = True
+                children.append(q)
+            else:
+                # single-threaded Controller
+                scheduler_args['in_thread'] = True
+                launch_spanning_tree_scheduler(**scheduler_args)
 
+        def recursively_start_schedulers(identity, depth):
+            outgoing_id1 = identity * 2 + 1
+            outgoing_id2 = outgoing_id1 + 1
+            is_leaf = depth == SPANNING_TREE_SCHEDULER_DEPTH
 
+            scheduler_args = dict(
+                in_addr=factory.client_url('sub_schedulers', identity),
+                mon_addr=monitor_url,
+                not_addr=disambiguate_url(factory.client_url('notification')),
+                reg_addr=disambiguate_url(factory.client_url('registration')),
+                identity=identity,
+                config=dict(self.config),
+                loglevel=self.log_level,
+                log_url=self.log_url,
+                outgoing_ids=[outgoing_id1, outgoing_id2]
+            )
+            if is_leaf:
+                scheduler_args.update(
+                    out_addrs=[
+                        factory.engine_url('sub_schedulers', identity - get_number_of_non_leaf_schedulers())
+                    ],
+                    is_leaf=is_leaf
+                )
+            else:
+                scheduler_args.update(
+                    out_addrs=[
+                        factory.client_url('sub_schedulers', outgoing_id1),
+                        factory.client_url('sub_schedulers', outgoing_id2)
+                    ],
+                )
+            launch_in_thread_or_process(scheduler_args)
+            if not is_leaf:
+                recursively_start_schedulers(outgoing_id1, depth + 1)
+                recursively_start_schedulers(outgoing_id2, depth + 1)
 
-
-
+        recursively_start_schedulers(0, 0)
 
 def launch_new_instance(*args, **kwargs):
     """Create and run the IPython controller"""

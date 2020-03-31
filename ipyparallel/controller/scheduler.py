@@ -159,16 +159,15 @@ def launch_scheduler(
     util.set_hwm(ins, 0)
     if identity:
         ins.setsockopt(zmq.IDENTITY, identity + b'_in')
-    else:
-        ins.bind(in_addr)
+
+    ins.bind(in_addr)
 
     outs = ZMQStream(ctx.socket(zmq.ROUTER), loop)
     util.set_hwm(outs, 0)
 
     if identity:
         outs.setsockopt(zmq.IDENTITY, identity + b'_out')
-    else:
-        outs.bind(out_addr)
+    outs.bind(out_addr)
 
     scheduler = scheduler_class(
         client_stream=ins,
@@ -187,31 +186,3 @@ def launch_scheduler(
             loop.start()
         except KeyboardInterrupt:
             scheduler.log.critical("Interrupted, exiting...")
-
-def launch_tree_spanning_scheduler(
-        in_addr,
-        out_addrs,
-        mon_addr,
-        not_addr,
-        reg_addr,
-        config=None,
-        loglevel=logging.DEBUG,
-        log_url=None,
-        is_leaf=False,
-        is_root=False,
-        in_thread=False,
-):
-    config, ctx, loop, mons, nots, querys, log = get_common_scheduler_streams(
-        mon_addr,
-        not_addr,
-        reg_addr,
-        config,
-        'scheduler',
-        log_url,
-        loglevel,
-        in_thread
-    )
-    ins = ZMQStream(ctx.socket(zmq.ROUTER), loop)
-    util.set_hwm(ins, 0)
-
-

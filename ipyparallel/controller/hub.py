@@ -22,7 +22,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 # internal:
 from ipython_genutils.importstring import import_item
 
-from ..apps.ipcontrollerapp import SPANNING_TREE_SCHEDULER_DEPTH
+from .exponential_scheduler import SPANNING_TREE_SCHEDULER_DEPTH
 from ..util import extract_dates
 from jupyter_client.localinterfaces import localhost
 from ipython_genutils.py3compat import cast_bytes, unicode_type, iteritems, buffer_to_bytes_py2
@@ -109,6 +109,18 @@ def init_record(msg):
     }
 
 
+def get_number_of_leaf_schedulers():
+    return 2**SPANNING_TREE_SCHEDULER_DEPTH
+
+
+def get_number_of_tree_spanning_schedulers():
+    return 2 * get_number_of_leaf_schedulers() - 1
+
+
+def get_number_of_non_leaf_schedulers():
+    return get_number_of_tree_spanning_schedulers() - get_number_of_leaf_schedulers()
+
+
 class EngineConnector(HasTraits):
     """A simple object for accessing the various zmq connections of an object.
     Attributes are:
@@ -131,8 +143,6 @@ _db_shortcuts = {
     'nodb'     : 'ipyparallel.controller.dictdb.NoDB',
 }
 
-def number_of_port_pairs_for_sub_schedulers(depth):
-    return 2**(depth-1)+2**depth - 1
 
 class HubFactory(RegistrationFactory):
     """The Configurable for setting up a Hub."""
@@ -167,15 +177,13 @@ class HubFactory(RegistrationFactory):
     def _broadcast_coalescing_default(self):
         return tuple(util.select_random_ports(2))
 
-    sub_schedulers = List(Trait=Tuple(Integer(), Integer(), config=True,
-                             help="Port pair for queue from client through sub schedulers to engines"),
-                         help="List of available ports for spanning tree schedulers")
+    sub_schedulers = List(Integer(), config=True,
+                          help="List of available ports for spanning tree schedulers")
 
     def _sub_schedulers_default(self):
-        return [util.select_random_ports(2) for i in range(
-                number_of_port_pairs_for_sub_schedulers(
-                    SPANNING_TREE_SCHEDULER_DEPTH
-                ))]
+        return util.select_random_ports(
+            get_number_of_leaf_schedulers() + get_number_of_tree_spanning_schedulers()
+        )
 
     control = Tuple(Integer(), Integer(), config=True,
         help="""Client/Engine Port pair for Control queue""")
@@ -282,13 +290,21 @@ class HubFactory(RegistrationFactory):
         self.heartmonitor.start()
         self.log.info("Heartmonitor started")
 
-    def client_url(self, channel):
+    def client_url(self, channel, index=None):
         """return full zmq url for a named client channel"""
-        return "%s://%s:%i" % (self.client_transport, self.client_ip, self.client_info[channel])
+        return "%s://%s:%i" % (
+            self.client_transport,
+            self.client_ip,
+            self.client_info[channel] if index is None else self.client_info[channel][index]
+        )
     
-    def engine_url(self, channel):
+    def engine_url(self, channel, index=None):
         """return full zmq url for a named engine channel"""
-        return "%s://%s:%i" % (self.engine_transport, self.engine_ip, self.engine_info[channel])
+        return "%s://%s:%i" % (
+            self.engine_transport,
+            self.engine_ip,
+            self.engine_info[channel] if index is None else self.engine_info[channel][index]
+        )
     
     def init_hub(self):
         """construct Hub object"""
@@ -313,7 +329,7 @@ class HubFactory(RegistrationFactory):
             'iopub'         : self.iopub[1],
             'broadcast_non_coalescing': self.broadcast_non_coalescing[1],
             'broadcast_coalescing': self.broadcast_coalescing[1],
-            'sub_scheduler': (outgoing for incoming, outgoing in self.sub_schedulers),
+            'sub_schedulers': self.sub_schedulers[-get_number_of_leaf_schedulers():]
             }
 
         client = self.client_info = {
@@ -327,7 +343,7 @@ class HubFactory(RegistrationFactory):
             'notification'  : self.notifier_port,
             'broadcast_non_coalescing': self.broadcast_non_coalescing[0],
             'broadcast_coalescing': self.broadcast_coalescing[0],
-            'sub_scheduler': (incoming for incoming, outgoing in self.sub_schedulers),
+            'sub_schedulers': self.sub_schedulers[:get_number_of_tree_spanning_schedulers()],
             }
         
         self.log.debug("Hub engine addrs: %s", self.engine_info)

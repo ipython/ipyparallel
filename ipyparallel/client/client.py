@@ -455,10 +455,10 @@ class Client(HasTraits):
                 'registration',
                 'broadcast_non_coalescing',
                 'broadcast_coalescing',
-                'sub_scheduler',
         ):
             cfg[key] = cfg['interface'] + ':%i' % cfg[key]
 
+        cfg['sub_schedulers'] = cfg['interface'] + ':%i' % cfg['sub_schedulers'][0]
         url = cfg['registration']
 
         if location is not None and addr == localhost():
@@ -674,7 +674,7 @@ class Client(HasTraits):
                            cfg['broadcast_coalescing'])
 
             self._sub_scheduler_socket = self._context.socket(zmq.DEALER)
-            connect_socket(self._sub_scheduler_socket, cfg['sub_scheduler'])
+            connect_socket(self._sub_scheduler_socket, cfg['sub_schedulers'])
 
             self._notification_socket = self._context.socket(zmq.SUB)
             self._notification_socket.setsockopt(zmq.SUBSCRIBE, b'')
