@@ -26,7 +26,7 @@ COPY --from=builder /root/rpmbuild/RPMS/x86_64/pbspro-server-*.rpm .
 # install pbspro and useful packages
 RUN yum install -y pbspro-server-*.rpm curl bzip2 git gcc sudo openssh-server && yum clean all
 # install python
-RUN curl -o miniconda.sh https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
+RUN curl -o miniconda.sh https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh && \
     bash miniconda.sh -f -b -p /opt/anaconda && \
     /opt/anaconda/bin/conda clean -tipy && \
     rm -f miniconda.sh
