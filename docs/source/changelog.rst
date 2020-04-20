@@ -3,6 +3,12 @@
 Changes in IPython Parallel
 ===========================
 
+6.2.5
+-----
+
+- Fix compatibility with Python 3.8
+- Fix compatibility with recent dask
+
 6.2.4
 -----
 
