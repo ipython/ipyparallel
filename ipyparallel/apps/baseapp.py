@@ -124,7 +124,7 @@ class BaseParallelApplication(BaseIPythonApplication):
     @observe('cluster_id')
     def _cluster_id_changed(self, change):
         if change['new']:
-            self.name += '{}-{}'.format(self.__class__.name, change['new'])
+            self.name = '{}-{}'.format(self.__class__.name, change['new'])
         else:
             self.name = self.__class__.name
 
