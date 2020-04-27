@@ -9,6 +9,8 @@ Python Scheduler exists.
 # Distributed under the terms of the Modified BSD License.
 
 import logging
+
+from ipython_genutils.py3compat import cast_bytes
 from traitlets import observe, Instance, Set, CBytes
 
 
@@ -82,17 +84,22 @@ class Scheduler(SessionFactory):
     def dispatch_submission(self, raw_msg):
         raise NotImplementedError("Implement in subclasses")
 
+    def append_new_msg_id_to_msg(self, new_id, target_id, idents, msg):
+        new_idents = [cast_bytes(target_id)] + idents
+        msg['header']['msg_id'] = new_id
+        new_msg_list = self.session.serialize(msg, ident=new_idents)
+        new_msg_list.extend(msg['buffers'])
+        return new_msg_list
+
+    def get_new_msg_id(self, original_msg_id, outgoing_id):
+        return f'{original_msg_id}_{outgoing_id if isinstance(outgoing_id, str) else outgoing_id.decode("utf8")}'
+
+
 ZMQStream = zmqstream.ZMQStream
 
+
 def get_common_scheduler_streams(
-        mon_addr,
-        not_addr,
-        reg_addr,
-        config,
-        logname,
-        log_url,
-        loglevel,
-        in_thread,
+    mon_addr, not_addr, reg_addr, config, logname, log_url, loglevel, in_thread
 ):
     if config:
         # unwrap dict back into Config
@@ -144,14 +151,7 @@ def launch_scheduler(
     in_thread=False,
 ):
     config, ctx, loop, mons, nots, querys, log = get_common_scheduler_streams(
-        mon_addr,
-        not_addr,
-        reg_addr,
-        config,
-        logname,
-        log_url,
-        loglevel,
-        in_thread
+        mon_addr, not_addr, reg_addr, config, logname, log_url, loglevel, in_thread
     )
 
     util.set_hwm(mons, 0)
@@ -177,7 +177,7 @@ def launch_scheduler(
         query_stream=querys,
         loop=loop,
         log=log,
-        config=config
+        config=config,
     )
 
     scheduler.start()

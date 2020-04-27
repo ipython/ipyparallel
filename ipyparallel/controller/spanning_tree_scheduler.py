@@ -1,7 +1,6 @@
 import logging
 
 import zmq
-from ipython_genutils.py3compat import cast_bytes
 
 from ipyparallel import util
 from ipyparallel.controller.scheduler import (
@@ -10,17 +9,19 @@ from ipyparallel.controller.scheduler import (
     ZMQStream,
 )
 
-SPANNING_TREE_SCHEDULER_DEPTH = 2
+SPANNING_TREE_SCHEDULER_DEPTH = 3
+
 
 class SpanningTreeScheduler(Scheduler):
     accumulated_replies = {}
 
     def __init__(
-        self, *args, connected_sub_schedulers=None, outgoing_streams=None, **kwargs
+        self, depth=0, connected_sub_schedulers=None, outgoing_streams=None, **kwargs
     ):
         super().__init__(**kwargs)
         self.connected_sub_schedulers = connected_sub_schedulers
         self.outgoing_streams = outgoing_streams
+        self.depth = depth
         self.log.info('Spanning tree scheduler started')
 
     def start(self):
@@ -36,68 +37,61 @@ class SpanningTreeScheduler(Scheduler):
 
     @util.log_errors
     def dispatch_submission(self, raw_msg):
-        self.log.info(f'Spanning tree msg received ')
         try:
             idents, msg_list = self.session.feed_identities(raw_msg, copy=False)
             msg = self.session.deserialize(msg_list, content=False, copy=False)
-        except Exception as e:
+        except:
             self.log.error(f'Spanning tree scheduler:: Invalid msg: {raw_msg}')
             return
-        header = msg['header']
+
         metadata = msg['metadata']
-        original_msg_id = header['msg_id']
+        msg_id = msg['header']['msg_id']
         targets = metadata.get('targets', [])
+        if 'original_msg_id' not in metadata:
+            metadata['original_msg_id'] = msg_id
+            metadata['is_spanning_tree'] = True
+
+        original_msg_id = metadata['original_msg_id']
+
         self.accumulated_replies[original_msg_id] = {
-            f'{original_msg_id}_{scheduler_id.decode("utf8")}': None
-            for scheduler_id in self.connected_sub_schedulers
+            scheduler_id: None for scheduler_id in self.connected_sub_schedulers
         }
 
         for i, scheduler_id in enumerate(self.connected_sub_schedulers):
-            msg_and_scheduler_id = f'{original_msg_id}_{scheduler_id.decode("utf8")}'
-
             targets_for_scheduler = targets[
-                i * len(targets)//2: (i + 1) * len(targets)//2
+                i * len(targets) // 2 : (i + 1) * len(targets) // 2
             ]
+
             if not targets_for_scheduler:
-                del self.accumulated_replies[original_msg_id][msg_and_scheduler_id]
-                continue # needs to reply a message to previous scheduler maybe so it won't get stuck waiting
-            msg['header']['msg_id'] = msg_and_scheduler_id
+                del self.accumulated_replies[original_msg_id][scheduler_id]
+                continue
+
             msg['metadata']['targets'] = targets_for_scheduler
-            self.all_ids.add(msg_and_scheduler_id)
-            new_idents = [cast_bytes(scheduler_id + b'_in')] + idents
-            new_msg_list = self.session.serialize(msg, ident=new_idents)
-            new_msg_list.extend(msg['buffers'])
-            self.mon_stream.send_multipart([b'inexpo'] + new_msg_list, copy=False)
-            self.outgoing_streams[i].send_multipart(new_msg_list, copy=False)
+
+            new_msg = self.append_new_msg_id_to_msg(
+                self.get_new_msg_id(msg_id, scheduler_id), scheduler_id, idents, msg
+            )
+            self.mon_stream.send_multipart([b'insptree'] + new_msg, copy=False)
+            self.outgoing_streams[i].send_multipart(new_msg, copy=False)
 
     @util.log_errors
     def dispatch_result(self, raw_msg):
         try:
             idents, msg = self.session.feed_identities(raw_msg, copy=False)
             msg = self.session.deserialize(msg, content=False, copy=False)
-            next_scheduler, previous_scheduler = idents[:2]
-        except Exception as e:
+            outgoing_scheduler, _ = idents[:2]
+        except:
             self.log.error(
                 f'spanning tree::Invalid broadcast msg: {raw_msg}', exc_info=True
             )
             return
 
-        metadata = msg['metadata']
-        msg_id = msg['parent_header']['msg_id']
-        success = metadata['status'] == 'ok'
-        if success:
-            self.all_completed.add(msg_id)
-        else:
-            self.all_failed.add(msg_id)
-
-        original_msg_id = metadata['original_msg_id']
-        self.accumulated_replies[original_msg_id][next_scheduler] = raw_msg
-        raw_msg.pop()
-        raw_msg[0] = previous_scheduler
+        original_msg_id = msg['metadata']['original_msg_id']
+        self.accumulated_replies[original_msg_id][outgoing_scheduler] = raw_msg[1:]
 
         if all(
-                msg is not None
-                for msg in self.accumulated_replies[original_msg_id].values()
+            msg is not None
+            for msg in self.accumulated_replies[original_msg_id].values()
         ):
             self.client_stream.send_multipart(
                 [
@@ -107,8 +101,7 @@ class SpanningTreeScheduler(Scheduler):
                 ],
                 copy=False,
             )
-            self.all_done.add(original_msg_id)
-            self.mon_stream.send_multipart([b'outexpo'] + raw_msg, copy=False)
+            self.mon_stream.send_multipart([b'outsptree'] + raw_msg, copy=False)
 
 
 class SpanningTreeLeafScheduler(Scheduler):
@@ -118,64 +111,48 @@ class SpanningTreeLeafScheduler(Scheduler):
         super().__init__(**kwargs)
         self.log.info('Spanning tree leaf scheduler started')
 
-
     @util.log_errors
     def dispatch_submission(self, raw_msg):
-        self.log.info(f'Spanning tree leaf msg received ')
         try:
             idents, msg_list = self.session.feed_identities(raw_msg, copy=False)
             msg = self.session.deserialize(msg_list, content=False, copy=False)
         except Exception as e:
             self.log.error(f'Spanning tree scheduler:: Invalid msg: {raw_msg}')
             return
-        header = msg['header']
+
         metadata = msg['metadata']
-        original_msg_id = header['msg_id']
+        original_msg_id = metadata['original_msg_id']
         targets = metadata.get('targets', [])
+
         self.accumulated_replies[original_msg_id] = {
-            f'{original_msg_id}_{target}': None for target in targets
+            bytes(target, 'utf8'): None for target in targets
         }
         for target in targets:
-            msg_and_target_id = f'{original_msg_id}_{target}'
-            self.all_ids.add(msg_and_target_id)
-            header['msg_id'] = msg_and_target_id
-            new_idents = [cast_bytes(target)] + idents
-            new_msg_list = self.session.serialize(msg, ident=new_idents)
-            new_msg_list.extend(msg['buffers'])
-
-            self.mon_stream.send_multipart([b'inexpo'] + new_msg_list, copy=False)
-            self.engine_stream.send_multipart(new_msg_list, copy=False)
+            new_msg = self.append_new_msg_id_to_msg(
+                self.get_new_msg_id(original_msg_id, target), target, idents, msg
+            )
+            self.mon_stream.send_multipart([b'insptree'] + new_msg, copy=False)
+            self.engine_stream.send_multipart(new_msg, copy=False)
 
     @util.log_errors
     def dispatch_result(self, raw_msg):
         try:
             idents, msg = self.session.feed_identities(raw_msg, copy=False)
             msg = self.session.deserialize(msg, content=False, copy=False)
-            engine, previous_scheduler = idents[:2]
-        except Exception as e:
+            target = idents[0]
+        except:
             self.log.error(
                 f'spanning tree::Invalid broadcast msg: {raw_msg}', exc_info=True
             )
             return
 
-        metadata = msg['metadata']
-        msg_id = msg['parent_header']['msg_id']
-        success = metadata['status'] == 'ok'
-        if success:
-            self.all_completed.add(msg_id)
-        else:
-            self.all_failed.add(msg_id)
-
-        original_msg_id = metadata['original_msg_id']
-        self.accumulated_replies[original_msg_id][msg_id] = raw_msg
-        raw_msg.pop()
-        raw_msg[0] = previous_scheduler
+        original_msg_id = msg['metadata']['original_msg_id']
+        self.accumulated_replies[original_msg_id][target] = raw_msg[1:]
 
         if all(
             msg is not None
             for msg in self.accumulated_replies[original_msg_id].values()
         ):
-
             self.client_stream.send_multipart(
                 [
                     msgpart
@@ -184,11 +161,12 @@ class SpanningTreeLeafScheduler(Scheduler):
                 ],
                 copy=False,
             )
-            self.all_done.add(original_msg_id)
-            self.mon_stream.send_multipart([b'outexpo'] + raw_msg, copy=False)
+            self.mon_stream.send_multipart([b'outsptree'] + raw_msg, copy=False)
+
 
 def get_id_with_prefix(identity):
     return bytes(f'sub_scheduler_{identity}', 'utf8')
+
 
 def launch_spanning_tree_scheduler(
     in_addr,
@@ -203,6 +181,7 @@ def launch_spanning_tree_scheduler(
     is_leaf=False,
     in_thread=False,
     outgoing_ids=None,
+    depth=0,
 ):
     config, ctx, loop, mons, nots, querys, log = get_common_scheduler_streams(
         mon_addr, not_addr, reg_addr, config, 'scheduler', log_url, loglevel, in_thread
@@ -213,7 +192,7 @@ def launch_spanning_tree_scheduler(
 
     incoming_stream = ZMQStream(ctx.socket(zmq.ROUTER), loop)
     util.set_hwm(incoming_stream, 0)
-    incoming_stream.setsockopt(zmq.IDENTITY, sub_scheduler_id + b'_in')
+    incoming_stream.setsockopt(zmq.IDENTITY, sub_scheduler_id)
 
     if is_root:
         incoming_stream.bind(in_addr)
@@ -224,7 +203,7 @@ def launch_spanning_tree_scheduler(
     for out_addr in out_addrs:
         out = ZMQStream(ctx.socket(zmq.ROUTER), loop)
         util.set_hwm(out, 0)
-        out.setsockopt(zmq.IDENTITY, sub_scheduler_id + b'_out')
+        out.setsockopt(zmq.IDENTITY, sub_scheduler_id)
         out.bind(out_addr)
         outgoing_streams.append(out)
 
@@ -236,15 +215,16 @@ def launch_spanning_tree_scheduler(
         loop=loop,
         log=log,
         config=config,
+        depth=depth,
     )
     if is_leaf:
-        scheduler_args.update(
-            engine_stream=outgoing_streams[0]
-        )
+        scheduler_args.update(engine_stream=outgoing_streams[0])
         scheduler = SpanningTreeLeafScheduler(**scheduler_args)
     else:
         scheduler_args.update(
-            connected_sub_schedulers=[get_id_with_prefix(identity) for identity in outgoing_ids],
+            connected_sub_schedulers=[
+                get_id_with_prefix(identity) for identity in outgoing_ids
+            ],
             outgoing_streams=outgoing_streams,
         )
         scheduler = SpanningTreeScheduler(**scheduler_args)

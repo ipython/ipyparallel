@@ -52,9 +52,6 @@ class IPythonParallelKernel(IPythonKernel):
             return False
         return True
 
-    def extract_original_msg_id(self, parent):
-        return parent.get('metadata', {}).get('original_msg_id', '')
-
     def init_metadata(self, parent):
         """init metadata dict, for execute/apply_reply"""
         return {
@@ -63,7 +60,10 @@ class IPythonParallelKernel(IPythonKernel):
             'engine' : self.ident,
             'is_broadcast_non_coalescing': parent.get('metadata', {}).get('is_broadcast_non_coalescing', False),
             'is_broadcast_coalescing': parent.get('metadata', {}).get('is_broadcast_coalescing', False),
-            'original_msg_id': self.extract_original_msg_id(parent)
+            'original_msg_id': parent.get('metadata', {}).get('original_msg_id', ''),
+            'is_spanning_tree': parent.get('metadata', {}).get(
+                'is_spanning_tree', False),
+
         }
 
     def finish_metadata(self, parent, metadata, reply_content):

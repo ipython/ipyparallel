@@ -39,8 +39,7 @@ from jupyter_client.session import (
 
 from ipyparallel.controller.broadcast_scheduler import BroadcastSchedulerNonCoalescing, \
     BroadcastSchedulerCoalescing
-from ipyparallel.controller.exponential_scheduler import SpanningTreeScheduler, \
-    SPANNING_TREE_SCHEDULER_DEPTH, launch_spanning_tree_scheduler
+from ipyparallel.controller.spanning_tree_scheduler import SPANNING_TREE_SCHEDULER_DEPTH, launch_spanning_tree_scheduler
 from ipyparallel.controller.heartmonitor import HeartMonitor
 from ipyparallel.controller.hub import HubFactory, get_number_of_non_leaf_schedulers
 from ipyparallel.controller.scheduler import launch_scheduler
@@ -568,7 +567,8 @@ class IPControllerApp(BaseParallelApplication):
                 config=dict(self.config),
                 loglevel=self.log_level,
                 log_url=self.log_url,
-                outgoing_ids=[outgoing_id1, outgoing_id2]
+                outgoing_ids=[outgoing_id1, outgoing_id2],
+                depth=depth,
             )
             if is_leaf:
                 scheduler_args.update(

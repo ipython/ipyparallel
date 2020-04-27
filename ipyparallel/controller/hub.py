@@ -22,7 +22,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 # internal:
 from ipython_genutils.importstring import import_item
 
-from .exponential_scheduler import SPANNING_TREE_SCHEDULER_DEPTH
+from .spanning_tree_scheduler import SPANNING_TREE_SCHEDULER_DEPTH
 from ..util import extract_dates
 from jupyter_client.localinterfaces import localhost
 from ipython_genutils.py3compat import cast_bytes, unicode_type, iteritems, buffer_to_bytes_py2
@@ -487,6 +487,8 @@ class Hub(SessionFactory):
                                 b'outtask': self.save_task_result,
                                 b'inbcast': self.save_broadcast_request,
                                 b'outbcast': self.save_broadcast_result,
+                                b'insptree': self.save_spanning_tree_request,
+                                b'outsptree': self.save_spanning_tree_result,
                                 b'tracktask': self.save_task_destination,
                                 b'incontrol': _passer,
                                 b'outcontrol': _passer,
@@ -764,6 +766,11 @@ class Hub(SessionFactory):
         except Exception:
             self.log.error("DB Error updating record %r", msg_id, exc_info=True)
 
+    def save_spanning_tree_request(self):
+        pass
+
+    def save_spanning_tree_result(self):
+        pass
 
     #--------------------- Broadcast traffic ------------------------------
     def save_broadcast_request(self, idents, msg):

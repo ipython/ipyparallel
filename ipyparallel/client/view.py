@@ -933,7 +933,7 @@ class BroadcastViewCoalescing(DirectView):
         return ar
 
 
-class ExponentialView(DirectView):
+class SpanningTreeView(DirectView):
     def __init__(self, client=None, socket=None, targets=None):
         super().__init__(client=client, socket=socket, targets=targets)
 
@@ -1301,5 +1301,5 @@ class ViewExecutor(Executor):
             self.view.wait()
 
 __all__ = ['LoadBalancedView', 'DirectView', 'ViewExecutor',
-           'BroadcastViewNonCoalescing', 'BroadcastViewCoalescing']
+           'BroadcastViewNonCoalescing', 'BroadcastViewCoalescing', 'SpanningTreeView']
 
