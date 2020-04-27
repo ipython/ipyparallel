@@ -1,4 +1,5 @@
 # /Users/tomo/anaconda3/envs/master_thesis/bin/python
+import atexit
 import sys
 
 from benchmarks.utils import get_time_stamp
@@ -112,7 +113,21 @@ def run_on_instance(template_name):
     print("copying instance setup to instance")
     copy_files_to_instance(current_instance_name, "instance_setup.py")
     print("starting instance setup")
-    command_over_ssh(current_instance_name, "python3", "instance_setup.py")
+    command_over_ssh(
+        current_instance_name,
+        'pip',
+        'install',
+        'google-api-python-client',
+        'google-auth-httplib2',
+        'google-auth-oauthlib',
+    )
+    command_over_ssh(
+        current_instance_name, 'pip', 'install', 'google-cloud-storage'
+    )
+
+    command_over_ssh(
+        current_instance_name, "python3", "instance_setup.py", current_instance_name
+    )
     os.makedirs(result_dir)
     print("copying results from instance")
     gcloud_run(
@@ -128,6 +143,7 @@ def run_on_instance(template_name):
 if __name__ == "__main__":
     running_instances = get_running_instance_names()
     number_of_running_instances = len(running_instances)
+    atexit.register(delete_all_instances)
 
     print(f"Currently there are {number_of_running_instances} running instances.")
     if number_of_running_instances:
@@ -151,5 +167,4 @@ if __name__ == "__main__":
             ],
         )
         result.wait()
-    delete_all_instances()
     print("script finished.")

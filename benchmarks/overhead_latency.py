@@ -28,15 +28,37 @@ def timing_decorator(cls):
     setattr(
         cls,
         "time_n_tasks",
-        lambda self, tasks, delay: self.view.map_sync(echo(delay), [None] * tasks),
+        lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),
     )
     return cls
 
 
-class OverHeadLatencyLoadBalanced(OverheadLatencyBase):
+class OverheadLatencyLoadBalanced(OverheadLatencyBase):
     def setup(self, *_):
         super().setup()
         self.view = self.client.load_balanced_view(targets=slice(self.n))
+
+
+class OverheadLatencyBroadcastNonCoalescing(OverheadLatencyBase):
+    def setup(self, *_):
+        super().setup()
+        self.view = self.client.broadcast_view(
+            targets=slice(self.n), is_coalescing=False
+        )
+
+
+class OverheadLatencyBroadcastCoalescing(OverheadLatencyBase):
+    def setup(self, *_):
+        super().setup()
+        self.view = self.client.broadcast_view(
+            targets=slice(self.n), is_coalescing=True
+        )
+
+
+class OverheadLatencySpanningTree(OverheadLatencyBase):
+    def setup(self, *_):
+        super().setup()
+        self.view = self.client.spanning_tree_view(targets=slice(self.n))
 
 
 class OverHeadLatencyDirectView(OverheadLatencyBase):
@@ -57,41 +79,86 @@ def make_engine_class(base_class, n, engine_params):
 
 
 class Engines1DirectView(
-    make_engine_class(OverHeadLatencyDirectView, 1, [[1, 10, 100], [0, 0.1, 1]])
+    make_engine_class(OverHeadLatencyDirectView, 1, [[1, 10, 100], [0, 0.1]])
 ):
     pass
 
 
 class Engines1LoadBalanced(
-    make_engine_class(OverHeadLatencyLoadBalanced, 1, [[1, 10, 100], [0, 0.1, 1]])
+    make_engine_class(OverheadLatencyLoadBalanced, 1, [[1, 10, 100], [0, 0.1]])
+):
+    pass
+
+
+class Engines1BroadcastNonCoalescing(
+    make_engine_class(
+        OverheadLatencyBroadcastNonCoalescing, 1, [[1, 10, 100], [0, 0.1]]
+    )
+):
+    pass
+
+
+class Engines1BroadcastCoalescing(
+    make_engine_class(
+        OverheadLatencyBroadcastCoalescing, 1, [[1, 10, 100], [0, 0.1]]
+    )
+):
+    pass
+
+
+class Engines1BroadcastSpanningTree(
+    make_engine_class(OverheadLatencySpanningTree, 1, [[1, 10, 100], [0, 0.1]])
 ):
     pass
 
 
 class Engines10DirectView(
-    make_engine_class(OverHeadLatencyDirectView, 10, [[1, 10, 100], [0, 0.1, 1]])
+    make_engine_class(OverHeadLatencyDirectView, 10, [[1, 10, 100], [0, 0.1]])
 ):
     pass
 
 
 class Engines10LoadBalanced(
-    make_engine_class(OverHeadLatencyLoadBalanced, 10, [[1, 10, 100], [0, 0.1, 1]])
+    make_engine_class(OverheadLatencyLoadBalanced, 10, [[1, 10, 100], [0, 0.1]])
 ):
     pass
 
 
-class Engines100DirectView(
-    make_engine_class(OverHeadLatencyDirectView, 100, [[1, 10, 100, 1000], [0, 0.1, 1]])
-):
-    pass
-
-
-class Engines100LoadBalanced(
+class Engines10BroadcastNonCoalescing(
     make_engine_class(
-        OverHeadLatencyLoadBalanced, 100, [[1, 10, 100, 1000], [0, 0.1, 1]]
+        OverheadLatencyBroadcastNonCoalescing, 10, [[1, 10, 100], [0, 0.1]]
     )
 ):
     pass
+
+
+class Engines10BroadcastCoalescing(
+    make_engine_class(
+        OverheadLatencyBroadcastCoalescing, 10, [[1, 10, 100], [0, 0.1]]
+    )
+):
+    pass
+
+
+class Engines10BroadcastSpanningTree(
+    make_engine_class(OverheadLatencySpanningTree, 10, [[1, 10, 100], [0, 0.1]])
+):
+    pass
+
+
+#
+# class Engines100DirectView(
+#     make_engine_class(OverHeadLatencyDirectView, 100, [[1, 10, 100, 1000], [0, 0.1, 1]])
+# ):
+#     pass
+#
+#
+# class Engines100LoadBalanced(
+#     make_engine_class(
+#         OverheadLatencyLoadBalanced, 100, [[1, 10, 100, 1000], [0, 0.1, 1]]
+#     )
+# ):
+#     pass
 
 
 def make_no_delay_engine_class(base_class, n, engine_params):
@@ -102,17 +169,17 @@ def make_no_delay_engine_class(base_class, n, engine_params):
         params = engine_params
 
         def time_n_tasks(self, tasks, _):
-            self.view.map_sync(echo(0), [None] * tasks)
+            self.view.apply_sync(echo(0), [None] * tasks)
 
         def time_n_task_non_blocking(self, tasks, _):
-            self.view.map(echo(0), [None] * tasks, block=False)
+            self.view.apply_sync(echo(0), [None] * tasks, block=False)
 
     return Engine
 
 
 class Engines100NoDelayLoadBalanced(
     make_no_delay_engine_class(
-        OverHeadLatencyLoadBalanced, 100, [[1, 10, 100, 1000, 10000], [0]]
+        OverheadLatencyLoadBalanced, 100, [[1, 10, 100, 1000, 10000], [0]]
     )
 ):
     pass
@@ -121,6 +188,30 @@ class Engines100NoDelayLoadBalanced(
 class Engines100NoDelayDirectView(
     make_no_delay_engine_class(
         OverHeadLatencyDirectView, 100, [[1, 10, 100, 1000, 10000], [0]]
+    )
+):
+    pass
+
+
+class Engines100NoDelayBroadcastNonCoalescing(
+    make_no_delay_engine_class(
+        OverheadLatencyBroadcastNonCoalescing, 100, [[1, 10, 100, 1000, 10000], [0]]
+    )
+):
+    pass
+
+
+class Engines100NoDelayBroadcastCoalescing(
+    make_no_delay_engine_class(
+        OverheadLatencyBroadcastCoalescing, 100, [[1, 10, 100, 1000, 10000], [0]]
+    )
+):
+    pass
+
+
+class Engines100NoDelaySpanningTree(
+    make_no_delay_engine_class(
+        OverheadLatencySpanningTree, 100, [[1, 10, 100, 1000, 10000], [0]]
     )
 ):
     pass
@@ -152,7 +243,7 @@ def create_echo_many_arguments_class(base_class):
 
 
 class EchoManyArgumentsLoadBalanced(
-    create_echo_many_arguments_class(OverHeadLatencyLoadBalanced)
+    create_echo_many_arguments_class(OverheadLatencyLoadBalanced)
 ):
     pass
 
