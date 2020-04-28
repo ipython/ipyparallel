@@ -71,7 +71,7 @@ class SpanningTreeScheduler(Scheduler):
             new_msg = self.append_new_msg_id_to_msg(
                 self.get_new_msg_id(msg_id, scheduler_id), scheduler_id, idents, msg
             )
-            self.mon_stream.send_multipart([b'insptree'] + new_msg, copy=False)
+            # self.mon_stream.send_multipart([b'insptree'] + new_msg, copy=False)
             self.outgoing_streams[i].send_multipart(new_msg, copy=False)
 
     @util.log_errors
@@ -101,7 +101,7 @@ class SpanningTreeScheduler(Scheduler):
                 ],
                 copy=False,
             )
-            self.mon_stream.send_multipart([b'outsptree'] + raw_msg, copy=False)
+            # self.mon_stream.send_multipart([b'outsptree'] + raw_msg, copy=False)
 
 
 class SpanningTreeLeafScheduler(Scheduler):
@@ -131,7 +131,7 @@ class SpanningTreeLeafScheduler(Scheduler):
             new_msg = self.append_new_msg_id_to_msg(
                 self.get_new_msg_id(original_msg_id, target), target, idents, msg
             )
-            self.mon_stream.send_multipart([b'insptree'] + new_msg, copy=False)
+            # self.mon_stream.send_multipart([b'insptree'] + new_msg, copy=False)
             self.engine_stream.send_multipart(new_msg, copy=False)
 
     @util.log_errors
@@ -161,7 +161,7 @@ class SpanningTreeLeafScheduler(Scheduler):
                 ],
                 copy=False,
             )
-            self.mon_stream.send_multipart([b'outsptree'] + raw_msg, copy=False)
+            # self.mon_stream.send_multipart([b'outsptree'] + raw_msg, copy=False)
 
 
 def get_id_with_prefix(identity):

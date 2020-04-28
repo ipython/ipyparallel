@@ -876,7 +876,8 @@ class BroadcastViewNonCoalescing(DirectView):
             self.client.outstanding.add(msg_and_target_id)
             self.outstanding.add(msg_and_target_id)
             futures.append(future[0])
-        self.outstanding.remove(original_msg_id)
+        if original_msg_id in self.outstanding:
+            self.outstanding.remove(original_msg_id)
 
         if isinstance(targets, int):
             futures = futures[0]
