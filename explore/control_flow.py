@@ -16,12 +16,12 @@ def main():
     )
 
     print(broadcast_result)
-    spanning_tree_view = client.spanning_tree_view()
-    spanning_result = spanning_tree_view.apply(
-        lambda x: f'The answer to Life, the Universe and Everything: {x * 2}', 21
-    ).get()
-    print(spanning_result)
-    print(f'{len(broadcast_result)} == {len(spanning_result)}')
+    # spanning_tree_view = client.spanning_tree_view()
+    # spanning_result = spanning_tree_view.apply(
+    #     lambda x: f'The answer to Life, the Universe and Everything: {x * 2}', 21
+    # ).get()
+    # print(spanning_result)
+    # print(f'{len(broadcast_result)} == {len(spanning_result)}')
 
 if __name__ == '__main__':
     main()

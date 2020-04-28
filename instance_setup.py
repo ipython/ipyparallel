@@ -1,6 +1,10 @@
+import os
+DEFAULT_MINICONDA_PATH = os.path.join(os.getcwd(), "miniconda3/bin/:")
+env = os.environ.copy()
+env["PATH"] = DEFAULT_MINICONDA_PATH + env["PATH"]
+
 import atexit
 from subprocess import check_call
-import os
 import socket
 import googleapiclient.discovery as gcd
 from google.cloud import storage
@@ -13,17 +17,13 @@ ZONE = "europe-west1-b"
 PROJECT_NAME = "jupyter-simula"
 BUCKET_NAME = 'ipyparallel_dev'
 
-DEFAULT_MINICONDA_PATH = os.path.join(os.getcwd(), "miniconda3/bin/:")
-env = os.environ.copy()
-env["PATH"] = DEFAULT_MINICONDA_PATH + env["PATH"]
-
 instance_name = socket.gethostname()
 compute = gcd.build("compute", "v1")
 
 
 def delete_self():
     print(f'deleting: {instance_name}')
-    compute.instance().delete(
+    compute.instances().delete(
         project=PROJECT_NAME, zone=ZONE, instance=instance_name
     ).execute()
 
@@ -45,15 +45,6 @@ def cmd_run(*args):
 if __name__ == "__main__":
     atexit.register(delete_self)
     cmd_run(
-        "wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh"
-    )  # Download miniconda
-    cmd_run("bash Miniconda3-latest-Linux-x86_64.sh -b")  # Install miniconda
-    cmd_run("conda init")  # init conda env
-    cmd_run("conda install -c conda-forge asv -y")  # Install av
-    cmd_run(
-        'pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib'
-    )
-    cmd_run(
         f"git clone -q https://{GITHUB_TOKEN}@{ASV_TESTS_REPO}"
     )  # Get benchmarks from repo
     print("Finished cloning benchmark repo")
@@ -66,7 +57,7 @@ if __name__ == "__main__":
     os.chdir("ipyparallel_master_project")
 
     log_filename = f'{instance_name}.log'
-    error_log_filename = f'{instance_name}.log'
+    error_log_filename = f'{instance_name}.error.log'
 
     with open(log_filename, 'w') as log_file, open(
         error_log_filename, 'w'
@@ -76,7 +67,7 @@ if __name__ == "__main__":
         sys.stderr = error_log
 
         cmd_run("ipcluster start -n 100 --daemon --profile=asv")  # Starting 100 engines
-        cmd_run("asv run master..dev")
+        cmd_run("asv run")
         cmd_run("ipcluster stop --profile=asv")
 
     print('uploading files')

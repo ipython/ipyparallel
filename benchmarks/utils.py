@@ -21,7 +21,7 @@ def get_time_stamp() -> str:
 
 
 def echo(delay=0):
-    def inner_echo(x):
+    def inner_echo(x, **kwargs):
         import time
 
         if delay:

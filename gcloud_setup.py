@@ -3,19 +3,21 @@ import atexit
 import sys
 
 from benchmarks.utils import get_time_stamp
-from subprocess import check_call
+from subprocess import check_call, Popen
 import os
 import googleapiclient.discovery as gcd
 from typing import List
 import multiprocessing as mp
 from time import sleep
-from logger import get_gcloud_log_file_name
 
-CORE_NUMBERS_FOR_TEMPLATES = [16, 32, 64]
+# CORE_NUMBERS_FOR_TEMPLATES = [16, 32, 64]
+CORE_NUMBERS_FOR_TEMPLATES = [16]
+
 ZONE = "europe-west1-b"
 PROJECT_NAME = "jupyter-simula"
 INSTANCE_NAME_PREFIX = "asv-testing-"
 MACHINE_CONFIGS_DIR = os.path.join(os.getcwd(), "machine_configs")
+CONDA_PATH = 'miniconda3/bin/conda'
 
 compute = gcd.build("compute", "v1")
 
@@ -46,14 +48,14 @@ def delete_all_instances():
     ]
 
 
-def gcloud_run(*args, instance_name=""):
+def gcloud_run(*args, instance_name="", block=True):
     cmd = ["gcloud", "compute"] + list(args)
     print(f'$ {" ".join(cmd)}')
     check_call(
-        cmd,
-        stdout=open(get_gcloud_log_file_name(instance_name) + ".log", "a+"),
-        stderr=open(f"{get_gcloud_log_file_name(instance_name)}_error.out", "a+"),
-    )
+        cmd
+        # stdout=open(get_gcloud_log_file_name(instance_name) + ".log", "a+"),
+        # stderr=open(f"{get_gcloud_log_file_name(instance_name)}_error.out", "a+"),
+    ) if block else Popen(cmd)
 
 
 def copy_files_to_instance(instance_name, *file_names, directory="~"):
@@ -67,9 +69,15 @@ def copy_files_to_instance(instance_name, *file_names, directory="~"):
         )
 
 
-def command_over_ssh(instance_name, *args):
+def command_over_ssh(instance_name, *args, block=True):
     return gcloud_run(
-        "ssh", instance_name, f"--zone={ZONE}", "--", *args, instance_name=instance_name
+        "ssh",
+        instance_name,
+        f"--zone={ZONE}",
+        "--",
+        *args,
+        instance_name=instance_name,
+        block=block,
     )
 
 
@@ -87,17 +95,53 @@ def run_on_instance(template_name):
     )
     sleep(20)  # Waiting for ssh keys to propagate to instance
     command_over_ssh(current_instance_name, "sudo", "apt", "update")
+    # command_over_ssh(
+    #     current_instance_name,
+    #     "sudo",
+    #     "DEBIAN_FRONTEND=noninteractive",
+    #     "apt",
+    #     "install",
+    #     "-y",
+    #     "--yes",
+    #     "--assume-yes",
+    #     "python3-pip",
+    # )
+    print("copying instance setup to instance")
     command_over_ssh(
         current_instance_name,
-        "sudo",
-        "DEBIAN_FRONTEND=noninteractive",
-        "apt",
-        "install",
-        "-y",
-        "--yes",
-        "--assume-yes",
-        "python3-pip",
+        'wget',
+        '-q',
+        'https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh',
     )
+    print('installing miniconda')
+    command_over_ssh(
+        current_instance_name, 'bash', 'Miniconda3-latest-Linux-x86_64.sh', '-b'
+    )
+    command_over_ssh(
+        current_instance_name,
+        'echo',
+        '"source  miniconda3/bin/activate"',
+        '>>',
+        '~/.bashrc',
+    )
+    command_over_ssh(current_instance_name, f'{CONDA_PATH}', 'init')
+    print('installing asv and google api')
+    command_over_ssh(
+        current_instance_name,
+        f'{CONDA_PATH}',
+        'install',
+        '-c',
+        'conda-forge',
+        'asv',
+        'google-api-python-client',
+        'google-auth-httplib2',
+        'google-auth-oauthlib',
+        'google-cloud-storage',
+        '-y',
+    )
+
+    copy_files_to_instance(current_instance_name, "instance_setup.py")
+
     for config_name in os.listdir(MACHINE_CONFIGS_DIR):
         if config_name == template_name + ".json":
             copy_files_to_instance(
@@ -109,41 +153,41 @@ def run_on_instance(template_name):
     else:
         print(f"Found no valid machine config for template: {template_name}.")
         exit(1)
-    result_dir = f"results/{current_instance_name}"
-    print("copying instance setup to instance")
-    copy_files_to_instance(current_instance_name, "instance_setup.py")
+    # result_dir = f"results/{current_instance_name}"
     print("starting instance setup")
-    command_over_ssh(
-        current_instance_name,
-        'pip',
-        'install',
-        'google-api-python-client',
-        'google-auth-httplib2',
-        'google-auth-oauthlib',
-    )
-    command_over_ssh(
-        current_instance_name, 'pip', 'install', 'google-cloud-storage'
-    )
+    # command_over_ssh(
+    #     current_instance_name,
+    #     'pip3',
+    #     'install',
+    #     'google-api-python-client',
+    #     'google-auth-httplib2',
+    #     'google-auth-oauthlib',
+    #     'google-cloud-storage',
+    # )
 
     command_over_ssh(
-        current_instance_name, "python3", "instance_setup.py", current_instance_name
+        current_instance_name,
+        "miniconda3/bin/python3",
+        "instance_setup.py",
+        current_instance_name,
+        block=False,
     )
-    os.makedirs(result_dir)
-    print("copying results from instance")
-    gcloud_run(
-        "scp",
-        "--recurse",
-        f"{current_instance_name}:~/ipyparallel_master_project/results/{template_name}/.",
-        os.path.abspath(result_dir),
-        f"--zone={ZONE}",
-        instance_name=current_instance_name,
-    )
+    # os.makedirs(result_dir)
+    # print("copying results from instance")
+    # gcloud_run(
+    #     "scp",
+    #     "--recurse",
+    #     f"{current_instance_name}:~/ipyparallel_master_project/results/{template_name}/.",
+    #     os.path.abspath(result_dir),
+    #     f"--zone={ZONE}",
+    #     instance_name=current_instance_name,
+    # )
 
 
 if __name__ == "__main__":
     running_instances = get_running_instance_names()
     number_of_running_instances = len(running_instances)
-    atexit.register(delete_all_instances)
+    # atexit.register(delete_all_instances)
 
     print(f"Currently there are {number_of_running_instances} running instances.")
     if number_of_running_instances:
