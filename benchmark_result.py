@@ -14,10 +14,18 @@ RESULTS_DIR = "results"
 
 class BenchmarkType(Enum):
     ECHO_MANY_ARGUMENTS = 'EchoManyArguments'
+    THROUGHPUT = 'throughput'
     TIME_N_TASKS = 'Engines'
-    BROADCAST = 'BroadCast'
     TIME_N_TASKS_NO_DELAY_NON_BLOCKING = 'non_blocking'
     TIME_N_TASKS_NO_DELAY = 'NoDelay'
+
+
+class SchedulerType(Enum):
+    DIRECT_VIEW = 'DirectView'
+    LOAD_BALANCED = 'LoadBalanced'
+    BROADCAST_COALESCING = 'BroadcastCoalescing'
+    BROADCAST_NON_COALESCING = 'BroadcastNonCoalescing'
+    SPANNING_TREE = 'SpanningTree'
 
 
 def get_benchmark_type(benchmark_name):
@@ -29,12 +37,21 @@ def get_benchmark_type(benchmark_name):
         return BenchmarkType.TIME_N_TASKS_NO_DELAY
     elif BenchmarkType.TIME_N_TASKS.value in benchmark_name:
         return BenchmarkType.TIME_N_TASKS
-    else:
-        return BenchmarkType.BROADCAST
+    elif BenchmarkType.THROUGHPUT.value in benchmark_name:
+        return BenchmarkType.THROUGHPUT
 
 
-def is_direct_view(benchmark_name):
-    return 'DirectView' in benchmark_name or 'Broadcast' in benchmark_name
+def get_scheduler_type(benchmark_name):
+    if SchedulerType.DIRECT_VIEW.value in benchmark_name:
+        return SchedulerType.DIRECT_VIEW
+    elif SchedulerType.LOAD_BALANCED.value in benchmark_name:
+        return SchedulerType.LOAD_BALANCED
+    elif SchedulerType.BROADCAST_COALESCING.value in benchmark_name:
+        return SchedulerType.BROADCAST_COALESCING
+    elif SchedulerType.BROADCAST_NON_COALESCING.value in benchmark_name:
+        return SchedulerType.BROADCAST_NON_COALESCING
+    elif SchedulerType.SPANNING_TREE.value in benchmark_name:
+        return SchedulerType.SPANNING_TREE
 
 
 class BenchmarkResult:
@@ -49,8 +66,8 @@ class BenchmarkResult:
         self.results_dict = {
             benchmark_name: {
                 'benchmark_type': get_benchmark_type(benchmark_name),
+                'scheduler_type': get_scheduler_type(benchmark_name),
                 'engines': get_number_of_engines(benchmark_name),
-                'is_direct_view': is_direct_view(benchmark_name),
                 'results': [
                     Result(
                         duration_in_seconds,
@@ -111,7 +128,7 @@ class Result:
                 or benchmark_type is BenchmarkType.TIME_N_TASKS_NO_DELAY_NON_BLOCKING
                 else float(param[1])
             )
-        elif benchmark_type is BenchmarkType.BROADCAST:
+        elif benchmark_type is BenchmarkType.THROUGHPUT:
             self.number_of_bytes = int(param[1])
             self.number_of_engines = int(param[0])
         else:
@@ -126,7 +143,7 @@ def get_benchmark_results():
         for dir_content in os.listdir(RESULTS_DIR)
         if (
             os.path.isdir(os.path.join(os.getcwd(), RESULTS_DIR, dir_content))
-            and "asv-testing" in dir_content
+            and "asv_testing" in dir_content
         )
         for file_name in os.listdir(f"{RESULTS_DIR}/{dir_content}")
         if "machine" not in file_name
@@ -151,41 +168,41 @@ def get_value_dict(engines_or_cores='engines', bytes_or_tasks='tasks'):
     }
 
 
-def ensure_time_n_tasks_source_structure(datasource, delay, number_of_cores, view_type):
+def ensure_time_n_tasks_source_structure(datasource, delay, number_of_cores, scheduler_type):
     if delay not in datasource:
-        datasource[delay] = {number_of_cores: {view_type: get_value_dict()}}
+        datasource[delay] = {number_of_cores: {scheduler_type: get_value_dict()}}
     elif number_of_cores not in datasource[delay]:
-        datasource[delay][number_of_cores] = {view_type: get_value_dict()}
-    elif view_type not in datasource[delay][number_of_cores]:
-        datasource[delay][number_of_cores][view_type] = get_value_dict()
+        datasource[delay][number_of_cores] = {scheduler_type: get_value_dict()}
+    elif scheduler_type not in datasource[delay][number_of_cores]:
+        datasource[delay][number_of_cores][scheduler_type] = get_value_dict()
 
 
 def add_time_n_tasks_source(source, benchmark, number_of_cores):
     number_of_engines = benchmark['engines']
-    view_type = 'direct_view' if benchmark['is_direct_view'] else 'load_balanced'
+    scheduler_type = benchmark['scheduler_type']
     for duration, tasks_num, delay in [
         (result.duration_in_ms, result.number_of_tasks, seconds_to_ms(result.delay))
         for result in benchmark['results']
         if not result.failed
     ]:
-        ensure_time_n_tasks_source_structure(source, delay, number_of_cores, view_type)
-        dict_to_append_to = source[delay][number_of_cores][view_type]
+        ensure_time_n_tasks_source_structure(source, delay, number_of_cores, scheduler_type)
+        dict_to_append_to = source[delay][number_of_cores][scheduler_type]
         dict_to_append_to['Duration in ms'].append(duration)
         dict_to_append_to['Number of tasks'].append(tasks_num)
         dict_to_append_to['Number of engines'].append(number_of_engines)
 
 
 def add_no_delay_tasks_source(source, benchmark, number_of_cores):
-    view_type = 'direct_view' if benchmark['is_direct_view'] else 'load_balanced'
+    scheduler_type = benchmark['scheduler_type']
     if benchmark['benchmark_type'] not in source:
         source[benchmark['benchmark_type']] = {
-            view_type: get_value_dict(engines_or_cores='cores')
+            scheduler_type: get_value_dict(engines_or_cores='cores')
         }
-    if view_type not in source[benchmark['benchmark_type']]:
-        source[benchmark['benchmark_type']][view_type] = get_value_dict(
+    if scheduler_type not in source[benchmark['benchmark_type']]:
+        source[benchmark['benchmark_type']][scheduler_type] = get_value_dict(
             engines_or_cores='cores'
         )
-    dict_to_append_to = source[benchmark['benchmark_type']][view_type]
+    dict_to_append_to = source[benchmark['benchmark_type']][scheduler_type]
 
     for duration, tasks_num in [
         (result.duration_in_ms, result.number_of_tasks)
@@ -286,8 +303,10 @@ def get_echo_many_arguments_source(benchmark_results=None):
 
 
 if __name__ == "__main__":
-    results = get_benchmark_results()
-    get_time_n_tasks_source()
-    source = get_echo_many_arguments_source()
+    benchmark_results = get_benchmark_results()
+
+    # source = get_time_n_tasks_source(benchmark_results)
+    source = get_no_delay_source(benchmark_results)
+    # source = get_echo_many_arguments_source()
     with open("saved_results.pkl", "wb") as saved_results:
-        pickle.dump(get_benchmark_results(), saved_results)
+        pickle.dump(benchmark_results, saved_results)

@@ -23,7 +23,7 @@ compute = gcd.build("compute", "v1")
 
 
 def generate_template_name(number_of_cores_and_ram):
-    return f"{INSTANCE_NAME_PREFIX}{number_of_cores_and_ram}-{number_of_cores_and_ram}"
+    return f"{INSTANCE_NAME_PREFIX}{number_of_cores_and_ram}"
 
 
 def get_running_instance_names() -> List[str]:
@@ -48,7 +48,7 @@ def delete_all_instances():
     ]
 
 
-def gcloud_run(*args, instance_name="", block=True):
+def gcloud_run(*args, block=True):
     cmd = ["gcloud", "compute"] + list(args)
     print(f'$ {" ".join(cmd)}')
     check_call(
@@ -60,25 +60,11 @@ def gcloud_run(*args, instance_name="", block=True):
 
 def copy_files_to_instance(instance_name, *file_names, directory="~"):
     for file_name in file_names:
-        gcloud_run(
-            "scp",
-            file_name,
-            f"{instance_name}:{directory}",
-            f"--zone={ZONE}",
-            instance_name=instance_name,
-        )
+        gcloud_run("scp", file_name, f"{instance_name}:{directory}", f"--zone={ZONE}")
 
 
 def command_over_ssh(instance_name, *args, block=True):
-    return gcloud_run(
-        "ssh",
-        instance_name,
-        f"--zone={ZONE}",
-        "--",
-        *args,
-        instance_name=instance_name,
-        block=block,
-    )
+    return gcloud_run("ssh", instance_name, f"--zone={ZONE}", "--", *args, block=block)
 
 
 def run_on_instance(template_name):
@@ -91,7 +77,6 @@ def run_on_instance(template_name):
         current_instance_name,
         "--source-instance-template",
         template_name,
-        instance_name=current_instance_name,
     )
     sleep(20)  # Waiting for ssh keys to propagate to instance
     command_over_ssh(current_instance_name, "sudo", "apt", "update")
@@ -170,6 +155,7 @@ def run_on_instance(template_name):
         "miniconda3/bin/python3",
         "instance_setup.py",
         current_instance_name,
+        template_name,
         block=False,
     )
     # os.makedirs(result_dir)
@@ -202,13 +188,16 @@ if __name__ == "__main__":
     if "-q" in sys.argv:
         exit(0)
 
-    with mp.Pool(len(CORE_NUMBERS_FOR_TEMPLATES)) as pool:
-        result = pool.map_async(
-            run_on_instance,
-            [
-                generate_template_name(core_number)
-                for core_number in CORE_NUMBERS_FOR_TEMPLATES
-            ],
-        )
+    if len(CORE_NUMBERS_FOR_TEMPLATES) == 1:
+        run_on_instance(generate_template_name(CORE_NUMBERS_FOR_TEMPLATES[0]))
+    else:
+        with mp.Pool(len(CORE_NUMBERS_FOR_TEMPLATES)) as pool:
+            result = pool.map_async(
+                run_on_instance,
+                [
+                    generate_template_name(core_number)
+                    for core_number in CORE_NUMBERS_FOR_TEMPLATES
+                ],
+            )
         result.wait()
     print("script finished.")

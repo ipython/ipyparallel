@@ -106,7 +106,7 @@ class Engines1BroadcastCoalescing(
     pass
 
 
-class Engines1BroadcastSpanningTree(
+class Engines1SpanningTree(
     make_engine_class(OverheadLatencySpanningTree, 1, [[1, 10, 100], [0, 0.1]])
 ):
     pass
@@ -140,7 +140,7 @@ class Engines10BroadcastCoalescing(
     pass
 
 
-class Engines10BroadcastSpanningTree(
+class Engines10SpanningTree(
     make_engine_class(OverheadLatencySpanningTree, 10, [[1, 10, 100], [0, 0.1]])
 ):
     pass
