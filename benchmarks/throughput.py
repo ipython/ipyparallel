@@ -13,10 +13,10 @@ class ThroughputSuite:
     def setup(self, n=200, *_):
         wait_for(lambda: len(self.client) >= n)
 
-    def teardown(self, *_):
-        if self.client:
-            self.client.close()
-
+    # def teardown(self, *_):
+    #     if self.client:
+    #         self.client.close()
+    #
 
 #
 # def timing_decorator(cls):
