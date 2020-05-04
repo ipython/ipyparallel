@@ -36,7 +36,7 @@ def make_benchmark(get_view):
     class Benchmark(ThroughputSuite):
         params = [
             [0, 0.1],
-            [1, 10, 50, 100, 200],
+            [1, 10, 50, 100],
             [10, 100, 1000, 10_000, 100_000, 1_000_000],
         ]
 
