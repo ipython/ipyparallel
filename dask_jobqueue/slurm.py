@@ -150,4 +150,3 @@ class SLURMCluster(JobQueueCluster):
         job=job_parameters, cluster=cluster_parameters
     )
     job_cls = SLURMJob
-    config_name = "slurm"

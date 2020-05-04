@@ -104,4 +104,3 @@ class LocalCluster(JobQueueCluster):
         job=job_parameters, cluster=cluster_parameters
     )
     job_cls = LocalJob
-    config_name = "local"

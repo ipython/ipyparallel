@@ -131,4 +131,3 @@ class OARCluster(JobQueueCluster):
         job=job_parameters, cluster=cluster_parameters
     )
     job_cls = OARJob
-    config_name = "oar"

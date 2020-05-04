@@ -232,7 +232,6 @@ class LSFCluster(JobQueueCluster):
         job=job_parameters, cluster=cluster_parameters
     )
     job_cls = LSFJob
-    config_name = "lsf"
 
 
 @toolz.memoize

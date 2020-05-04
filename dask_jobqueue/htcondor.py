@@ -236,4 +236,3 @@ class HTCondorCluster(JobQueueCluster):
         job=job_parameters, cluster=cluster_parameters
     )
     job_cls = HTCondorJob
-    config_name = "htcondor"
