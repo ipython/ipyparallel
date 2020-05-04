@@ -1,670 +1,29 @@
 {
-    "overhead_latency.EchoManyArgumentsDirectView.time_echo_with_many_arguments": {
-        "code": "class EchoManyArguments:\n    def time_echo_with_many_arguments(self, number_of_arguments):\n        echo_many_arguments(self.view, number_of_arguments, self.n)\n\nclass OverHeadLatencyDirectView:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client[: self.n]",
+    "throughput.CoalescingBroadcast.time_broadcast": {
+        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, n=200, *_):\n        wait_for(lambda: len(self.client) >= n)",
         "min_run_count": 2,
-        "name": "overhead_latency.EchoManyArgumentsDirectView.time_echo_with_many_arguments",
+        "name": "throughput.CoalescingBroadcast.time_broadcast",
         "number": 0,
         "param_names": [
-            "Number of arguments"
-        ],
-        "params": [
-            [
-                "2",
-                "4",
-                "8",
-                "16",
-                "32",
-                "64",
-                "128",
-                "255"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "78b0a9b0deb1bb8db5b3183b398a099a14be98dbe2405a357242604c182fdc32",
-        "warmup_time": -1
-    },
-    "overhead_latency.EchoManyArgumentsLoadBalanced.time_echo_with_many_arguments": {
-        "code": "class EchoManyArguments:\n    def time_echo_with_many_arguments(self, number_of_arguments):\n        echo_many_arguments(self.view, number_of_arguments, self.n)\n\nclass OverheadLatencyLoadBalanced:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.load_balanced_view(targets=slice(self.n))",
-        "min_run_count": 2,
-        "name": "overhead_latency.EchoManyArgumentsLoadBalanced.time_echo_with_many_arguments",
-        "number": 0,
-        "param_names": [
-            "Number of arguments"
-        ],
-        "params": [
-            [
-                "2",
-                "4",
-                "8",
-                "16",
-                "32",
-                "64",
-                "128",
-                "255"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "075aa340d1d9bc7849ccade3bb11a52ea80cb0f5aac08cb5a9235f51b8148a5a",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines100NoDelayBroadcastCoalescing.time_n_task_non_blocking": {
-        "code": "class Engine:\n    def time_n_task_non_blocking(self, tasks, _):\n        self.view.apply_sync(echo(0), [None] * tasks, block=False)\n\nclass OverheadLatencyBroadcastCoalescing:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.broadcast_view(\n            targets=slice(self.n), is_coalescing=True\n        )",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines100NoDelayBroadcastCoalescing.time_n_task_non_blocking",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100",
-                "1000",
-                "10000"
-            ],
-            [
-                "0"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "aaabcd7a89a2cf3570e3a02a6418dfd00c5486f73c670cfbfa740d4ce0249805",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines100NoDelayBroadcastCoalescing.time_n_tasks": {
-        "code": "class Engine:\n    def time_n_tasks(self, tasks, _):\n        self.view.apply_sync(echo(0), [None] * tasks)\n\nclass OverheadLatencyBroadcastCoalescing:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.broadcast_view(\n            targets=slice(self.n), is_coalescing=True\n        )",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines100NoDelayBroadcastCoalescing.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100",
-                "1000",
-                "10000"
-            ],
-            [
-                "0"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "4f9f78d7a3958b3e1f57ff8a92434ffd79e50c34496bb89ab3b9c02adcfc7b4f",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines100NoDelayBroadcastNonCoalescing.time_n_task_non_blocking": {
-        "code": "class Engine:\n    def time_n_task_non_blocking(self, tasks, _):\n        self.view.apply_sync(echo(0), [None] * tasks, block=False)\n\nclass OverheadLatencyBroadcastNonCoalescing:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.broadcast_view(\n            targets=slice(self.n), is_coalescing=False\n        )",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines100NoDelayBroadcastNonCoalescing.time_n_task_non_blocking",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100",
-                "1000",
-                "10000"
-            ],
-            [
-                "0"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "501355a716530431dc9ad712eef2586da4c74844eb9bc0a4b15fe209df76cc98",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines100NoDelayBroadcastNonCoalescing.time_n_tasks": {
-        "code": "class Engine:\n    def time_n_tasks(self, tasks, _):\n        self.view.apply_sync(echo(0), [None] * tasks)\n\nclass OverheadLatencyBroadcastNonCoalescing:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.broadcast_view(\n            targets=slice(self.n), is_coalescing=False\n        )",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines100NoDelayBroadcastNonCoalescing.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100",
-                "1000",
-                "10000"
-            ],
-            [
-                "0"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "d6aea3efb13a8c7f8183c720a9ae8748e156b3e964096743e50f6776192a33d2",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines100NoDelayDirectView.time_n_task_non_blocking": {
-        "code": "class Engine:\n    def time_n_task_non_blocking(self, tasks, _):\n        self.view.apply_sync(echo(0), [None] * tasks, block=False)\n\nclass OverHeadLatencyDirectView:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client[: self.n]",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines100NoDelayDirectView.time_n_task_non_blocking",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100",
-                "1000",
-                "10000"
-            ],
-            [
-                "0"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "b4a361b70ff8cded6ba3baf946466ac49de91ca62bb712838be3bd3af82b3f48",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines100NoDelayDirectView.time_n_tasks": {
-        "code": "class Engine:\n    def time_n_tasks(self, tasks, _):\n        self.view.apply_sync(echo(0), [None] * tasks)\n\nclass OverHeadLatencyDirectView:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client[: self.n]",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines100NoDelayDirectView.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100",
-                "1000",
-                "10000"
-            ],
-            [
-                "0"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "0ce7c2cf65ce3e7a455b8269cedfce6d2bfa881135128a9ded9438e3d23b9313",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines100NoDelayLoadBalanced.time_n_task_non_blocking": {
-        "code": "class Engine:\n    def time_n_task_non_blocking(self, tasks, _):\n        self.view.apply_sync(echo(0), [None] * tasks, block=False)\n\nclass OverheadLatencyLoadBalanced:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.load_balanced_view(targets=slice(self.n))",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines100NoDelayLoadBalanced.time_n_task_non_blocking",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100",
-                "1000",
-                "10000"
-            ],
-            [
-                "0"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "c0a8da6a1374cf07e2586be9d3ec81ab3ce0beadba6012234a8387bd36a045fd",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines100NoDelayLoadBalanced.time_n_tasks": {
-        "code": "class Engine:\n    def time_n_tasks(self, tasks, _):\n        self.view.apply_sync(echo(0), [None] * tasks)\n\nclass OverheadLatencyLoadBalanced:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.load_balanced_view(targets=slice(self.n))",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines100NoDelayLoadBalanced.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100",
-                "1000",
-                "10000"
-            ],
-            [
-                "0"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "b9f74ca7a0ca784a5594708f0a5b06664f2ae8c1b6b71953ec7432a4b6f1272f",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines100NoDelaySpanningTree.time_n_task_non_blocking": {
-        "code": "class Engine:\n    def time_n_task_non_blocking(self, tasks, _):\n        self.view.apply_sync(echo(0), [None] * tasks, block=False)\n\nclass OverheadLatencySpanningTree:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.spanning_tree_view(targets=slice(self.n))",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines100NoDelaySpanningTree.time_n_task_non_blocking",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100",
-                "1000",
-                "10000"
-            ],
-            [
-                "0"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "37f2cb970de0182abb248febb297953335ef7be175cd194cf73b38b6c8edbeb3",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines100NoDelaySpanningTree.time_n_tasks": {
-        "code": "class Engine:\n    def time_n_tasks(self, tasks, _):\n        self.view.apply_sync(echo(0), [None] * tasks)\n\nclass OverheadLatencySpanningTree:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.spanning_tree_view(targets=slice(self.n))",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines100NoDelaySpanningTree.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100",
-                "1000",
-                "10000"
-            ],
-            [
-                "0"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "26b080f3d2b87221dd2125181ecc0ec8ad0696cf772f2d06cdc8ae2b99379c4b",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines10BroadcastCoalescing.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencyBroadcastCoalescing:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.broadcast_view(\n            targets=slice(self.n), is_coalescing=True\n        )",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines10BroadcastCoalescing.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100"
-            ],
-            [
-                "0",
-                "0.1"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "e6baa90f15ac58c4a211e617cf9a33fcaf076b3df222cbf966a4b3f7549d02ab",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines10BroadcastNonCoalescing.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencyBroadcastNonCoalescing:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.broadcast_view(\n            targets=slice(self.n), is_coalescing=False\n        )",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines10BroadcastNonCoalescing.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100"
-            ],
-            [
-                "0",
-                "0.1"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "26226562d0be937e13584cdca9f73d8e87e48c357af3a79420537219bd76b399",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines10BroadcastSpanningTree.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencySpanningTree:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.spanning_tree_view(targets=slice(self.n))",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines10BroadcastSpanningTree.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100"
-            ],
-            [
-                "0",
-                "0.1"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "78393f5b6454ffe4cc354a4e5ed89652e8db12ca8f9dcd5c01e16bfad81e9aac",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines10DirectView.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),\n\nclass OverHeadLatencyDirectView:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client[: self.n]",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines10DirectView.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100"
-            ],
-            [
-                "0",
-                "0.1"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "cfa9ac084c7b8d5268953f3c42714cf3361de876728441cf7432ec6bbf3ccfc3",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines10LoadBalanced.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencyLoadBalanced:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.load_balanced_view(targets=slice(self.n))",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines10LoadBalanced.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100"
-            ],
-            [
-                "0",
-                "0.1"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "be690f610b5f1810d06e13bdf7483b5255d57984f1eb4ec0eee5137d4835493c",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines1BroadcastCoalescing.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencyBroadcastCoalescing:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.broadcast_view(\n            targets=slice(self.n), is_coalescing=True\n        )",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines1BroadcastCoalescing.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100"
-            ],
-            [
-                "0",
-                "0.1"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "e6baa90f15ac58c4a211e617cf9a33fcaf076b3df222cbf966a4b3f7549d02ab",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines1BroadcastNonCoalescing.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencyBroadcastNonCoalescing:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.broadcast_view(\n            targets=slice(self.n), is_coalescing=False\n        )",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines1BroadcastNonCoalescing.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100"
-            ],
-            [
-                "0",
-                "0.1"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "26226562d0be937e13584cdca9f73d8e87e48c357af3a79420537219bd76b399",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines1BroadcastSpanningTree.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencySpanningTree:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.spanning_tree_view(targets=slice(self.n))",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines1BroadcastSpanningTree.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100"
-            ],
-            [
-                "0",
-                "0.1"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "78393f5b6454ffe4cc354a4e5ed89652e8db12ca8f9dcd5c01e16bfad81e9aac",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines1DirectView.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),\n\nclass OverHeadLatencyDirectView:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client[: self.n]",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines1DirectView.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100"
-            ],
-            [
-                "0",
-                "0.1"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "cfa9ac084c7b8d5268953f3c42714cf3361de876728441cf7432ec6bbf3ccfc3",
-        "warmup_time": -1
-    },
-    "overhead_latency.Engines1LoadBalanced.time_n_tasks": {
-        "code": "class <locals>:\n    lambda self, tasks, delay: self.view.apply_sync(echo(delay), [None] * tasks),\n\nclass OverheadLatencyLoadBalanced:\n    def setup(self, *_):\n        super().setup()\n        self.view = self.client.load_balanced_view(targets=slice(self.n))",
-        "min_run_count": 2,
-        "name": "overhead_latency.Engines1LoadBalanced.time_n_tasks",
-        "number": 0,
-        "param_names": [
-            "number of tasks",
-            "delay for echo"
-        ],
-        "params": [
-            [
-                "1",
-                "10",
-                "100"
-            ],
-            [
-                "0",
-                "0.1"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "be690f610b5f1810d06e13bdf7483b5255d57984f1eb4ec0eee5137d4835493c",
-        "warmup_time": -1
-    },
-    "throughput.NumpyArrayBroadcast.time_broadcast": {
-        "code": "class NumpyArrayBroadcast:\n    def time_broadcast(self, engines, num_bytes):\n        self.client[:engines][\"x\"] = np.array([0] * num_bytes, dtype=np.int8)\n\nclass ThroughputSuite:\n    def setup(self, n=10, *_):\n        self.client = ipp.Client(profile=\"asv\")\n        wait_for(lambda: len(self.client) >= n)",
-        "min_run_count": 2,
-        "name": "throughput.NumpyArrayBroadcast.time_broadcast",
-        "number": 0,
-        "param_names": [
+            "delay",
             "Number of engines",
             "Number of bytes"
         ],
         "params": [
             [
+                "0",
+                "0.1"
+            ],
+            [
                 "1",
                 "10",
                 "50",
-                "100"
+                "100",
+                "200"
             ],
             [
                 "10",
+                "100",
                 "1000",
                 "10000",
                 "100000",
@@ -678,7 +37,130 @@
         "timeout": 200,
         "type": "time",
         "unit": "seconds",
-        "version": "898d240d2d6de3bdf0fd6636311bd5ce8754b9c4042a39174957e7a910fadefa",
+        "version": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
+        "warmup_time": -1
+    },
+    "throughput.DirectViewBroadCast.time_broadcast": {
+        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, n=200, *_):\n        wait_for(lambda: len(self.client) >= n)",
+        "min_run_count": 2,
+        "name": "throughput.DirectViewBroadCast.time_broadcast",
+        "number": 0,
+        "param_names": [
+            "delay",
+            "Number of engines",
+            "Number of bytes"
+        ],
+        "params": [
+            [
+                "0",
+                "0.1"
+            ],
+            [
+                "1",
+                "10",
+                "50",
+                "100",
+                "200"
+            ],
+            [
+                "10",
+                "100",
+                "1000",
+                "10000",
+                "100000",
+                "1000000",
+                "10000000"
+            ]
+        ],
+        "processes": 2,
+        "repeat": 0,
+        "sample_time": 0.01,
+        "timeout": 200,
+        "type": "time",
+        "unit": "seconds",
+        "version": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
+        "warmup_time": -1
+    },
+    "throughput.NonCoalescingBroadcast.time_broadcast": {
+        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, n=200, *_):\n        wait_for(lambda: len(self.client) >= n)",
+        "min_run_count": 2,
+        "name": "throughput.NonCoalescingBroadcast.time_broadcast",
+        "number": 0,
+        "param_names": [
+            "delay",
+            "Number of engines",
+            "Number of bytes"
+        ],
+        "params": [
+            [
+                "0",
+                "0.1"
+            ],
+            [
+                "1",
+                "10",
+                "50",
+                "100",
+                "200"
+            ],
+            [
+                "10",
+                "100",
+                "1000",
+                "10000",
+                "100000",
+                "1000000",
+                "10000000"
+            ]
+        ],
+        "processes": 2,
+        "repeat": 0,
+        "sample_time": 0.01,
+        "timeout": 200,
+        "type": "time",
+        "unit": "seconds",
+        "version": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
+        "warmup_time": -1
+    },
+    "throughput.SpanningTreeBroadCast.time_broadcast": {
+        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, n=200, *_):\n        wait_for(lambda: len(self.client) >= n)",
+        "min_run_count": 2,
+        "name": "throughput.SpanningTreeBroadCast.time_broadcast",
+        "number": 0,
+        "param_names": [
+            "delay",
+            "Number of engines",
+            "Number of bytes"
+        ],
+        "params": [
+            [
+                "0",
+                "0.1"
+            ],
+            [
+                "1",
+                "10",
+                "50",
+                "100",
+                "200"
+            ],
+            [
+                "10",
+                "100",
+                "1000",
+                "10000",
+                "100000",
+                "1000000",
+                "10000000"
+            ]
+        ],
+        "processes": 2,
+        "repeat": 0,
+        "sample_time": 0.01,
+        "timeout": 200,
+        "type": "time",
+        "unit": "seconds",
+        "version": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
         "warmup_time": -1
     },
     "version": 2

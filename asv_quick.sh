@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 echo "starting engines"
-ipcluster start -n 100 --daemon --profile=asv
+#ipcluster start -n 200 --daemon --profile=asv
 echo "starting benchmarks"
 asv run --quick --show-stderr
-echo "Bebchmarks finished"
-ipcluster stop --profile=asv
+echo "Benchmarks finished"
+#ipcluster stop --profile=asv
