@@ -29,6 +29,68 @@ what is appropriate for you job queuing system.
 To correct any problem detected at this point, you could try to use
 ``job_extra`` or ``env_extra`` kwargs when initializing your cluster object.
 
+In particular, pay attention to the python executable used to launch the
+workers, which by default is the one used to launch the scheduler (this makes
+sense only if ``python`` is on a shared location accessible both to the Dask
+scheduler and the Dask workers). You can use the ``python`` argument in
+``SLURMCluster`` to specify the python executable you want to use to launch
+your workers.
+
+The typical error you might see is a ``ModuleNotFoundError``, even if you loaded
+the right module just before:
+
+.. code-block:: text
+
+   Loading tensorflow-gpu/py3/2.1.0
+     Loading requirement: cuda/10.1.2 cudnn/10.1-v7.5.1.10 nccl/2.5.6-2-cuda
+       gcc/4.8.5 openmpi/4.0.2-cuda
+   distributed.nanny - INFO -         Start Nanny at: 'tcp://10.148.3.252:39243'
+   distributed.dashboard.proxy - INFO - To route to workers diagnostics web server please install jupyter-server-proxy: python -m pip install jupyter-server-proxy
+   distributed.worker - INFO -       Start worker at:   tcp://10.148.3.252:42618
+   distributed.worker - INFO -          Listening to:   tcp://10.148.3.252:42618
+   distributed.worker - INFO -          dashboard at:         10.148.3.252:36903
+   distributed.worker - INFO - Waiting to connect to:    tcp://10.148.0.20:35926
+   distributed.worker - INFO - -------------------------------------------------
+   distributed.worker - INFO -               Threads:                          1
+   distributed.worker - INFO -                Memory:                   10.00 GB
+   distributed.worker - INFO -       Local Directory: <local-dir>
+   distributed.worker - INFO - -------------------------------------------------
+   distributed.worker - INFO -         Registered to:    tcp://10.148.0.20:35926
+   distributed.worker - INFO - -------------------------------------------------
+   distributed.core - INFO - Starting established connection
+   distributed.worker - WARNING -  Compute Failed
+   Function:  train_dense_model
+   args:      (None, False, 64)
+   kwargs:    {}
+   Exception: ModuleNotFoundError("No module named 'tensorflow'")
+   
+   slurmstepd: error: *** JOB 1368437 ON <node> CANCELLED AT 2020-04-10T17:14:30 ***
+   distributed.worker - INFO - Connection to scheduler broken.  Reconnecting...
+   distributed.worker - INFO - Stopping worker at tcp://10.148.3.252:42618
+   distributed.nanny - INFO - Worker closed
+
+This happens when you created the cluster using a different python than the one
+you want to use for your workers (here ``module load python/3.7.5``), giving
+the following job script (pay attention to the last line which will show which
+``python`` is used):
+
+.. code-block:: sh
+
+   #!/usr/bin/env bash
+   
+   #SBATCH -J <job_name>
+   #SBATCH -n 1
+   #SBATCH --cpus-per-task=10
+   #SBATCH --mem=10G
+   #SBATCH -t 1:00:00
+   #SBATCH --gres=gpu:1
+   #SBATCH --qos=qos_gpu-dev
+   #SBATCH --distribution=block:block
+   #SBATCH --hint=nomultithread
+   #SBATCH --output=%x_%j.out
+   module purge
+   module load tensorflow-gpu/py3/2.1.0
+   /path/to/anaconda-py3/2019.10/bin/python -m distributed.cli.dask_worker tcp://10.148.0.20:44851 --nthreads 1 --memory-limit 10.00GB --name name --nanny --death-timeout 60 --interface ib0
 
 Activate debug mode
 -------------------
