@@ -10,7 +10,7 @@ from typing import List
 import multiprocessing as mp
 from time import sleep
 
-CORE_NUMBERS_FOR_TEMPLATES = [64]
+CORE_NUMBERS_FOR_TEMPLATES = [16, 32, 64]
 # CORE_NUMBERS_FOR_TEMPLATES = [16]
 
 ZONE = "europe-west1-b"
@@ -122,6 +122,7 @@ def run_on_instance(template_name):
         'google-auth-httplib2',
         'google-auth-oauthlib',
         'google-cloud-storage',
+        'numpy',
         '-y',
     )
 
