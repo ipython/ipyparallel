@@ -557,8 +557,8 @@ class TestClient(ClusterTestCase):
 
     @skip_without('distributed')
     @pytest.mark.skipif(
-        sys.version_info[:2] == (3, 4),
-        reason="become_dask doesn't work on Python 3.4")
+        sys.version_info[:2] <= (3, 5),
+        reason="become_dask doesn't work on Python 3.5")
     @pytest.mark.skipif(
         tornado.version_info[:2] < (5,),
         reason="become_dask doesn't work with tornado 4")
