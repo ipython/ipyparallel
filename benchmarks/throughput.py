@@ -35,9 +35,9 @@ def make_benchmark(get_view):
     # @timing_decorator
     class Benchmark(ThroughputSuite):
         params = [
-            [0, .1],
-            [1, 10, 50, 100, 200, 400],
-            [10, 100, 1000, 10_000, 100_000, 1_000_000],
+            [0],
+            [1, 10, 50, 100],
+            [10, 100, 1000, 10_000, 100_000, 1_000_000, 2_000_000],
         ]
 
         def __init__(self):
@@ -54,27 +54,27 @@ def make_benchmark(get_view):
 
     return Benchmark
 
-
-class DirectViewBroadCast(
-    make_benchmark(lambda benchmark: benchmark.client.direct_view())
-):
-    pass
-
-
-class CoalescingBroadcast(
-    make_benchmark(
-        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=True)
-    )
-):
-    pass
-
-
-class NonCoalescingBroadcast(
-    make_benchmark(
-        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
-    )
-):
-    pass
+#
+# class DirectViewBroadCast(
+#     make_benchmark(lambda benchmark: benchmark.client.direct_view())
+# ):
+#     pass
+#
+#
+# class CoalescingBroadcast(
+#     make_benchmark(
+#         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=True)
+#     )
+# ):
+#     pass
+#
+#
+# class NonCoalescingBroadcast(
+#     make_benchmark(
+#         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
+#     )
+# ):
+#     pass
 
 
 class SpanningTreeBroadCast(
