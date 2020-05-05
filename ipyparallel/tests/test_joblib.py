@@ -30,7 +30,7 @@ class TestJobLib(ClusterTestCase):
     def test_default_backend(self):
         """ipyparallel.register_joblib_backend() registers default backend"""
         ipp.register_joblib_backend()
-        with mock.patch('ipyparallel.Client', lambda : self.client):
+        with mock.patch.object(ipp.Client, "__new__", lambda *a, **kw: self.client):
             p = Parallel(backend='ipyparallel')
             assert p._backend._view.client is self.client
         
