@@ -23,8 +23,8 @@ class BenchmarkType(Enum):
 class SchedulerType(Enum):
     DIRECT_VIEW = 'DirectView'
     LOAD_BALANCED = 'LoadBalanced'
-    BROADCAST_COALESCING = 'BroadcastCoalescing'
-    BROADCAST_NON_COALESCING = 'BroadcastNonCoalescing'
+    BROADCAST_COALESCING = 'CoalescingBroadcast'
+    BROADCAST_NON_COALESCING = 'NonCoalescingBroadcast'
     SPANNING_TREE = 'SpanningTree'
 
 
@@ -46,10 +46,10 @@ def get_scheduler_type(benchmark_name):
         return SchedulerType.DIRECT_VIEW
     elif SchedulerType.LOAD_BALANCED.value in benchmark_name:
         return SchedulerType.LOAD_BALANCED
-    elif SchedulerType.BROADCAST_COALESCING.value in benchmark_name:
-        return SchedulerType.BROADCAST_COALESCING
     elif SchedulerType.BROADCAST_NON_COALESCING.value in benchmark_name:
         return SchedulerType.BROADCAST_NON_COALESCING
+    elif SchedulerType.BROADCAST_COALESCING.value in benchmark_name:
+        return SchedulerType.BROADCAST_COALESCING
     elif SchedulerType.SPANNING_TREE.value in benchmark_name:
         return SchedulerType.SPANNING_TREE
 
@@ -67,7 +67,6 @@ class BenchmarkResult:
             benchmark_name: {
                 'benchmark_type': get_benchmark_type(benchmark_name),
                 'scheduler_type': get_scheduler_type(benchmark_name),
-                'engines': get_number_of_engines(benchmark_name),
                 'results': [
                     Result(
                         duration_in_seconds,
@@ -80,7 +79,11 @@ class BenchmarkResult:
                         result_data["result"],
                         result_data["stats"],
                         (
-                            product(result_data["params"][0], result_data["params"][1])
+                            product(
+                                result_data["params"][0],
+                                result_data["params"][1],
+                                result_data['params'][2],
+                            )
                             if len(result_data["params"]) > 1
                             else result_data['params'][0]
                         ),
@@ -129,8 +132,9 @@ class Result:
                 else float(param[1])
             )
         elif benchmark_type is BenchmarkType.THROUGHPUT:
-            self.number_of_bytes = int(param[1])
-            self.number_of_engines = int(param[0])
+            self.delay = float(param[0])
+            self.number_of_engines = int(param[1])
+            self.number_of_bytes = int(param[2])
         else:
             raise Exception('BenchmarkType not found in Result constructor')
 
@@ -143,7 +147,7 @@ def get_benchmark_results():
         for dir_content in os.listdir(RESULTS_DIR)
         if (
             os.path.isdir(os.path.join(os.getcwd(), RESULTS_DIR, dir_content))
-            and "asv_testing" in dir_content
+            and "asv-testing-64-2020-05-04-23-52-41" in dir_content
         )
         for file_name in os.listdir(f"{RESULTS_DIR}/{dir_content}")
         if "machine" not in file_name
@@ -168,7 +172,9 @@ def get_value_dict(engines_or_cores='engines', bytes_or_tasks='tasks'):
     }
 
 
-def ensure_time_n_tasks_source_structure(datasource, delay, number_of_cores, scheduler_type):
+def ensure_time_n_tasks_source_structure(
+    datasource, delay, number_of_cores, scheduler_type
+):
     if delay not in datasource:
         datasource[delay] = {number_of_cores: {scheduler_type: get_value_dict()}}
     elif number_of_cores not in datasource[delay]:
@@ -185,7 +191,9 @@ def add_time_n_tasks_source(source, benchmark, number_of_cores):
         for result in benchmark['results']
         if not result.failed
     ]:
-        ensure_time_n_tasks_source_structure(source, delay, number_of_cores, scheduler_type)
+        ensure_time_n_tasks_source_structure(
+            source, delay, number_of_cores, scheduler_type
+        )
         dict_to_append_to = source[delay][number_of_cores][scheduler_type]
         dict_to_append_to['Duration in ms'].append(duration)
         dict_to_append_to['Number of tasks'].append(tasks_num)
@@ -216,18 +224,33 @@ def add_no_delay_tasks_source(source, benchmark, number_of_cores):
 
 
 def add_to_broadcast_source(source, benchmark, number_of_cores):
-    if number_of_cores not in source:
-        source[number_of_cores] = get_value_dict(bytes_or_tasks='bytes')
+    scheduler_type = benchmark['scheduler_type'].value
 
-    dict_to_append_to = source[number_of_cores]
-    for duration, bytes, engines in [
-        (result.duration_in_ms, result.number_of_bytes, result.number_of_engines)
+    if number_of_cores not in source:
+        source[number_of_cores] = {
+            0: {scheduler_type: get_value_dict(bytes_or_tasks='bytes')},
+            0.1: {scheduler_type: get_value_dict(bytes_or_tasks='bytes')},
+        }
+
+    elif scheduler_type not in source[number_of_cores][0]:
+        source[number_of_cores][0][scheduler_type] = get_value_dict(
+            bytes_or_tasks='bytes'
+        )
+        source[number_of_cores][0.1][scheduler_type] = get_value_dict(
+            bytes_or_tasks='bytes'
+        )
+
+    def dict_to_append_to(delay):
+        return source[number_of_cores][delay][scheduler_type]
+
+    for delay, duration, bytes, engines in [
+        (result.delay, result.duration_in_ms, result.number_of_bytes, result.number_of_engines)
         for result in benchmark['results']
         if not result.failed
     ]:
-        dict_to_append_to['Duration in ms'].append(duration)
-        dict_to_append_to['Number of bytes'].append(bytes)
-        dict_to_append_to['Number of engines'].append(engines)
+        dict_to_append_to(delay)['Duration in ms'].append(duration)
+        dict_to_append_to(delay)['Number of bytes'].append(bytes)
+        dict_to_append_to(delay)['Number of engines'].append(engines)
 
 
 def add_to_echo_many_arguments_source(source, benchmark, number_of_cores):
@@ -288,9 +311,9 @@ def get_no_delay_source(benchmark_results=None):
     )
 
 
-def get_broad_cast_source(benchmark_results=None):
+def get_broadcast_source(benchmark_results=None):
     return make_source(
-        BenchmarkType.BROADCAST, add_to_broadcast_source, benchmark_results
+        BenchmarkType.THROUGHPUT, add_to_broadcast_source, benchmark_results
     )
 
 
@@ -304,9 +327,9 @@ def get_echo_many_arguments_source(benchmark_results=None):
 
 if __name__ == "__main__":
     benchmark_results = get_benchmark_results()
-
+    source = get_broadcast_source(benchmark_results)
     # source = get_time_n_tasks_source(benchmark_results)
-    source = get_no_delay_source(benchmark_results)
+    # source = get_no_delay_source(benchmark_results)
     # source = get_echo_many_arguments_source()
     with open("saved_results.pkl", "wb") as saved_results:
         pickle.dump(benchmark_results, saved_results)
