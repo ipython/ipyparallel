@@ -21,6 +21,9 @@ matrix:
     - python: "3.6"
       env:
         - JOBQUEUE=slurm
+    - python: "3.6"
+      env:
+        - JOBQUEUE=htcondor
 
 before_install:
   - set -e
