@@ -7,16 +7,16 @@ from __future__ import absolute_import
 import ipyparallel as ipp
 from joblib.parallel import ParallelBackendBase, AutoBatchingMixin
 
-class IPythonParallelBackend(AutoBatchingMixin, ParallelBackendBase):
 
-    def __init__(self, view=None):
-        super(IPythonParallelBackend, self).__init__()
+class IPythonParallelBackend(AutoBatchingMixin, ParallelBackendBase):
+    def __init__(self, view=None, **kwargs):
+        super(IPythonParallelBackend, self).__init__(**kwargs)
         if view is None:
             self._owner = True
             rc = ipp.Client()
             view = rc.load_balanced_view()
             # use cloudpickle or dill for closures, if available.
-            # joblib tends to create closured default pickle can't handle.
+            # joblib tends to create closures default pickle can't handle.
             try:
                 import cloudpickle
             except ImportError:
@@ -47,5 +47,3 @@ class IPythonParallelBackend(AutoBatchingMixin, ParallelBackendBase):
         if callback:
             future.add_done_callback(lambda f: callback(f.result()))
         return future
-
-
