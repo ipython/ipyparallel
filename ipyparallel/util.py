@@ -582,7 +582,7 @@ def utcnow():
     return datetime.utcnow().replace(tzinfo=utc)
 
 def _patch_jupyter_client_dates():
-    """Monkeypatch juptyer_client.extract_dates to be nondestructive wrt timezone info"""
+    """Monkeypatch jupyter_client.extract_dates to be nondestructive wrt timezone info"""
     import jupyter_client
     from distutils.version import LooseVersion as V
     if V(jupyter_client.__version__) < V('5.0'):
