@@ -36,14 +36,13 @@ def make_benchmark(get_view):
     class Benchmark(ThroughputSuite):
         params = [
             [0, .1],
-            [1, 10, 50, 100],
-            [10, 100, 1000, 10_000, 100_000, 1_000_000],
+            [1, 10, 50, 100, 200],
+            [10, 100, 1000, 10_000, 100_000, 1_000_000, 10_000_000],
         ]
 
         def __init__(self):
             super().__init__()
             self.client = ipp.Client(profile='asv')
-            wait_for(lambda: len(self.client) == 100)
             self.view = get_view(self)
 
         def time_broadcast(self, delay, engines, number_of_bytes):
