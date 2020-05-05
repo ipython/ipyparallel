@@ -3,6 +3,16 @@
 Changes in IPython Parallel
 ===========================
 
+6.3.0
+-----
+
+- **Require Python 3.5**
+- Fix compatibility with joblib 0.14
+- Fix crash recovery test for Python 3.8
+- Fix repeated name when cluster-id is set
+- Fix CSS for notebook extension
+- Fix KeyError handling heartbeat failures
+
 6.2.5
 -----
 
