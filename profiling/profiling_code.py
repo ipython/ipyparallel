@@ -29,15 +29,16 @@ def profile_many_empty_tasks(lview, n, block=True):
 
 
 def profile_tasks_with_large_data(lview, num_bytes):
-    for _ in range(100):
+    for _ in range(10):
         for i in range(10):
-            lview.apply_sync(echo(0), np.empty(num_bytes, dtype=np.int8))
+            lview.apply_sync(echo(0), np.array([0] * num_bytes, dtype=np.int8))
 
 def run_profiling(selected_profiling_task, selected_view):
     client = ipp.Client(profile='asv')
     # add it to path on the engines
     # client[:].apply_sync(add_to_path, master_project_parent)
-
+    print('profiling task: ', selected_profiling_task)
+    print('profiling view: ', selected_view)
     if selected_view == 'direct':
         view = client[:]
     elif selected_view == 'spanning_tree':

@@ -1,6 +1,6 @@
 {
     "throughput.CoalescingBroadcast.time_broadcast": {
-        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, n=200, *_):\n        wait_for(lambda: len(self.client) >= n)",
+        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view = get_view(self)\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, *args):\n        self.client = ipp.Client(profile='asv')\n        wait_for(lambda: len(self.client) >= max(engines))",
         "min_run_count": 2,
         "name": "throughput.CoalescingBroadcast.time_broadcast",
         "number": 0,
@@ -15,8 +15,7 @@
             ],
             [
                 "1",
-                "10",
-                "50"
+                "10"
             ],
             [
                 "10",
@@ -29,14 +28,14 @@
         "processes": 2,
         "repeat": 0,
         "sample_time": 0.01,
-        "timeout": 200,
+        "timeout": 300,
         "type": "time",
         "unit": "seconds",
-        "version": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
+        "version": "1229cbf5251bdcfdb654cdb9ee6b317440b8fbb1e70646546196e2a6dae5998c",
         "warmup_time": -1
     },
     "throughput.DirectViewBroadCast.time_broadcast": {
-        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, n=200, *_):\n        wait_for(lambda: len(self.client) >= n)",
+        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view = get_view(self)\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, *args):\n        self.client = ipp.Client(profile='asv')\n        wait_for(lambda: len(self.client) >= max(engines))",
         "min_run_count": 2,
         "name": "throughput.DirectViewBroadCast.time_broadcast",
         "number": 0,
@@ -51,8 +50,7 @@
             ],
             [
                 "1",
-                "10",
-                "50"
+                "10"
             ],
             [
                 "10",
@@ -65,14 +63,14 @@
         "processes": 2,
         "repeat": 0,
         "sample_time": 0.01,
-        "timeout": 200,
+        "timeout": 300,
         "type": "time",
         "unit": "seconds",
-        "version": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
+        "version": "1229cbf5251bdcfdb654cdb9ee6b317440b8fbb1e70646546196e2a6dae5998c",
         "warmup_time": -1
     },
     "throughput.NonCoalescingBroadcast.time_broadcast": {
-        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, n=200, *_):\n        wait_for(lambda: len(self.client) >= n)",
+        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view = get_view(self)\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, *args):\n        self.client = ipp.Client(profile='asv')\n        wait_for(lambda: len(self.client) >= max(engines))",
         "min_run_count": 2,
         "name": "throughput.NonCoalescingBroadcast.time_broadcast",
         "number": 0,
@@ -87,8 +85,7 @@
             ],
             [
                 "1",
-                "10",
-                "50"
+                "10"
             ],
             [
                 "10",
@@ -101,46 +98,10 @@
         "processes": 2,
         "repeat": 0,
         "sample_time": 0.01,
-        "timeout": 200,
+        "timeout": 300,
         "type": "time",
         "unit": "seconds",
-        "version": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
-        "warmup_time": -1
-    },
-    "throughput.SpanningTreeBroadCast.time_broadcast": {
-        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, n=200, *_):\n        wait_for(lambda: len(self.client) >= n)",
-        "min_run_count": 2,
-        "name": "throughput.SpanningTreeBroadCast.time_broadcast",
-        "number": 0,
-        "param_names": [
-            "delay",
-            "Number of engines",
-            "Number of bytes"
-        ],
-        "params": [
-            [
-                "0"
-            ],
-            [
-                "1",
-                "10",
-                "50"
-            ],
-            [
-                "10",
-                "100",
-                "1000",
-                "10000",
-                "100000"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 200,
-        "type": "time",
-        "unit": "seconds",
-        "version": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
+        "version": "1229cbf5251bdcfdb654cdb9ee6b317440b8fbb1e70646546196e2a6dae5998c",
         "warmup_time": -1
     },
     "version": 2

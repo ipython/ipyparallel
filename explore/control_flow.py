@@ -1,5 +1,5 @@
 import ipyparallel as ipp
-
+import numpy as np
 
 def main():
     client = ipp.Client(profile='asv')
@@ -12,16 +12,19 @@ def main():
     # print(result.get())
     broadcast_view = client.broadcast_view(is_coalescing=True)
     broadcast_result = broadcast_view.apply_sync(
-        lambda x: f'The answer to Life, the Universe and Everything: {x * 2}', 21
+        lambda x: x, np.array([0] * 8, dtype=np.int8)
     )
 
     print(broadcast_result)
-    spanning_tree_view = client.spanning_tree_view()
-    spanning_result = spanning_tree_view.apply(
-        lambda x: f'The answer to Life, the Universe and Everything: {x * 2}', 21
-    ).get()
-    # print(spanning_result)
-    # print(f'{len(broadcast_result)} == {len(spanning_result)}')
+    print(len(broadcast_result))
+    broadcast_view2 = client.broadcast_view(is_coalescing=False)
+    broadcast_result = broadcast_view2.apply_sync(
+        lambda x: x, np.array([0] * 8, dtype=np.int8)
+    )
+
+    print(broadcast_result)
+    print(len(broadcast_result))
+
 
 if __name__ == '__main__':
     main()

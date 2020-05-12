@@ -96,12 +96,12 @@ if __name__ == "__main__":
         )
         files_to_upload.append(scheduler_output_path)
         ps.append(start_cmd(
-            f'sudo py-spy --function -d 30 --flame {scheduler_output_path} --pid {scheduler_pid}',
+            f'sudo py-spy --function -d 60 --flame {scheduler_output_path} --pid {scheduler_pid}',
             blocking=False,
         ))
 
     start_cmd(
-            f'sudo py-spy --function -d 30 --flame {client_output_path} -- python profiling_code.py tasks_with_large_data spanning_tree'
+            f'sudo py-spy --function -d 60 --flame {client_output_path} -- python profiling_code.py tasks_with_large_data spanning_tree'
     )
     print('client ended')
     for p in ps:
