@@ -235,8 +235,7 @@ class EngineFactory(RegistrationFactory):
             heart.start()
 
             # create Shell Connections (MUX, Task, etc.):
-            shell_addrs = [url('mux'), url('task'), url('broadcast_non_coalescing'),
-                url('broadcast_coalescing')] + urls('sub_schedulers')
+            shell_addrs = [url('mux'), url('task')] + urls('broadcast')
 
             self.log.info(f'ENGINE: shell_addrs: {shell_addrs}')
 

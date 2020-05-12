@@ -22,7 +22,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 # internal:
 from ipython_genutils.importstring import import_item
 
-from .spanning_tree_scheduler import SPANNING_TREE_SCHEDULER_DEPTH
+from .broadcast_scheduler import SPANNING_TREE_SCHEDULER_DEPTH, BroadcastScheduler
 from ..util import extract_dates
 from jupyter_client.localinterfaces import localhost
 from ipython_genutils.py3compat import cast_bytes, unicode_type, iteritems, buffer_to_bytes_py2
@@ -113,12 +113,12 @@ def get_number_of_leaf_schedulers():
     return 2**SPANNING_TREE_SCHEDULER_DEPTH
 
 
-def get_number_of_tree_spanning_schedulers():
+def get_number_of_broadcast_schedulers():
     return 2 * get_number_of_leaf_schedulers() - 1
 
 
 def get_number_of_non_leaf_schedulers():
-    return get_number_of_tree_spanning_schedulers() - get_number_of_leaf_schedulers()
+    return get_number_of_broadcast_schedulers() - get_number_of_leaf_schedulers()
 
 
 class EngineConnector(HasTraits):
@@ -129,7 +129,7 @@ class EngineConnector(HasTraits):
     pending: set of msg_ids
     stallback: tornado timeout for stalled registration
     """
-    
+
     id = Integer(0)
     uuid = Unicode()
     pending = Set()
@@ -164,25 +164,12 @@ class HubFactory(RegistrationFactory):
     def _task_default(self):
         return tuple(util.select_random_ports(2))
 
-    broadcast_non_coalescing = Tuple(Integer(), Integer(), config=True,
-        help="""Client/Engine Port pair for BroadcastNonCoalescing queue""")
+    broadcast = List(Integer(), config=True,
+                     help="List of available ports for broadcast")
 
-
-    def _broadcast_non_coalescing_default(self):
-        return tuple(util.select_random_ports(2))
-
-    broadcast_coalescing = Tuple(Integer(), Integer(), config=True,
-            help="""Client/Engine Port pair for BroadcastCoalescing queue""")
-
-    def _broadcast_coalescing_default(self):
-        return tuple(util.select_random_ports(2))
-
-    sub_schedulers = List(Integer(), config=True,
-                          help="List of available ports for spanning tree schedulers")
-
-    def _sub_schedulers_default(self):
+    def _broadcast_default(self):
         return util.select_random_ports(
-            get_number_of_leaf_schedulers() + get_number_of_tree_spanning_schedulers()
+            get_number_of_leaf_schedulers() + get_number_of_broadcast_schedulers()
         )
 
     control = Tuple(Integer(), Integer(), config=True,
@@ -247,7 +234,7 @@ class HubFactory(RegistrationFactory):
     registration_timeout = Integer(0, config=True,
         help="Engine registration timeout in seconds [default: max(30,"
              "10*heartmonitor.period)]" )
-    
+
     def _registration_timeout_default(self):
         if self.heartmonitor is None:
             # early initialization, this value will be ignored
@@ -297,7 +284,7 @@ class HubFactory(RegistrationFactory):
             self.client_ip,
             self.client_info[channel] if index is None else self.client_info[channel][index]
         )
-    
+
     def engine_url(self, channel, index=None):
         """return full zmq url for a named engine channel"""
         return "%s://%s:%i" % (
@@ -305,7 +292,7 @@ class HubFactory(RegistrationFactory):
             self.engine_ip,
             self.engine_info[channel] if index is None else self.engine_info[channel][index]
         )
-    
+
     def init_hub(self):
         """construct Hub object"""
 
@@ -316,7 +303,7 @@ class HubFactory(RegistrationFactory):
         else:
             from .task_scheduler import TaskScheduler
             scheme = TaskScheduler.scheme_name.default_value
-        
+
         # build connection dicts
         engine = self.engine_info = {
             'interface'     : "%s://%s" % (self.engine_transport, self.engine_ip),
@@ -327,9 +314,8 @@ class HubFactory(RegistrationFactory):
             'hb_pong'       : self.hb[1],
             'task'          : self.task[1],
             'iopub'         : self.iopub[1],
-            'broadcast_non_coalescing': self.broadcast_non_coalescing[1],
-            'broadcast_coalescing': self.broadcast_coalescing[1],
-            'sub_schedulers': self.sub_schedulers[-get_number_of_leaf_schedulers():]
+            BroadcastScheduler.port_name:
+                self.broadcast[-get_number_of_leaf_schedulers():],
             }
 
         client = self.client_info = {
@@ -341,14 +327,13 @@ class HubFactory(RegistrationFactory):
             'task_scheme'   : scheme,
             'iopub'         : self.iopub[0],
             'notification'  : self.notifier_port,
-            'broadcast_non_coalescing': self.broadcast_non_coalescing[0],
-            'broadcast_coalescing': self.broadcast_coalescing[0],
-            'sub_schedulers': self.sub_schedulers[:get_number_of_tree_spanning_schedulers()],
+            BroadcastScheduler.port_name:
+                self.broadcast[:get_number_of_broadcast_schedulers()],
             }
-        
+
         self.log.debug("Hub engine addrs: %s", self.engine_info)
         self.log.debug("Hub client addrs: %s", self.client_info)
-        
+
         # Registrar socket
         q = ZMQStream(ctx.socket(zmq.ROUTER), loop)
         util.set_hwm(q, 0)
@@ -372,7 +357,7 @@ class HubFactory(RegistrationFactory):
                             )
 
         ### Client connections ###
-        
+
         # Notifier socket
         n = ZMQStream(ctx.socket(zmq.PUB), loop)
         n.bind(self.client_url('notification'))
@@ -425,9 +410,9 @@ class Hub(SessionFactory):
     client_info: dict of zmq connection information for engines to connect
                 to the queues.
     """
-    
+
     engine_state_file = Unicode()
-    
+
     # internal data structures:
     ids=Set() # engine IDs
     keytable=Dict()
@@ -487,8 +472,6 @@ class Hub(SessionFactory):
                                 b'outtask': self.save_task_result,
                                 b'inbcast': self.save_broadcast_request,
                                 b'outbcast': self.save_broadcast_result,
-                                b'insptree': self.save_spanning_tree_request,
-                                b'outsptree': self.save_spanning_tree_result,
                                 b'tracktask': self.save_task_destination,
                                 b'incontrol': _passer,
                                 b'outcontrol': _passer,
@@ -514,7 +497,7 @@ class Hub(SessionFactory):
         self.resubmit.on_recv(lambda msg: None, copy=False)
 
         self.log.info("hub::created hub")
-    
+
     def new_engine_id(self, requested_id=None):
         """generate a new engine integer id.
 
@@ -537,7 +520,7 @@ class Hub(SessionFactory):
         newid = self._idcounter
         self._idcounter += 1
         return newid
-    
+
     #-----------------------------------------------------------------------------
     # message validation
     #-----------------------------------------------------------------------------
@@ -623,7 +606,7 @@ class Hub(SessionFactory):
             self.session.send(self.query, "hub_error", ident=client_id,
                     content=content, parent=msg)
             return
-        
+
         try:
             f = handler(idents, msg)
             if f:
@@ -765,12 +748,6 @@ class Hub(SessionFactory):
             self.db.update_record(msg_id, result)
         except Exception:
             self.log.error("DB Error updating record %r", msg_id, exc_info=True)
-
-    def save_spanning_tree_request(self):
-        pass
-
-    def save_spanning_tree_result(self):
-        pass
 
     #--------------------- Broadcast traffic ------------------------------
     def save_broadcast_request(self, idents, msg):
@@ -917,7 +894,7 @@ class Hub(SessionFactory):
         md = msg['metadata']
         engine_uuid = md.get('engine', u'')
         eid = self.by_ident.get(cast_bytes(engine_uuid), None)
-        
+
         status = md.get('status', None)
 
         if msg_id in self.pending:
@@ -1006,13 +983,13 @@ class Hub(SessionFactory):
         msg_id = parent['msg_id']
         msg_type = msg['header']['msg_type']
         content = msg['content']
-        
+
         # ensure msg_id is in db
         try:
             rec = self.db.get_record(msg_id)
         except KeyError:
             rec = None
-        
+
         # stream
         d = {}
         if msg_type == 'stream':
@@ -1032,7 +1009,7 @@ class Hub(SessionFactory):
 
         if not d:
             return
-        
+
         if rec is None:
             # new record
             rec = empty_record()
@@ -1042,7 +1019,7 @@ class Hub(SessionFactory):
             update_record = self.db.add_record
         else:
             update_record = self.db.update_record
-        
+
         try:
             update_record(msg_id, d)
         except Exception:
@@ -1122,7 +1099,7 @@ class Hub(SessionFactory):
                 self.incoming_registrations[heart] = EngineConnector(id=eid,uuid=uuid,stallback=t)
         else:
             self.log.error("registration::registration %i failed: %r", eid, content['evalue'])
-        
+
         return eid
 
     def unregister_engine(self, ident, msg):
@@ -1133,10 +1110,10 @@ class Hub(SessionFactory):
             self.log.error("registration::bad engine id for unregistration: %r", ident, exc_info=True)
             return
         self.log.info("registration::unregister_engine(%r)", eid)
-        
+
         uuid = self.keytable[eid]
         content=dict(id=eid, uuid=uuid)
-        
+
         #stop the heartbeats
         self.hearts.pop(uuid, None)
         self.heartmonitor.responses.discard(uuid)
@@ -1211,7 +1188,7 @@ class Hub(SessionFactory):
         if self.notifier:
             self.session.send(self.notifier, "registration_notification", content=content)
         self.log.info("engine::Engine Connected: %i", eid)
-        
+
         self._save_engine_state()
 
     def _purge_stalled_registration(self, heart):
@@ -1228,7 +1205,7 @@ class Hub(SessionFactory):
 
     def _cleanup_engine_state_file(self):
         """cleanup engine state mapping"""
-        
+
         if os.path.exists(self.engine_state_file):
             self.log.debug("cleaning up engine state: %s", self.engine_state_file)
             try:
@@ -1246,11 +1223,11 @@ class Hub(SessionFactory):
         engines = {}
         for eid, ec in self.engines.items():
             engines[eid] = ec.uuid
-        
+
         state['engines'] = engines
-        
+
         state['next_id'] = self._idcounter
-        
+
         with open(self.engine_state_file, 'w') as f:
             json.dump(state, f)
 
@@ -1259,12 +1236,12 @@ class Hub(SessionFactory):
         """load engine mapping from JSON file"""
         if not os.path.exists(self.engine_state_file):
             return
-        
+
         self.log.info("loading engine state from %s" % self.engine_state_file)
-        
+
         with open(self.engine_state_file) as f:
             state = json.load(f)
-        
+
         save_notifier = self.notifier
         self.notifier = None
         for eid, uuid in iteritems(state['engines']):
@@ -1272,12 +1249,12 @@ class Hub(SessionFactory):
             # start with this heart as current and beating:
             self.heartmonitor.responses.add(heart)
             self.heartmonitor.hearts.add(heart)
-            
+
             self.incoming_registrations[heart] = EngineConnector(id=int(eid), uuid=uuid)
             self.finish_registration(heart)
-        
+
         self.notifier = save_notifier
-        
+
         self._idcounter = state['next_id']
 
     #-------------------------------------------------------------------------
@@ -1450,7 +1427,7 @@ class Hub(SessionFactory):
             msg = self.session.msg(header['msg_type'], parent=header)
             msg_id = msg['msg_id']
             msg['content'] = rec['content']
-            
+
             # use the old header, but update msg_id and timestamp
             fresh = msg['header']
             header['msg_id'] = fresh['msg_id']
@@ -1469,7 +1446,7 @@ class Hub(SessionFactory):
                 return finish(error.wrap_exception())
 
         finish(dict(status='ok', resubmitted=resubmitted))
-        
+
         # store the new IDs in the Task DB
         for msg_id, resubmit_id in iteritems(resubmitted):
             try:
@@ -1483,7 +1460,7 @@ class Hub(SessionFactory):
         io_dict = {}
         for key in ('execute_input', 'execute_result', 'error', 'stdout', 'stderr'):
                 io_dict[key] = rec[key]
-        content = { 
+        content = {
             'header': rec['header'],
             'metadata': rec['metadata'],
             'result_metadata': rec['result_metadata'],

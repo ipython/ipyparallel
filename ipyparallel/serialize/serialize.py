@@ -125,7 +125,7 @@ def serialize_object(obj, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
     buffers.insert(0, pickle.dumps(cobj, PICKLE_PROTOCOL))
     return buffers
 
-def deserialize_object(buffers, g=None, try_to_extract_all=False):
+def deserialize_object(buffers, g=None):
     """reconstruct an object serialized by serialize_object from data buffers.
 
     Parameters
@@ -143,15 +143,7 @@ def deserialize_object(buffers, g=None, try_to_extract_all=False):
     bufs = list(buffers)
     pobj = buffer_to_bytes_py2(bufs.pop(0))
     canned = pickle.loads(pobj)
-    if try_to_extract_all:
-        unpickled_buffers = [canned]
-        for buf in bufs:
-            try:
-                unpickled_buffers.append(pickle.loads(buffer_to_bytes_py2(buf)))
-            except Exception:
-                continue
-        return unpickled_buffers
-    elif istype(canned, sequence_types) and len(canned) < MAX_ITEMS:
+    if istype(canned, sequence_types) and len(canned) < MAX_ITEMS:
         for c in canned:
             _restore_buffers(c, bufs)
         newobj = uncan_sequence(canned, g)

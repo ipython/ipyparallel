@@ -54,16 +54,14 @@ class IPythonParallelKernel(IPythonKernel):
 
     def init_metadata(self, parent):
         """init metadata dict, for execute/apply_reply"""
+        parent_metadata = parent.get('metadata', {})
         return {
             'started': utcnow(),
             'dependencies_met' : True,
             'engine' : self.ident,
-            'is_broadcast_non_coalescing': parent.get('metadata', {}).get('is_broadcast_non_coalescing', False),
-            'is_broadcast_coalescing': parent.get('metadata', {}).get('is_broadcast_coalescing', False),
-            'original_msg_id': parent.get('metadata', {}).get('original_msg_id', ''),
-            'is_spanning_tree': parent.get('metadata', {}).get(
-                'is_spanning_tree', False),
-
+            'is_broadcast': parent_metadata.get('is_broadcast', False),
+            'is_coalescing': parent_metadata.get('is_coalescing', False),
+            'original_msg_id': parent_metadata.get('original_msg_id', ''),
         }
 
     def finish_metadata(self, parent, metadata, reply_content):

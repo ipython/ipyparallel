@@ -55,8 +55,7 @@ from .view import (
     DirectView,
     LoadBalancedView,
     BroadcastViewNonCoalescing,
-    BroadcastViewCoalescing,
-    SpanningTreeView,
+    BroadcastViewCoalescing
 )
 import jupyter_client.session
 
@@ -368,9 +367,7 @@ class Client(HasTraits):
     _notification_socket = Instance('zmq.Socket', allow_none=True)
     _mux_socket = Instance('zmq.Socket', allow_none=True)
     _task_socket = Instance('zmq.Socket', allow_none=True)
-    _broadcast_non_coalescing_socket = Instance('zmq.Socket', allow_none=True)
-    _broadcast_coalescing_socket = Instance('zmq.Socket', allow_none=True)
-    _sub_scheduler_socket = Instance('zmq.Socket', allow_none=True)
+    _broadcast_socket = Instance('zmq.Socket', allow_none=True)
 
     _task_scheme = Unicode()
     _closed = False
@@ -475,12 +472,10 @@ class Client(HasTraits):
             'iopub',
             'notification',
             'registration',
-            'broadcast_non_coalescing',
-            'broadcast_coalescing',
         ):
             cfg[key] = cfg['interface'] + ':%i' % cfg[key]
 
-        cfg['sub_schedulers'] = cfg['interface'] + ':%i' % cfg['sub_schedulers'][0]
+        cfg['broadcast'] = cfg['interface'] + ':%i' % cfg['broadcast'][0]
         url = cfg['registration']
 
         if location is not None and addr == localhost():
@@ -716,18 +711,10 @@ class Client(HasTraits):
             self._task_socket = self._context.socket(zmq.DEALER)
             connect_socket(self._task_socket, cfg['task'])
 
-            self._broadcast_non_coalescing_socket = self._context.socket(zmq.DEALER)
+            self._broadcast_socket = self._context.socket(zmq.DEALER)
             connect_socket(
-                self._broadcast_non_coalescing_socket, cfg['broadcast_non_coalescing']
+                self._broadcast_socket, cfg['broadcast']
             )
-
-            self._broadcast_coalescing_socket = self._context.socket(zmq.DEALER)
-            connect_socket(
-                self._broadcast_coalescing_socket, cfg['broadcast_coalescing']
-            )
-
-            self._sub_scheduler_socket = self._context.socket(zmq.DEALER)
-            connect_socket(self._sub_scheduler_socket, cfg['sub_schedulers'])
 
             self._notification_socket = self._context.socket(zmq.SUB)
             self._notification_socket.setsockopt(zmq.SUBSCRIBE, b'')
@@ -774,11 +761,10 @@ class Client(HasTraits):
             'follow': msg_meta.get('follow', []),
             'after': msg_meta.get('after', []),
             'status': content['status'],
-            'is_broadcast_non_coalescing': msg_meta.get(
-                'is_broadcast_non_coalescing', False
+            'is_broadcast': msg_meta.get(
+                'is_broadcast', False
             ),
-            'is_broadcast_coalescing': msg_meta.get('is_broadcast_coalescing', False),
-            'is_spanning_tree': msg_meta.get('is_spanning_tree', False)
+            'is_coalescing': msg_meta.get('is_coalescing', False),
         }
 
         if md['engine_uuid'] is not None:
@@ -889,8 +875,7 @@ class Client(HasTraits):
 
     def _should_use_metadata_msg_id(self, msg):
         md = msg['metadata']
-        return md.get('is_broadcast_non_coalescing', False) or md.get(
-            'is_broadcast_coalescing', False) or md.get('is_spanning_tree', False)
+        return md.get('is_broadcast', False) and md.get('is_coalescing', False)
 
     def _handle_apply_reply(self, msg):
         """Save the reply to an apply_request into our results."""
@@ -923,10 +908,13 @@ class Client(HasTraits):
 
         # construct result:
         if content['status'] == 'ok':
-            if md.get('is_broadcast_coalescing', False) or md.get('is_spanning_tree', False):
-                self.results[msg_id] = serialize.deserialize_object(
-                    msg['buffers'], try_to_extract_all=True
-                )
+            if md.get('is_coalescing', False):
+                deserialized_bufs = []
+                bufs = msg['buffers']
+                while bufs:
+                    deserialized, bufs = serialize.deserialize_object(bufs)
+                    deserialized_bufs.append(deserialized)
+                self.results[msg_id] = deserialized_bufs
             else:
                 self.results[msg_id] = serialize.deserialize_object(msg['buffers'])[0]
         elif content['status'] == 'aborted':
@@ -984,21 +972,10 @@ class Client(HasTraits):
         self._notification_stream = ZMQStream(self._notification_socket, self._io_loop)
         self._notification_stream.on_recv(self._dispatch_notification, copy=False)
 
-        self._broadcast_non_coalescing_stream = ZMQStream(
-            self._broadcast_non_coalescing_socket, self._io_loop
+        self._broadcast_stream = ZMQStream(
+            self._broadcast_socket, self._io_loop
         )
-        self._broadcast_non_coalescing_stream.on_recv(self._dispatch_reply, copy=False)
-
-        self._broadcast_coalescing_stream = ZMQStream(
-            self._broadcast_coalescing_socket, self._io_loop
-        )
-        self._broadcast_coalescing_stream.on_recv(self._dispatch_reply, copy=False)
-
-        self._sub_scheduler_stream = ZMQStream(
-            self._sub_scheduler_socket, self._io_loop
-        )
-
-        self._sub_scheduler_stream.on_recv(self._dispatch_reply, copy=False)
+        self._broadcast_stream.on_recv(self._dispatch_reply, copy=False)
 
     def _start_io_thread(self):
         """Start IOLoop in a background thread."""
@@ -1775,22 +1752,17 @@ class Client(HasTraits):
         return (
             BroadcastViewCoalescing(
                 client=self,
-                socket=self._broadcast_coalescing_stream,
+                socket=self._broadcast_stream,
                 targets=targets,
                 **kwargs
             )
             if is_coalescing
             else BroadcastViewNonCoalescing(
                 client=self,
-                socket=self._broadcast_non_coalescing_stream,
+                socket=self._broadcast_stream,
                 targets=targets,
                 **kwargs
             )
-        )
-
-    def spanning_tree_view(self, targets='all', **kwargs):
-        return SpanningTreeView(
-            client=self, socket=self._sub_scheduler_stream, targets=targets, **kwargs
         )
 
     # --------------------------------------------------------------------------
