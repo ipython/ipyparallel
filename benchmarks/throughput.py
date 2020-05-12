@@ -4,7 +4,7 @@ from benchmarks.utils import wait_for, echo
 import numpy as np
 
 delay = [0]
-engines = [1, 10, 50, 100, 200]
+engines = [1, 10, 50, 100, 200, 400]
 byte_param = [10, 100, 1000, 10_000, 100_000, 1_000_000, 2_000_000]
 
 class ThroughputSuite:
