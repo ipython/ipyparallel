@@ -9,7 +9,7 @@ from ipyparallel.controller.scheduler import (
     ZMQStream,
 )
 
-SPANNING_TREE_SCHEDULER_DEPTH = 2
+SPANNING_TREE_SCHEDULER_DEPTH = 3
 
 
 class BroadcastScheduler(Scheduler):
