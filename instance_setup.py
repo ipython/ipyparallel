@@ -71,7 +71,7 @@ if __name__ == "__main__":
     log_filename = f'{instance_name}.log'
     error_log_filename = f'{instance_name}.error.log'
 
-    cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
+    cmd_run("ipcluster start -n 400 --daemon --profile=asv")  # Starting 200 engines
     cmd_run("asv run --quick --show-stderr", log_filename=log_filename, error_filename=error_log_filename)
     cmd_run("ipcluster stop --profile=asv")
     print('uploading files')
