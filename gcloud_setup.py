@@ -80,17 +80,6 @@ def run_on_instance(template_name):
     )
     sleep(20)  # Waiting for ssh keys to propagate to instance
     command_over_ssh(current_instance_name, "sudo", "apt", "update")
-    # command_over_ssh(
-    #     current_instance_name,
-    #     "sudo",
-    #     "DEBIAN_FRONTEND=noninteractive",
-    #     "apt",
-    #     "install",
-    #     "-y",
-    #     "--yes",
-    #     "--assume-yes",
-    #     "python3-pip",
-    # )
     print("copying instance setup to instance")
     command_over_ssh(
         current_instance_name,
@@ -139,18 +128,7 @@ def run_on_instance(template_name):
     else:
         print(f"Found no valid machine config for template: {template_name}.")
         exit(1)
-    # result_dir = f"results/{current_instance_name}"
     print("starting instance setup")
-    # command_over_ssh(
-    #     current_instance_name,
-    #     'pip3',
-    #     'install',
-    #     'google-api-python-client',
-    #     'google-auth-httplib2',
-    #     'google-auth-oauthlib',
-    #     'google-cloud-storage',
-    # )
-
     command_over_ssh(
         current_instance_name,
         "miniconda3/bin/python3",
@@ -159,16 +137,6 @@ def run_on_instance(template_name):
         template_name,
         block=False,
     )
-    # os.makedirs(result_dir)
-    # print("copying results from instance")
-    # gcloud_run(
-    #     "scp",
-    #     "--recurse",
-    #     f"{current_instance_name}:~/ipyparallel_master_project/results/{template_name}/.",
-    #     os.path.abspath(result_dir),
-    #     f"--zone={ZONE}",
-    #     instance_name=current_instance_name,
-    # )
 
 
 if __name__ == "__main__":
@@ -201,4 +169,4 @@ if __name__ == "__main__":
                 ],
             )
         result.wait()
-    print("script finished.")
+    print("gcloud setup finished.")
