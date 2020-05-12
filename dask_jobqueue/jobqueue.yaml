@@ -10,17 +10,20 @@ jobqueue:
     interface: null             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
+    extra: []
 
     # OAR resource manager options
     shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30:00'
-    extra: []
     env-extra: []
     resource-spec: null
     job-extra: []
     log-directory: null
+    
+    # Scheduler options
+    scheduler-options: {}
 
   pbs:
     name: dask-worker
@@ -33,17 +36,20 @@ jobqueue:
     interface: null             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
+    extra: []
 
     # PBS resource manager options
     shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30:00'
-    extra: []
     env-extra: []
     resource-spec: null
     job-extra: []
     log-directory: null
+    
+    # Scheduler options
+    scheduler-options: {}
 
   sge:
     name: dask-worker
@@ -56,18 +62,20 @@ jobqueue:
     interface: null             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
+    extra: []
 
     # SGE resource manager options
     shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30:00'
-    extra: []
     env-extra: []
     job-extra: []
     log-directory: null
-
     resource-spec: null
+    
+    # Scheduler options
+    scheduler-options: {}
 
   slurm:
     name: dask-worker
@@ -80,18 +88,21 @@ jobqueue:
     interface: null             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
+    extra: []
 
     # SLURM resource manager options
     shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30:00'
-    extra: []
     env-extra: []
     job-cpu: null
     job-mem: null
     job-extra: []
     log-directory: null
+    
+    # Scheduler options
+    scheduler-options: {}
 
   moab:
     name: dask-worker
@@ -104,17 +115,20 @@ jobqueue:
     interface: null             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
+    extra: []
 
     # PBS resource manager options
     shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30:00'
-    extra: []
     env-extra: []
     resource-spec: null
     job-extra: []
     log-directory: null
+    
+    # Scheduler options
+    scheduler-options: {}
 
   lsf:
     name: dask-worker
@@ -127,13 +141,13 @@ jobqueue:
     interface: null             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
+    extra: []
 
     # LSF resource manager options
     shebang: "#!/usr/bin/env bash"
     queue: null
     project: null
     walltime: '00:30'
-    extra: []
     env-extra: []
     ncpus: null
     mem: null
@@ -141,6 +155,9 @@ jobqueue:
     log-directory: null
     lsf-units: null
     use-stdin: True             # (bool) How jobs are launched, i.e. 'bsub jobscript.sh' or 'bsub < jobscript.sh'
+    
+    # Scheduler options
+    scheduler-options: {}
 
   htcondor:
     name: dask-worker
@@ -153,14 +170,17 @@ jobqueue:
     interface: null             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
+    extra: []
 
     # HTCondor Resource Manager options
     disk: null                  # Total amount of disk per job
-    extra: []
     env-extra: []
     job-extra: {}               # Extra submit attributes
     log-directory: null
     shebang: "#!/usr/bin/env condor_submit"
+    
+    # Scheduler options
+    scheduler-options: {}
 
   local:
     name: dask-worker
@@ -172,8 +192,11 @@ jobqueue:
     interface: null             # Network interface to use like eth0 or ib0
     death-timeout: 60           # Number of seconds to wait if a worker can not find a scheduler
     local-directory: null       # Location of fast local storage like /scratch or $TMPDIR
-
     extra: []
+
     env-extra: []
     job-extra: []
     log-directory: null
+    
+    # Scheduler options
+    scheduler-options: {}

@@ -477,7 +477,9 @@ class JobQueueCluster(SpecCluster):
         if interface is None:
             interface = dask.config.get("jobqueue.%s.interface" % config_name)
         if scheduler_options is None:
-            scheduler_options = {}
+            scheduler_options = dask.config.get(
+                "jobqueue.%s.scheduler-options" % config_name, {}
+            )
 
         default_scheduler_options = {
             "protocol": protocol,
