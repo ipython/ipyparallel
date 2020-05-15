@@ -36,9 +36,9 @@ from traitlets import Unicode, Bool, List, Dict, TraitError, observe
 from jupyter_client.session import Session, session_aliases, session_flags
 
 from ipyparallel.controller.broadcast_scheduler import launch_broadcast_scheduler, \
-    SPANNING_TREE_SCHEDULER_DEPTH, BroadcastScheduler
+    BroadcastScheduler
 from ipyparallel.controller.heartmonitor import HeartMonitor
-from ipyparallel.controller.hub import HubFactory, get_number_of_non_leaf_schedulers
+from ipyparallel.controller.hub import HubFactory
 from ipyparallel.controller.scheduler import launch_scheduler
 from ipyparallel.controller.task_scheduler import TaskScheduler
 from ipyparallel.controller.dictdb import DictDB
@@ -341,7 +341,10 @@ class IPControllerApp(BaseParallelApplication):
         self.do_import_statements()
 
         try:
-            self.factory = HubFactory(config=c, log=self.log)
+            self.factory = HubFactory(
+                config=c,
+                log=self.log,
+            )
             # self.start_logging()
             self.factory.init_hub()
         except TraitError:
@@ -584,7 +587,7 @@ class IPControllerApp(BaseParallelApplication):
         def recursively_start_schedulers(identity, depth):
             outgoing_id1 = identity * 2 + 1
             outgoing_id2 = outgoing_id1 + 1
-            is_leaf = depth == SPANNING_TREE_SCHEDULER_DEPTH
+            is_leaf = depth == self.factory.broadcast_scheduler_depth
 
             scheduler_args = dict(
                 in_addr=factory.client_url(BroadcastScheduler.port_name, identity),
@@ -597,16 +600,16 @@ class IPControllerApp(BaseParallelApplication):
                 log_url=self.log_url,
                 outgoing_ids=[outgoing_id1, outgoing_id2],
                 depth=depth,
+                is_leaf=is_leaf,
             )
             if is_leaf:
                 scheduler_args.update(
                     out_addrs=[
                         factory.engine_url(
                             BroadcastScheduler.port_name,
-                            identity - get_number_of_non_leaf_schedulers(),
+                            identity - factory.number_of_non_leaf_schedulers,
                         )
                     ],
-                    is_leaf=is_leaf,
                 )
             else:
                 scheduler_args.update(
