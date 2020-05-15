@@ -17,7 +17,7 @@ def wait_for(condition: Callable):
 def get_time_stamp() -> str:
     return (
         str(datetime.datetime.now()).split(".")[0].replace(" ", "-").replace(":", "-")
-    )
+        )
 
 
 def echo(delay=0):

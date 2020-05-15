@@ -10,6 +10,7 @@ import socket
 import googleapiclient.discovery as gcd
 from google.cloud import storage
 import sys
+from cluster_start import start_cluster
 
 GITHUB_TOKEN = "***REMOVED***"  # Token for machine user
 ASV_TESTS_REPO = "github.com/tomoboy/ipyparallel_master_project.git"
@@ -64,16 +65,23 @@ if __name__ == "__main__":
     cmd_run(f"pip install -q git+https://{GITHUB_TOKEN}@{IPYPARALLEL_REPO}")
     print("Installed ipyparallel")
     # Create profile for ipyparallel, (should maybe be copied if we want some cusom values here)
-    cmd_run("ipython profile create --parallel --profile=asv")
 
+    cmd_run("ipython profile create --parallel --profile=asv")
     os.chdir("ipyparallel_master_project")
 
     log_filename = f'{instance_name}.log'
     error_log_filename = f'{instance_name}.error.log'
+    ps = start_cluster(3, 'depth_3', 200) + start_cluster(0, 'depth_0', 200)
 
-    cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
-    cmd_run("asv run --show-stderr", log_filename=log_filename, error_filename=error_log_filename)
-    cmd_run("ipcluster stop --profile=asv")
+    def clean_up():
+        for p in ps:
+            ps.kill()
+
+    atexit.register(clean_up)
+    # cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
+    cmd_run("asv run --quick --show-stderr", log_filename=log_filename, error_filename=error_log_filename)
+    clean_up()
+    # cmd_run("ipcluster stop --profile=asv")
     print('uploading files')
     upload_file(log_filename)
     upload_file(error_log_filename)
