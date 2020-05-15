@@ -7,6 +7,7 @@ delay = [0]
 engines = [1, 10, 50, 100, 200]
 byte_param = [10, 100, 1000, 10_000, 100_000, 1_000_000]
 
+
 class ThroughputSuite:
     client = None
     param_names = ['delay', 'Number of engines', 'Number of bytes']
@@ -25,11 +26,7 @@ class ThroughputSuite:
 def make_benchmark(get_view):
     # @timing_decorator
     class Benchmark(ThroughputSuite):
-        params = [
-            delay,
-            engines,
-            byte_param,
-        ]
+        params = [delay, engines, byte_param]
 
         def __init__(self):
             super().__init__()
@@ -65,4 +62,3 @@ class NonCoalescingBroadcast(
     )
 ):
     pass
-

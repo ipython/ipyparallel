@@ -1,107 +1,28 @@
 {
-    "throughput.CoalescingBroadcast.time_broadcast": {
-        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view = get_view(self)\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, *args):\n        self.client = ipp.Client(profile='asv')\n        wait_for(lambda: len(self.client) >= max(engines))",
+    "testing.TestingSuite.time_testing": {
+        "code": "class TestingSuite:\n    def time_testing(self, x):\n        lol = 3\n\n    def setup(self, *args):\n        print('starting cluster')\n        self.ps = start_cluster()\n        print('starting client')\n        self.client = ipp.Client(profile='asv')\n        print('checking client len')\n        wait_for(self.client)\n        print(self.client)\n        print('client len', len(self.client))\n        print('finished waiting for engines')",
         "min_run_count": 2,
-        "name": "throughput.CoalescingBroadcast.time_broadcast",
+        "name": "testing.TestingSuite.time_testing",
         "number": 0,
         "param_names": [
-            "delay",
-            "Number of engines",
-            "Number of bytes"
+            "param1"
         ],
         "params": [
             [
-                "0"
-            ],
-            [
-                "1",
-                "10"
-            ],
-            [
-                "10",
-                "100",
-                "1000",
-                "10000",
-                "100000"
+                "'1'",
+                "'2'",
+                "'3'",
+                "'4'",
+                "'5'"
             ]
         ],
         "processes": 2,
         "repeat": 0,
         "sample_time": 0.01,
-        "timeout": 300,
+        "timeout": 30,
         "type": "time",
         "unit": "seconds",
-        "version": "1229cbf5251bdcfdb654cdb9ee6b317440b8fbb1e70646546196e2a6dae5998c",
-        "warmup_time": -1
-    },
-    "throughput.DirectViewBroadCast.time_broadcast": {
-        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view = get_view(self)\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, *args):\n        self.client = ipp.Client(profile='asv')\n        wait_for(lambda: len(self.client) >= max(engines))",
-        "min_run_count": 2,
-        "name": "throughput.DirectViewBroadCast.time_broadcast",
-        "number": 0,
-        "param_names": [
-            "delay",
-            "Number of engines",
-            "Number of bytes"
-        ],
-        "params": [
-            [
-                "0"
-            ],
-            [
-                "1",
-                "10"
-            ],
-            [
-                "10",
-                "100",
-                "1000",
-                "10000",
-                "100000"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 300,
-        "type": "time",
-        "unit": "seconds",
-        "version": "1229cbf5251bdcfdb654cdb9ee6b317440b8fbb1e70646546196e2a6dae5998c",
-        "warmup_time": -1
-    },
-    "throughput.NonCoalescingBroadcast.time_broadcast": {
-        "code": "class Benchmark:\n    def time_broadcast(self, delay, engines, number_of_bytes):\n        self.view = get_view(self)\n        self.view.apply_sync(\n            echo(delay),\n            np.array([0] * number_of_bytes, dtype=np.int8),\n            targets=slice(engines),\n        )\n\nclass ThroughputSuite:\n    def setup(self, *args):\n        self.client = ipp.Client(profile='asv')\n        wait_for(lambda: len(self.client) >= max(engines))",
-        "min_run_count": 2,
-        "name": "throughput.NonCoalescingBroadcast.time_broadcast",
-        "number": 0,
-        "param_names": [
-            "delay",
-            "Number of engines",
-            "Number of bytes"
-        ],
-        "params": [
-            [
-                "0"
-            ],
-            [
-                "1",
-                "10"
-            ],
-            [
-                "10",
-                "100",
-                "1000",
-                "10000",
-                "100000"
-            ]
-        ],
-        "processes": 2,
-        "repeat": 0,
-        "sample_time": 0.01,
-        "timeout": 300,
-        "type": "time",
-        "unit": "seconds",
-        "version": "1229cbf5251bdcfdb654cdb9ee6b317440b8fbb1e70646546196e2a6dae5998c",
+        "version": "a963e2e206ca9dddc68e384349867139e73884b7aedae857bceda726c0962e99",
         "warmup_time": -1
     },
     "version": 2

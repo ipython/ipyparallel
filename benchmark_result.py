@@ -147,7 +147,7 @@ def get_benchmark_results():
         for dir_content in os.listdir(RESULTS_DIR)
         if (
             os.path.isdir(os.path.join(os.getcwd(), RESULTS_DIR, dir_content))
-            and "asv-testing-64-2020-05-04-23-52-41" in dir_content
+            and "asv-testing-64-2020-05-12-19-52-58" in dir_content
         )
         for file_name in os.listdir(f"{RESULTS_DIR}/{dir_content}")
         if "machine" not in file_name
