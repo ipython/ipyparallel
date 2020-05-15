@@ -22,14 +22,15 @@ from zmq.eventloop.zmqstream import ZMQStream
 # internal:
 from ipython_genutils.importstring import import_item
 
-from .broadcast_scheduler import SPANNING_TREE_SCHEDULER_DEPTH, BroadcastScheduler
+from .broadcast_scheduler import BroadcastScheduler
 from ..util import extract_dates
 from jupyter_client.localinterfaces import localhost
 from ipython_genutils.py3compat import cast_bytes, unicode_type, iteritems, buffer_to_bytes_py2
 from traitlets import (
     HasTraits, Any, Instance, Integer, Unicode, Dict, Set, Tuple,
-    DottedObjectName, observe,
-    List)
+    DottedObjectName, default, observe,
+    List,
+)
 
 from datetime import datetime
 from ipyparallel import error, util
@@ -109,18 +110,6 @@ def init_record(msg):
     }
 
 
-def get_number_of_leaf_schedulers():
-    return 2**SPANNING_TREE_SCHEDULER_DEPTH
-
-
-def get_number_of_broadcast_schedulers():
-    return 2 * get_number_of_leaf_schedulers() - 1
-
-
-def get_number_of_non_leaf_schedulers():
-    return get_number_of_broadcast_schedulers() - get_number_of_leaf_schedulers()
-
-
 class EngineConnector(HasTraits):
     """A simple object for accessing the various zmq connections of an object.
     Attributes are:
@@ -164,12 +153,37 @@ class HubFactory(RegistrationFactory):
     def _task_default(self):
         return tuple(util.select_random_ports(2))
 
+
+    broadcast_scheduler_depth = Integer(
+        3,
+        config=True,
+        help="Depth of spanning tree schedulers",
+    )
+    number_of_leaf_schedulers = Integer()
+    number_of_broadcast_schedulers = Integer()
+    number_of_non_leaf_schedulers = Integer()
+
+    @default('number_of_leaf_schedulers')
+    def get_number_of_leaf_schedulers(self):
+        return 2 ** self.broadcast_scheduler_depth
+
+
+    @default('number_of_broadcast_schedulers')
+    def get_number_of_broadcast_schedulers(self):
+        return 2 * self.number_of_leaf_schedulers - 1
+
+
+    @default('number_of_non_leaf_schedulers')
+    def get_number_of_non_leaf_schedulers(self):
+        return self.number_of_broadcast_schedulers - self.number_of_leaf_schedulers
+
+
     broadcast = List(Integer(), config=True,
                      help="List of available ports for broadcast")
 
     def _broadcast_default(self):
         return util.select_random_ports(
-            get_number_of_leaf_schedulers() + get_number_of_broadcast_schedulers()
+            self.number_of_leaf_schedulers + self.number_of_broadcast_schedulers
         )
 
     control = Tuple(Integer(), Integer(), config=True,
@@ -315,7 +329,7 @@ class HubFactory(RegistrationFactory):
             'task'          : self.task[1],
             'iopub'         : self.iopub[1],
             BroadcastScheduler.port_name:
-                self.broadcast[-get_number_of_leaf_schedulers():],
+                self.broadcast[-self.number_of_leaf_schedulers:],
             }
 
         client = self.client_info = {
@@ -328,7 +342,7 @@ class HubFactory(RegistrationFactory):
             'iopub'         : self.iopub[0],
             'notification'  : self.notifier_port,
             BroadcastScheduler.port_name:
-                self.broadcast[:get_number_of_broadcast_schedulers()],
+                self.broadcast[:self.number_of_broadcast_schedulers],
             }
 
         self.log.debug("Hub engine addrs: %s", self.engine_info)
@@ -640,10 +654,10 @@ class Hub(SessionFactory):
         triggers unregistration"""
         self.log.debug("heartbeat::handle_heart_failure(%r)", heart)
         eid = self.hearts.get(heart, None)
-        uuid = self.engines[eid].uuid
         if eid is None:
             self.log.info("heartbeat::ignoring heart failure %r (not an engine or already dead)", heart)
         else:
+            uuid = self.engines[eid].uuid
             self.unregister_engine(heart, dict(content=dict(id=eid, queue=uuid)))
 
     #----------------------- MUX Queue Traffic ------------------------------

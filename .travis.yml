@@ -2,12 +2,10 @@
 dist: xenial
 language: python
 python:
-  - "2.7"
-  - "3.4"
   - "3.5"
   - "3.6"
   - "3.7"
-  - "3.8-dev"
+  - "3.8"
   - "nightly"
 sudo: false
 cache:
@@ -29,12 +27,9 @@ after_success:
   - codecov
 matrix:
   allow_failures:
-    - python: "3.8-dev"
     - python: "nightly"
   include:
     - python: 3.6
       env: TORNADO="4.5.3"
     - python: 3.6
       env: TORNADO="5.1.1"
-    - python: 2.7
-      env: TORNADO="4.5.3"

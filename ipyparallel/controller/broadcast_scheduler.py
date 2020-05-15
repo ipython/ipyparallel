@@ -1,6 +1,9 @@
 import logging
+import os
 
 import zmq
+
+from traitlets import Integer, List, Bytes, Bool
 
 from ipyparallel import util
 from ipyparallel.controller.scheduler import (
@@ -9,30 +12,22 @@ from ipyparallel.controller.scheduler import (
     ZMQStream,
 )
 
-SPANNING_TREE_SCHEDULER_DEPTH = 3
-
 
 class BroadcastScheduler(Scheduler):
     port_name = 'broadcast'
     accumulated_replies = {}
 
-    def __init__(
-        self,
-        *args,
-        depth=0,
-        connected_sub_schedulers=None,
-        outgoing_streams=None,
-        is_leaf=False,
-        **kwargs,
-    ):
-        super().__init__(**kwargs)
-        self.log.info('Broadcast Scheduler Started')
-        self.connected_sub_scheduler_ids = connected_sub_schedulers
-        self.outgoing_streams = outgoing_streams
-        self.is_leaf = is_leaf or SPANNING_TREE_SCHEDULER_DEPTH == 0
-        self.depth = depth
+    depth = Integer(0)
+    is_leaf = Bool(False)
+    connected_sub_scheduler_ids = List(Bytes())
+    outgoing_streams = List()
 
     def start(self):
+        self.log.info(
+            'Broadcast Scheduler started with depth=%s, pid=%s',
+            self.depth,
+            os.getpid(),
+        )
         self.client_stream.on_recv(self.dispatch_submission, copy=False)
         if self.is_leaf:
             super().start()
@@ -204,7 +199,7 @@ def launch_broadcast_scheduler(
         scheduler_args.update(engine_stream=outgoing_streams[0], is_leaf=True)
     else:
         scheduler_args.update(
-            connected_sub_schedulers=[
+            connected_sub_scheduler_ids=[
                 get_id_with_prefix(identity) for identity in outgoing_ids
             ],
             outgoing_streams=outgoing_streams,

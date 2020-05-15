@@ -27,26 +27,9 @@ PY3 = (sys.version_info[0] >= 3)
 # Add test command
 #-----------------------------------------------------------------------------
 
-from distutils.cmd import Command
-
-class IPTestCommand(Command):
-    description = "Run unit tests using iptest"
-    user_options = []
-
-    def initialize_options(self):
-        pass
-
-    def finalize_options(self):
-        pass
-
-    def run(self):
-        from IPython.testing import iptest
-        old_argv = sys.argv
-        sys.argv = ['iptest', 'ipyparallel.tests']
-        iptest.run_iptest()
-        sys.argv = old_argv
 
 from setuptools.command.bdist_egg import bdist_egg
+
 
 class bdist_egg_disabled(bdist_egg):
     """Disabled version of bdist_egg
@@ -104,7 +87,7 @@ setup_args = dict(
     package_data=package_data,
     description="Interactive Parallel Computing with IPython",
     long_description="""Use multiple instances of IPython in parallel, interactively.
-    
+
     See https://ipyparallel.readthedocs.io for more info.
     """,
     author="IPython Development Team",
@@ -119,14 +102,11 @@ setup_args = dict(
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: BSD License",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 2.7",
-        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
     ],
     cmdclass={
-        "test": IPTestCommand,
         "bdist_egg": bdist_egg if "bdist_egg" in sys.argv else bdist_egg_disabled,
     },
     data_files=data_files,
@@ -141,9 +121,8 @@ setup_args = dict(
         "tornado>=4",
         "python-dateutil>=2.1",
     ],
-    python_requires=">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*",
+    python_requires=">=3.5",
     extras_require={
-        ':python_version == "2.7"': ["futures"],
         "nbext": ["notebook"],
         "test": ["pytest", "pytest-cov", "ipython[test]", "testpath", "mock"],
     },
