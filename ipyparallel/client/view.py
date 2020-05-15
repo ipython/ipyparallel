@@ -838,10 +838,8 @@ class DirectView(View):
         ip.magics_manager.register(M)
 
 
-class BroadcastViewNonCoalescing(DirectView):
-    def __init__(self, client=None, socket=None, targets=None):
-        super().__init__(client=client, socket=socket, targets=targets)
-
+class BroadcastView(DirectView):
+    is_coalescing = Bool(False)
 
     @sync_results
     @save_ids
@@ -861,25 +859,30 @@ class BroadcastViewNonCoalescing(DirectView):
 
         s_idents = [ident.decode("utf8") for ident in idents]
 
-        metadata = dict(targets=s_idents, is_broadcast=True, is_coalescing=False)
+        metadata = dict(targets=s_idents, is_broadcast=True, is_coalescing=self.is_coalescing)
 
-        original_future = self.client.send_apply_request(
+        if not self.is_coalescing:
+            original_future = self.client.send_apply_request(
                 self._socket, pf, pargs, pkwargs,
                 track=track, metadata=metadata)
+            original_msg_id = original_future.msg_id
 
-        original_msg_id = original_future.msg_id
+            for ident in s_idents:
+                msg_and_target_id = f'{original_msg_id}_{ident}'
+                future = self.client.create_message_futures(msg_and_target_id, async_result=True, track=True)
+                self.client.outstanding.add(msg_and_target_id)
+                self.outstanding.add(msg_and_target_id)
+                futures.append(future[0])
+            if original_msg_id in self.outstanding:
+                self.outstanding.remove(original_msg_id)
+        else:
+            message_future = self.client.send_apply_request(
+                self._socket, pf, pargs, pkwargs,
+                track=track, metadata=metadata
+            )
+            self.client.outstanding.add(message_future.msg_id)
+            futures = message_future
 
-        for ident in s_idents:
-            msg_and_target_id = f'{original_msg_id}_{ident}'
-            future = self.client.create_message_futures(msg_and_target_id, async_result=True, track=True)
-            self.client.outstanding.add(msg_and_target_id)
-            self.outstanding.add(msg_and_target_id)
-            futures.append(future[0])
-        if original_msg_id in self.outstanding:
-            self.outstanding.remove(original_msg_id)
-
-        if isinstance(targets, int):
-            futures = futures[0]
         ar = AsyncResult(self.client, futures, fname=getname(f), targets=_targets,
                          owner=True)
         if block:
@@ -891,46 +894,6 @@ class BroadcastViewNonCoalescing(DirectView):
 
     def map(self, f, *sequences, **kwargs):
         pass
-
-
-class BroadcastViewCoalescing(DirectView):
-    def __init__(self, client=None, socket=None, targets=None):
-        super().__init__(client=client, socket=socket, targets=targets)
-
-    @sync_results
-    @save_ids
-    def _really_apply(self, f, args=None, kwargs=None, block=None, track=None,
-                      targets=None):
-        args = [] if args is None else args
-        kwargs = {} if kwargs is None else kwargs
-        block = self.block if block is None else block
-        track = self.track if track is None else track
-        targets = self.targets if targets is None else targets
-
-        idents, _targets = self.client._build_targets(targets)
-
-        pf = PrePickled(f)
-        pargs = [PrePickled(arg) for arg in args]
-        pkwargs = {k: PrePickled(v) for k, v in kwargs.items()}
-
-        s_idents = [ident.decode("utf8") for ident in idents]
-
-        metadata = dict(targets=s_idents, is_broadcast=True, is_coalescing=True)
-
-        message_future = self.client.send_apply_request(
-            self._socket, pf, pargs, pkwargs,
-            track=track, metadata=metadata)
-
-        self.client.outstanding.add(message_future.msg_id)
-
-        ar = AsyncResult(self.client, message_future, fname=getname(f), targets=_targets,
-                         owner=True)
-        if block:
-            try:
-                return ar.get()
-            except KeyboardInterrupt:
-                pass
-        return ar
 
 class LoadBalancedView(View):
     """An load-balancing View that only executes via the Task scheduler.
@@ -1260,6 +1223,5 @@ class ViewExecutor(Executor):
         if wait:
             self.view.wait()
 
-__all__ = ['LoadBalancedView', 'DirectView', 'ViewExecutor',
-           'BroadcastViewNonCoalescing', 'BroadcastViewCoalescing']
+__all__ = ['LoadBalancedView', 'DirectView', 'ViewExecutor', 'BroadcastView']
 

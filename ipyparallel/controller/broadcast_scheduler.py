@@ -193,7 +193,6 @@ def launch_broadcast_scheduler(
         loop=loop,
         log=log,
         config=config,
-        depth=depth,
     )
     if is_leaf:
         scheduler_args.update(engine_stream=outgoing_streams[0], is_leaf=True)

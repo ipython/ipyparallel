@@ -153,7 +153,6 @@ class HubFactory(RegistrationFactory):
     def _task_default(self):
         return tuple(util.select_random_ports(2))
 
-
     broadcast_scheduler_depth = Integer(
         3,
         config=True,

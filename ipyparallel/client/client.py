@@ -54,8 +54,7 @@ from .futures import MessageFuture, multi_future
 from .view import (
     DirectView,
     LoadBalancedView,
-    BroadcastViewNonCoalescing,
-    BroadcastViewCoalescing
+    BroadcastView,
 )
 import jupyter_client.session
 
@@ -1749,21 +1748,13 @@ class Client(HasTraits):
         """
         targets = self._build_targets(targets)[1]
 
-        return (
-            BroadcastViewCoalescing(
-                client=self,
-                socket=self._broadcast_stream,
-                targets=targets,
-                **kwargs
-            )
-            if is_coalescing
-            else BroadcastViewNonCoalescing(
-                client=self,
-                socket=self._broadcast_stream,
-                targets=targets,
-                **kwargs
-            )
+        bcast_view = BroadcastView(
+            client=self,
+            socket=self._broadcast_stream,
+            targets=targets,
         )
+        bcast_view.is_coalescing = is_coalescing
+        return bcast_view
 
     # --------------------------------------------------------------------------
     # Query methods
