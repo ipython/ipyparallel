@@ -578,7 +578,6 @@ class DirectView(View):
                 pass
         return ar
 
-
     @sync_results
     def map(self, f, *sequences, **kwargs):
         """``view.map(f, *sequences, block=self.block)`` => list|AsyncMapResult

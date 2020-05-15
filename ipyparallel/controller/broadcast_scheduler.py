@@ -44,7 +44,7 @@ class BroadcastScheduler(Scheduler):
         if is_coalescing:
             self.accumulated_replies[original_msg_id] = {
                 bytes(target, 'utf8'): None for target in targets
-            }
+                }
 
         for target in targets:
             new_msg = self.append_new_msg_id_to_msg(
