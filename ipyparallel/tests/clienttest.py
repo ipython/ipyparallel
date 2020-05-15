@@ -34,7 +34,11 @@ def crash():
     if sys.version_info[0] >= 3:
         # Python3 adds 'kwonlyargcount' as the second argument to Code
         args.insert(1, 0)
-        
+    if sys.version_info > (3, 8):
+        # Python 3.8 adds 'posonlyargcount' as the second argument to Code
+        # kwonlyargcount added above is now the third argument
+        args.insert(1, 0)
+
     co = types.CodeType(*args)
     exec(co)
 

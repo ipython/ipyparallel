@@ -1227,7 +1227,7 @@ class LoadBalancedView(View):
         from joblib.parallel import register_parallel_backend
         from ._joblib import IPythonParallelBackend
         register_parallel_backend(name,
-            lambda : IPythonParallelBackend(view=self),
+            lambda **kwargs: IPythonParallelBackend(view=self, **kwargs),
             make_default=make_default)
 
 from concurrent.futures import Executor

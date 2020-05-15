@@ -101,7 +101,7 @@ define([
         var engines_col = $('<div/>').addClass('engine_col col-xs-3');
         var input = $('<input/>').attr('type','number')
                 .attr('min',1)
-                .attr('size',3)
+                .attr('style','width: 100%')
                 .addClass('engine_num_input form-control');
         engines_col.append(input);
         var start_button = $('<button/>').addClass("btn btn-default btn-xs").text("Start");
