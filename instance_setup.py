@@ -1,6 +1,6 @@
 import os
 
-DEFAULT_MINICONDA_PATH = os.path.join(os.getcwd(), "miniconda3/bin/:")
+DEFAULT_MINICONDA_PATH = os.path.join(os.getcwd(), "miniconda3/bin/")
 env = os.environ.copy()
 env["PATH"] = DEFAULT_MINICONDA_PATH + env["PATH"]
 
@@ -54,7 +54,7 @@ def cmd_run(*args, log_filename=None, error_filename=None):
 
 
 if __name__ == "__main__":
-    atexit.register(delete_self)
+    # atexit.register(delete_self)
     template_name = sys.argv[2]
 
     cmd_run(
@@ -67,11 +67,12 @@ if __name__ == "__main__":
     # Create profile for ipyparallel, (should maybe be copied if we want some cusom values here)
 
     cmd_run("ipython profile create --parallel --profile=asv")
+    ps = start_cluster(3, 'depth_3', 200, path=DEFAULT_MINICONDA_PATH) + start_cluster(0, 'depth_0', 200, path=DEFAULT_MINICONDA_PATH)
+
     os.chdir("ipyparallel_master_project")
 
     log_filename = f'{instance_name}.log'
     error_log_filename = f'{instance_name}.error.log'
-    ps = start_cluster(3, 'depth_3', 200) + start_cluster(0, 'depth_0', 200)
 
     def clean_up():
         for p in ps:

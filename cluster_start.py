@@ -3,14 +3,14 @@ from subprocess import Popen
 import sys
 
 
-def start_cluster(depth, cluster_id, number_of_engines):
+def start_cluster(depth, cluster_id, number_of_engines, path=''):
     ipcontroller_cmd = (
-        f'ipcontroller --debug --profile=asv '
+        f'{path}ipcontroller --debug --profile=asv '
         f'{f"--cluster-id={cluster_id}" if cluster_id else ""} '
         f'--HubFactory.broadcast_scheduler_depth={depth}'
     )
     print(ipcontroller_cmd)
-    ipengine_cmd = f'ipengine --debug --profile=asv ' \
+    ipengine_cmd = f'{path}ipengine --debug --profile=asv ' \
                    f'{f"--cluster-id={cluster_id}" if cluster_id else ""}'
     ps = [
         Popen(
