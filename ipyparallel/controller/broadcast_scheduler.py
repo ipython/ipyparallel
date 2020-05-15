@@ -65,7 +65,7 @@ class BroadcastScheduler(Scheduler):
             slice_start = i * len(targets) // len(self.connected_sub_scheduler_ids)
             slice_end = (i + 1) * len(targets) // len(self.connected_sub_scheduler_ids)
             targets_for_scheduler = targets[slice_start:slice_end]
-            if not targets_for_scheduler:
+            if not targets_for_scheduler and is_coalescing:
                 del self.accumulated_replies[original_msg_id][scheduler_id]
             msg['metadata']['targets'] = targets_for_scheduler
 
