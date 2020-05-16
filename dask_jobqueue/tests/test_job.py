@@ -48,6 +48,7 @@ all_clusters = [
     HTCondorCluster,
     MoabCluster,
     OARCluster,
+    HTCondorCluster,
 ]
 
 
