@@ -8,6 +8,10 @@ from cluster_start import start_cluster
 from instance_setup import cmd_run
 
 
+DEFAULT_MINICONDA_PATH = os.path.join(os.getcwd(), "~/miniconda3/bin/:")
+env = os.environ.copy()
+env["PATH"] = DEFAULT_MINICONDA_PATH + env["PATH"]
+
 ZONE = "europe-west1-b"
 PROJECT_NAME = "jupyter-simula"
 BUCKET_NAME = 'ipyparallel_dev'
@@ -35,7 +39,9 @@ if __name__ == '__main__':
     # atexit.register(delete_self)
     template_name = sys.argv[2]
 
-    ps = start_cluster(3, 'depth_3', 256) + start_cluster(0, 'depth_0', 256)
+    ps = start_cluster(3, 'depth_3', 256, '~/miniconda3/bin/') + start_cluster(
+        0, 'depth_0', 256, '~/miniconda3/bin/'
+    )
 
     os.chdir("ipyparallel_master_project")
 

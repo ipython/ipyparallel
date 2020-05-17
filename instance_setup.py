@@ -1,6 +1,6 @@
 import os
 
-DEFAULT_MINICONDA_PATH = os.path.join(os.getcwd(), "miniconda3/bin/:")
+DEFAULT_MINICONDA_PATH = os.path.join(os.getcwd(), "~/miniconda3/bin/:")
 env = os.environ.copy()
 env["PATH"] = DEFAULT_MINICONDA_PATH + env["PATH"]
 
