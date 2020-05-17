@@ -45,8 +45,6 @@ if __name__ == '__main__':
         0, 'depth_0', 256, '../miniconda3/bin/'
     )
 
-    os.chdir("ipyparallel_master_project")
-
     log_filename = f'{instance_name}.log'
     error_log_filename = f'{instance_name}.error.log'
 
