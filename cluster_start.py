@@ -3,20 +3,28 @@ from subprocess import Popen
 import sys
 
 
-def start_cluster(depth, cluster_id, number_of_engines, path=''):
+def start_cluster(
+    depth, cluster_id, number_of_engines, path='', log_output_to_file=False
+):
     ipcontroller_cmd = (
         f'{path}ipcontroller --debug --profile=asv '
         f'{f"--cluster-id={cluster_id}" if cluster_id else ""} '
         f'--HubFactory.broadcast_scheduler_depth={depth}'
     )
     print(ipcontroller_cmd)
-    ipengine_cmd = f'{path}ipengine --debug --profile=asv ' \
-                   f'{f"--cluster-id={cluster_id}" if cluster_id else ""}'
+    ipengine_cmd = (
+        f'{path}ipengine --debug --profile=asv '
+        f'{f"--cluster-id={cluster_id}" if cluster_id else ""}'
+    )
     ps = [
         Popen(
             ipcontroller_cmd.split(),
-            stdout=sys.stdout,
-            stderr=sys.stdout,
+            stdout=open(f'ipcontroller_{cluster_id}_output.log', 'a+')
+            if log_output_to_file
+            else sys.stdout,
+            stderr=open(f'ipcontroller_{cluster_id}_error_output.log', 'a+')
+            if log_output_to_file
+            else sys.stdout,
             stdin=sys.stdin,
         )
     ]
@@ -25,13 +33,18 @@ def start_cluster(depth, cluster_id, number_of_engines, path=''):
         ps.append(
             Popen(
                 ipengine_cmd.split(),
-                stdout=sys.stdout,
-                stderr=sys.stdout,
+                stdout=open(f'ipengine_{i}_{cluster_id}_output.log', 'a+')
+                if log_output_to_file
+                else sys.stdout,
+                stderr=open(f'ipengine_{i}_{cluster_id}_error_output.log', 'a+')
+                if log_output_to_file
+                else sys.stdout,
                 stdin=sys.stdin,
             )
         )
 
     return ps
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 3:

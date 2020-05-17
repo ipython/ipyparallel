@@ -54,11 +54,11 @@ if __name__ == '__main__':
     # atexit.register(delete_self)
     template_name = sys.argv[2]
 
-    ps = start_cluster(3, 'depth_3', 256, '../miniconda3/bin/')
+    ps = start_cluster(3, 'depth_3', 256, '../miniconda3/bin/', log_output_to_file=True)
     time.sleep(10)
     ps += start_cluster(
-        0, 'depth_0', 256, '../miniconda3/bin/'
-    )
+        0, 'depth_0', 256, '../miniconda3/bin/',
+        log_output_to_file=True)
 
     log_filename = f'{instance_name}.log'
     error_log_filename = f'{instance_name}.error.log'
