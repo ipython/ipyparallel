@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 delay = [0]
-engines = [2, 8, 64, 128, 256]
+engines = [2, 8, 64, 128]
 byte_param = [10, 100, 1000, 10_000, 100_000, 1_000_000]
 
 apply_replies = {}
@@ -48,7 +48,7 @@ def make_benchmark(benchmark_name, get_view):
 
         def setup(self, *args):
             self.client = ipp.Client(profile='asv', cluster_id='depth_3')
-            self.view = get_view(self.client)
+            self.view = get_view(self)
             wait_for(lambda: len(self.client) >= max(engines))
 
         def time_broadcast(self, delay, engines, number_of_bytes):
@@ -174,7 +174,7 @@ def make_multiple_message_benchmark(get_view):
         param_names = ['Number of engines', 'Number of bytes', 'number_of_messages']
         timer = timeit.default_timer
         timeout = 300
-        params = [engines, [1000, 10_000, 100_000], [1, 10, 100, 1000, 10000]]
+        params = [engines, [1000, 10_000, 100_000], [1, 10, 100, 1000]]
 
         view = None
         client = None
@@ -182,7 +182,7 @@ def make_multiple_message_benchmark(get_view):
 
         def setup(self, number_of_engines, number_of_bytes, number_of_messages):
             self.client = ipp.Client(profile='asv', cluster_id=f'depth_3')
-            self.view = get_view(self.client)
+            self.view = get_view(self)
 
             wait_for(lambda: len(self.client) >= max(engines))
 

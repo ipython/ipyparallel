@@ -6,7 +6,7 @@ import googleapiclient.discovery as gcd
 from google.cloud import storage
 from cluster_start import start_cluster
 from instance_setup import cmd_run
-
+import time
 
 # DEFAULT_MINICONDA_PATH = os.path.join('home', 'tomo',"miniconda3/bin/:")
 # env = os.environ.copy()
@@ -39,7 +39,9 @@ if __name__ == '__main__':
     # atexit.register(delete_self)
     template_name = sys.argv[2]
 
-    ps = start_cluster(3, 'depth_3', 256, '../miniconda3/bin/') + start_cluster(
+    ps = start_cluster(3, 'depth_3', 256, '../miniconda3/bin/')
+    time.sleep(10)
+    ps += start_cluster(
         0, 'depth_0', 256, '../miniconda3/bin/'
     )
 
