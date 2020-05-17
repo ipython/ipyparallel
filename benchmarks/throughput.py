@@ -48,7 +48,7 @@ def make_benchmark(benchmark_name, get_view):
 
         def setup(self, *args):
             self.client = ipp.Client(profile='asv', cluster_id='depth_3')
-            self.view = get_view()
+            self.view = get_view(self.client)
             wait_for(lambda: len(self.client) >= max(engines))
 
         def time_broadcast(self, delay, engines, number_of_bytes):
@@ -182,7 +182,7 @@ def make_multiple_message_benchmark(get_view):
 
         def setup(self, number_of_engines, number_of_bytes, number_of_messages):
             self.client = ipp.Client(profile='asv', cluster_id=f'depth_3')
-            self.view = get_view()
+            self.view = get_view(self.client)
 
             wait_for(lambda: len(self.client) >= max(engines))
 
