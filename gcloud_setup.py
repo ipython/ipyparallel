@@ -135,8 +135,21 @@ def run_on_instance(template_name):
         "instance_setup.py",
         current_instance_name,
         template_name,
+        block=True,
+    )
+
+    command_over_ssh(
+        current_instance_name,
+        'cd',
+        'ipyparallel_master_project',
+        ';',
+        "~/miniconda3/bin/python3",
+        'asv_runner.py',
+        current_instance_name,
+        template_name,
         block=False,
     )
+
 
 
 if __name__ == "__main__":

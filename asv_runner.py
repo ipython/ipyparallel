@@ -1,0 +1,65 @@
+import atexit
+import os
+import sys
+import socket
+import googleapiclient.discovery as gcd
+from google.cloud import storage
+from cluster_start import start_cluster
+from instance_setup import cmd_run
+
+
+ZONE = "europe-west1-b"
+PROJECT_NAME = "jupyter-simula"
+BUCKET_NAME = 'ipyparallel_dev'
+
+instance_name = socket.gethostname()
+compute = gcd.build("compute", "v1")
+
+
+def delete_self():
+    print(f'deleting: {instance_name}')
+    compute.instances().delete(
+        project=PROJECT_NAME, zone=ZONE, instance=instance_name
+    ).execute()
+
+
+def upload_file(filename):
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(BUCKET_NAME)
+    blob = bucket.blob(f'{instance_name}/{filename}')
+    print(f'Uploading {filename}')
+    blob.upload_from_filename(filename)
+
+
+if __name__ == '__main__':
+    # atexit.register(delete_self)
+    template_name = sys.argv[2]
+
+    ps = start_cluster(3, 'depth_3', 256) + start_cluster(0, 'depth_0', 256)
+
+    os.chdir("ipyparallel_master_project")
+
+    log_filename = f'{instance_name}.log'
+    error_log_filename = f'{instance_name}.error.log'
+
+    def clean_up():
+        for p in ps:
+            p.kill()
+
+    atexit.register(clean_up)
+    # cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
+    cmd_run(
+        "asv run --quick --show-stderr",
+        log_filename=log_filename,
+        error_filename=error_log_filename,
+    )
+    clean_up()
+    # cmd_run("ipcluster stop --profile=asv")
+    print('uploading files')
+    upload_file(log_filename)
+    upload_file(error_log_filename)
+    results_dir = f'results/{template_name}'
+    for file_name in os.listdir(results_dir):
+        if 'conda' in file_name:
+            upload_file(f'{results_dir}/{file_name}')
+    print('script finished')
