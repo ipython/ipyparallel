@@ -8,9 +8,9 @@ from cluster_start import start_cluster
 from instance_setup import cmd_run
 import time
 
-# DEFAULT_MINICONDA_PATH = os.path.join('home', 'tomo',"miniconda3/bin/:")
-# env = os.environ.copy()
-# env["PATH"] = DEFAULT_MINICONDA_PATH + env["PATH"]
+DEFAULT_MINICONDA_PATH = os.path.abspath(os.path.join('..', "miniconda3/bin/:"))
+env = os.environ.copy()
+env["PATH"] = DEFAULT_MINICONDA_PATH + env["PATH"]
 
 ZONE = "europe-west1-b"
 PROJECT_NAME = "jupyter-simula"
