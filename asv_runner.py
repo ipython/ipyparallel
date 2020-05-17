@@ -2,10 +2,11 @@ import atexit
 import os
 import sys
 import socket
+from subprocess import check_call
+
 import googleapiclient.discovery as gcd
 from google.cloud import storage
 from cluster_start import start_cluster
-from instance_setup import cmd_run
 import time
 
 DEFAULT_MINICONDA_PATH = os.path.abspath(os.path.join('..', "miniconda3/bin/:"))
@@ -18,6 +19,20 @@ BUCKET_NAME = 'ipyparallel_dev'
 
 instance_name = socket.gethostname()
 compute = gcd.build("compute", "v1")
+
+def cmd_run(*args, log_filename=None, error_filename=None):
+    if len(args) == 1:
+        args = args[0].split(" ")
+    print(f'$ {" ".join(args)}')
+    if not log_filename and not error_filename:
+        check_call(args, env=env)
+    else:
+        check_call(
+            args,
+            env=env,
+            stdout=open(log_filename, 'w'),
+            stderr=open(error_filename, 'w'),
+        )
 
 
 def delete_self():
@@ -55,7 +70,7 @@ if __name__ == '__main__':
     atexit.register(clean_up)
     # cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
     cmd_run(
-        "../miniconda3/bin/asv run --quick --show-stderr",
+        "asv run --quick --show-stderr",
         log_filename=log_filename,
         error_filename=error_log_filename,
     )
