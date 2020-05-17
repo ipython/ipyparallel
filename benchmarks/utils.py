@@ -14,12 +14,6 @@ def wait_for(condition: Callable):
         raise TimeoutError('wait_for took to long to finish')
 
 
-def get_time_stamp() -> str:
-    return (
-        str(datetime.datetime.now()).split(".")[0].replace(" ", "-").replace(":", "-")
-        )
-
-
 def echo(delay=0):
     def inner_echo(x, **kwargs):
         import time
@@ -29,4 +23,10 @@ def echo(delay=0):
         return x
 
     return inner_echo
+
+
+def get_time_stamp() -> str:
+    return (
+        str(datetime.datetime.now()).split(".")[0].replace(" ", "-").replace(":", "-")
+        )
 
