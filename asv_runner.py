@@ -8,7 +8,7 @@ from cluster_start import start_cluster
 from instance_setup import cmd_run
 
 
-DEFAULT_MINICONDA_PATH = os.path.join(os.getcwd(), "~/miniconda3/bin/:")
+DEFAULT_MINICONDA_PATH = os.path.join('home', 'tomo',"miniconda3/bin/:")
 env = os.environ.copy()
 env["PATH"] = DEFAULT_MINICONDA_PATH + env["PATH"]
 
