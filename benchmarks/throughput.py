@@ -103,55 +103,55 @@ def make_benchmark(benchmark_name, get_view):
 #     pass
 #
 #
-class DepthTestingSuite:
-    param_names = ['Number of engines', 'Number of bytes', 'is_coalescing', 'depth']
-    timer = timeit.default_timer
-    timeout = 300
-    params = [engines, [1000, 10_000, 100_000], [True, False], [0, 1, 3]]
-
-    view = None
-    client = None
-    reply = None
-
-    def setup(self, number_of_engines, number_of_bytes, is_coalescing, depth):
-        self.client = ipp.Client(profile='asv', cluster_id=f'depth_{depth}')
-        self.view = self.client.broadcast_view(is_coalescing=is_coalescing)
-        self.view.targets = list(range(number_of_engines))
-
-        wait_for(lambda: len(self.client) >= number_of_engines)
-
-    def time_broadcast(self, number_of_engines, number_of_bytes, *args):
-        self.reply = self.view.apply_sync(
-            echo(0),
-            np.array([0] * number_of_bytes, dtype=np.int8),
-        )
-
-    def teardown(self, *args):
-        replies_key = tuple(args)
-        if replies_key in apply_replies:
-            if any(
-                not np.array_equal(new_reply, stored_reply)
-                for new_reply, stored_reply in zip(
-                    self.reply, apply_replies[replies_key]
-                )
-            ):
-                raise ArrayNotEqual('DepthTestingSuite', args)
-        if self.client:
-            self.client.close()
+# class DepthTestingSuite:
+#     param_names = ['Number of engines', 'is_coalescing', 'depth']
+#     timer = timeit.default_timer
+#     timeout = 300
+#     params = [engines, [True, False], [0, 1, 3]]
+#
+#     view = None
+#     client = None
+#     reply = None
+#
+#     def setup(self, number_of_engines, is_coalescing, depth):
+#         self.client = ipp.Client(profile='asv', cluster_id=f'depth_{depth}')
+#         self.view = self.client.broadcast_view(is_coalescing=is_coalescing)
+#         self.view.targets = list(range(number_of_engines))
+#
+#         wait_for(lambda: len(self.client) >= number_of_engines)
+#
+#     def time_broadcast(self, number_of_engines,  *args):
+#         self.reply = self.view.apply_sync(
+#             echo(0),
+#             np.array([0] * 1000, dtype=np.int8),
+#         )
+#
+#     def teardown(self, *args):
+#         replies_key = tuple(args)
+#         if replies_key in apply_replies:
+#             if any(
+#                 not np.array_equal(new_reply, stored_reply)
+#                 for new_reply, stored_reply in zip(
+#                     self.reply, apply_replies[replies_key]
+#                 )
+#             ):
+#                 raise ArrayNotEqual('DepthTestingSuite', args)
+#         if self.client:
+#             self.client.close()
 
 
 def make_multiple_message_benchmark(get_view):
     class AsyncMessagesSuite:
-        param_names = ['Number of engines', 'Number of bytes', 'number_of_messages']
+        param_names = ['Number of engines', 'number_of_messages']
         timer = timeit.default_timer
         timeout = 300
-        params = [engines, [1000, 10_000], [1, 10, 100]]
+        params = [engines, [1, 10, 100]]
 
         view = None
         client = None
         reply = None
 
-        def setup(self, number_of_engines, number_of_bytes, number_of_messages):
+        def setup(self, number_of_engines, number_of_messages):
             self.client = ipp.Client(profile='asv', cluster_id=f'depth_3')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
@@ -159,13 +159,13 @@ def make_multiple_message_benchmark(get_view):
             wait_for(lambda: len(self.client) >= number_of_engines)
 
         def time_async_messages(
-            self, number_of_engines, number_of_bytes, number_of_messages
+            self, number_of_engines, number_of_messages
         ):
             replies = []
             for i in range(number_of_messages):
                 reply = self.view.apply_async(
                     echo(0),
-                    np.array([0] * number_of_bytes, dtype=np.int8),
+                    np.array([0] * 1000, dtype=np.int8),
                 )
                 replies.append(reply)
             for reply in replies:
