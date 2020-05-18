@@ -70,6 +70,7 @@ A good entry point to know more about how to use ``dask-jobqueue`` is
    configuration-setup
    examples
    configurations
+   common-work-arounds
    api
 
 .. toctree::
