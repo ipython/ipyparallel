@@ -161,10 +161,7 @@ def make_multiple_message_benchmark(get_view):
             self, number_of_engines, number_of_bytes, number_of_messages
         ):
             replies = []
-            number_of_messages_to_send = number_of_messages // number_of_engines
-            if number_of_messages_to_send < 1:
-                number_of_messages_to_send = 1
-            for i in range(number_of_messages_to_send):
+            for i in range(number_of_messages):
                 reply = self.view.apply(
                     echo(0),
                     np.array([0] * number_of_bytes, dtype=np.int8),
