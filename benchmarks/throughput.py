@@ -107,7 +107,7 @@ class DepthTestingSuite:
     param_names = ['Number of engines', 'is_coalescing', 'depth']
     timer = timeit.default_timer
     timeout = 300
-    params = [engines, [True, False], [0, 1, 3]]
+    params = [engines, [True, False], [0, 3]]
 
     view = None
     client = None

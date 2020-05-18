@@ -59,10 +59,10 @@ if __name__ == '__main__':
     ps += start_cluster(
         0, 'depth_0', 150, '../miniconda3/bin/',
         log_output_to_file=True)
-    time.sleep(10)
-    ps += start_cluster(
-        0, 'depth_1', 150, '../miniconda3/bin/',
-        log_output_to_file=True)
+    # time.sleep(10)
+    # ps += start_cluster(
+    #     0, 'depth_1', 150, '../miniconda3/bin/',
+    #     log_output_to_file=True)
 
     log_filename = f'{instance_name}.log'
     error_log_filename = f'{instance_name}.error.log'
