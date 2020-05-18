@@ -7,13 +7,14 @@ def start_cluster(
     depth, cluster_id, number_of_engines, path='', log_output_to_file=False
 ):
     ipcontroller_cmd = (
-        f'{path}ipcontroller --debug --profile=asv '
+        f'{path}ipcontroller --profile=asv --nodb'
         f'{f"--cluster-id={cluster_id}" if cluster_id else ""} '
         f'--HubFactory.broadcast_scheduler_depth={depth}'
+        f'c.HubFactory.db_class = "NoDB"'
     )
     print(ipcontroller_cmd)
     ipengine_cmd = (
-        f'{path}ipengine --debug --profile=asv '
+        f'{path}ipengine --profile=asv '
         f'{f"--cluster-id={cluster_id}" if cluster_id else ""}'
     )
     ps = [
