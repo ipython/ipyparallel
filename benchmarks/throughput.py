@@ -154,19 +154,18 @@ def make_multiple_message_benchmark(get_view):
         def setup(self, number_of_engines, number_of_bytes, number_of_messages):
             self.client = ipp.Client(profile='asv', cluster_id=f'depth_3')
             self.view = get_view(self)
+            self.view.targets = list(range(number_of_engines))
 
-            wait_for(lambda: len(self.client) >= max(engines))
+            wait_for(lambda: len(self.client) >= number_of_engines)
 
         def time_async_messages(
             self, number_of_engines, number_of_bytes, number_of_messages
         ):
             replies = []
             for i in range(number_of_messages):
-                reply = self.view.apply(
+                reply = self.view.apply_async(
                     echo(0),
                     np.array([0] * number_of_bytes, dtype=np.int8),
-                    targets=slice(number_of_engines),
-                    block=False,
                 )
                 replies.append(reply)
             for reply in replies:
