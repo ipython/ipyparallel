@@ -33,10 +33,10 @@ def start_cluster(
         ps.append(
             Popen(
                 ipengine_cmd.split(),
-                stdout=open(f'ipengine_{i}_{cluster_id}_output.log', 'a+')
+                stdout=open(f'ipengine_{cluster_id}_output.log', 'a+')
                 if log_output_to_file
                 else sys.stdout,
-                stderr=open(f'ipengine_{i}_{cluster_id}_error_output.log', 'a+')
+                stderr=open(f'ipengine_{cluster_id}_error_output.log', 'a+')
                 if log_output_to_file
                 else sys.stdout,
                 stdin=sys.stdin,
