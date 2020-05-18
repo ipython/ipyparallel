@@ -77,8 +77,8 @@ if __name__ == '__main__':
     clean_up()
     # cmd_run("ipcluster stop --profile=asv")
     print('uploading files')
-    upload_file(log_filename)
-    upload_file(error_log_filename)
+    # upload_file(log_filename)
+    # upload_file(error_log_filename)
     results_dir = f'results/{template_name}'
     for file_name in os.listdir(results_dir):
         if 'conda' in file_name:
