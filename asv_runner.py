@@ -54,10 +54,12 @@ if __name__ == '__main__':
     # atexit.register(delete_self)
     template_name = sys.argv[2]
 
+    cmd_run('echo 100000 > /proc/sys/kernel/threads-max')
+
     ps = start_cluster(3, 'depth_3', 300, '../miniconda3/bin/', log_output_to_file=True)
     time.sleep(10)
     ps += start_cluster(
-        0, 'depth_0', 150, '../miniconda3/bin/',
+        0, 'depth_0', 300, '../miniconda3/bin/',
         log_output_to_file=True)
     # time.sleep(10)
     # ps += start_cluster(
