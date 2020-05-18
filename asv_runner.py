@@ -56,9 +56,13 @@ if __name__ == '__main__':
 
     ps = start_cluster(3, 'depth_3', 300, '../miniconda3/bin/', log_output_to_file=True)
     time.sleep(10)
-    # ps += start_cluster(
-    #     0, 'depth_0', 150, '../miniconda3/bin/',
-    #     log_output_to_file=True)
+    ps += start_cluster(
+        0, 'depth_0', 150, '../miniconda3/bin/',
+        log_output_to_file=True)
+    time.sleep(10)
+    ps += start_cluster(
+        0, 'depth_1', 150, '../miniconda3/bin/',
+        log_output_to_file=True)
 
     log_filename = f'{instance_name}.log'
     error_log_filename = f'{instance_name}.error.log'
@@ -70,7 +74,7 @@ if __name__ == '__main__':
     atexit.register(clean_up)
     # cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
     cmd_run(
-        "asv run --show-stderr",
+        "asv run --quick --show-stderr",
         # log_filename=log_filename,
         # error_filename=error_log_filename,
     )
