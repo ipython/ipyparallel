@@ -9,8 +9,8 @@ def start_cluster(
     ipcontroller_cmd = (
         f'{path}ipcontroller --profile=asv --nodb'
         f'{f"--cluster-id={cluster_id}" if cluster_id else ""} '
-        f'--HubFactory.broadcast_scheduler_depth={depth}'
-        f'c.HubFactory.db_class = "NoDB"'
+        f'--HubFactory.broadcast_scheduler_depth={depth} '
+        f'--HubFactory.db_class=NoDB'
     )
     print(ipcontroller_cmd)
     ipengine_cmd = (
