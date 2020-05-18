@@ -177,24 +177,24 @@ def make_multiple_message_benchmark(get_view):
 
     return AsyncMessagesSuite
 
-#
-# class DirectViewAsync(
-#     make_multiple_message_benchmark(lambda benchmark: benchmark.client.direct_view())
-# ):
-#     pass
-#
-#
-# class CoalescingAsync(
-#     make_multiple_message_benchmark(
-#         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=True)
-#     )
-# ):
-#     pass
-#
-#
-# class NonCoalescingAsync(
-#     make_multiple_message_benchmark(
-#         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
-#     )
-# ):
-#     pass
+
+class DirectViewAsync(
+    make_multiple_message_benchmark(lambda benchmark: benchmark.client.direct_view())
+):
+    pass
+
+
+class CoalescingAsync(
+    make_multiple_message_benchmark(
+        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=True)
+    )
+):
+    pass
+
+
+class NonCoalescingAsync(
+    make_multiple_message_benchmark(
+        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
+    )
+):
+    pass
