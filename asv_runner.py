@@ -54,10 +54,10 @@ if __name__ == '__main__':
     # atexit.register(delete_self)
     template_name = sys.argv[2]
 
-    ps = start_cluster(3, 'depth_3', 256, '../miniconda3/bin/', log_output_to_file=True)
+    ps = start_cluster(3, 'depth_3', 150, '../miniconda3/bin/', log_output_to_file=True)
     time.sleep(10)
     ps += start_cluster(
-        0, 'depth_0', 256, '../miniconda3/bin/',
+        0, 'depth_0', 150, '../miniconda3/bin/',
         log_output_to_file=True)
 
     log_filename = f'{instance_name}.log'
@@ -71,8 +71,8 @@ if __name__ == '__main__':
     # cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
     cmd_run(
         "asv run --quick --show-stderr",
-        log_filename=log_filename,
-        error_filename=error_log_filename,
+        # log_filename=log_filename,
+        # error_filename=error_log_filename,
     )
     clean_up()
     # cmd_run("ipcluster stop --profile=asv")
