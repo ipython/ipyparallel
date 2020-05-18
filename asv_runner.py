@@ -70,7 +70,7 @@ if __name__ == '__main__':
     atexit.register(clean_up)
     # cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
     cmd_run(
-        "asv run --quick --show-stderr",
+        "asv run --show-stderr",
         # log_filename=log_filename,
         # error_filename=error_log_filename,
     )
