@@ -55,8 +55,7 @@ if __name__ == '__main__':
     # atexit.register(delete_self)
     template_name = sys.argv[2]
 
-    cmd_run('echo 100000 > /proc/sys/kernel/threads-max')
-    cmd_run('ulimit -n 4096')
+    # cmd_run('echo 100000 > /proc/sys/kernel/threads-max')
     soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
     resource.setrlimit(resource.RLIMIT_NOFILE, (hard_limit, hard_limit))
 
