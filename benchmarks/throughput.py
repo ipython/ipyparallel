@@ -47,7 +47,7 @@ def make_benchmark(benchmark_name, get_view):
         reply = None
 
         def setup(self, number_of_engines, number_of_bytes):
-            self.client = ipp.Client(profile='asv', cluster_id='depth_3')
+            self.client = ipp.Client(profile='asv')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
             wait_for(lambda: len(self.client) >= number_of_engines)
@@ -140,7 +140,7 @@ def make_multiple_message_benchmark(get_view):
         reply = None
 
         def setup(self, number_of_engines, number_of_messages):
-            self.client = ipp.Client(profile='asv', cluster_id=f'depth_3')
+            self.client = ipp.Client(profile='asv')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
 
@@ -196,7 +196,7 @@ def make_push_benchmark(get_view):
         client = None
 
         def setup(self, number_of_engines, number_of_bytes):
-            self.client = ipp.Client(profile='asv', cluster_id='depth_3')
+            self.client = ipp.Client(profile='asv')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
             wait_for(lambda: len(self.client) >= number_of_engines)

@@ -1,5 +1,5 @@
 {
-    "asv-testing-16-16": {
+    "asv-testing-64": {
         "arch": "x86_64",
         "cpu": "Intel(R) Xeon(R) CPU @ 2.30GHz",
         "machine": "asv-testing-64",

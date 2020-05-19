@@ -35,3 +35,8 @@ if __name__ == "__main__":
     print("Installed ipyparallel")
     # Create profile for ipyparallel, (should maybe be copied if we want some cusom values here)
     cmd_run("ipython profile create --parallel --profile=asv")
+    cmd_run('echo 120000 > /proc/sys/kernel/threads-max')
+    cmd_run('echo 600000 > /proc/sys/vm/max_map_count')
+    cmd_run('echo 200000 > /proc/sys/kernel/piad_max')
+    cmd_run('echo "*    hard    nproc    100000" > /etc/security/limits.d')
+    cmd_run('echo "*    soft    nproc    100000" > /etc/security/limits.d')
