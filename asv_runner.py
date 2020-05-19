@@ -59,7 +59,7 @@ if __name__ == '__main__':
     soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
     resource.setrlimit(resource.RLIMIT_NOFILE, (hard_limit, hard_limit))
 
-    ps = start_cluster(3, 'depth_3', 1040, '../miniconda3/bin/', log_output_to_file=True)
+    ps = start_cluster(3, 'depth_3', 550, '../miniconda3/bin/', log_output_to_file=True)
     # time.sleep(10)
     # ps += start_cluster(
     #     0, 'depth_0', 300, '../miniconda3/bin/',
@@ -79,7 +79,7 @@ if __name__ == '__main__':
     atexit.register(clean_up)
     # cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
     cmd_run(
-        "asv run --show-stderr",
+        "asv run --quick --verbose --show-stderr",
         # log_filename=log_filename,
         # error_filename=error_log_filename,
     )
