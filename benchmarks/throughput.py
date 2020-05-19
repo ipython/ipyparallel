@@ -4,8 +4,8 @@ import time
 import numpy as np
 
 delay = [0]
-engines = [2, 8, 64, 128, 256]
-byte_param = [1000, 10_000, 100_000, 1_000_000, 2_000_000]
+engines = [2, 8, 16, 32, 64, 128, 256]
+byte_param = [1000, 10_000, 100_000, 1_000_000, 2_000_000, 5_000_000]
 
 apply_replies = {}
 
@@ -77,7 +77,7 @@ def make_benchmark(benchmark_name, get_view):
     return ThroughputSuite
 
 
-class DirectViewBroadCast(
+class DirectViewBroadcast(
     make_benchmark(
         'DirectViewBroadcast', lambda benchmark: benchmark.client.direct_view()
     )
@@ -145,67 +145,7 @@ def make_multiple_message_benchmark(get_view):
         param_names = ['Number of engines', 'number_of_messages']
         timer = timeit.default_timer
         timeout = 60
-        params = [engines, [1, 10, 100]]
-
-        view = None
-        client = None
-        reply = None
-
-        def setup(self, number_of_engines, number_of_messages):
-            self.client = ipp.Client(profile='asv', cluster_id=f'depth_3')
-            self.view = get_view(self)
-            self.view.targets = list(range(number_of_engines))
-
-            wait_for(lambda: len(self.client) >= number_of_engines)
-
-        def time_async_messages(
-            self, number_of_engines, number_of_messages
-        ):
-            replies = []
-            for i in range(number_of_messages):
-                reply = self.view.apply_async(
-                    echo(0),
-                    np.array([0] * 1000, dtype=np.int8),
-                )
-                replies.append(reply)
-            for reply in replies:
-                reply.get()
-
-        def teardown(self, *args):
-            if self.client:
-                self.client.close()
-
-    return AsyncMessagesSuite
-
-
-class DirectViewAsync(
-    make_multiple_message_benchmark(lambda benchmark: benchmark.client.direct_view())
-):
-    pass
-
-
-class CoalescingAsync(
-    make_multiple_message_benchmark(
-        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=True)
-    )
-):
-    pass
-
-
-class NonCoalescingAsync(
-    make_multiple_message_benchmark(
-        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
-    )
-):
-    pass
-
-
-def make_multiple_message_benchmark(get_view):
-    class AsyncMessagesSuite:
-        param_names = ['Number of engines', 'number_of_messages']
-        timer = timeit.default_timer
-        timeout = 60
-        params = [engines, [1, 10, 100]]
+        params = [engines, [1, 5, 10, 20, 50, 75, 100]]
 
         view = None
         client = None

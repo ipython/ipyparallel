@@ -14,44 +14,35 @@ RESULTS_DIR = "results"
 
 class BenchmarkType(Enum):
     ECHO_MANY_ARGUMENTS = 'EchoManyArguments'
-    THROUGHPUT = 'throughput'
     TIME_N_TASKS = 'Engines'
     TIME_N_TASKS_NO_DELAY_NON_BLOCKING = 'non_blocking'
     TIME_N_TASKS_NO_DELAY = 'NoDelay'
+    BROADCAST = 'Broadcast'
+    TIME_ASYNC = 'Async'
 
 
 class SchedulerType(Enum):
+    __order__= 'DIRECT_VIEW LOAD_BALANCED BROADCAST_NON_COALESCING BROADCAST_COALESCING'
     DIRECT_VIEW = 'DirectView'
     LOAD_BALANCED = 'LoadBalanced'
-    BROADCAST_COALESCING = 'CoalescingBroadcast'
-    BROADCAST_NON_COALESCING = 'NonCoalescingBroadcast'
-    SPANNING_TREE = 'SpanningTree'
+    BROADCAST_NON_COALESCING = 'NonCoalescing'
+    BROADCAST_COALESCING = 'Coalescing'
 
 
 def get_benchmark_type(benchmark_name):
-    if BenchmarkType.ECHO_MANY_ARGUMENTS.value in benchmark_name:
-        return BenchmarkType.ECHO_MANY_ARGUMENTS
-    elif BenchmarkType.TIME_N_TASKS_NO_DELAY_NON_BLOCKING.value in benchmark_name:
-        return BenchmarkType.TIME_N_TASKS_NO_DELAY_NON_BLOCKING
-    elif BenchmarkType.TIME_N_TASKS_NO_DELAY.value in benchmark_name:
-        return BenchmarkType.TIME_N_TASKS_NO_DELAY
-    elif BenchmarkType.TIME_N_TASKS.value in benchmark_name:
-        return BenchmarkType.TIME_N_TASKS
-    elif BenchmarkType.THROUGHPUT.value in benchmark_name:
-        return BenchmarkType.THROUGHPUT
+    for benchmark_type in BenchmarkType:
+        if benchmark_type.value.lower() in benchmark_name.lower():
+            return benchmark_type
+    else:
+        raise NotImplementedError(
+            f"Couldn't find matching benchmarkType for {benchmark_name} "
+        )
 
 
 def get_scheduler_type(benchmark_name):
-    if SchedulerType.DIRECT_VIEW.value in benchmark_name:
-        return SchedulerType.DIRECT_VIEW
-    elif SchedulerType.LOAD_BALANCED.value in benchmark_name:
-        return SchedulerType.LOAD_BALANCED
-    elif SchedulerType.BROADCAST_NON_COALESCING.value in benchmark_name:
-        return SchedulerType.BROADCAST_NON_COALESCING
-    elif SchedulerType.BROADCAST_COALESCING.value in benchmark_name:
-        return SchedulerType.BROADCAST_COALESCING
-    elif SchedulerType.SPANNING_TREE.value in benchmark_name:
-        return SchedulerType.SPANNING_TREE
+    for scheduler_type in SchedulerType:
+        if scheduler_type.value in benchmark_name:
+            return scheduler_type
 
 
 class BenchmarkResult:
@@ -84,8 +75,10 @@ class BenchmarkResult:
                                 result_data["params"][1],
                                 result_data['params'][2],
                             )
-                            if len(result_data["params"]) > 1
-                            else result_data['params'][0]
+                            if len(result_data["params"]) > 2
+                            else product(
+                                result_data['params'][0], result_data['params'][1]
+                            )
                         ),
                     )
                 ],
@@ -115,28 +108,15 @@ class Result:
         self.failed = False
 
         self.duration_in_ms = seconds_to_ms(duration_in_seconds)
-        if benchmark_type is BenchmarkType.ECHO_MANY_ARGUMENTS:
-            self.number_of_arguments = int(param)
-            self.number_of_engines = DEFAULT_NUMBER_OF_ENGINES
-        elif (
-            benchmark_type is BenchmarkType.TIME_N_TASKS_NO_DELAY
-            or benchmark_type is BenchmarkType.TIME_N_TASKS_NO_DELAY_NON_BLOCKING
-            or benchmark_type is BenchmarkType.TIME_N_TASKS
-        ):
-            self.number_of_tasks = int(param[0])
-            self.number_of_engines = get_number_of_engines(benchmark_name)
-            self.delay = (
-                0
-                if benchmark_type is BenchmarkType.TIME_N_TASKS_NO_DELAY
-                or benchmark_type is BenchmarkType.TIME_N_TASKS_NO_DELAY_NON_BLOCKING
-                else float(param[1])
-            )
-        elif benchmark_type is BenchmarkType.THROUGHPUT:
+        if benchmark_type is BenchmarkType.BROADCAST:
             self.delay = float(param[0])
             self.number_of_engines = int(param[1])
             self.number_of_bytes = int(param[2])
+        elif benchmark_type is BenchmarkType.TIME_ASYNC:
+            self.number_of_engines = int(param[0])
+            self.number_of_messages = int(param[1])
         else:
-            raise Exception('BenchmarkType not found in Result constructor')
+            raise NotImplementedError('BenchmarkType not found in Result constructor')
 
 
 def get_benchmark_results():
@@ -147,7 +127,7 @@ def get_benchmark_results():
         for dir_content in os.listdir(RESULTS_DIR)
         if (
             os.path.isdir(os.path.join(os.getcwd(), RESULTS_DIR, dir_content))
-            and "asv-testing-64-2020-05-12-19-52-58" in dir_content
+            and "asv-testing-64-2020-05-19-00-04-55" in dir_content
         )
         for file_name in os.listdir(f"{RESULTS_DIR}/{dir_content}")
         if "machine" not in file_name
@@ -244,13 +224,40 @@ def add_to_broadcast_source(source, benchmark, number_of_cores):
         return source[number_of_cores][delay][scheduler_type]
 
     for delay, duration, bytes, engines in [
-        (result.delay, result.duration_in_ms, result.number_of_bytes, result.number_of_engines)
+        (
+            result.delay,
+            result.duration_in_ms,
+            result.number_of_bytes,
+            result.number_of_engines,
+        )
         for result in benchmark['results']
         if not result.failed
     ]:
         dict_to_append_to(delay)['Duration in ms'].append(duration)
         dict_to_append_to(delay)['Number of bytes'].append(bytes)
         dict_to_append_to(delay)['Number of engines'].append(engines)
+
+
+def add_to_async_source(source, benchmark, number_of_cores):
+    scheduler_type = benchmark['scheduler_type'].value
+    if number_of_cores not in source:
+        source[number_of_cores] = {
+            scheduler_type: get_value_dict(bytes_or_tasks='messages')
+        }
+
+    elif scheduler_type not in source[number_of_cores]:
+        source[number_of_cores][scheduler_type] = get_value_dict(
+            bytes_or_tasks='messages'
+        )
+
+    for duration, number_of_messages, engines in [
+        (result.duration_in_ms, result.number_of_messages, result.number_of_engines)
+        for result in benchmark['results']
+        if not result.failed
+    ]:
+        source[number_of_cores][scheduler_type]['Duration in ms'].append(duration)
+        source[number_of_cores][scheduler_type]['Number of messages'].append(number_of_messages)
+        source[number_of_cores][scheduler_type]['Number of engines'].append(engines)
 
 
 def add_to_echo_many_arguments_source(source, benchmark, number_of_cores):
@@ -313,8 +320,12 @@ def get_no_delay_source(benchmark_results=None):
 
 def get_broadcast_source(benchmark_results=None):
     return make_source(
-        BenchmarkType.THROUGHPUT, add_to_broadcast_source, benchmark_results
+        BenchmarkType.BROADCAST, add_to_broadcast_source, benchmark_results
     )
+
+
+def get_async_source(benchmark_results):
+    return make_source(BenchmarkType.TIME_ASYNC, add_to_async_source, benchmark_results)
 
 
 def get_echo_many_arguments_source(benchmark_results=None):
@@ -328,6 +339,7 @@ def get_echo_many_arguments_source(benchmark_results=None):
 if __name__ == "__main__":
     benchmark_results = get_benchmark_results()
     source = get_broadcast_source(benchmark_results)
+    source = get_async_source(benchmark_results)
     # source = get_time_n_tasks_source(benchmark_results)
     # source = get_no_delay_source(benchmark_results)
     # source = get_echo_many_arguments_source()
