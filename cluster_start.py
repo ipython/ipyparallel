@@ -52,6 +52,8 @@ def start_cluster(
         if i % 10 == 0:
             print(f'{len(client)} engines started')
             wait_for(lambda: len(client) >= i - 10)
+        if i % 20 == 0:
+            time.sleep(2)
     return ps
 
 
