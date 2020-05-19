@@ -4,8 +4,8 @@ import time
 import numpy as np
 
 delay = [0]
-engines = [2, 8, 16, 32, 64, 128, 256]
-byte_param = [1000, 10_000, 100_000, 1_000_000, 2_000_000, 5_000_000]
+engines = [2, 8, 16, 32, 64, 128, 256, 512]
+byte_param = [1000, 10_000, 100_000, 1_000_000, 2_000_000]
 
 apply_replies = {}
 
@@ -37,16 +37,16 @@ def echo(delay=0):
 
 def make_benchmark(benchmark_name, get_view):
     class ThroughputSuite:
-        param_names = ['delay', 'Number of engines', 'Number of bytes']
+        param_names = ['Number of engines', 'Number of bytes']
         timer = timeit.default_timer
-        timeout = 60
-        params = [delay, engines, byte_param]
+        timeout = 120
+        params = [engines, byte_param]
 
         view = None
         client = None
         reply = None
 
-        def setup(self, delay, number_of_engines, number_of_bytes):
+        def setup(self, number_of_engines, number_of_bytes):
             self.client = ipp.Client(profile='asv', cluster_id='depth_3')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
@@ -54,23 +54,10 @@ def make_benchmark(benchmark_name, get_view):
 
         def time_broadcast(self, delay, engines, number_of_bytes):
             self.reply = self.view.apply_sync(
-                echo(delay),
-                np.array([0] * number_of_bytes, dtype=np.int8),
+                echo(delay), np.array([0] * number_of_bytes, dtype=np.int8)
             )
 
         def teardown(self, *args):
-            replies_key = tuple(args)
-            if replies_key in apply_replies:
-                if any(
-                    not np.array_equal(new_reply, stored_reply)
-                    for new_reply, stored_reply in zip(
-                        self.reply, apply_replies[replies_key]
-                    )
-                ):
-                    raise ArrayNotEqual(benchmark_name, args)
-            else:
-                apply_replies[replies_key] = self.reply
-
             if self.client:
                 self.client.close()
 
@@ -101,6 +88,7 @@ class NonCoalescingBroadcast(
     )
 ):
     pass
+
 
 #
 # class DepthTestingSuite:
@@ -158,14 +146,11 @@ def make_multiple_message_benchmark(get_view):
 
             wait_for(lambda: len(self.client) >= number_of_engines)
 
-        def time_async_messages(
-            self, number_of_engines, number_of_messages
-        ):
+        def time_async_messages(self, number_of_engines, number_of_messages):
             replies = []
             for i in range(number_of_messages):
                 reply = self.view.apply_async(
-                    echo(0),
-                    np.array([0] * 1000, dtype=np.int8),
+                    echo(0), np.array([0] * 1000, dtype=np.int8)
                 )
                 replies.append(reply)
             for reply in replies:
@@ -194,6 +179,57 @@ class CoalescingAsync(
 
 class NonCoalescingAsync(
     make_multiple_message_benchmark(
+        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
+    )
+):
+    pass
+
+
+def make_push_benchmark(get_view):
+    class PushMessageSuite:
+        param_names = ['Number of engines', 'Number of bytes']
+        timer = timeit.default_timer
+        timeout = 120
+        params = [engines, byte_param]
+
+        view = None
+        client = None
+
+        def setup(self, number_of_engines, number_of_bytes):
+            self.client = ipp.Client(profile='asv', cluster_id='depth_3')
+            self.view = get_view(self)
+            self.view.targets = list(range(number_of_engines))
+            wait_for(lambda: len(self.client) >= number_of_engines)
+
+        def time_broadcast(self, engines, number_of_bytes):
+            reply = self.view.apply_sync(
+                lambda x: None, np.array([0] * number_of_bytes, dtype=np.int8)
+            )
+
+        def teardown(self, *args):
+            if self.client:
+                self.client.close()
+
+    return PushMessageSuite
+
+
+
+class DirectViewPush(
+    make_push_benchmark(lambda benchmark: benchmark.client.direct_view())
+):
+    pass
+
+
+class CoalescingPush(
+    make_push_benchmark(
+        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=True)
+    )
+):
+    pass
+
+
+class NonCoalescingPush(
+    make_push_benchmark(
         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
     )
 ):

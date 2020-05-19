@@ -1,6 +1,10 @@
 import atexit
 from subprocess import Popen
+import ipyparallel as ipp
 import sys
+import time
+
+from benchmarks.throughput import wait_for
 
 
 def start_cluster(
@@ -29,6 +33,8 @@ def start_cluster(
             stdin=sys.stdin,
         )
     ]
+    time.sleep(2)
+    client = ipp.Client(profile='asv', cluster_id=cluster_id)
     print(ipengine_cmd)
     for i in range(number_of_engines):
         ps.append(
@@ -43,7 +49,8 @@ def start_cluster(
                 stdin=sys.stdin,
             )
         )
-
+        if i % 10 == 0:
+            wait_for(lambda: len(client) >= i)
     return ps
 
 
