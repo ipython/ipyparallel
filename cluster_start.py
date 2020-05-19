@@ -11,7 +11,7 @@ def start_cluster(
     depth, cluster_id, number_of_engines, path='', log_output_to_file=False
 ):
     ipcontroller_cmd = (
-        f'{path}ipcontroller --profile=asv --nodb '
+        f'{path}ipcontroller --debug --profile=asv --nodb '
         f'{f"--cluster-id={cluster_id}" if cluster_id else ""} '
         f'--HubFactory.broadcast_scheduler_depth={depth} '
         f'--HubFactory.db_class=NoDB'
@@ -54,6 +54,11 @@ def start_cluster(
             wait_for(lambda: len(client) >= i - 10)
         if i % 20 == 0:
             time.sleep(2)
+        if i % 50 == 0:
+            time.sleep(10)
+        if i > 300:
+            print(f'{len(client)} engines started')
+
     return ps
 
 
