@@ -7,7 +7,8 @@ from subprocess import check_call
 import googleapiclient.discovery as gcd
 from google.cloud import storage
 from cluster_start import start_cluster
-import time
+import resource
+
 
 DEFAULT_MINICONDA_PATH = os.path.abspath(os.path.join('..', "miniconda3/bin/:"))
 env = os.environ.copy()
@@ -56,6 +57,9 @@ if __name__ == '__main__':
 
     cmd_run('echo 100000 > /proc/sys/kernel/threads-max')
     cmd_run('ulimit -n 4096')
+    soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
+    resource.setrlimit(resource.RLIMIT_NOFILE, (hard_limit, hard_limit))
+
     ps = start_cluster(3, 'depth_3', 1040, '../miniconda3/bin/', log_output_to_file=True)
     # time.sleep(10)
     # ps += start_cluster(
