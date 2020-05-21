@@ -24,15 +24,8 @@ def wait_for(condition):
         raise TimeoutError('wait_for took to long to finish')
 
 
-def echo(delay=0):
-    def inner_echo(x, **kwargs):
-        import time
-
-        if delay:
-            time.sleep(delay)
-        return x
-
-    return inner_echo
+def echo(x):
+    return x
 
 
 def make_benchmark(benchmark_name, get_view):
@@ -54,7 +47,7 @@ def make_benchmark(benchmark_name, get_view):
 
         def time_broadcast(self, engines, number_of_bytes):
             self.reply = self.view.apply_sync(
-                echo(0), np.array([0] * number_of_bytes, dtype=np.int8)
+                echo, np.array([0] * number_of_bytes, dtype=np.int8)
             )
 
         def teardown(self, *args):
@@ -150,7 +143,7 @@ def make_multiple_message_benchmark(get_view):
             replies = []
             for i in range(number_of_messages):
                 reply = self.view.apply_async(
-                    echo(0), np.array([0] * 1000, dtype=np.int8)
+                    echo, np.array([0] * 1000, dtype=np.int8)
                 )
                 replies.append(reply)
             for reply in replies:
