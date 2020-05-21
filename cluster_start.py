@@ -7,27 +7,23 @@ import time
 from benchmarks.throughput import wait_for
 
 
-def start_cluster(
-    depth, cluster_id, number_of_engines, path='', log_output_to_file=False
-):
+def start_cluster(depth, number_of_engines, path='', log_output_to_file=False):
     ipcontroller_cmd = (
-        f'{path}ipcontroller --debug --profile=asv --nodb '
-        f'{f"--cluster-id={cluster_id}" if cluster_id else ""} '
+        f'{path}ipcontroller --debug --profile=asv --nodb '        
         f'--HubFactory.broadcast_scheduler_depth={depth} '
         f'--HubFactory.db_class=NoDB'
     )
     print(ipcontroller_cmd)
     ipengine_cmd = (
         f'{path}ipengine --profile=asv '
-        f'{f"--cluster-id={cluster_id}" if cluster_id else ""}'
     )
     ps = [
         Popen(
             ipcontroller_cmd.split(),
-            stdout=open(f'ipcontroller_{cluster_id}_output.log', 'a+')
+            stdout=open(f'ipcontroller_output.log', 'a+')
             if log_output_to_file
             else sys.stdout,
-            stderr=open(f'ipcontroller_{cluster_id}_error_output.log', 'a+')
+            stderr=open(f'ipcontroller_error_output.log', 'a+')
             if log_output_to_file
             else sys.stdout,
             stdin=sys.stdin,
@@ -40,10 +36,10 @@ def start_cluster(
         ps.append(
             Popen(
                 ipengine_cmd.split(),
-                stdout=open(f'ipengine_{cluster_id}_output.log', 'a+')
+                stdout=open(f'ipengine_output.log', 'a+')
                 if log_output_to_file
                 else sys.stdout,
-                stderr=open(f'ipengine_{cluster_id}_error_output.log', 'a+')
+                stderr=open(f'ipengine_error_output.log', 'a+')
                 if log_output_to_file
                 else sys.stdout,
                 stdin=sys.stdin,
