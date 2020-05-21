@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 delay = [0]
-engines = [2, 8, 16, 32, 64, 128, 256, 512]
+engines = [2, 8, 16, 32, 64, 128, 256]
 byte_param = [1000, 10_000, 100_000, 1_000_000, 2_000_000]
 
 apply_replies = {}
@@ -41,14 +41,13 @@ def make_benchmark(benchmark_name, get_view):
         timer = timeit.default_timer
         timeout = 120
         params = [engines, byte_param]
-        processes = 1
+
         view = None
         client = None
         reply = None
 
         def setup(self, number_of_engines, number_of_bytes):
-            if not self.client:
-                self.client = ipp.Client(profile='asv')
+            self.client = ipp.Client(profile='asv')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
             wait_for(lambda: len(self.client) >= number_of_engines)
@@ -58,6 +57,9 @@ def make_benchmark(benchmark_name, get_view):
                 echo(delay), np.array([0] * number_of_bytes, dtype=np.int8)
             )
 
+        def teardown(self, *args):
+            if self.client:
+                self.client.close()
 
     return ThroughputSuite
 
@@ -132,15 +134,13 @@ def make_multiple_message_benchmark(get_view):
         timer = timeit.default_timer
         timeout = 60
         params = [engines, [1, 5, 10, 20, 50, 75, 100]]
-        processes = 1
 
         view = None
         client = None
         reply = None
 
         def setup(self, number_of_engines, number_of_messages):
-            if not self.client:
-                self.client = ipp.Client(profile='asv')
+            self.client = ipp.Client(profile='asv')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
 
@@ -155,6 +155,10 @@ def make_multiple_message_benchmark(get_view):
                 replies.append(reply)
             for reply in replies:
                 reply.get()
+
+        def teardown(self, *args):
+            if self.client:
+                self.client.close()
 
     return AsyncMessagesSuite
 
@@ -187,14 +191,12 @@ def make_push_benchmark(get_view):
         timer = timeit.default_timer
         timeout = 120
         params = [engines, byte_param]
-        processes = 1
 
         view = None
         client = None
 
         def setup(self, number_of_engines, number_of_bytes):
-            if not self.client:
-                self.client = ipp.Client(profile='asv')
+            self.client = ipp.Client(profile='asv')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
             wait_for(lambda: len(self.client) >= number_of_engines)
@@ -204,6 +206,9 @@ def make_push_benchmark(get_view):
                 lambda x: None, np.array([0] * number_of_bytes, dtype=np.int8)
             )
 
+        def teardown(self, *args):
+            if self.client:
+                self.client.close()
 
     return PushMessageSuite
 
