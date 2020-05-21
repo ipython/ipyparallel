@@ -58,7 +58,7 @@ if __name__ == '__main__':
     soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
     resource.setrlimit(resource.RLIMIT_NOFILE, (hard_limit, hard_limit))
 
-    ps = start_cluster(3, 300, '../miniconda3/bin/', log_output_to_file=True)
+    ps = start_cluster(3, 530, '../miniconda3/bin/', log_output_to_file=True)
     # time.sleep(10)
     # ps += start_cluster(
     #     0, 'depth_0', 300, '../miniconda3/bin/',
