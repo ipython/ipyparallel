@@ -5,6 +5,8 @@
 
 from __future__ import print_function
 
+import threading
+
 try:
     from collections.abc import Iterable
 except ImportError:  # py2
@@ -564,6 +566,8 @@ class Client(HasTraits):
             'execute_reply': self._handle_execute_reply,
             'apply_reply': self._handle_apply_reply,
         }
+
+        self.log.info(f'number of active threads running on client init {threading.active_count()}')
 
         try:
             self._connect(sshserver, ssh_kwargs, timeout)
