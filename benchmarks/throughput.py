@@ -54,7 +54,7 @@ def make_benchmark(benchmark_name, get_view):
 
         def time_broadcast(self, engines, number_of_bytes):
             self.reply = self.view.apply_sync(
-                echo(delay), np.array([0] * number_of_bytes, dtype=np.int8)
+                echo(0), np.array([0] * number_of_bytes, dtype=np.int8)
             )
 
         def teardown(self, *args):
