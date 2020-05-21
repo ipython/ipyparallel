@@ -52,7 +52,7 @@ def make_benchmark(benchmark_name, get_view):
             self.view.targets = list(range(number_of_engines))
             wait_for(lambda: len(self.client) >= number_of_engines)
 
-        def time_broadcast(self, delay, engines, number_of_bytes):
+        def time_broadcast(self, engines, number_of_bytes):
             self.reply = self.view.apply_sync(
                 echo(delay), np.array([0] * number_of_bytes, dtype=np.int8)
             )
