@@ -47,7 +47,8 @@ def make_benchmark(benchmark_name, get_view):
         reply = None
 
         def setup(self, number_of_engines, number_of_bytes):
-            self.client = ipp.Client(profile='asv')
+            if not self.client:
+                self.client = ipp.Client(profile='asv')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
             wait_for(lambda: len(self.client) >= number_of_engines)
@@ -57,9 +58,6 @@ def make_benchmark(benchmark_name, get_view):
                 echo(delay), np.array([0] * number_of_bytes, dtype=np.int8)
             )
 
-        def teardown(self, *args):
-            if self.client:
-                self.client.close()
 
     return ThroughputSuite
 
@@ -140,7 +138,8 @@ def make_multiple_message_benchmark(get_view):
         reply = None
 
         def setup(self, number_of_engines, number_of_messages):
-            self.client = ipp.Client(profile='asv')
+            if not self.client:
+                self.client = ipp.Client(profile='asv')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
 
@@ -155,10 +154,6 @@ def make_multiple_message_benchmark(get_view):
                 replies.append(reply)
             for reply in replies:
                 reply.get()
-
-        def teardown(self, *args):
-            if self.client:
-                self.client.close()
 
     return AsyncMessagesSuite
 
@@ -196,7 +191,8 @@ def make_push_benchmark(get_view):
         client = None
 
         def setup(self, number_of_engines, number_of_bytes):
-            self.client = ipp.Client(profile='asv')
+            if not self.client:
+                self.client = ipp.Client(profile='asv')
             self.view = get_view(self)
             self.view.targets = list(range(number_of_engines))
             wait_for(lambda: len(self.client) >= number_of_engines)
@@ -206,9 +202,6 @@ def make_push_benchmark(get_view):
                 lambda x: None, np.array([0] * number_of_bytes, dtype=np.int8)
             )
 
-        def teardown(self, *args):
-            if self.client:
-                self.client.close()
 
     return PushMessageSuite
 

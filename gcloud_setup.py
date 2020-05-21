@@ -10,7 +10,7 @@ from typing import List
 import multiprocessing as mp
 from time import sleep
 
-CORE_NUMBERS_FOR_TEMPLATES = [64]
+CORE_NUMBERS_FOR_TEMPLATES = [96]
 # CORE_NUMBERS_FOR_TEMPLATES = [16]
 
 ZONE = "europe-west1-b"
