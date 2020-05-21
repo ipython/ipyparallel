@@ -41,7 +41,7 @@ def make_benchmark(benchmark_name, get_view):
         timer = timeit.default_timer
         timeout = 120
         params = [engines, byte_param]
-
+        processes = 1
         view = None
         client = None
         reply = None
@@ -132,6 +132,7 @@ def make_multiple_message_benchmark(get_view):
         timer = timeit.default_timer
         timeout = 60
         params = [engines, [1, 5, 10, 20, 50, 75, 100]]
+        processes = 1
 
         view = None
         client = None
@@ -186,6 +187,7 @@ def make_push_benchmark(get_view):
         timer = timeit.default_timer
         timeout = 120
         params = [engines, byte_param]
+        processes = 1
 
         view = None
         client = None
