@@ -1,5 +1,5 @@
-Common work-arounds
-===================
+Advanced tips and tricks
+========================
 
 The universe of HPC clusters is extremely diverse, with different job
 schedulers, different configuration, different decisions (security, usage, etc...)
@@ -7,7 +7,7 @@ made by each HPC cluster. An unfortunate consequence of this is that this is
 impossible for Dask-Jobqueue to cover all possible tiny edge cases of some HPC
 clusters.
 
-This page is an attempt to document work-arounds that are likely to be useful
+This page is an attempt to document tips and tricks that are likely to be useful
 on some clusters (strictly more than one ideally although hard to be sure ...).
 
 Skipping unrecognised line in submission script with ``header_skip``
