@@ -1,11 +1,12 @@
-version: "2.1"
+version: "3.4"
 
 services:
 
   master:
+    image: daskdev/dask-jobqueue:sge
     build:
       context: .
-      dockerfile: Dockerfile-master
+      target: master
       args:
         PYTHON_VERSION: ${TRAVIS_PYTHON_VERSION:-3.6}
     container_name: sge_master
@@ -16,9 +17,10 @@ services:
     command: bash /run-master.sh
 
   slave-one:
+    image: daskdev/dask-jobqueue:sge-slave
     build:
       context: .
-      dockerfile: Dockerfile-slave
+      target: slave
       args:
         PYTHON_VERSION: ${TRAVIS_PYTHON_VERSION:-3.6}
     container_name: slave_one
@@ -33,9 +35,10 @@ services:
       - master
 
   slave-two:
+    image: daskdev/dask-jobqueue:sge-slave
     build:
       context: .
-      dockerfile: Dockerfile-slave
+      target: slave
       args:
         PYTHON_VERSION: ${TRAVIS_PYTHON_VERSION:-3.6}
     container_name: slave_two

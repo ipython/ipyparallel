@@ -3,8 +3,10 @@
 function jobqueue_before_install {
     docker version
     docker-compose version
+
     # start sge cluster
     cd ./ci/sge
+    docker-compose pull
     ./start-sge.sh
     cd -
 
