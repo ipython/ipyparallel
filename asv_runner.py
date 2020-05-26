@@ -44,9 +44,10 @@ def delete_self():
 
 
 def upload_file(filename):
+    blob_name = sys.argv[1]
     storage_client = storage.Client()
     bucket = storage_client.bucket(BUCKET_NAME)
-    blob = bucket.blob(f'{instance_name}/{filename}')
+    blob = bucket.blob(f'{instance_name}/{blob_name}')
     print(f'Uploading {filename}')
     blob.upload_from_filename(filename)
 
