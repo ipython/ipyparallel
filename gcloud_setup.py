@@ -145,7 +145,7 @@ def run_on_instance(template_name):
         ';',
         "~/miniconda3/bin/python3",
         'asv_runner.py',
-        '512_engines',
+        '1024_async_only',
         template_name,
         block=False,
     )
