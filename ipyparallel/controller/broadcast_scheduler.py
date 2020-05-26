@@ -16,16 +16,13 @@ from ipyparallel.controller.scheduler import (
 class BroadcastScheduler(Scheduler):
     port_name = 'broadcast'
     accumulated_replies = {}
-
-    depth = Integer(0)
     is_leaf = Bool(False)
     connected_sub_scheduler_ids = List(Bytes())
     outgoing_streams = List()
 
     def start(self):
         self.log.info(
-            'Broadcast Scheduler started with depth=%s, pid=%s',
-            self.depth,
+            'Broadcast Scheduler started with pid=%s',
             os.getpid(),
         )
         self.client_stream.on_recv(self.dispatch_submission, copy=False)
