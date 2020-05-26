@@ -1,3 +1,5 @@
+import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import ipyparallel as ipp
 import timeit
 import time
@@ -128,7 +130,7 @@ def make_multiple_message_benchmark(get_view):
         param_names = ['Number of engines', 'number_of_messages']
         timer = timeit.default_timer
         timeout = 60
-        params = [engines, [5]]
+        params = [engines, number_of_messages]
 
         view = None
         client = None

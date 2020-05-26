@@ -9,6 +9,7 @@ from google.cloud import storage
 from cluster_start import start_cluster
 import resource
 
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
 DEFAULT_MINICONDA_PATH = os.path.abspath(os.path.join('..', "miniconda3/bin/:"))
 env = os.environ.copy()
