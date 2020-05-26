@@ -85,42 +85,42 @@ class NonCoalescingBroadcast(
     pass
 
 
-
-class DepthTestingSuite:
-    param_names = ['Number of engines', 'is_coalescing', 'depth']
-    timer = timeit.default_timer
-    timeout = 60
-    params = [engines, [True, False], [0, 3]]
-
-    view = None
-    client = None
-    reply = None
-
-    def setup(self, number_of_engines, is_coalescing, depth):
-        self.client = ipp.Client(profile='asv', cluster_id=f'depth_{depth}')
-        self.view = self.client.broadcast_view(is_coalescing=is_coalescing)
-        self.view.targets = list(range(number_of_engines))
-
-        wait_for(lambda: len(self.client) >= number_of_engines)
-
-    def time_broadcast(self, number_of_engines,  *args):
-        self.reply = self.view.apply_sync(
-            echo(0),
-            np.array([0] * 1000, dtype=np.int8),
-        )
-
-    def teardown(self, *args):
-        replies_key = tuple(args)
-        if replies_key in apply_replies:
-            if any(
-                not np.array_equal(new_reply, stored_reply)
-                for new_reply, stored_reply in zip(
-                    self.reply, apply_replies[replies_key]
-                )
-            ):
-                raise ArrayNotEqual('DepthTestingSuite', args)
-        if self.client:
-            self.client.close()
+#
+# class DepthTestingSuite:
+#     param_names = ['Number of engines', 'is_coalescing', 'depth']
+#     timer = timeit.default_timer
+#     timeout = 60
+#     params = [engines, [True, False], [0, 3]]
+#
+#     view = None
+#     client = None
+#     reply = None
+#
+#     def setup(self, number_of_engines, is_coalescing, depth):
+#         self.client = ipp.Client(profile='asv', cluster_id=f'depth_{depth}')
+#         self.view = self.client.broadcast_view(is_coalescing=is_coalescing)
+#         self.view.targets = list(range(number_of_engines))
+#
+#         wait_for(lambda: len(self.client) >= number_of_engines)
+#
+#     def time_broadcast(self, number_of_engines,  *args):
+#         self.reply = self.view.apply_sync(
+#             echo(0),
+#             np.array([0] * 1000, dtype=np.int8),
+#         )
+#
+#     def teardown(self, *args):
+#         replies_key = tuple(args)
+#         if replies_key in apply_replies:
+#             if any(
+#                 not np.array_equal(new_reply, stored_reply)
+#                 for new_reply, stored_reply in zip(
+#                     self.reply, apply_replies[replies_key]
+#                 )
+#             ):
+#                 raise ArrayNotEqual('DepthTestingSuite', args)
+#         if self.client:
+#             self.client.close()
 
 
 
