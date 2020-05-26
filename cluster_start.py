@@ -9,7 +9,7 @@ from benchmarks.throughput import wait_for
 
 def start_cluster(depth, number_of_engines, path='', log_output_to_file=False):
     ipcontroller_cmd = (
-        f'{path}ipcontroller --debug --profile=asv --nodb '        
+        f'{path}ipcontroller --profile=asv --nodb '        
         f'--HubFactory.broadcast_scheduler_depth={depth} '
         f'--HubFactory.db_class=NoDB'
     )
