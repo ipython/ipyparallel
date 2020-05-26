@@ -567,8 +567,6 @@ class Client(HasTraits):
             'apply_reply': self._handle_apply_reply,
         }
 
-        print(f'number of active threads running on client init {threading.active_count()}')
-
         try:
             self._connect(sshserver, ssh_kwargs, timeout)
         except:

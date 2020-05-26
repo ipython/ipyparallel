@@ -850,7 +850,6 @@ class BroadcastView(DirectView):
         block = self.block if block is None else block
         track = self.track if track is None else track
         targets = self.targets if targets is None else targets
-
         idents, _targets = self.client._build_targets(targets)
         futures = []
 
@@ -861,7 +860,6 @@ class BroadcastView(DirectView):
         s_idents = [ident.decode("utf8") for ident in idents]
 
         metadata = dict(targets=s_idents, is_broadcast=True, is_coalescing=self.is_coalescing)
-        print(f'Active threads on braodcastView: {threading.active_count()}')
         if not self.is_coalescing:
             original_future = self.client.send_apply_request(
                 self._socket, pf, pargs, pkwargs,
