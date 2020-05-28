@@ -69,6 +69,8 @@ def command_over_ssh(instance_name, *args, block=True):
 
 def run_on_instance(template_name):
     current_instance_name = f"{template_name}-{get_time_stamp()}"
+    benchmark_name = sys.argv[1] if len(sys.argv) > 2 else ''
+
     print(f"Creating new instance with name: {current_instance_name}")
 
     gcloud_run(
@@ -145,7 +147,7 @@ def run_on_instance(template_name):
         ';',
         "~/miniconda3/bin/python3",
         'asv_runner.py',
-        '1024_async_only',
+        benchmark_name,
         template_name,
         block=False,
     )

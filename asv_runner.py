@@ -55,6 +55,7 @@ def upload_file(filename):
 
 if __name__ == '__main__':
     # atexit.register(delete_self)
+    benchmark_name = sys.argv[1]
     template_name = sys.argv[2]
 
     soft_limit, hard_limit = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -80,7 +81,7 @@ if __name__ == '__main__':
     # atexit.register(clean_up)
     # cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
     cmd_run(
-        "asv run --show-stderr",
+        f"asv run -b {benchmark_name} --show-stderr",
         # log_filename=log_filename,
         # error_filename=error_log_filename,
     )

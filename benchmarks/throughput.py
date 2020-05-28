@@ -57,32 +57,32 @@ def make_benchmark(benchmark_name, get_view):
                 self.client.close()
 
     return ThroughputSuite
-#
-#
-# class DirectViewBroadcast(
-#     make_benchmark(
-#         'DirectViewBroadcast', lambda benchmark: benchmark.client.direct_view()
-#     )
-# ):
-#     pass
-#
-#
-# class CoalescingBroadcast(
-#     make_benchmark(
-#         'CoalescingBroadcast',
-#         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=True),
-#     )
-# ):
-#     pass
-#
-#
-# class NonCoalescingBroadcast(
-#     make_benchmark(
-#         'NonCoalescingBroadcast',
-#         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False),
-#     )
-# ):
-#     pass
+
+
+class DirectViewBroadcast(
+    make_benchmark(
+        'DirectViewBroadcast', lambda benchmark: benchmark.client.direct_view()
+    )
+):
+    pass
+
+
+class CoalescingBroadcast(
+    make_benchmark(
+        'CoalescingBroadcast',
+        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=True),
+    )
+):
+    pass
+
+
+class NonCoalescingBroadcast(
+    make_benchmark(
+        'NonCoalescingBroadcast',
+        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False),
+    )
+):
+    pass
 
 
 #
@@ -181,53 +181,53 @@ class NonCoalescingAsync(
 ):
     pass
 
-#
-# def make_push_benchmark(get_view):
-#     class PushMessageSuite:
-#         param_names = ['Number of engines', 'Number of bytes']
-#         timer = timeit.default_timer
-#         timeout = 120
-#         params = [engines, byte_param]
-#
-#         view = None
-#         client = None
-#
-#         def setup(self, number_of_engines, number_of_bytes):
-#             self.client = ipp.Client(profile='asv')
-#             self.view = get_view(self)
-#             self.view.targets = list(range(number_of_engines))
-#             wait_for(lambda: len(self.client) >= number_of_engines)
-#
-#         def time_broadcast(self, engines, number_of_bytes):
-#             reply = self.view.apply_sync(
-#                 lambda x: None, np.array([0] * number_of_bytes, dtype=np.int8)
-#             )
-#
-#         def teardown(self, *args):
-#             if self.client:
-#                 self.client.close()
-#
-#     return PushMessageSuite
-#
-#
-#
-# class DirectViewPush(
-#     make_push_benchmark(lambda benchmark: benchmark.client.direct_view())
-# ):
-#     pass
-#
-#
-# class CoalescingPush(
-#     make_push_benchmark(
-#         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=True)
-#     )
-# ):
-#     pass
-#
-#
-# class NonCoalescingPush(
-#     make_push_benchmark(
-#         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
-#     )
-# ):
-#     pass
+
+def make_push_benchmark(get_view):
+    class PushMessageSuite:
+        param_names = ['Number of engines', 'Number of bytes']
+        timer = timeit.default_timer
+        timeout = 120
+        params = [engines, byte_param]
+
+        view = None
+        client = None
+
+        def setup(self, number_of_engines, number_of_bytes):
+            self.client = ipp.Client(profile='asv')
+            self.view = get_view(self)
+            self.view.targets = list(range(number_of_engines))
+            wait_for(lambda: len(self.client) >= number_of_engines)
+
+        def time_broadcast(self, engines, number_of_bytes):
+            reply = self.view.apply_sync(
+                lambda x: None, np.array([0] * number_of_bytes, dtype=np.int8)
+            )
+
+        def teardown(self, *args):
+            if self.client:
+                self.client.close()
+
+    return PushMessageSuite
+
+
+
+class DirectViewPush(
+    make_push_benchmark(lambda benchmark: benchmark.client.direct_view())
+):
+    pass
+
+
+class CoalescingPush(
+    make_push_benchmark(
+        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=True)
+    )
+):
+    pass
+
+
+class NonCoalescingPush(
+    make_push_benchmark(
+        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
+    )
+):
+    pass
