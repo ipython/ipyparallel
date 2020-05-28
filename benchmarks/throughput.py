@@ -48,8 +48,6 @@ def make_benchmark(benchmark_name, get_view):
             wait_for(lambda: len(self.client) >= number_of_engines)
 
         def time_broadcast(self, engines, number_of_bytes):
-            if engines > 255 and number_of_bytes > 1000_000:
-                return
             self.reply = self.view.apply_sync(
                 echo, np.array([0] * number_of_bytes, dtype=np.int8)
             )
