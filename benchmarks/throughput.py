@@ -58,14 +58,14 @@ def make_benchmark(benchmark_name, get_view):
 
     return ThroughputSuite
 
-
-class DirectViewBroadcast(
-    make_benchmark(
-        'DirectViewBroadcast', lambda benchmark: benchmark.client.direct_view()
-    )
-):
-    pass
-
+#
+# class DirectViewBroadcast(
+#     make_benchmark(
+#         'DirectViewBroadcast', lambda benchmark: benchmark.client.direct_view()
+#     )
+# ):
+#     pass
+#
 
 class CoalescingBroadcast(
     make_benchmark(
@@ -75,14 +75,14 @@ class CoalescingBroadcast(
 ):
     pass
 
-
-class NonCoalescingBroadcast(
-    make_benchmark(
-        'NonCoalescingBroadcast',
-        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False),
-    )
-):
-    pass
+#
+# class NonCoalescingBroadcast(
+#     make_benchmark(
+#         'NonCoalescingBroadcast',
+#         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False),
+#     )
+# ):
+#     pass
 
 
 #
@@ -158,12 +158,12 @@ def make_multiple_message_benchmark(get_view):
                 self.client.close()
 
     return AsyncMessagesSuite
-
-
-class DirectViewAsync(
-    make_multiple_message_benchmark(lambda benchmark: benchmark.client.direct_view())
-):
-    pass
+#
+#
+# class DirectViewAsync(
+#     make_multiple_message_benchmark(lambda benchmark: benchmark.client.direct_view())
+# ):
+#     pass
 
 
 class CoalescingAsync(
@@ -173,13 +173,13 @@ class CoalescingAsync(
 ):
     pass
 
-
-class NonCoalescingAsync(
-    make_multiple_message_benchmark(
-        lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
-    )
-):
-    pass
+#
+# class NonCoalescingAsync(
+#     make_multiple_message_benchmark(
+#         lambda benchmark: benchmark.client.broadcast_view(is_coalescing=False)
+#     )
+# ):
+#     pass
 
 
 def make_push_benchmark(get_view):
