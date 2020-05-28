@@ -78,7 +78,7 @@ if __name__ == '__main__':
         for p in ps:
             p.kill()
 
-    # atexit.register(clean_up)
+    atexit.register(clean_up)
     # cmd_run("ipcluster start -n 200 --daemon --profile=asv")  # Starting 200 engines
     cmd_run(
         f"asv run -b {benchmark_name} --show-stderr",

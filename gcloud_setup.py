@@ -69,7 +69,7 @@ def command_over_ssh(instance_name, *args, block=True):
 
 def run_on_instance(template_name):
     current_instance_name = f"{template_name}-{get_time_stamp()}"
-    benchmark_name = sys.argv[1] if len(sys.argv) > 2 else ''
+    benchmark_name = sys.argv[1] if len(sys.argv) > 1 else ''
 
     print(f"Creating new instance with name: {current_instance_name}")
 
