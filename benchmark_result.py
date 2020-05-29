@@ -13,16 +13,20 @@ RESULTS_DIR = "results"
 
 
 class BenchmarkType(Enum):
-    ECHO_MANY_ARGUMENTS = 'EchoManyArguments'
-    TIME_N_TASKS = 'Engines'
-    TIME_N_TASKS_NO_DELAY_NON_BLOCKING = 'non_blocking'
-    TIME_N_TASKS_NO_DELAY = 'NoDelay'
-    BROADCAST = 'Broadcast'
+    # ECHO_MANY_ARGUMENTS = 'EchoManyArguments'
+    # TIME_N_TASKS = 'Engines'
+    # TIME_N_TASKS_NO_DELAY_NON_BLOCKING = 'non_blocking'
+    # TIME_N_TASKS_NO_DELAY = 'NoDelay'
+    __order__ = 'PUSH TIME_ASYNC BROADCAST'
+    PUSH = 'Push'
     TIME_ASYNC = 'Async'
+    BROADCAST = 'Broadcast'
 
 
 class SchedulerType(Enum):
-    __order__= 'DIRECT_VIEW LOAD_BALANCED BROADCAST_NON_COALESCING BROADCAST_COALESCING'
+    __order__ = (
+        'DIRECT_VIEW LOAD_BALANCED BROADCAST_NON_COALESCING BROADCAST_COALESCING'
+    )
     DIRECT_VIEW = 'DirectView'
     LOAD_BALANCED = 'LoadBalanced'
     BROADCAST_NON_COALESCING = 'NonCoalescing'
@@ -49,6 +53,7 @@ class BenchmarkResult:
     def __init__(self, benchmark_results_file_name):
         with open(benchmark_results_file_name, "r") as results_file:
             results_data = json.load(results_file)
+
         self.results_file_name = benchmark_results_file_name
         self.date = datetime.fromtimestamp(
             results_data["date"] // 1000
@@ -108,10 +113,12 @@ class Result:
         self.failed = False
 
         self.duration_in_ms = seconds_to_ms(duration_in_seconds)
-        if benchmark_type is BenchmarkType.BROADCAST:
-            self.delay = float(param[0])
-            self.number_of_engines = int(param[1])
-            self.number_of_bytes = int(param[2])
+        if (
+            benchmark_type is BenchmarkType.BROADCAST
+            or benchmark_type is BenchmarkType.PUSH
+        ):
+            self.number_of_engines = int(param[0])
+            self.number_of_bytes = int(param[1])
         elif benchmark_type is BenchmarkType.TIME_ASYNC:
             self.number_of_engines = int(param[0])
             self.number_of_messages = int(param[1])
@@ -121,27 +128,19 @@ class Result:
 
 def get_benchmark_results():
     results_for_machines = {
-        dir_content: BenchmarkResult(
+        file_name: BenchmarkResult(
             os.path.join(os.getcwd(), RESULTS_DIR, dir_content, file_name)
         )
         for dir_content in os.listdir(RESULTS_DIR)
         if (
             os.path.isdir(os.path.join(os.getcwd(), RESULTS_DIR, dir_content))
-            and "asv-testing-64-2020-05-19-00-04-55" in dir_content
+            and "asv-testing-64-2020-04-28" in dir_content
         )
         for file_name in os.listdir(f"{RESULTS_DIR}/{dir_content}")
         if "machine" not in file_name
     }
 
-    sorted_results = {}
-    for machine_name, result in results_for_machines.items():
-        number_of_cores = get_number_of_cores(machine_name)
-        if (
-            number_of_cores not in sorted_results
-            or sorted_results[number_of_cores].date < result.date
-        ):
-            sorted_results[number_of_cores] = result
-    return {result.results_file_name: result for result in sorted_results.values()}
+    return results_for_machines
 
 
 def get_value_dict(engines_or_cores='engines', bytes_or_tasks='tasks'):
@@ -203,61 +202,36 @@ def add_no_delay_tasks_source(source, benchmark, number_of_cores):
         dict_to_append_to['Number of cores'].append(number_of_cores)
 
 
-def add_to_broadcast_source(source, benchmark, number_of_cores):
+def add_to_broadcast_source(source, benchmark):
     scheduler_type = benchmark['scheduler_type'].value
 
-    if number_of_cores not in source:
-        source[number_of_cores] = {
-            0: {scheduler_type: get_value_dict(bytes_or_tasks='bytes')},
-            0.1: {scheduler_type: get_value_dict(bytes_or_tasks='bytes')},
-        }
+    if scheduler_type not in source:
+        source[scheduler_type] = get_value_dict(bytes_or_tasks='bytes')
 
-    elif scheduler_type not in source[number_of_cores][0]:
-        source[number_of_cores][0][scheduler_type] = get_value_dict(
-            bytes_or_tasks='bytes'
-        )
-        source[number_of_cores][0.1][scheduler_type] = get_value_dict(
-            bytes_or_tasks='bytes'
-        )
-
-    def dict_to_append_to(delay):
-        return source[number_of_cores][delay][scheduler_type]
-
-    for delay, duration, bytes, engines in [
-        (
-            result.delay,
-            result.duration_in_ms,
-            result.number_of_bytes,
-            result.number_of_engines,
-        )
+    for duration, bytes, engines in [
+        (result.duration_in_ms, result.number_of_bytes, result.number_of_engines)
         for result in benchmark['results']
         if not result.failed
     ]:
-        dict_to_append_to(delay)['Duration in ms'].append(duration)
-        dict_to_append_to(delay)['Number of bytes'].append(bytes)
-        dict_to_append_to(delay)['Number of engines'].append(engines)
+        source[scheduler_type]['Duration in ms'].append(duration)
+        source[scheduler_type]['Number of bytes'].append(bytes)
+        source[scheduler_type]['Number of engines'].append(engines)
 
 
-def add_to_async_source(source, benchmark, number_of_cores):
+def add_to_async_source(source, benchmark):
     scheduler_type = benchmark['scheduler_type'].value
-    if number_of_cores not in source:
-        source[number_of_cores] = {
-            scheduler_type: get_value_dict(bytes_or_tasks='messages')
-        }
 
-    elif scheduler_type not in source[number_of_cores]:
-        source[number_of_cores][scheduler_type] = get_value_dict(
-            bytes_or_tasks='messages'
-        )
+    if scheduler_type not in source:
+        source[scheduler_type] = get_value_dict(bytes_or_tasks='messages')
 
     for duration, number_of_messages, engines in [
         (result.duration_in_ms, result.number_of_messages, result.number_of_engines)
         for result in benchmark['results']
         if not result.failed
     ]:
-        source[number_of_cores][scheduler_type]['Duration in ms'].append(duration)
-        source[number_of_cores][scheduler_type]['Number of messages'].append(number_of_messages)
-        source[number_of_cores][scheduler_type]['Number of engines'].append(engines)
+        source[scheduler_type]['Duration in ms'].append(duration)
+        source[scheduler_type]['Number of messages'].append(number_of_messages)
+        source[scheduler_type]['Number of engines'].append(engines)
 
 
 def add_to_echo_many_arguments_source(source, benchmark, number_of_cores):
@@ -290,14 +264,13 @@ def make_source(benchmark_type, add_to_source_f, benchmark_results=None):
     if not benchmark_results:
         benchmark_results = get_benchmark_results()
     source = {}
-    for machine_name, benchmark_run in benchmark_results.items():
-        number_of_cores = get_number_of_cores(machine_name)
-        for benchmark_name, benchmark in benchmark_run.results_dict.items():
-            if (
-                isinstance(benchmark_type, list)
-                and benchmark['benchmark_type'] in benchmark_type
-            ) or benchmark['benchmark_type'] == benchmark_type:
-                add_to_source_f(source, benchmark, number_of_cores)
+
+    for benchmark_name, benchmark in benchmark_results['results_dict'].items():
+        if (
+            isinstance(benchmark_type, list)
+            and benchmark['benchmark_type'] in benchmark_type
+        ) or benchmark['benchmark_type'] == benchmark_type:
+            add_to_source_f(source, benchmark)
     return source
 
 
@@ -324,6 +297,10 @@ def get_broadcast_source(benchmark_results=None):
     )
 
 
+def get_push_source(benchmark_results=None):
+    return make_source(BenchmarkType.PUSH, add_to_async_source, benchmark_results)
+
+
 def get_async_source(benchmark_results):
     return make_source(BenchmarkType.TIME_ASYNC, add_to_async_source, benchmark_results)
 
@@ -338,10 +315,20 @@ def get_echo_many_arguments_source(benchmark_results=None):
 
 if __name__ == "__main__":
     benchmark_results = get_benchmark_results()
-    source = get_broadcast_source(benchmark_results)
-    source = get_async_source(benchmark_results)
+    combined_results = {
+        'date': benchmark_results['CoalescingBroadcast.json'].date,
+        'machine_config': benchmark_results['CoalescingBroadcast.json'].machine_config,
+        'results_dict': {},
+    }
+    for result in benchmark_results.values():
+        for benchmark_name, benchmark_result in result.results_dict.items():
+            combined_results['results_dict'][benchmark_name] = benchmark_result
+
+    source = get_broadcast_source(combined_results)
+    source = get_async_source(combined_results)
+
     # source = get_time_n_tasks_source(benchmark_results)
     # source = get_no_delay_source(benchmark_results)
     # source = get_echo_many_arguments_source()
     with open("saved_results.pkl", "wb") as saved_results:
-        pickle.dump(benchmark_results, saved_results)
+        pickle.dump(combined_results, saved_results)
