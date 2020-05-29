@@ -9,6 +9,9 @@ import pytest
 
 import dask
 
+from distributed.security import Security
+from distributed import Client
+
 from dask_jobqueue import (
     JobQueueCluster,
     PBSCluster,
@@ -393,3 +396,49 @@ def test_import_scheduler_options_from_config(Cluster):
             scheduler_options = cluster.scheduler_spec["options"]
             assert scheduler_options.get("interface") == pass_scheduler_interface
             assert scheduler_options.get("port") is None
+
+
+@pytest.mark.parametrize("Cluster", all_clusters)
+def test_wrong_parameter_error(Cluster):
+    match = re.compile(
+        "unexpected keyword argument.+wrong_parameter.+"
+        "{}.+job_kwargs.+cores.+memory.+"
+        "wrong_parameter.+wrong_parameter_value".format(Cluster.__name__),
+        re.DOTALL,
+    )
+    with pytest.raises(ValueError, match=match):
+        create_cluster_func(
+            Cluster, cores=1, memory="1GB", wrong_parameter="wrong_parameter_value",
+        )
+
+
+def test_security():
+    dirname = os.path.dirname(__file__)
+    key = os.path.join(dirname, "key.pem")
+    cert = os.path.join(dirname, "ca.pem")
+    security = Security(
+        tls_ca_file=cert,
+        tls_scheduler_key=key,
+        tls_scheduler_cert=cert,
+        tls_worker_key=key,
+        tls_worker_cert=cert,
+        tls_client_key=key,
+        tls_client_cert=cert,
+        require_encryption=True,
+    )
+
+    with LocalCluster(
+        cores=1, memory="1GB", security=security, protocol="tls"
+    ) as cluster:
+        assert cluster.security == security
+        assert cluster.scheduler_spec["options"]["security"] == security
+        job_script = cluster.job_script()
+        assert "--tls-key {}".format(key) in job_script
+        assert "--tls-cert {}".format(cert) in job_script
+        assert "--tls-ca-file {}".format(cert) in job_script
+
+        cluster.scale(jobs=1)
+        with Client(cluster, security=security) as client:
+            future = client.submit(lambda x: x + 1, 10)
+            result = future.result()
+            assert result == 11

@@ -136,6 +136,8 @@ class Job(ProcessInterface, abc.ABC):
         memory=None,
         processes=None,
         nanny=True,
+        protocol=None,
+        security=None,
         interface=None,
         death_timeout=None,
         local_directory=None,
@@ -147,7 +149,6 @@ class Job(ProcessInterface, abc.ABC):
         python=sys.executable,
         job_name=None,
         config_name=None,
-        **kwargs
     ):
         self.scheduler = scheduler
         self.job_id = None
@@ -210,6 +211,18 @@ class Job(ProcessInterface, abc.ABC):
 
         if interface:
             extra = extra + ["--interface", interface]
+        if protocol:
+            extra = extra + ["--protocol", protocol]
+        if security:
+            worker_security_dict = security.get_tls_config_for_role("worker")
+            security_command_line_list = [
+                ["--tls-" + key.replace("_", "-"), value]
+                for key, value in worker_security_dict.items()
+                # 'ciphers' parameter does not have a command-line equivalent
+                if key != "ciphers"
+            ]
+            security_command_line = sum(security_command_line_list, [])
+            extra = extra + security_command_line
 
         # Keep information on process, cores, and memory, for use in subclasses
         self.worker_memory = parse_bytes(memory) if memory is not None else None
@@ -434,7 +447,7 @@ class JobQueueCluster(SpecCluster):
         protocol="tcp://",
         # Job keywords
         config_name=None,
-        **kwargs
+        **job_kwargs
     ):
         self.status = "created"
 
@@ -499,14 +512,17 @@ class JobQueueCluster(SpecCluster):
             "options": scheduler_options,
         }
 
-        kwargs["config_name"] = config_name
-        kwargs["interface"] = interface
-        kwargs["protocol"] = protocol
-        kwargs["security"] = security
-        self._kwargs = kwargs
-        worker = {"cls": self.job_cls, "options": kwargs}
-        if "processes" in kwargs and kwargs["processes"] > 1:
-            worker["group"] = ["-" + str(i) for i in range(kwargs["processes"])]
+        job_kwargs["config_name"] = config_name
+        job_kwargs["interface"] = interface
+        job_kwargs["protocol"] = protocol
+        job_kwargs["security"] = security
+        self._job_kwargs = job_kwargs
+
+        worker = {"cls": self.job_cls, "options": self._job_kwargs}
+        if "processes" in self._job_kwargs and self._job_kwargs["processes"] > 1:
+            worker["group"] = [
+                "-" + str(i) for i in range(self._job_kwargs["processes"])
+            ]
 
         self._dummy_job  # trigger property to ensure that the job is valid
 
@@ -514,6 +530,7 @@ class JobQueueCluster(SpecCluster):
             scheduler=scheduler,
             worker=worker,
             loop=loop,
+            security=security,
             silence_logs=silence_logs,
             asynchronous=asynchronous,
             name=name,
@@ -535,11 +552,26 @@ class JobQueueCluster(SpecCluster):
             address = self.scheduler.address  # Have we already connected?
         except AttributeError:
             address = "tcp://<insert-scheduler-address-here>:8786"
-        return self.job_cls(
-            scheduler=address or "tcp://<insert-scheduler-address-here>:8786",
-            name="name",
-            **self._kwargs
-        )
+        try:
+            return self.job_cls(
+                address or "tcp://<insert-scheduler-address-here>:8786",
+                name="name",
+                **self._job_kwargs
+            )
+        except TypeError as exc:
+            # Very likely this error happened in the self.job_cls constructor
+            # because an unexpected parameter was used in the JobQueueCluster
+            # constructor. The next few lines builds a more user-friendly error message.
+            match = re.search("(unexpected keyword argument.+)", str(exc))
+            if not match:
+                raise
+            message_orig = match.group(1)
+            raise ValueError(
+                'Got {}. Very likely this unexpected parameter was passed in "job_kwargs" in the {} constructor:\n'
+                "job_kwargs={}".format(
+                    message_orig, self.__class__.__name__, self._job_kwargs
+                )
+            ) from exc
 
     @property
     def job_header(self):

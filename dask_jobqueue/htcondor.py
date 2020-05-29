@@ -40,10 +40,10 @@ Queue
         disk=None,
         job_extra=None,
         config_name=None,
-        **kwargs
+        **base_class_kwargs
     ):
         super().__init__(
-            scheduler=scheduler, name=name, config_name=config_name, **kwargs
+            scheduler=scheduler, name=name, config_name=config_name, **base_class_kwargs
         )
 
         if disk is None:
@@ -60,7 +60,7 @@ Queue
         else:
             self.job_extra = job_extra
 
-        env_extra = kwargs.get("env_extra", None)
+        env_extra = base_class_kwargs.get("env_extra", None)
         if env_extra is None:
             env_extra = dask.config.get(
                 "jobqueue.%s.env-extra" % self.config_name, default=[]

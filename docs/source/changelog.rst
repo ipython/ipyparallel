@@ -17,6 +17,8 @@ Development version
   ``threads_per_process=cores``. (:pr:`375`)
 - all cluster classes: ``interface`` was ignored when set in a config file.
   (:pr:`366`)
+- all cluster classes: fix a bug that would allow to pass any named parameter without an error (:pr:`398`)
+- all cluster classes: fix a bug where ``security`` was not correctly passed through (:pr:`398`)
 - ``LSFCluster``: switch to ``use_stdin=True`` by default (:pr:`388`).
 - ``LSFCluster``: add ``use_stdin`` to ``LSFCluster``. This switches between
   ``bsub < job_script`` and ``bsub job_script`` to launch a ``LSF`` job

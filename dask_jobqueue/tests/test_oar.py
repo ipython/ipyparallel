@@ -19,8 +19,6 @@ def test_header():
         processes=4,
         cores=8,
         memory="28GB",
-        job_cpu=16,
-        job_mem="100G",
         job_extra=["-t besteffort"],
     ) as cluster:
         assert "walltime=" in cluster.job_header
