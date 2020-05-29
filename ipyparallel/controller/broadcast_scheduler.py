@@ -88,6 +88,7 @@ class BroadcastScheduler(Scheduler):
                 ]
             )
             self.client_stream.send_multipart(new_msg, copy=False)
+            del self.accumulated_replies[original_msg_id]
         else:
             self.accumulated_replies[original_msg_id][outgoing_id] = msg['buffers']
 
