@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 delay = [0]
-engines = [1, 2, 16, 64, 128, 256, 512]
+engines = [1, 2, 16, 64, 128, 256, 512, 1024]
 byte_param = [1000, 10_000, 100_000, 1_000_000, 2_000_000]
 
 apply_replies = {}
