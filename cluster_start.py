@@ -16,7 +16,7 @@ def start_cluster(depth, number_of_engines, path='', log_output_to_file=False):
     )
     print(ipcontroller_cmd)
     ipengine_cmd = (
-        f'{path}ipengine --profile=asv'
+        f'{path}ipengine --profile=asv '
         f'--cluster-id=depth_{depth} '
     )
     ps = [
