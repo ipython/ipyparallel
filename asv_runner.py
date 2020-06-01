@@ -62,7 +62,7 @@ if __name__ == '__main__':
     resource.setrlimit(resource.RLIMIT_NOFILE, (hard_limit, hard_limit))
 
     ps = []
-    for i in [0, 2, 3, 4]:
+    for i in [0, 2]:
         ps += start_cluster(i, 1030, '../miniconda3/bin/', log_output_to_file=True)
     # time.sleep(10)
     # ps += start_cluster(
