@@ -9,13 +9,15 @@ from benchmarks.throughput import wait_for
 
 def start_cluster(depth, number_of_engines, path='', log_output_to_file=False):
     ipcontroller_cmd = (
-        f'{path}ipcontroller --profile=asv --nodb '        
+        f'{path}ipcontroller --profile=asv --nodb '
+        f'--cluster-id=depth_{depth} '
         f'--HubFactory.broadcast_scheduler_depth={depth} '
         f'--HubFactory.db_class=NoDB'
     )
     print(ipcontroller_cmd)
     ipengine_cmd = (
-        f'{path}ipengine --profile=asv '
+        f'{path}ipengine --profile=asv'
+        f'--cluster-id=depth_{depth} '
     )
     ps = [
         Popen(
@@ -50,8 +52,6 @@ def start_cluster(depth, number_of_engines, path='', log_output_to_file=False):
         if i % 20 == 0:
             time.sleep(2)
             print(f'{len(client)} engines started')
-        if i % 50 == 0:
-            time.sleep(10)
 
     return ps
 
