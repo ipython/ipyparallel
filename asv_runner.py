@@ -54,7 +54,7 @@ def upload_file(filename):
 
 
 if __name__ == '__main__':
-    atexit.register(delete_self)
+    # atexit.register(delete_self)
     benchmark_name = sys.argv[1]
     template_name = sys.argv[2]
 
