@@ -32,7 +32,7 @@ def start_cluster(depth, number_of_engines, path='', log_output_to_file=False):
         )
     ]
     time.sleep(2)
-    client = ipp.Client(profile='asv')
+    client = ipp.Client(profile='asv', cluster_id=f'depth_{depth}')
     print(ipengine_cmd)
     for i in range(number_of_engines):
         ps.append(
