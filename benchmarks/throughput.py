@@ -105,7 +105,7 @@ class DepthTestingSuite:
 
     def time_broadcast(self, number_of_engines,  *args):
         self.reply = self.view.apply_sync(
-            echo(0),
+            echo,
             np.array([0] * 1000, dtype=np.int8),
         )
 
