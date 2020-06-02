@@ -17,20 +17,20 @@ class BenchmarkType(Enum):
     # TIME_N_TASKS = 'Engines'
     # TIME_N_TASKS_NO_DELAY_NON_BLOCKING = 'non_blocking'
     # TIME_N_TASKS_NO_DELAY = 'NoDelay'
-    __order__ = 'PUSH TIME_ASYNC BROADCAST'
+    __order__ = 'PUSH TIME_ASYNC DEPTH_TESTING BROADCAST'
     PUSH = 'Push'
     TIME_ASYNC = 'Async'
+    DEPTH_TESTING = 'DepthTesting'
     BROADCAST = 'Broadcast'
 
 
 class SchedulerType(Enum):
-    __order__ = (
-        'DIRECT_VIEW LOAD_BALANCED BROADCAST_NON_COALESCING BROADCAST_COALESCING'
-    )
+    __order__ = 'DIRECT_VIEW LOAD_BALANCED BROADCAST_NON_COALESCING BROADCAST_COALESCING BROADCAST'
     DIRECT_VIEW = 'DirectView'
     LOAD_BALANCED = 'LoadBalanced'
     BROADCAST_NON_COALESCING = 'NonCoalescing'
     BROADCAST_COALESCING = 'Coalescing'
+    BROADCAST = 'Depth'
 
 
 def get_benchmark_type(benchmark_name):
@@ -122,6 +122,10 @@ class Result:
         elif benchmark_type is BenchmarkType.TIME_ASYNC:
             self.number_of_engines = int(param[0])
             self.number_of_messages = int(param[1])
+        elif benchmark_type is BenchmarkType.DEPTH_TESTING:
+            self.number_of_engines = int(param[0])
+            self.is_coalescing = True if param[1] == 'True' else False
+            self.depth = int(param[2])
         else:
             raise NotImplementedError('BenchmarkType not found in Result constructor')
 
@@ -234,6 +238,32 @@ def add_to_async_source(source, benchmark):
         source[scheduler_type]['Number of engines'].append(engines)
 
 
+def add_to_depth_testing_source(source, benchmark):
+    scheduler_type = benchmark['scheduler_type'].value
+    if scheduler_type not in source:
+        source[scheduler_type] = {
+            'Duration in ms': [],
+            'Number of engines': [],
+            'Is coalescing': [],
+            'Depth': [],
+        }
+    for duration, number_of_engines, is_coalescing, depth in [
+        (
+            result.duration_in_ms,
+            result.number_of_engines,
+            result.is_coalescing,
+            result.depth,
+        )
+        for result in benchmark['results']
+        if not result.failed
+    ]:
+        source[scheduler_type]['Duration in ms'].append(duration)
+        source[scheduler_type]['Number of engines'].append(number_of_engines)
+        source[scheduler_type]['Is coalescing'].append(is_coalescing)
+        source[scheduler_type]['Depth'].append(depth)
+
+
+
 def add_to_echo_many_arguments_source(source, benchmark, number_of_cores):
     view_type = 'direct_view' if benchmark['is_direct_view'] else 'load_balanced'
     if 'number_of_engines' not in source and benchmark['results']:
@@ -298,7 +328,7 @@ def get_broadcast_source(benchmark_results=None):
 
 
 def get_push_source(benchmark_results=None):
-    return make_source(BenchmarkType.PUSH, add_to_async_source, benchmark_results)
+    return make_source(BenchmarkType.PUSH, add_to_broadcast_source, benchmark_results)
 
 
 def get_async_source(benchmark_results):
@@ -313,6 +343,12 @@ def get_echo_many_arguments_source(benchmark_results=None):
     )
 
 
+def get_depth_testing_source(benchmark_results):
+    return make_source(
+        BenchmarkType.DEPTH_TESTING, add_to_depth_testing_source, benchmark_results
+    )
+
+
 if __name__ == "__main__":
     benchmark_results = get_benchmark_results()
     combined_results = {
@@ -324,11 +360,12 @@ if __name__ == "__main__":
         for benchmark_name, benchmark_result in result.results_dict.items():
             combined_results['results_dict'][benchmark_name] = benchmark_result
 
-    source = get_broadcast_source(combined_results)
-    source = get_async_source(combined_results)
-
+    # source = get_broadcast_source(combined_results)
+    # source = get_async_source(combined_results)
+    # source = get_push_source(combined_results)
     # source = get_time_n_tasks_source(benchmark_results)
     # source = get_no_delay_source(benchmark_results)
     # source = get_echo_many_arguments_source()
+    source = get_depth_testing_source(combined_results)
     with open("saved_results.pkl", "wb") as saved_results:
         pickle.dump(combined_results, saved_results)
