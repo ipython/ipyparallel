@@ -555,7 +555,12 @@ class JobQueueCluster(SpecCluster):
         try:
             return self.job_cls(
                 address or "tcp://<insert-scheduler-address-here>:8786",
-                name="name",
+                # The 'name' parameter is replaced inside Job class by the
+                # actual Dask worker name. Using 'dummy-name here' to make it
+                # more clear that cluster.job_script() is similar to but not
+                # exactly the same script as the script submitted for each Dask
+                # worker
+                name="dummy-name",
                 **self._job_kwargs
             )
         except TypeError as exc:
