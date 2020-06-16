@@ -342,7 +342,7 @@ class Job(ProcessInterface, abc.ABC):
         if job_id is None:
             msg = (
                 "You need to use a 'job_id' named group in your regexp, e.g. "
-                "r'(?P<job_id>\\d+)', in your regexp. Your regexp was: "
+                "r'(?P<job_id>\\d+)'. Your regexp was: "
                 "{!r}".format(self.job_id_regexp)
             )
             raise ValueError(msg)
