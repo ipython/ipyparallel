@@ -46,8 +46,8 @@ Some tests require to have a fully functional job queue cluster running, this
 is done through Docker_ and `Docker compose`_ tools. You must thus have them
 installed on your system following their docs.
 
-You can then use the same commands as Travis CI does for your local testing,
-for example with pbs::
+You can then use the same commands as the CI for running the tests locally.
+For example for PBS you can run::
 
    source ci/pbs.sh
    jobqueue_before_install
