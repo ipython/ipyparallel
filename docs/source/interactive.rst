@@ -134,7 +134,7 @@ connection to see the dashboard you can do so with SSH Tunneling as described
 above. The dashboard's default port is at ``8787``, and is configurable by
 using the ``scheduler_options`` parameter in the Dask Jobqueue cluster object.
 For example ``scheduler_options={'dashboard_address': ':12435'}`` would use
-12435 for the web dasboard port.
+12435 for the web dashboard port.
 
 However, Jupyter is also able to proxy the dashboard connection through the
 Jupyter server, allowing you to access the dashboard at
@@ -152,7 +152,18 @@ notebook, shown from Cluster and Client objects. In order to do this,
 edit dask config file, either ``~/.config/dask/jobqueue.yaml`` or
 ``~/.config/dask/distributed.yaml``, and add the following:
 
-.. code-block:: yaml
+- for user launched notebooks
 
-   distributed.dashboard.link: "/proxy/{port}/status" # for user launched notebook
-   distributed.dashboard.link: "/user/{JUPYTERHUB_USER}/proxy/{port}/status" # for jupyterhub launched notebook
+  .. code-block:: yaml
+
+   distributed:
+     dashboard:
+       link: "/proxy/{port}/status"
+
+- for JupyterHub launched notebooks
+
+  .. code-block:: yaml
+
+     distributed:
+       dashboard:
+         link: "/user/{JUPYTERHUB_USER}/proxy/{port}/status"
