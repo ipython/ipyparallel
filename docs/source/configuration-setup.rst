@@ -53,7 +53,7 @@ Gigabyte vs Gibibyte
 It is important to note that Dask makes the difference between 
 power of 2 and power of 10 when specifying memory. This means that:
 - 1GB = :math:`10^9` bytes
-- 1GiB = :math:`2^30` bytes
+- 1GiB = :math:`2^{30}` bytes
 
 ``memory`` configuration is interpreted by Dask memory parser, and for most
 JobQueueCluster implementation translated as a resource requirement for job 
