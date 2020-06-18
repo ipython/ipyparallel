@@ -1477,9 +1477,10 @@ class Hub(SessionFactory):
         content = {
             'status': 'ok',
             'ip': self.distributed_scheduler.ip,
+            'address': self.distributed_scheduler.address,
             'port': self.distributed_scheduler.port,
         }
-        self.log.info("dask.distributed scheduler running at {ip}:{port}".format(**content))
+        self.log.info("dask.distributed scheduler running at {address}".format(**content))
         self.session.send(self.query, "become_dask_reply", content=content,
             parent=msg, ident=client_id,
         )

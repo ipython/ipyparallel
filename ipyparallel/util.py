@@ -463,16 +463,14 @@ def int_keys(dikt):
     return dikt
 
 
-def become_dask_worker(ip, port, nanny=False, **kwargs):
+def become_dask_worker(address, nanny=False, **kwargs):
     """Task function for becoming a dask.distributed Worker
 
     Parameters
     ----------
 
-    ip: str
-        The IP address of the dask Scheduler.
-    port: int
-        The port of the dask Scheduler.
+    address: str
+        The URL of the dask Scheduler.
     **kwargs:
         Any additional keyword arguments will be passed to the Worker constructor.
     """
@@ -483,9 +481,9 @@ def become_dask_worker(ip, port, nanny=False, **kwargs):
         return
     from distributed import Worker, Nanny
     if nanny:
-        w = Nanny(ip, port, **kwargs)
+        w = Nanny(address, **kwargs)
     else:
-        w = Worker(ip, port, **kwargs)
+        w = Worker(address, **kwargs)
     shell.user_ns['dask_worker'] = shell.user_ns['distributed_worker'] = kernel.distributed_worker = w
     kernel.io_loop.add_callback(w.start)
 
