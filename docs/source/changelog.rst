@@ -4,6 +4,13 @@ Changelog
 Development version
 -------------------
 
+- all cluster classes: fix a bug that would allow to pass any named parameter without an error (:pr:`398`)
+- all cluster classes: fix a bug where ``security`` was not correctly passed through (:pr:`398`)
+
+
+0.7.1 / 2020-03-26
+------------------
+
 - all cluster classes: add ``scheduler_options`` allows to pass parameters to
   the Dask scheduler. For example ``scheduler_options={'interface': 'eth0',
   dashboard_addresses=':12435')`` (:pr:`384`). Breaking change: using ``port``
@@ -17,8 +24,6 @@ Development version
   ``threads_per_process=cores``. (:pr:`375`)
 - all cluster classes: ``interface`` was ignored when set in a config file.
   (:pr:`366`)
-- all cluster classes: fix a bug that would allow to pass any named parameter without an error (:pr:`398`)
-- all cluster classes: fix a bug where ``security`` was not correctly passed through (:pr:`398`)
 - ``LSFCluster``: switch to ``use_stdin=True`` by default (:pr:`388`).
 - ``LSFCluster``: add ``use_stdin`` to ``LSFCluster``. This switches between
   ``bsub < job_script`` and ``bsub job_script`` to launch a ``LSF`` job
