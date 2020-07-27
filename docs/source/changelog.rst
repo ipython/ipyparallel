@@ -6,7 +6,8 @@ Development version
 
 - all cluster classes: fix a bug that would allow to pass any named parameter without an error (:pr:`398`)
 - all cluster classes: fix a bug where ``security`` was not correctly passed through (:pr:`398`)
-
+- ``MoabCluster``: fix bug where ``MoabCluster`` was using the ``jobqueue.pbs``
+  config section rather than the ``jobqueue.moab`` section. (:pr:`450`)
 
 0.7.1 / 2020-03-26
 ------------------
