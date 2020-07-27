@@ -75,7 +75,7 @@ cluster_parameters = """
         A dask.distributed security object if you're using TLS/SSL
     scheduler_options : dict
         Used to pass additional arguments to Dask Scheduler. For example use
-        ``scheduler_options={'dasboard_address': ':12435'}`` to specify which
+        ``scheduler_options={'dashboard_address': ':12435'}`` to specify which
         port the web dashboard should use or ``scheduler_options={'host': 'your-host'}``
         to specify the host the Dask scheduler should run on. See
         :class:`distributed.Scheduler` for more details.
