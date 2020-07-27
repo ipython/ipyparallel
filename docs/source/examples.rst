@@ -158,7 +158,7 @@ to the dask-workers.
                            cores=2,
                            extra=['--resources ssdGB=200,GPU=2'])
 
-    cluster.start_workers(2)
+    cluster.scale(2)
     client = Client(cluster)
 
 The client can then be used as normal. Additionally, required resources can be

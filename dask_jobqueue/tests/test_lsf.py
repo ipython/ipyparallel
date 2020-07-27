@@ -121,7 +121,7 @@ def test_basic(loop):
         loop=loop,
     ) as cluster:
         with Client(cluster) as client:
-            cluster.start_workers(2)
+            cluster.scale(2)
             assert cluster.pending_jobs or cluster.running_jobs
             future = client.submit(lambda x: x + 1, 10)
             assert future.result(QUEUE_WAIT) == 11
