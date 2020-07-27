@@ -6,6 +6,8 @@ Development version
 
 - all cluster classes: fix a bug that would allow to pass any named parameter without an error (:pr:`398`)
 - all cluster classes: fix a bug where ``security`` was not correctly passed through (:pr:`398`)
+- all cluster classes: ``scheduler_options`` parameter can be set through the
+  config file in the ``scheduler-options`` section (:pr:`405`).
 - ``MoabCluster``: fix bug where ``MoabCluster`` was using the ``jobqueue.pbs``
   config section rather than the ``jobqueue.moab`` section. (:pr:`450`)
 
@@ -16,8 +18,7 @@ Development version
   the Dask scheduler. For example ``scheduler_options={'interface': 'eth0',
   dashboard_addresses=':12435')`` (:pr:`384`). Breaking change: using ``port``
   or ``dashboard_addresses`` arguments raises an error. They have to be passed
-  through ``scheduler_options``. ``scheduler_options`` can be set through the
-  config file in the ``scheduler-options`` section (:pr:`405`).
+  through ``scheduler_options``.
 - all cluster classes: ``processes`` parameter default has changed. By default,
   ``processes ~= sqrt(cores)`` so that the number of processes and the number
   of threads per process is roughly the same. Old default was to use one
@@ -126,5 +127,3 @@ Development version
 - Adds an LSF job queue system implementation.
 - Adds some convenient methods to JobQueueCluster objects: ``__repr__``,
   ``stop_jobs()``, ``close()``.
-
-
