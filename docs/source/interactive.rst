@@ -9,7 +9,7 @@ We recommend first doing these steps from a login node (nothing will be
 computationally intensive) but at some point you may want to shift to a compute
 or interactive node.
 
-*Note: We also recommend the `JupyterHub <https://jupyter.org/hub>`_ project,
+*Note: We also recommend the* `JupyterHub <https://jupyter.org/hub>`_ *project,
 which allows HPC administrators to offer and control the process described
 in this document automatically.  If you find this process valuable but tedious,
 then you may want to ask your system administrators to support it with
