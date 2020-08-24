@@ -1368,8 +1368,7 @@ class Client(HasTraits):
         distributed_info = reply['content']
 
         # Start a Worker on the selected engines:
-        worker_args['ip'] = distributed_info['ip']
-        worker_args['port'] = distributed_info['port']
+        worker_args['address'] = distributed_info['address']
         worker_args['nanny'] = nanny
         # set default ncores=1, since that's how an IPython cluster is typically set up.
         worker_args.setdefault('ncores', 1)
@@ -1382,7 +1381,7 @@ class Client(HasTraits):
             # For distributed pre-1.18.1
             distributed_Client = distributed.Executor
 
-        client = distributed_Client('{ip}:{port}'.format(**distributed_info))
+        client = distributed_Client('{address}'.format(**distributed_info))
 
         return client
 
