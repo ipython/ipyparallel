@@ -1112,7 +1112,6 @@ class LoadBalancedView(View):
     @save_ids
     def map(self, f, *sequences, **kwargs):
         """``view.map(f, *sequences, block=self.block, chunksize=1, ordered=True)`` => list|AsyncMapResult
-
         Parallel version of builtin `map`, load-balanced by this View.
 
         `block`, and `chunksize` can be specified by keyword only.

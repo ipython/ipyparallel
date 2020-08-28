@@ -48,7 +48,6 @@ class BroadcastScheduler(Scheduler):
         self, msg, original_msg_id, targets, idents, is_coalescing
     ):
         if is_coalescing:
-
             self.accumulated_replies[original_msg_id] = {
                 scheduler_id: None for scheduler_id in self.connected_sub_scheduler_ids
             }
