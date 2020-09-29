@@ -1,0 +1,47 @@
+name: docker-images-build
+
+on:
+  push:
+    branches: "master"
+  schedule:
+    - cron: "0 0 * * *" # Daily “At 00:00”
+  workflow_dispatch: # allows you to trigger manually
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        jobqueue: ["pbs", "sge", "slurm"]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Check versions
+        run: |
+          docker version
+          docker-compose version
+      - name: Building Image
+        shell: bash -l {0}
+        run: |
+          cd ./ci/${{ matrix.jobqueue }}
+          docker-compose build
+      - name: List images
+        run: |
+          docker ps -a 
+          docker images
+
+      - name: Publish main images to DockerHub Registry
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        run: | 
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          docker push daskdev/dask-jobqueue:${{ matrix.jobqueue }}
+
+
+      - name: Publish secondary images to DockerHub Registry
+        if: matrix.jobqueue == 'sge' && github.ref == 'refs/heads/master' && github.event_name == 'push'
+        run: | 
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          docker push daskdev/dask-jobqueue:${{ matrix.jobqueue }}-slave
+       
