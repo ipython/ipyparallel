@@ -84,7 +84,7 @@ class SLURMJob(Job):
 
 
 def slurm_format_bytes_ceil(n):
-    """ Format bytes as text.
+    """Format bytes as text.
 
     SLURM expects KiB, MiB or Gib, but names it KB, MB, GB. SLURM does not handle Bytes, only starts at KB.
 

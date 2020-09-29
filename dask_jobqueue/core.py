@@ -362,7 +362,7 @@ class Job(ProcessInterface, abc.ABC):
 
     @staticmethod
     def _call(cmd, **kwargs):
-        """ Call a command using subprocess.Popen.
+        """Call a command using subprocess.Popen.
 
         This centralizes calls out to the command line, providing consistent
         outputs, logging, and an opportunity to go asynchronous in the future.
@@ -590,7 +590,7 @@ class JobQueueCluster(SpecCluster):
         return self._dummy_job.job_name
 
     def scale(self, n=None, jobs=0, memory=None, cores=None):
-        """ Scale cluster to specified configurations.
+        """Scale cluster to specified configurations.
 
         Parameters
         ----------
@@ -612,7 +612,7 @@ class JobQueueCluster(SpecCluster):
     def adapt(
         self, *args, minimum_jobs: int = None, maximum_jobs: int = None, **kwargs
     ):
-        """ Scale Dask cluster automatically based on scheduler activity.
+        """Scale Dask cluster automatically based on scheduler activity.
 
         Parameters
         ----------

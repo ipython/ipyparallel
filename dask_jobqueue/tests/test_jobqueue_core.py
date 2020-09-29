@@ -408,7 +408,7 @@ def test_wrong_parameter_error(Cluster):
     )
     with pytest.raises(ValueError, match=match):
         create_cluster_func(
-            Cluster, cores=1, memory="1GB", wrong_parameter="wrong_parameter_value",
+            Cluster, cores=1, memory="1GB", wrong_parameter="wrong_parameter_value"
         )
 
 

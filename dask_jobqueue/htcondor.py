@@ -95,8 +95,8 @@ Queue
             self.job_header_dict.update(self.job_extra)
 
     def env_lines_to_dict(self, env_lines):
-        """ Convert an array of export statements (what we get from env-extra
-        in the config) into a dict """
+        """Convert an array of export statements (what we get from env-extra
+        in the config) into a dict"""
         env_dict = {}
         for env_line in env_lines:
             split_env_line = shlex.split(env_line)
