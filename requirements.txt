@@ -1,2 +1,2 @@
-dask>=2.5.2
-distributed>=2.5.2
+dask>=2.19
+distributed>=2.19

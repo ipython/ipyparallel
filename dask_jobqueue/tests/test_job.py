@@ -21,6 +21,7 @@ from dask_jobqueue.oar import OARJob
 
 from dask_jobqueue.core import JobQueueCluster
 from dask.distributed import Scheduler, Client
+from distributed.core import Status
 
 import pytest
 
@@ -82,7 +83,7 @@ async def test_cluster(job_cls):
             await cluster
             assert len(cluster.workers) == 2
             assert all(isinstance(w, job_cls) for w in cluster.workers.values())
-            assert all(w.status == "running" for w in cluster.workers.values())
+            assert all(w.status == Status.running for w in cluster.workers.values())
             await client.wait_for_workers(2)
 
             cluster.scale(1)

@@ -12,6 +12,7 @@ import abc
 import dask
 from dask.utils import ignoring
 
+from distributed.core import Status
 from distributed.deploy.spec import ProcessInterface, SpecCluster
 from distributed.deploy.local import nprocesses_nthreads
 from distributed.scheduler import Scheduler
@@ -449,7 +450,7 @@ class JobQueueCluster(SpecCluster):
         config_name=None,
         **job_kwargs
     ):
-        self.status = "created"
+        self.status = Status.created
 
         default_job_cls = getattr(type(self), "job_cls", None)
         self.job_cls = default_job_cls
