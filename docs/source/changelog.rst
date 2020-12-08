@@ -1,15 +1,39 @@
 Changelog
 =========
 
-Development version
--------------------
+0.7.2 / 2020-12-07
+------------------
 
-- all cluster classes: fix a bug that would allow to pass any named parameter without an error (:pr:`398`)
-- all cluster classes: fix a bug where ``security`` was not correctly passed through (:pr:`398`)
-- all cluster classes: ``scheduler_options`` parameter can be set through the
-  config file in the ``scheduler-options`` section (:pr:`405`).
+- Use ``Status`` enum (:pr:`476`)
+- Bump GHA ``setup-miniconda`` version (:pr:`474`)
+- Build docker images for scheduled runs (:pr:`468`)
+- Blacken after likely a black change
+- Add GH action to periodically build docker images (:pr:`455`)
+- Fix link format inside an italicised text (:pr:`460`)
 - ``MoabCluster``: fix bug where ``MoabCluster`` was using the ``jobqueue.pbs``
-  config section rather than the ``jobqueue.moab`` section. (:pr:`450`)
+  config section rather than the ``jobqueue.moab`` section (:pr:`450`)
+- Updating ``start_workers`` to scale in examples (:pr:`453`)
+- Fixing typo in ``core.py`` (:pr:`454`)
+- Improve doc about GiB vs GB
+- Fix math typo in GiB definition (:pr:`445`)
+- Improve doc about customising dashboard link
+- Remove Travis mentions following Github Actions switch (:pr:`444`)
+- Improve error message.
+- Tweak name in ``cluster.job_script()`` (:pr:`439`)
+- Switch from Travis to GitHub Actions (:pr:`435`)
+- All cluster classes: fix a bug that would allow to pass any named parameter without an error (:pr:`398``)
+- Use pre-built docker images to speed up CI (:pr:`432`)
+- Rename common work-arounds section.
+- Kick-off doc section about common work-arounds (:pr:`430`)
+- Clean up parametrized tests (:pr:`429`)
+- All cluster classes: ``scheduler_options`` parameter can be set through the
+  config file in the ``scheduler-options`` section (:pr:`405`)
+- Add minimal HTCondor CI support (:pr:`420`)
+- Add content about the python executable used by workers in SLURM (:pr:`409`)
+- Remove ``config_name`` from cluster classes (:pr:`426`)
+- Fix mysql version to get Slurm CI green (:pr:`423`)
+- Fix URL for miniconda download (:pr:`412`)
+
 
 0.7.1 / 2020-03-26
 ------------------
