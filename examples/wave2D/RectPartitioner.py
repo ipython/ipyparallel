@@ -387,7 +387,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
                 t.wait()
 
     def update_internal_boundary_send_recv (self, solution_array):
-        """update the inner boundary, sending first, then recving"""
+        """update the inner boundary, sending first, then receiving"""
         nsd_ = self.nsd
         dtype = solution_array.dtype
         if nsd_!=len(self.in_lower_buffers) | nsd_!=len(self.out_lower_buffers):
