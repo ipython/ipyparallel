@@ -212,3 +212,28 @@ def test_different_interfaces_on_scheduler_and_workers(loop):
             client.wait_for_workers(1)
 
             assert future.result(QUEUE_WAIT) == 11
+
+
+@pytest.mark.env("slurm")
+def test_worker_name_uses_cluster_name(loop):
+    # The environment variable setup below is similar to a job array setup
+    # where you would use SLURM_ARRAY_JOB_ID to make sure that Dask workers
+    # belonging to the same job array have different worker names
+    with SLURMCluster(
+        cores=1,
+        memory="2GB",
+        name="test-$MY_ENV_VARIABLE",
+        env_extra=["MY_ENV_VARIABLE=my-env-variable-value"],
+        loop=loop,
+    ) as cluster:
+        with Client(cluster) as client:
+            cluster.scale(jobs=2)
+            print(cluster.job_script())
+            client.wait_for_workers(2)
+            worker_names = [
+                w["id"] for w in client.scheduler_info()["workers"].values()
+            ]
+            assert sorted(worker_names) == [
+                "test-my-env-variable-value-0",
+                "test-my-env-variable-value-1",
+            ]
