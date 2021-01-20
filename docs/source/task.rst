@@ -6,7 +6,7 @@ The IPython task interface
 
 The task interface to the cluster presents the engines as a fault tolerant,
 dynamic load-balanced system of workers. Unlike the direct interface, in
-the task interface the user have no direct access to individual engines. By
+the task interface the user has no direct access to individual engines. By
 allowing the IPython scheduler to assign work, this interface is simultaneously
 simpler and more powerful.
 
