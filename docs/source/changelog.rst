@@ -1,6 +1,11 @@
 Changelog
 =========
 
+Development version
+-------------------
+
+- Override _new_worker_name to make it easier to use job arrays (:pr:`480`)
+
 0.7.2 / 2020-12-07
 ------------------
 
@@ -21,7 +26,8 @@ Changelog
 - Improve error message.
 - Tweak name in ``cluster.job_script()`` (:pr:`439`)
 - Switch from Travis to GitHub Actions (:pr:`435`)
-- All cluster classes: fix a bug that would allow to pass any named parameter without an error (:pr:`398``)
+- All cluster classes: fix a bug that would allow to pass any named parameter
+  without an error (:pr:`398`)
 - Use pre-built docker images to speed up CI (:pr:`432`)
 - Rename common work-arounds section.
 - Kick-off doc section about common work-arounds (:pr:`430`)
