@@ -5,6 +5,7 @@ Development version
 -------------------
 
 - Override _new_worker_name to make it easier to use job arrays (:pr:`480`)
+- Drop support for Python 3.5 (:pr:`456`)
 
 0.7.2 / 2020-12-07
 ------------------
