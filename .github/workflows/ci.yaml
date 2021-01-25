@@ -5,44 +5,52 @@ on: [push, pull_request]
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash -l {0}
     strategy:
       fail-fast: false
       matrix:
         jobqueue: ["htcondor", "pbs", "sge", "slurm", "none"]
 
     steps:
+      - name: Cancel previous runs
+        uses: styfle/cancel-workflow-action@0.7.0
+        with:
+            access_token: ${{ github.token }}
       - name: Checkout source
         uses: actions/checkout@v2
 
       - name: Setup Conda Environment
         uses: conda-incubator/setup-miniconda@v2
         with:
-          miniconda-version: "latest"
-          python-version: 3.6
-          environment-file: ci/environment.yml
+          channels: conda-forge
+          mamba-version: "*"
           activate-environment: dask-jobqueue
           auto-activate-base: false
+         
+      - name: Setup conda environment 
+        run: |
+          mamba env update -f ci/environment.yml
+          mamba list
 
       - name: Setup
-        shell: bash -l {0}
         run: |
           source ci/${{ matrix.jobqueue }}.sh
           jobqueue_before_install
 
       - name: Install
-        shell: bash -l {0}
         run: |
           source ci/${{ matrix.jobqueue }}.sh
           jobqueue_install
 
       - name: Test
-        shell: bash -l {0}
         run: |
           source ci/${{ matrix.jobqueue }}.sh
           jobqueue_script
 
       - name: Cleanup
-        shell: bash -l {0}
         run: |
           source ci/${{ matrix.jobqueue }}.sh
           jobqueue_after_script

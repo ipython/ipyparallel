@@ -1,6 +1,6 @@
 #!/bin/bash
 
-docker-compose up -d
+docker-compose up -d --no-build
 while [ `docker exec sge_master qhost | grep lx26-amd64 | wc -l` -ne 2 ]
   do
     echo "Waiting for SGE slots to become available";
