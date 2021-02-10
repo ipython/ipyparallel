@@ -2,7 +2,7 @@ name: docker-images-build
 
 on:
   push:
-    branches: "master"
+    branches: "main"
   schedule:
     - cron: "0 0 * * *" # Daily “At 00:00”
   workflow_dispatch: # allows you to trigger manually
@@ -29,7 +29,7 @@ jobs:
           docker-compose build
       - name: List images
         run: |
-          docker ps -a 
+          docker ps -a
           docker images
 
       - name: Publish main images to DockerHub Registry

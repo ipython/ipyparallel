@@ -1,17 +1,17 @@
-Dask-jobqueue heavily relies on dask and distributed upstream projects.  
+Dask-jobqueue heavily relies on dask and distributed upstream projects.
 We may want to check their status while releasing.
 
 
 Release for dask-jobqueue, from within your fork:
 
-* Submit a PR that updates the release notes in `docs/source/changelog.rst`. 
+* Submit a PR that updates the release notes in `docs/source/changelog.rst`.
 We submit a PR to inform other developers of the pending release, and possibly
 discuss its content.
 
-* Once the PR is merged, checkout the master branch:
+* Once the PR is merged, checkout the main branch:
 
 ````
-git checkout upstream/master
+git checkout upstream/main
 ````
 
 * Create a tag and push to github:

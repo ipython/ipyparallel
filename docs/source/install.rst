@@ -35,7 +35,7 @@ or use ``pip`` locally if you want to install all dependencies as well::
 
     pip install -e .
 
-You can also install directly from git master branch::
+You can also install directly from git main branch::
 
     pip install git+https://github.com/dask/dask-jobqueue
 

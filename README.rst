@@ -10,7 +10,7 @@ or SGE.  See documentation_ for more information.
 LICENSE
 -------
 
-New BSD. See `License File <https://github.com/dask/dask-jobqueue/blob/master/LICENSE.txt>`__.
+New BSD. See `License File <https://github.com/dask/dask-jobqueue/blob/main/LICENSE.txt>`__.
 
 .. _documentation: https://jobqueue.dask.org/en/latest/
 .. |Build Status| image:: https://github.com/dask/dask-jobqueue/workflows/CI/badge.svg
