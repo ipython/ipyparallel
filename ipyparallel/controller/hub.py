@@ -154,7 +154,7 @@ class HubFactory(RegistrationFactory):
         return tuple(util.select_random_ports(2))
 
     broadcast_scheduler_depth = Integer(
-        3,
+        1,
         config=True,
         help="Depth of spanning tree schedulers",
     )
@@ -1626,4 +1626,3 @@ class Hub(SessionFactory):
         self.session.send(self.query, "stop_distributed_reply", content=content,
             parent=msg, ident=client_id,
         )
-
