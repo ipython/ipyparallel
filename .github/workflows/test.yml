@@ -1,0 +1,55 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+
+
+env:
+  # UTF-8 content may be interpreted as ascii and causes errors without this.
+  LANG: C.UTF-8
+
+jobs:
+  pytest:
+    runs-on: ubuntu-20.04
+    timeout-minutes: 10
+
+    strategy:
+      # Keep running even if one variation of the job fail
+      fail-fast: false
+      matrix:
+       include:
+          - python: "3.6"
+            tornado: "5.1.1"
+          - python: "3.6"
+          - python: "3.7"
+          - python: "3.8"
+          - python: "3.9"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install Python ${{ matrix.python }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install --pre --upgrade .[test] distributed joblib codecov
+          pip install --only-binary :all: matplotlib || echo "no matplotlib"
+          if [ "${{ matrix.tornado }}" != "" ]; then
+            pip install tornado==${{ matrix.tornado }}
+          fi
+      
+      - name: Show environment
+        run: pip freeze
+    
+      - name: Run tests
+        # FIXME: --color=yes explicitly set because:
+        #        https://github.com/actions/runner/issues/241
+        run: |
+          pytest -v --maxfail=3 --color=yes --cov=ipyparallel ipyparallel/tests
+      - name: Submit codecov report
+        run: |
+          codecov

@@ -1,0 +1,45 @@
+# Build releases and (on tags) publish to PyPI
+name: Release
+
+# always build releases (to make sure wheel-building works)
+# but only publish to PyPI on tags
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-release:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: install build package
+        run: |
+          pip install --upgrade pip
+          pip install build
+          pip freeze
+
+      - name: build release
+        run: |
+          python -m build --sdist --wheel .
+          ls -l dist
+
+      - name: verify wheel
+        run: |
+          cd dist
+          pip install ./*.whl
+          ipcluster --help-all
+          ipcontroller --help-all
+          ipengine --help-all
+
+      - name: Publish to PyPI
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          pip install twine
+          twine upload --skip-existing dist/*
