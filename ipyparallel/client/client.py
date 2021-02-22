@@ -527,7 +527,7 @@ class Client(HasTraits):
         if ip is None:
             return
         else:
-            if 'px' not in ip.magics_manager.magics:
+            if 'px' not in ip.magics_manager.magics["line"]:
                 # in IPython but we are the first Client.
                 # activate a default view for parallel magics.
                 self.activate()
