@@ -23,7 +23,7 @@ from zmq import MessageTracker
 from IPython import get_ipython
 from IPython.core.display import clear_output, display, display_pretty
 from ipyparallel import error
-from ipyparallel.util import utcnow, compare_datetimes
+from ipyparallel.util import utcnow, compare_datetimes, _parse_date
 from ipython_genutils.py3compat import string_types
 
 from .futures import MessageFuture, multi_future
@@ -278,9 +278,28 @@ class AsyncResult(Future):
         """result property wrapper for `get(timeout=-1)`."""
         return self.get()
 
+    _DATE_FIELDS = [
+        "submitted",
+        "started",
+        "completed",
+        "received",
+    ]
+
+    def _parse_metadata_dates(self):
+        """Ensure metadata date fields are parsed on access
+
+        Rather than parsing timestamps from str->dt on receipt,
+        parse on access for compatibility.
+        """
+        for md in self._metadata:
+            for key in self._DATE_FIELDS:
+                if isinstance(md.get(key, None), str):
+                    md[key] = _parse_date(md[key])
+
     @property
     def metadata(self):
         """property for accessing execution metadata."""
+        self._parse_metadata_dates()
         if self._single_result:
             return self._metadata[0]
         else:
@@ -356,6 +375,7 @@ class AsyncResult(Future):
             # metadata proxy *does not* require that results are done
             self.wait(0)
             self.wait_for_output(0)
+            self._parse_metadata_dates()
             values = [ md[key] for md in self._metadata ]
             if self._single_result:
                 return values[0]
@@ -441,30 +461,30 @@ class AsyncResult(Future):
             # not a list
             end = end_key(end)
         return compare_datetimes(end, start).total_seconds()
-        
+
     @property
     def progress(self):
         """the number of tasks which have been completed at this point.
-        
+
         Fractional progress would be given by 1.0 * ar.progress / len(ar)
         """
         self.wait(0)
         return len(self) - len(set(self.msg_ids).intersection(self._client.outstanding))
-    
+
     @property
     def elapsed(self):
         """elapsed time since initial submission"""
         if self.ready():
             return self.wall_time
-        
+
         now = submitted = utcnow()
-        for msg_id in self.msg_ids:
-            if msg_id in self._client.metadata:
-                stamp = self._client.metadata[msg_id]['submitted']
-                if stamp and stamp < submitted:
-                    submitted = stamp
+        self._parse_metadata_dates()
+        for md in self._metadata:
+            stamp = md["submitted"]
+            if stamp and stamp < submitted:
+                submitted = stamp
         return compare_datetimes(now, submitted).total_seconds()
-    
+
     @property
     @check_ready
     def serial_time(self):
@@ -473,6 +493,7 @@ class AsyncResult(Future):
         Computed as the sum of (completed-started) of each task
         """
         t = 0
+        self._parse_metadata_dates()
         for md in self._metadata:
             t += compare_datetimes(md['completed'], md['started']).total_seconds()
         return t
