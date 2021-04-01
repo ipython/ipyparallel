@@ -1,0 +1,57 @@
+version: "3.4"
+
+services:
+  cm:
+    image: htcondor/cm:el7
+    hostname: cm.htcondor
+    environment:
+      - USE_POOL_PASSWORD=yes
+    volumes:
+      - secrets:/root/secrets
+    command: bash -c 'condor_store_cred -p password -f /root/secrets/pool_password ; exec bash -x /start.sh'
+
+  submit:
+    image: daskdev/dask-jobqueue:htcondor-submit
+    build:
+      context: .
+      target: submit
+    hostname: submit.htcondor
+    environment:
+      - CONDOR_HOST=cm
+      - USE_POOL_PASSWORD=yes
+    depends_on:
+      - cm
+    volumes:
+      - secrets:/root/secrets
+      - ../..:/dask-jobqueue
+
+  execute1:
+    image: daskdev/dask-jobqueue:htcondor-execute
+    build:
+      context: .
+      target: execute
+    hostname: execute1.htcondor
+    environment:
+      - CONDOR_HOST=cm
+      - USE_POOL_PASSWORD=yes
+    depends_on:
+      - cm
+    volumes:
+      - secrets:/root/secrets
+
+  execute2:
+    image: daskdev/dask-jobqueue:htcondor-execute
+    build:
+      context: .
+      target: execute
+    hostname: execute2.htcondor
+    environment:
+      - CONDOR_HOST=cm
+      - USE_POOL_PASSWORD=yes
+    depends_on:
+      - cm
+    volumes:
+      - secrets:/root/secrets
+
+volumes:
+  secrets:
