@@ -6,6 +6,7 @@
 from __future__ import absolute_import, print_function
 
 import imp
+import threading
 import warnings
 from contextlib import contextmanager
 
@@ -128,7 +129,7 @@ class View(HasTraits):
             return 1
         else:
             return len(self.client)
-    
+
     def set_flags(self, **kwargs):
         """set my attribute flags by keyword.
 
@@ -578,7 +579,6 @@ class DirectView(View):
                 pass
         return ar
 
-
     @sync_results
     def map(self, f, *sequences, **kwargs):
         """``view.map(f, *sequences, block=self.block)`` => list|AsyncMapResult
@@ -819,6 +819,7 @@ class DirectView(View):
         Parameters
         ----------
         
+
         suffix: str [default: '']
             The suffix, if any, for the magics.  This allows you to have
             multiple views associated with parallel magics at the same time.
@@ -837,6 +838,61 @@ class DirectView(View):
         M = ParallelMagics(ip, self, suffix)
         ip.magics_manager.register(M)
 
+
+class BroadcastView(DirectView):
+    is_coalescing = Bool(False)
+
+    @sync_results
+    @save_ids
+    def _really_apply(self, f, args=None, kwargs=None, block=None, track=None, targets=None):
+        args = [] if args is None else args
+        kwargs = {} if kwargs is None else kwargs
+        block = self.block if block is None else block
+        track = self.track if track is None else track
+        targets = self.targets if targets is None else targets
+        idents, _targets = self.client._build_targets(targets)
+        futures = []
+
+        pf = PrePickled(f)
+        pargs = [PrePickled(arg) for arg in args]
+        pkwargs = {k: PrePickled(v) for k, v in kwargs.items()}
+
+        s_idents = [ident.decode("utf8") for ident in idents]
+
+        metadata = dict(targets=s_idents, is_broadcast=True, is_coalescing=self.is_coalescing)
+        if not self.is_coalescing:
+            original_future = self.client.send_apply_request(
+                self._socket, pf, pargs, pkwargs,
+                track=track, metadata=metadata)
+            original_msg_id = original_future.msg_id
+
+            for ident in s_idents:
+                msg_and_target_id = f'{original_msg_id}_{ident}'
+                future = self.client.create_message_futures(msg_and_target_id, async_result=True, track=True)
+                self.client.outstanding.add(msg_and_target_id)
+                self.outstanding.add(msg_and_target_id)
+                futures.append(future[0])
+            if original_msg_id in self.outstanding:
+                self.outstanding.remove(original_msg_id)
+        else:
+            message_future = self.client.send_apply_request(
+                self._socket, pf, pargs, pkwargs,
+                track=track, metadata=metadata
+            )
+            self.client.outstanding.add(message_future.msg_id)
+            futures = message_future
+
+        ar = AsyncResult(self.client, futures, fname=getname(f), targets=_targets,
+                         owner=True)
+        if block:
+            try:
+                return ar.get()
+            except KeyboardInterrupt:
+                pass
+        return ar
+
+    def map(self, f, *sequences, **kwargs):
+        pass
 
 class LoadBalancedView(View):
     """An load-balancing View that only executes via the Task scheduler.
@@ -956,6 +1012,7 @@ class LoadBalancedView(View):
             if t is not None:
                 if t < 0:
                     raise ValueError("Invalid timeout: %s"%t)
+
             self.timeout = t
 
     @sync_results
@@ -1055,7 +1112,6 @@ class LoadBalancedView(View):
     @save_ids
     def map(self, f, *sequences, **kwargs):
         """``view.map(f, *sequences, block=self.block, chunksize=1, ordered=True)`` => list|AsyncMapResult
-
         Parallel version of builtin `map`, load-balanced by this View.
 
         `block`, and `chunksize` can be specified by keyword only.
@@ -1165,5 +1221,5 @@ class ViewExecutor(Executor):
         if wait:
             self.view.wait()
 
-__all__ = ['LoadBalancedView', 'DirectView', 'ViewExecutor']
+__all__ = ['LoadBalancedView', 'DirectView', 'ViewExecutor', 'BroadcastView']
 

@@ -54,10 +54,14 @@ class IPythonParallelKernel(IPythonKernel):
 
     def init_metadata(self, parent):
         """init metadata dict, for execute/apply_reply"""
+        parent_metadata = parent.get('metadata', {})
         return {
             'started': utcnow(),
             'dependencies_met' : True,
             'engine' : self.ident,
+            'is_broadcast': parent_metadata.get('is_broadcast', False),
+            'is_coalescing': parent_metadata.get('is_coalescing', False),
+            'original_msg_id': parent_metadata.get('original_msg_id', ''),
         }
 
     def finish_metadata(self, parent, metadata, reply_content):
@@ -86,16 +90,16 @@ class IPythonParallelKernel(IPythonKernel):
             return
 
         md = self.init_metadata(parent)
-
         reply_content, result_buf = self.do_apply(content, bufs, msg_id, md)
 
         # put 'ok'/'error' status in header, for scheduler introspection:
         md = self.finish_metadata(parent, md, reply_content)
 
         # flush i/o
+        self.log.info(f'ENGINE apply request, ident: {ident}')
         sys.stdout.flush()
         sys.stderr.flush()
-
+        self.log.debug('engine: sending apply_reply')
         self.session.send(stream, u'apply_reply', reply_content,
                     parent=parent, ident=ident, buffers=result_buf, metadata=md)
 
