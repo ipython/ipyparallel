@@ -1054,8 +1054,7 @@ class LoadBalancedView(View):
         if 'timeout' in kwargs:
             t = kwargs['timeout']
             if not isinstance(t, (int, float, type(None))):
-                if (not PY3) and (not isinstance(t, long)):
-                    raise TypeError("Invalid type for timeout: %r" % type(t))
+                raise TypeError("Invalid type for timeout: %r" % type(t))
             if t is not None:
                 if t < 0:
                     raise ValueError("Invalid timeout: %s" % t)

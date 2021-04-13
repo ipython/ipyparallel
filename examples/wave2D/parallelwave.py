@@ -37,7 +37,12 @@ import ipyparallel as ipp
 def setup_partitioner(comm, addrs, index, num_procs, gnum_cells, parts):
     """create a partitioner in the engine namespace"""
     global partitioner
-    p = ZMQRectPartitioner2D(comm, addrs, my_id=index, num_procs=num_procs)
+    p = ZMQRectPartitioner2D(  # noqa: F821
+        comm,
+        addrs,
+        my_id=index,
+        num_procs=num_procs,
+    )
     p.redim(global_num_cells=gnum_cells, num_parts=parts)
     p.prepare_communication()
     # put the partitioner into the global namespace:
@@ -47,7 +52,7 @@ def setup_partitioner(comm, addrs, index, num_procs, gnum_cells, parts):
 def setup_solver(*args, **kwargs):
     """create a WaveSolver in the engine namespace."""
     global solver
-    solver = WaveSolver(*args, **kwargs)
+    solver = WaveSolver(*args, **kwargs)  # noqa: F821
 
 
 def wave_saver(u, x, y, t):
@@ -86,7 +91,7 @@ if __name__ == '__main__':
     paa('-t', '--tstop', type=float, default=1.0, help="Time units to run")
     paa(
         '--profile',
-        type=unicode,
+        type=str,
         default=u'default',
         help="Specify the ipcluster profile for the client to connect to.",
     )
@@ -171,7 +176,7 @@ if __name__ == '__main__':
     view.execute('com = EngineCommunicator()')
 
     # gather the connection information into a single dict
-    ar = view.apply_async(lambda: com.info)
+    ar = view.apply_async(lambda: com.info)  # noqa: F821
     peers = ar.get_dict()
     # print peers
     # this is a dict, keyed by engine ID, of the connection info for the EngineCommunicators

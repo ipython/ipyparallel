@@ -1,6 +1,7 @@
 import time
 from collections import deque
 from random import randint
+from random import random
 from types import FunctionType
 
 import zmq
@@ -131,9 +132,6 @@ class Job(object):
 
     def __lt__(self, other):
         return self.timestamp < other.timestamp
-
-    def __cmp__(self, other):
-        return cmp(self.timestamp, other.timestamp)
 
     @property
     def dependents(self):

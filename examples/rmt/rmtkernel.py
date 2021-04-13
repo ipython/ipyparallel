@@ -25,7 +25,7 @@ def center_eigenvalue_diff(mat):
 def ensemble_diffs(num, N):
     """Return num eigenvalue diffs for the NxN GOE ensemble."""
     diffs = np.empty(num)
-    for i in xrange(num):
+    for i in range(num):
         mat = GOE(N)
         diffs[i] = center_eigenvalue_diff(mat)
     return diffs
