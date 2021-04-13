@@ -59,6 +59,8 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install --pre --upgrade .[test] distributed joblib codecov
+          # FIXME: pin down ipykernel, jupyter-client
+          pip install 'ipykernel<6' 'jupyter-client<7'
           pip install --only-binary :all: matplotlib || echo "no matplotlib"
           if [ "${{ matrix.tornado }}" != "" ]; then
             pip install tornado==${{ matrix.tornado }}
