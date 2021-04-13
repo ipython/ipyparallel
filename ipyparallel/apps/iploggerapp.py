@@ -8,36 +8,32 @@ Authors:
 * MinRK
 
 """
-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #  Copyright (C) 2011  The IPython Development Team
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#-----------------------------------------------------------------------------
-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Imports
-#-----------------------------------------------------------------------------
-
+# -----------------------------------------------------------------------------
 import os
 import sys
 
 import zmq
-
 from IPython.core.profiledir import ProfileDir
-from traitlets import Bool, Dict, Unicode
+from traitlets import Bool
+from traitlets import Dict
+from traitlets import Unicode
 
-from ipyparallel.apps.baseapp import (
-    BaseParallelApplication,
-    base_aliases,
-    catch_config_error,
-)
+from ipyparallel.apps.baseapp import base_aliases
+from ipyparallel.apps.baseapp import BaseParallelApplication
+from ipyparallel.apps.baseapp import catch_config_error
 from ipyparallel.apps.logwatcher import LogWatcher
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Module level variables
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 #: The default config file name for this application
 _description = """Start an IPython logger for parallel computing.
@@ -51,12 +47,13 @@ See the `profile` and `profile-dir` options for details.
 """
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Main application
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 aliases = {}
 aliases.update(base_aliases)
 aliases.update(dict(url='LogWatcher.url', topics='LogWatcher.topics'))
+
 
 class IPLoggerApp(BaseParallelApplication):
 
@@ -69,15 +66,14 @@ class IPLoggerApp(BaseParallelApplication):
     def initialize(self, argv=None):
         super(IPLoggerApp, self).initialize(argv)
         self.init_watcher()
-    
+
     def init_watcher(self):
         try:
             self.watcher = LogWatcher(parent=self, log=self.log)
         except:
             self.log.error("Couldn't start the LogWatcher", exc_info=True)
             self.exit(1)
-        self.log.info("Listening for log messages on %r"%self.watcher.url)
-        
+        self.log.info("Listening for log messages on %r" % self.watcher.url)
 
     def start(self):
         self.watcher.start()
@@ -92,4 +88,3 @@ launch_new_instance = IPLoggerApp.launch_instance
 
 if __name__ == '__main__':
     launch_new_instance()
-

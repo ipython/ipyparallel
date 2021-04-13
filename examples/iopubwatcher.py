@@ -13,13 +13,13 @@ Authors
 -------
 * MinRK
 """
-
-import sys
 import json
-import zmq
+import sys
 
-from jupyter_client.session import Session
+import zmq
 from ipykernel.connect import find_connection_file
+from jupyter_client.session import Session
+
 
 def main(connection_file):
     """watch iopub channel, and print messages"""
@@ -31,7 +31,7 @@ def main(connection_file):
 
     reg_url = cfg['interface']
     iopub_port = cfg['iopub']
-    iopub_url = "%s:%s"%(reg_url, iopub_port)
+    iopub_url = "%s:%s" % (reg_url, iopub_port)
 
     session = Session(key=cfg['key'].encode('ascii'))
     sub = ctx.socket(zmq.SUB)
@@ -49,7 +49,7 @@ def main(connection_file):
     sub.connect(iopub_url)
     while True:
         try:
-            idents,msg = session.recv(sub, mode=0)
+            idents, msg = session.recv(sub, mode=0)
         except KeyboardInterrupt:
             return
         # ident always length 1 here
@@ -73,6 +73,7 @@ def main(connection_file):
             for line in c['traceback']:
                 # indent lines
                 print('    ' + line)
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:

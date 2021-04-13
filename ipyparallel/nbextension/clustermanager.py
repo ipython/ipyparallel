@@ -1,44 +1,49 @@
 """Manage IPython parallel clusters in the notebook."""
-
 # Copyright (c) Jupyter Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import os
 
-from tornado import web
-
-from traitlets.config.configurable import LoggingConfigurable
-from traitlets import Dict, Instance, Float
 from ipython_genutils import py3compat
+from tornado import web
+from traitlets import Dict
+from traitlets import Float
+from traitlets import Instance
+from traitlets.config.configurable import LoggingConfigurable
 
 
 class ClusterManager(LoggingConfigurable):
 
     profiles = Dict()
 
-    delay = Float(1., config=True,
-        help="delay (in s) between starting the controller and the engines")
+    delay = Float(
+        1.0,
+        config=True,
+        help="delay (in s) between starting the controller and the engines",
+    )
 
     loop = Instance('tornado.ioloop.IOLoop')
+
     def _loop_default(self):
         from ipyparallel.util import ioloop
+
         return ioloop.IOLoop.current()
 
     def build_launchers(self, profile_dir):
         from ipyparallel.apps.ipclusterapp import IPClusterStart
-        
+
         class DummyIPClusterStart(IPClusterStart):
             """Dummy subclass to skip init steps that conflict with global app.
-    
+
             Instantiating and initializing this class should result in fully configured
             launchers, but no other side effects or state.
             """
 
             def init_signal(self):
                 pass
+
             def reinit_logging(self):
                 pass
-        
+
         starter = DummyIPClusterStart(log=self.log)
         starter.initialize(['--profile-dir', profile_dir])
         cl = starter.controller_launcher
@@ -48,12 +53,12 @@ class ClusterManager(LoggingConfigurable):
 
     def get_profile_dir(self, name, path):
         from IPython.core.profiledir import ProfileDir
-        p = ProfileDir.find_profile_dir_by_name(path,name=name)
+
+        p = ProfileDir.find_profile_dir_by_name(path, name=name)
         return p.location
 
     def update_profiles(self):
-        """List all profiles in the ipython_dir and cwd.
-        """
+        """List all profiles in the ipython_dir and cwd."""
         try:
             from IPython.paths import get_ipython_dir
             from IPython.core.profileapp import list_profiles_in
@@ -73,7 +78,7 @@ class ClusterManager(LoggingConfigurable):
                     self.profiles[profile] = {
                         'profile': profile,
                         'profile_dir': pd,
-                        'status': 'stopped'
+                        'status': 'stopped',
                     }
         for profile in stale:
             # remove profiles that no longer exist
@@ -87,7 +92,9 @@ class ClusterManager(LoggingConfigurable):
             return []
         # sorted list, but ensure that 'default' always comes first
         default_first = lambda name: name if name != 'default' else ''
-        result = [self.profile_info(p) for p in sorted(self.profiles, key=default_first)]
+        result = [
+            self.profile_info(p) for p in sorted(self.profiles, key=default_first)
+        ]
         return result
 
     def check_profile(self, profile):
@@ -113,29 +120,35 @@ class ClusterManager(LoggingConfigurable):
             raise web.HTTPError(409, u'cluster already running')
         cl, esl, default_n = self.build_launchers(data['profile_dir'])
         n = n if n is not None else default_n
+
         def clean_data():
-            data.pop('controller_launcher',None)
-            data.pop('engine_set_launcher',None)
-            data.pop('n',None)
+            data.pop('controller_launcher', None)
+            data.pop('engine_set_launcher', None)
+            data.pop('n', None)
             data['status'] = 'stopped'
+
         def engines_stopped(r):
             self.log.debug('Engines stopped')
             if cl.running:
                 cl.stop()
             clean_data()
+
         esl.on_stop(engines_stopped)
+
         def controller_stopped(r):
             self.log.debug('Controller stopped')
             if esl.running:
                 esl.stop()
             clean_data()
+
         cl.on_stop(controller_stopped)
         loop = self.loop
-        
+
         def start():
             """start the controller, then the engines after a delay"""
             cl.start()
-            loop.add_timeout(self.loop.time() + self.delay, lambda : esl.start(n))
+            loop.add_timeout(self.loop.time() + self.delay, lambda: esl.start(n))
+
         self.loop.add_callback(start)
 
         self.log.debug('Cluster started')
@@ -163,7 +176,7 @@ class ClusterManager(LoggingConfigurable):
         result = {
             'profile': data['profile'],
             'profile_dir': data['profile_dir'],
-            'status': 'stopped'
+            'status': 'stopped',
         }
         return result
 

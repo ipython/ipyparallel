@@ -1,10 +1,10 @@
 """serialization utilities for apply messages"""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
 try:
     import cPickle
+
     pickle = cPickle
 except:
     cPickle = None
@@ -20,8 +20,13 @@ from itertools import chain
 
 from ipython_genutils.py3compat import PY3, buffer_to_bytes_py2
 from .canning import (
-    can, uncan, can_sequence, uncan_sequence, CannedObject,
-    istype, sequence_types,
+    can,
+    uncan,
+    can_sequence,
+    uncan_sequence,
+    CannedObject,
+    istype,
+    sequence_types,
 )
 from jupyter_client.session import MAX_ITEMS, MAX_BYTES
 
@@ -29,9 +34,9 @@ from jupyter_client.session import MAX_ITEMS, MAX_BYTES
 if PY3:
     buffer = memoryview
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Serialization Functions
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 class PrePickled(object):
@@ -40,6 +45,7 @@ class PrePickled(object):
     Used for pre-emptively pickling re-used objects
     to avoid pickling the same object several times.
     """
+
     def __init__(self, obj):
         self.buffers = serialize_object(obj)
 
@@ -60,6 +66,7 @@ def _nbytes(buf):
         # not a memoryview, raw bytes/ py2 buffer
         return len(buf)
 
+
 def _extract_buffers(obj, threshold=MAX_BYTES):
     """extract buffers larger than a certain threshold"""
     buffers = []
@@ -78,12 +85,14 @@ def _extract_buffers(obj, threshold=MAX_BYTES):
                 obj.buffers[i] = bytes(buf)
     return buffers
 
+
 def _restore_buffers(obj, buffers):
     """restore buffers extracted by """
     if isinstance(obj, CannedObject) and obj.buffers:
-        for i,buf in enumerate(obj.buffers):
+        for i, buf in enumerate(obj.buffers):
             if buf is None:
                 obj.buffers[i] = buffers.pop(0)
+
 
 def serialize_object(obj, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
     """Serialize an object into a list of sendable buffers.
@@ -125,6 +134,7 @@ def serialize_object(obj, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
     buffers.insert(0, pickle.dumps(cobj, PICKLE_PROTOCOL))
     return buffers
 
+
 def deserialize_object(buffers, g=None):
     """reconstruct an object serialized by serialize_object from data buffers.
 
@@ -159,7 +169,10 @@ def deserialize_object(buffers, g=None):
 
     return newobj, bufs
 
-def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
+
+def pack_apply_message(
+    f, args, kwargs, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS
+):
     """pack up a function, args, and kwargs to be sent over the wire
 
     Each element of args/kwargs will be canned for special treatment,
@@ -175,12 +188,19 @@ def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_thresho
     With length at least two + len(args) + len(kwargs)
     """
 
-    arg_bufs = list(chain.from_iterable(
-        serialize_object(arg, buffer_threshold, item_threshold) for arg in args))
+    arg_bufs = list(
+        chain.from_iterable(
+            serialize_object(arg, buffer_threshold, item_threshold) for arg in args
+        )
+    )
 
     kw_keys = sorted(kwargs.keys())
-    kwarg_bufs = list(chain.from_iterable(
-        serialize_object(kwargs[key], buffer_threshold, item_threshold) for key in kw_keys))
+    kwarg_bufs = list(
+        chain.from_iterable(
+            serialize_object(kwargs[key], buffer_threshold, item_threshold)
+            for key in kw_keys
+        )
+    )
 
     info = dict(nargs=len(args), narg_bufs=len(arg_bufs), kw_keys=kw_keys)
     msg = serialize_object(f)
@@ -190,15 +210,16 @@ def pack_apply_message(f, args, kwargs, buffer_threshold=MAX_BYTES, item_thresho
 
     return msg
 
+
 def unpack_apply_message(bufs, g=None, copy=True):
     """unpack f,args,kwargs from buffers packed by pack_apply_message()
     Returns: original f,args,kwargs"""
-    bufs = list(bufs) # allow us to pop
+    bufs = list(bufs)  # allow us to pop
     assert len(bufs) >= 2, "not enough buffers!"
     f, bufs = deserialize_object(bufs, g)
     pinfo = buffer_to_bytes_py2(bufs.pop(0))
     info = pickle.loads(pinfo)
-    arg_bufs, kwarg_bufs = bufs[:info['narg_bufs']], bufs[info['narg_bufs']:]
+    arg_bufs, kwarg_bufs = bufs[: info['narg_bufs']], bufs[info['narg_bufs'] :]
 
     args = []
     for i in range(info['nargs']):
@@ -213,4 +234,4 @@ def unpack_apply_message(bufs, g=None, copy=True):
         kwargs[key] = kwarg
     assert not kwarg_bufs, "Shouldn't be any kwarg bufs left over"
 
-    return f,args,kwargs
+    return f, args, kwargs

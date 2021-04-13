@@ -1,11 +1,9 @@
 """Install the IPython clusters tab in the Jupyter notebook dashboard"""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 from jupyter_core.paths import jupyter_config_dir
-from traitlets.config.manager import BaseJSONConfigManager
 from notebook.services.config import ConfigManager as FrontendConfigManager
+from traitlets.config.manager import BaseJSONConfigManager
 
 
 def install_extensions(enable=True, user=False):
@@ -19,14 +17,20 @@ def install_extensions(enable=True, user=False):
     if V(notebook.__version__) < V('4.2'):
         return _install_extension_nb41(enable)
 
-    from notebook.nbextensions import install_nbextension_python, enable_nbextension, disable_nbextension
+    from notebook.nbextensions import (
+        install_nbextension_python,
+        enable_nbextension,
+        disable_nbextension,
+    )
     from notebook.serverextensions import toggle_serverextension_python
+
     toggle_serverextension_python('ipyparallel.nbextension', user=user)
     install_nbextension_python('ipyparallel', user=user)
     if enable:
         enable_nbextension('tree', 'ipyparallel/main', user=user)
     else:
         disable_nbextension('tree', 'ipyparallel/main')
+
 
 def _install_extension_nb41(enable=True):
     """deprecated, pre-4.2 implementation of installing notebook extension"""
@@ -44,18 +48,25 @@ def _install_extension_nb41(enable=True):
         server_extensions.remove(server_ext)
         server_changed = True
     if server_changed:
-        server.update('jupyter_notebook_config', {
-            'NotebookApp': {
-                'server_extensions': server_extensions,
-            }
-        })
+        server.update(
+            'jupyter_notebook_config',
+            {
+                'NotebookApp': {
+                    'server_extensions': server_extensions,
+                }
+            },
+        )
 
     # frontend config (*way* easier because it's a dict)
     frontend = FrontendConfigManager()
-    frontend.update('tree', {
-        'load_extensions': {
-            'ipyparallel/main': enable or None,
-        }
-    })
+    frontend.update(
+        'tree',
+        {
+            'load_extensions': {
+                'ipyparallel/main': enable or None,
+            }
+        },
+    )
+
 
 install_server_extension = install_extensions

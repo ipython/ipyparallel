@@ -1,9 +1,7 @@
 # encoding: utf-8
 """Facilities for launching IPython processes asynchronously."""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import copy
 import logging
 import os
@@ -11,15 +9,15 @@ import pipes
 import stat
 import sys
 import time
+from signal import SIGINT
+from signal import SIGTERM
 
 # signal imports, handling various platforms, versions
-
-from signal import SIGINT, SIGTERM
 try:
     from signal import SIGKILL
 except ImportError:
     # Windows
-    SIGKILL=SIGTERM
+    SIGKILL = SIGTERM
 
 try:
     # Windows >= 2.7, 3.2
@@ -28,6 +26,7 @@ except ImportError:
     pass
 
 from subprocess import Popen, PIPE, STDOUT
+
 try:
     from subprocess import check_output
 except ImportError:
@@ -35,15 +34,23 @@ except ImportError:
     def check_output(*args, **kwargs):
         kwargs.update(dict(stdout=PIPE))
         p = Popen(*args, **kwargs)
-        out,err = p.communicate()
+        out, err = p.communicate()
         return out
 
 
 from traitlets.config.configurable import LoggingConfigurable
 from IPython.utils.text import EvalFormatter
 from traitlets import (
-    Any, Integer, CFloat, List, Unicode, Dict, Instance, HasTraits, CRegExp,
-    observe
+    Any,
+    Integer,
+    CFloat,
+    List,
+    Unicode,
+    Dict,
+    Instance,
+    HasTraits,
+    CRegExp,
+    observe,
 )
 from ipython_genutils.encoding import DEFAULT_ENCODING
 from IPython.utils.path import get_home_dir, ensure_dir_exists
@@ -56,9 +63,9 @@ from .winhpcjob import IPControllerTask, IPEngineTask, IPControllerJob, IPEngine
 
 WINDOWS = os.name == 'nt'
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Paths to the kernel apps
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 ipcluster_cmd_argv = [sys.executable, "-m", "ipyparallel.cluster"]
 
@@ -71,12 +78,21 @@ if WINDOWS and sys.version_info < (3,):
     # due to weird multiprocessing bugs
     # and python -m module puts classes in the `__main__` module,
     # so instance checks get confused
-    ipengine_cmd_argv = [sys.executable, "-c", "from ipyparallel.engine.__main__ import main; main()"]
-    ipcontroller_cmd_argv = [sys.executable, "-c", "from ipyparallel.controller.__main__ import main; main()"]
+    ipengine_cmd_argv = [
+        sys.executable,
+        "-c",
+        "from ipyparallel.engine.__main__ import main; main()",
+    ]
+    ipcontroller_cmd_argv = [
+        sys.executable,
+        "-c",
+        "from ipyparallel.controller.__main__ import main; main()",
+    ]
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Base launchers and errors
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 class LauncherError(Exception):
     pass
@@ -200,8 +216,10 @@ class BaseLauncher(LoggingConfigurable):
         """
         raise NotImplementedError('signal must be implemented in a subclass')
 
+
 class ClusterAppMixin(HasTraits):
     """MixIn for cluster args as traits"""
+
     profile_dir = Unicode('')
     cluster_id = Unicode('')
 
@@ -209,25 +227,36 @@ class ClusterAppMixin(HasTraits):
     def cluster_args(self):
         return ['--profile-dir', self.profile_dir, '--cluster-id', self.cluster_id]
 
-class ControllerMixin(ClusterAppMixin):
-    controller_cmd = List(ipcontroller_cmd_argv, config=True,
-        help="""Popen command to launch ipcontroller.""")
-    # Command line arguments to ipcontroller.
-    controller_args = List(['--log-level=%i' % logging.INFO], config=True,
-        help="""command-line args to pass to ipcontroller""")
 
-class EngineMixin(ClusterAppMixin):
-    engine_cmd = List(ipengine_cmd_argv, config=True,
-        help="""command to launch the Engine.""")
-    # Command line arguments for ipengine.
-    engine_args = List(['--log-level=%i' % logging.INFO], config=True,
-        help="command-line arguments to pass to ipengine"
+class ControllerMixin(ClusterAppMixin):
+    controller_cmd = List(
+        ipcontroller_cmd_argv,
+        config=True,
+        help="""Popen command to launch ipcontroller.""",
+    )
+    # Command line arguments to ipcontroller.
+    controller_args = List(
+        ['--log-level=%i' % logging.INFO],
+        config=True,
+        help="""command-line args to pass to ipcontroller""",
     )
 
 
-#-----------------------------------------------------------------------------
+class EngineMixin(ClusterAppMixin):
+    engine_cmd = List(
+        ipengine_cmd_argv, config=True, help="""command to launch the Engine."""
+    )
+    # Command line arguments for ipengine.
+    engine_args = List(
+        ['--log-level=%i' % logging.INFO],
+        config=True,
+        help="command-line arguments to pass to ipengine",
+    )
+
+
+# -----------------------------------------------------------------------------
 # Local process launchers
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 class LocalProcessLauncher(BaseLauncher):
@@ -255,10 +284,13 @@ class LocalProcessLauncher(BaseLauncher):
     def start(self):
         self.log.debug("Starting %s: %r", self.__class__.__name__, self.args)
         if self.state == 'before':
-            self.process = Popen(self.args,
-                stdout=PIPE, stderr=PIPE, stdin=PIPE,
+            self.process = Popen(
+                self.args,
+                stdout=PIPE,
+                stderr=PIPE,
+                stdin=PIPE,
                 env=os.environ,
-                cwd=self.work_dir
+                cwd=self.work_dir,
             )
             if WINDOWS:
                 self.stdout = forward_read_events(self.process.stdout)
@@ -293,7 +325,9 @@ class LocalProcessLauncher(BaseLauncher):
         except Exception:
             self.log.debug("interrupt failed")
             pass
-        self.killer = self.loop.add_timeout(self.loop.time() + delay, lambda: self.signal(SIGKILL))
+        self.killer = self.loop.add_timeout(
+            self.loop.time() + delay, lambda: self.signal(SIGKILL)
+        )
 
     # callbacks, etc:
 
@@ -328,6 +362,7 @@ class LocalProcessLauncher(BaseLauncher):
             self.notify_stop(dict(exit_code=status, pid=self.process.pid))
         return status
 
+
 class LocalControllerLauncher(LocalProcessLauncher, ControllerMixin):
     """Launch a controller as a regular external process."""
 
@@ -349,10 +384,12 @@ class LocalEngineLauncher(LocalProcessLauncher, EngineMixin):
 class LocalEngineSetLauncher(LocalEngineLauncher):
     """Launch a set of engines as regular external processes."""
 
-    delay = CFloat(0.1, config=True,
+    delay = CFloat(
+        0.1,
+        config=True,
         help="""delay (in seconds) between starting each engine after the first.
         This can help force the engines to get their ids in order, or limit
-        process flood when starting many engines."""
+        process flood when starting many engines.""",
     )
 
     # launcher class
@@ -372,8 +409,12 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
         for i in range(n):
             if i > 0:
                 time.sleep(self.delay)
-            el = self.launcher_class(work_dir=self.work_dir, parent=self, log=self.log,
-                                    profile_dir=self.profile_dir, cluster_id=self.cluster_id,
+            el = self.launcher_class(
+                work_dir=self.work_dir,
+                parent=self,
+                log=self.log,
+                profile_dir=self.profile_dir,
+                cluster_id=self.cluster_id,
             )
 
             # Copy the engine args over to each engine launcher.
@@ -418,43 +459,53 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
             self.notify_stop(self.stop_data)
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # MPI launchers
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 class MPILauncher(LocalProcessLauncher):
     """Launch an external process using mpiexec."""
 
-    mpi_cmd = List(['mpiexec'], config=True,
-        help="The mpiexec command to use in starting the process."
+    mpi_cmd = List(
+        ['mpiexec'],
+        config=True,
+        help="The mpiexec command to use in starting the process.",
     )
-    mpi_args = List([], config=True,
-        help="The command line arguments to pass to mpiexec."
+    mpi_args = List(
+        [], config=True, help="The command line arguments to pass to mpiexec."
     )
-    program = List(['date'],
-        help="The program to start via mpiexec.")
-    program_args = List([],
-        help="The command line argument to the program."
-    )
+    program = List(['date'], help="The program to start via mpiexec.")
+    program_args = List([], help="The command line argument to the program.")
     n = Integer(1)
 
     def __init__(self, *args, **kwargs):
         # deprecation for old MPIExec names:
         config = kwargs.get('config', {})
-        for oldname in ('MPIExecLauncher', 'MPIExecControllerLauncher', 'MPIExecEngineSetLauncher'):
+        for oldname in (
+            'MPIExecLauncher',
+            'MPIExecControllerLauncher',
+            'MPIExecEngineSetLauncher',
+        ):
             deprecated = config.get(oldname)
             if deprecated:
                 newname = oldname.replace('MPIExec', 'MPI')
                 config[newname].update(deprecated)
-                self.log.warn("WARNING: %s name has been deprecated, use %s", oldname, newname)
+                self.log.warn(
+                    "WARNING: %s name has been deprecated, use %s", oldname, newname
+                )
 
         super(MPILauncher, self).__init__(*args, **kwargs)
 
     def find_args(self):
         """Build self.args using all the fields."""
-        return self.mpi_cmd + ['-n', str(self.n)] + self.mpi_args + \
-               self.program + self.program_args
+        return (
+            self.mpi_cmd
+            + ['-n', str(self.n)]
+            + self.mpi_args
+            + self.program
+            + self.program_args
+        )
 
     def start(self, n):
         """Start n instances of the program using mpiexec."""
@@ -500,6 +551,7 @@ class MPIEngineSetLauncher(MPILauncher, EngineMixin):
         self.n = n
         return super(MPIEngineSetLauncher, self).start(n)
 
+
 # deprecated MPIExec names
 class DeprecatedMPILauncher(object):
     def warn(self):
@@ -507,30 +559,37 @@ class DeprecatedMPILauncher(object):
         newname = oldname.replace('MPIExec', 'MPI')
         self.log.warn("WARNING: %s name is deprecated, use %s", oldname, newname)
 
+
 class MPIExecLauncher(MPILauncher, DeprecatedMPILauncher):
     """Deprecated, use MPILauncher"""
+
     def __init__(self, *args, **kwargs):
         super(MPIExecLauncher, self).__init__(*args, **kwargs)
         self.warn()
 
+
 class MPIExecControllerLauncher(MPIControllerLauncher, DeprecatedMPILauncher):
     """Deprecated, use MPIControllerLauncher"""
+
     def __init__(self, *args, **kwargs):
         super(MPIExecControllerLauncher, self).__init__(*args, **kwargs)
         self.warn()
 
+
 class MPIExecEngineSetLauncher(MPIEngineSetLauncher, DeprecatedMPILauncher):
     """Deprecated, use MPIEngineSetLauncher"""
+
     def __init__(self, *args, **kwargs):
         super(MPIExecEngineSetLauncher, self).__init__(*args, **kwargs)
         self.warn()
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # SSH launchers
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 # TODO: Get SSH Launcher back to level of sshx in 0.10.2
+
 
 class SSHLauncher(LocalProcessLauncher):
     """A minimal launcher for ssh.
@@ -540,28 +599,23 @@ class SSHLauncher(LocalProcessLauncher):
     as well.
     """
 
-    ssh_cmd = List(['ssh'], config=True,
-        help="command for starting ssh")
-    ssh_args = List(['-tt'], config=True,
-        help="args to pass to ssh")
-    scp_cmd = List(['scp'], config=True,
-        help="command for sending files")
-    scp_args = List([], config=True,
-        help="args to pass to scp")
-    program = List(['date'],
-        help="Program to launch via ssh")
-    program_args = List([],
-        help="args to pass to remote program")
-    hostname = Unicode('', config=True,
-        help="hostname on which to launch the program")
-    user = Unicode('', config=True,
-        help="username for ssh")
-    location = Unicode('', config=True,
-        help="user@hostname location for ssh in one setting")
-    to_fetch = List([], config=True,
-        help="List of (remote, local) files to fetch after starting")
-    to_send = List([], config=True,
-        help="List of (local, remote) files to send before starting")
+    ssh_cmd = List(['ssh'], config=True, help="command for starting ssh")
+    ssh_args = List(['-tt'], config=True, help="args to pass to ssh")
+    scp_cmd = List(['scp'], config=True, help="command for sending files")
+    scp_args = List([], config=True, help="args to pass to scp")
+    program = List(['date'], help="Program to launch via ssh")
+    program_args = List([], help="args to pass to remote program")
+    hostname = Unicode('', config=True, help="hostname on which to launch the program")
+    user = Unicode('', config=True, help="username for ssh")
+    location = Unicode(
+        '', config=True, help="user@hostname location for ssh in one setting"
+    )
+    to_fetch = List(
+        [], config=True, help="List of (remote, local) files to fetch after starting"
+    )
+    to_send = List(
+        [], config=True, help="List of (local, remote) files to send before starting"
+    )
 
     @observe('hostname')
     def _hostname_changed(self, change):
@@ -575,8 +629,12 @@ class SSHLauncher(LocalProcessLauncher):
         self.location = u'%s@%s' % (change['new'], self.hostname)
 
     def find_args(self):
-        return self.ssh_cmd + self.ssh_args + [self.location] + \
-               list(map(pipes.quote, self.program + self.program_args))
+        return (
+            self.ssh_cmd
+            + self.ssh_args
+            + [self.location]
+            + list(map(pipes.quote, self.program + self.program_args))
+        )
 
     def _send_file(self, local, remote):
         """send a single file"""
@@ -589,8 +647,10 @@ class SSHLauncher(LocalProcessLauncher):
                 break
         remote_dir = os.path.dirname(remote)
         self.log.info("ensuring remote %s:%s/ exists", self.location, remote_dir)
-        check_output(self.ssh_cmd + self.ssh_args + \
-            [self.location, 'mkdir', '-p', '--', remote_dir]
+        check_output(
+            self.ssh_cmd
+            + self.ssh_args
+            + [self.location, 'mkdir', '-p', '--', remote_dir]
         )
         self.log.info("sending %s to %s", local, full_remote)
         check_output(self.scp_cmd + self.scp_args + [local, full_remote])
@@ -608,8 +668,11 @@ class SSHLauncher(LocalProcessLauncher):
         self.log.info("fetching %s from %s", local, full_remote)
         for i in range(10):
             # wait up to 10s for remote file to exist
-            check = check_output(self.ssh_cmd + self.ssh_args + \
-                [self.location, 'test -e', remote, "&& echo 'yes' || echo 'no'"])
+            check = check_output(
+                self.ssh_cmd
+                + self.ssh_args
+                + [self.location, 'test -e', remote, "&& echo 'yes' || echo 'no'"]
+            )
             check = check.decode(DEFAULT_ENCODING, 'replace').strip()
             if check == u'no':
                 time.sleep(1)
@@ -647,13 +710,17 @@ class SSHLauncher(LocalProcessLauncher):
             self.process.stdin.write(b'~.')
             self.process.stdin.flush()
 
+
 class SSHClusterLauncher(SSHLauncher, ClusterAppMixin):
 
-    remote_profile_dir = Unicode('', config=True,
+    remote_profile_dir = Unicode(
+        '',
+        config=True,
         help="""The remote profile_dir to use.
 
         If not specified, use calling profile, stripping out possible leading homedir.
-        """)
+        """,
+    )
 
     @observe('profile_dir')
     def _profile_dir_changed(self, change):
@@ -670,7 +737,7 @@ class SSHClusterLauncher(SSHLauncher, ClusterAppMixin):
             home = home + '/'
 
         if path.startswith(home):
-            return path[len(home):]
+            return path[len(home) :]
         else:
             return path
 
@@ -685,6 +752,7 @@ class SSHClusterLauncher(SSHLauncher, ClusterAppMixin):
     @property
     def cluster_args(self):
         return ['--profile-dir', self.remote_profile_dir]
+
 
 class SSHControllerLauncher(SSHClusterLauncher, ControllerMixin):
 
@@ -705,10 +773,13 @@ class SSHControllerLauncher(SSHClusterLauncher, ControllerMixin):
 
     def _to_fetch_default(self):
         return [
-            (os.path.join(self.remote_profile_dir, 'security', cf),
-             os.path.join(self.profile_dir, 'security', cf),)
+            (
+                os.path.join(self.remote_profile_dir, 'security', cf),
+                os.path.join(self.profile_dir, 'security', cf),
+            )
             for cf in ('ipcontroller-client.json', 'ipcontroller-engine.json')
         ]
+
 
 class SSHEngineLauncher(SSHClusterLauncher, EngineMixin):
 
@@ -729,17 +800,21 @@ class SSHEngineLauncher(SSHClusterLauncher, EngineMixin):
 
     def _to_send_default(self):
         return [
-            (os.path.join(self.profile_dir, 'security', cf),
-             os.path.join(self.remote_profile_dir, 'security', cf))
+            (
+                os.path.join(self.profile_dir, 'security', cf),
+                os.path.join(self.remote_profile_dir, 'security', cf),
+            )
             for cf in ('ipcontroller-client.json', 'ipcontroller-engine.json')
         ]
 
 
 class SSHEngineSetLauncher(LocalEngineSetLauncher):
     launcher_class = SSHEngineLauncher
-    engines = Dict(config=True,
+    engines = Dict(
+        config=True,
         help="""dict of engines to launch.  This is a dict by hostname of ints,
-        corresponding to the number of engines to start on that host.""")
+        corresponding to the number of engines to start on that host.""",
+    )
 
     def _engine_cmd_default(self):
         return ['ipengine']
@@ -770,7 +845,9 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher):
             if isinstance(n, dict):
                 cdict = n
                 if 'n' not in cdict:
-                    raise ValueError("Need to specify 'n' in engine's config dictionary.")
+                    raise ValueError(
+                        "Need to specify 'n' in engine's config dictionary."
+                    )
                 n = cdict['n']
                 if 'engine_args' in cdict:
                     args = cdict['engine_args']
@@ -793,8 +870,12 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher):
             for i in range(n):
                 if i > 0:
                     time.sleep(self.delay)
-                el = self.launcher_class(work_dir=self.work_dir, parent=self, log=self.log,
-                                        profile_dir=self.profile_dir, cluster_id=self.cluster_id,
+                el = self.launcher_class(
+                    work_dir=self.work_dir,
+                    parent=self,
+                    log=self.log,
+                    profile_dir=self.profile_dir,
+                    cluster_id=self.cluster_id,
                 )
                 if i > 0:
                     # only send files for the first engine on each host
@@ -832,19 +913,21 @@ class SSHProxyEngineSetLauncher(SSHClusterLauncher):
 
     def _to_send_default(self):
         return [
-            (os.path.join(self.profile_dir, 'security', cf),
-             os.path.join(self.remote_profile_dir, 'security', cf))
+            (
+                os.path.join(self.profile_dir, 'security', cf),
+                os.path.join(self.remote_profile_dir, 'security', cf),
+            )
             for cf in ('ipcontroller-client.json', 'ipcontroller-engine.json')
-    ]
+        ]
 
     def start(self, n):
         self.n = n
         super(SSHProxyEngineSetLauncher, self).start()
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Windows HPC Server 2008 scheduler launchers
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 # This is only used on Windows.
@@ -861,19 +944,26 @@ def find_job_cmd():
 
 class WindowsHPCLauncher(BaseLauncher):
 
-    job_id_regexp = CRegExp(r'\d+', config=True,
+    job_id_regexp = CRegExp(
+        r'\d+',
+        config=True,
         help="""A regular expression used to get the job id from the output of the
-        submit_command. """
-        )
-    job_file_name = Unicode(u'ipython_job.xml', config=True,
-        help="The filename of the instantiated job script.")
+        submit_command. """,
+    )
+    job_file_name = Unicode(
+        u'ipython_job.xml',
+        config=True,
+        help="The filename of the instantiated job script.",
+    )
     # The full path to the instantiated job script. This gets made dynamically
     # by combining the work_dir with the job_file_name.
     job_file = Unicode(u'')
-    scheduler = Unicode('', config=True,
-        help="The hostname of the scheduler to submit the job to.")
-    job_cmd = Unicode(find_job_cmd(), config=True,
-        help="The command for submitting jobs.")
+    scheduler = Unicode(
+        '', config=True, help="The hostname of the scheduler to submit the job to."
+    )
+    job_cmd = Unicode(
+        find_job_cmd(), config=True, help="The command for submitting jobs."
+    )
 
     def __init__(self, work_dir=u'.', config=None, **kwargs):
         super(WindowsHPCLauncher, self).__init__(
@@ -907,14 +997,14 @@ class WindowsHPCLauncher(BaseLauncher):
         args = [
             'submit',
             '/jobfile:%s' % self.job_file,
-            '/scheduler:%s' % self.scheduler
+            '/scheduler:%s' % self.scheduler,
         ]
-        self.log.debug("Starting Win HPC Job: %s" % (self.job_cmd + ' ' + ' '.join(args),))
+        self.log.debug(
+            "Starting Win HPC Job: %s" % (self.job_cmd + ' ' + ' '.join(args),)
+        )
 
-        output = check_output([self.job_cmd] + args,
-            env=os.environ,
-            cwd=self.work_dir,
-            stderr=STDOUT
+        output = check_output(
+            [self.job_cmd] + args, env=os.environ, cwd=self.work_dir, stderr=STDOUT
         )
         output = output.decode(DEFAULT_ENCODING, 'replace')
         job_id = self.parse_job_id(output)
@@ -922,31 +1012,29 @@ class WindowsHPCLauncher(BaseLauncher):
         return job_id
 
     def stop(self):
-        args = [
-            'cancel',
-            self.job_id,
-            '/scheduler:%s' % self.scheduler
-        ]
-        self.log.info("Stopping Win HPC Job: %s" % (self.job_cmd + ' ' + ' '.join(args),))
+        args = ['cancel', self.job_id, '/scheduler:%s' % self.scheduler]
+        self.log.info(
+            "Stopping Win HPC Job: %s" % (self.job_cmd + ' ' + ' '.join(args),)
+        )
         try:
-            output = check_output([self.job_cmd] + args,
-                env=os.environ,
-                cwd=self.work_dir,
-                stderr=STDOUT
+            output = check_output(
+                [self.job_cmd] + args, env=os.environ, cwd=self.work_dir, stderr=STDOUT
             )
             output = output.decode(DEFAULT_ENCODING, 'replace')
         except:
             output = u'The job already appears to be stopped: %r' % self.job_id
-        self.notify_stop(dict(job_id=self.job_id, output=output))  # Pass the output of the kill cmd
+        self.notify_stop(
+            dict(job_id=self.job_id, output=output)
+        )  # Pass the output of the kill cmd
         return output
 
 
 class WindowsHPCControllerLauncher(WindowsHPCLauncher, ClusterAppMixin):
 
-    job_file_name = Unicode(u'ipcontroller_job.xml', config=True,
-        help="WinHPC xml job file.")
-    controller_args = List([], config=False,
-        help="extra args to pass to ipcontroller")
+    job_file_name = Unicode(
+        u'ipcontroller_job.xml', config=True, help="WinHPC xml job file."
+    )
+    controller_args = List([], config=False, help="extra args to pass to ipcontroller")
 
     def write_job_file(self, n):
         job = IPControllerJob(parent=self)
@@ -975,10 +1063,10 @@ class WindowsHPCControllerLauncher(WindowsHPCLauncher, ClusterAppMixin):
 
 class WindowsHPCEngineSetLauncher(WindowsHPCLauncher, ClusterAppMixin):
 
-    job_file_name = Unicode(u'ipengineset_job.xml', config=True,
-        help="jobfile for ipengines job")
-    engine_args = List([], config=False,
-        help="extra args to pas to ipengine")
+    job_file_name = Unicode(
+        u'ipengineset_job.xml', config=True, help="jobfile for ipengines job"
+    )
+    engine_args = List([], config=False, help="extra args to pas to ipengine")
 
     def write_job_file(self, n):
         job = IPEngineSetJob(parent=self)
@@ -1006,9 +1094,10 @@ class WindowsHPCEngineSetLauncher(WindowsHPCLauncher, ClusterAppMixin):
         return super(WindowsHPCEngineSetLauncher, self).start(n)
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Batch (PBS) system launchers
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 class BatchClusterAppMixin(ClusterAppMixin):
     """ClusterApp mixin that updates the self.context dict, rather than cl-args."""
@@ -1024,6 +1113,7 @@ class BatchClusterAppMixin(ClusterAppMixin):
     def _profile_dir_default(self):
         self.context['profile_dir'] = ''
         return ''
+
     def _cluster_id_default(self):
         self.context['cluster_id'] = ''
         return ''
@@ -1044,23 +1134,39 @@ class BatchSystemLauncher(BaseLauncher):
     """
 
     # Subclasses must fill these in.  See PBSEngineSet
-    submit_command = List([''], config=True,
-        help="The name of the command line program used to submit jobs.")
-    delete_command = List([''], config=True,
-        help="The name of the command line program used to delete jobs.")
-    job_id_regexp = CRegExp('', config=True,
+    submit_command = List(
+        [''],
+        config=True,
+        help="The name of the command line program used to submit jobs.",
+    )
+    delete_command = List(
+        [''],
+        config=True,
+        help="The name of the command line program used to delete jobs.",
+    )
+    job_id_regexp = CRegExp(
+        '',
+        config=True,
         help="""A regular expression used to get the job id from the output of the
-        submit_command.""")
-    job_id_regexp_group = Integer(0, config=True,
-        help="""The group we wish to match in job_id_regexp (0 to match all)""")
-    batch_template = Unicode('', config=True,
-        help="The string that is the batch script template itself.")
-    batch_template_file = Unicode(u'', config=True,
-        help="The file that contains the batch template.")
-    batch_file_name = Unicode(u'batch_script', config=True,
-        help="The filename of the instantiated batch script.")
-    queue = Unicode(u'', config=True,
-        help="The batch queue.")
+        submit_command.""",
+    )
+    job_id_regexp_group = Integer(
+        0,
+        config=True,
+        help="""The group we wish to match in job_id_regexp (0 to match all)""",
+    )
+    batch_template = Unicode(
+        '', config=True, help="The string that is the batch script template itself."
+    )
+    batch_template_file = Unicode(
+        u'', config=True, help="The file that contains the batch template."
+    )
+    batch_file_name = Unicode(
+        u'batch_script',
+        config=True,
+        help="The filename of the instantiated batch script.",
+    )
+    queue = Unicode(u'', config=True, help="The batch queue.")
 
     @observe('queue')
     def _queue_changed(self, change):
@@ -1085,13 +1191,14 @@ class BatchSystemLauncher(BaseLauncher):
     batch_file = Unicode(u'')
     # the format dict used with batch_template:
     context = Dict()
-    
-    namespace = Dict(config=True,
+
+    namespace = Dict(
+        config=True,
         help="""Extra variables to pass to the template.
 
         This lets you parameterize additional options,
         such as wall_time with a custom template.
-        """
+        """,
     )
 
     def _context_default(self):
@@ -1155,19 +1262,17 @@ class BatchSystemLauncher(BaseLauncher):
         os.chmod(self.batch_file, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
 
     def _insert_options_in_script(self):
-        """Inserts a queue if required into the batch script.
-        """
+        """Inserts a queue if required into the batch script."""
         if self.queue and not self.queue_regexp.search(self.batch_template):
             self.log.debug("adding queue settings to batch script")
-            firstline, rest = self.batch_template.split('\n',1)
+            firstline, rest = self.batch_template.split('\n', 1)
             self.batch_template = u'\n'.join([firstline, self.queue_template, rest])
 
     def _insert_job_array_in_script(self):
-        """Inserts a job array if required into the batch script.
-        """
+        """Inserts a job array if required into the batch script."""
         if not self.job_array_regexp.search(self.batch_template):
             self.log.debug("adding job array settings to batch script")
-            firstline, rest = self.batch_template.split('\n',1)
+            firstline, rest = self.batch_template.split('\n', 1)
             self.batch_template = u'\n'.join([firstline, self.job_array_template, rest])
 
     def start(self, n):
@@ -1185,28 +1290,37 @@ class BatchSystemLauncher(BaseLauncher):
 
     def stop(self):
         try:
-            p = Popen(self.delete_command+[self.job_id], env=os.environ,
-                      stdout=PIPE, stderr=PIPE)
+            p = Popen(
+                self.delete_command + [self.job_id],
+                env=os.environ,
+                stdout=PIPE,
+                stderr=PIPE,
+            )
             out, err = p.communicate()
             output = out + err
         except:
-            self.log.exception("Problem stopping cluster with command: %s" %
-                               (self.delete_command + [self.job_id]))
+            self.log.exception(
+                "Problem stopping cluster with command: %s"
+                % (self.delete_command + [self.job_id])
+            )
             output = ""
         output = output.decode(DEFAULT_ENCODING, 'replace')
-        self.notify_stop(dict(job_id=self.job_id, output=output)) # Pass the output of the kill cmd
+        self.notify_stop(
+            dict(job_id=self.job_id, output=output)
+        )  # Pass the output of the kill cmd
         return output
 
 
 class PBSLauncher(BatchSystemLauncher):
     """A BatchSystemLauncher subclass for PBS."""
 
-    submit_command = List(['qsub'], config=True,
-        help="The PBS submit command ['qsub']")
-    delete_command = List(['qdel'], config=True,
-        help="The PBS delete command ['qdel']")
-    job_id_regexp = CRegExp(r'\d+', config=True,
-        help=r"Regular expresion for identifying the job ID [r'\d+']")
+    submit_command = List(['qsub'], config=True, help="The PBS submit command ['qsub']")
+    delete_command = List(['qdel'], config=True, help="The PBS delete command ['qdel']")
+    job_id_regexp = CRegExp(
+        r'\d+',
+        config=True,
+        help=r"Regular expresion for identifying the job ID [r'\d+']",
+    )
 
     batch_file = Unicode(u'')
     job_array_regexp = CRegExp(r'#PBS\W+-t\W+[\w\d\-\$]+')
@@ -1218,13 +1332,17 @@ class PBSLauncher(BatchSystemLauncher):
 class PBSControllerLauncher(PBSLauncher, BatchClusterAppMixin):
     """Launch a controller using PBS."""
 
-    batch_file_name = Unicode(u'pbs_controller', config=True,
-        help="batch file name for the controller job.")
-    default_template = Unicode("""#!/bin/sh
+    batch_file_name = Unicode(
+        u'pbs_controller', config=True, help="batch file name for the controller job."
+    )
+    default_template = Unicode(
+        """#!/bin/sh
 #PBS -V
 #PBS -N ipcontroller
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-""" % (' '.join(map(pipes.quote, ipcontroller_cmd_argv))))
+"""
+        % (' '.join(map(pipes.quote, ipcontroller_cmd_argv)))
+    )
 
     def start(self):
         """Start the controller by profile or profile_dir."""
@@ -1233,41 +1351,49 @@ class PBSControllerLauncher(PBSLauncher, BatchClusterAppMixin):
 
 class PBSEngineSetLauncher(PBSLauncher, BatchClusterAppMixin):
     """Launch Engines using PBS"""
-    batch_file_name = Unicode(u'pbs_engines', config=True,
-        help="batch file name for the engine(s) job.")
-    default_template = Unicode(u"""#!/bin/sh
+
+    batch_file_name = Unicode(
+        u'pbs_engines', config=True, help="batch file name for the engine(s) job."
+    )
+    default_template = Unicode(
+        u"""#!/bin/sh
 #PBS -V
 #PBS -N ipengine
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-""" % (' '.join(map(pipes.quote, ipengine_cmd_argv))))
+"""
+        % (' '.join(map(pipes.quote, ipengine_cmd_argv)))
+    )
 
-#Slurm is very similar to PBS
+
+# Slurm is very similar to PBS
+
 
 class SlurmLauncher(BatchSystemLauncher):
     """A BatchSystemLauncher subclass for slurm."""
 
-    submit_command = List(['sbatch'], config=True,
-        help="The slurm submit command ['sbatch']")
-    delete_command = List(['scancel'], config=True,
-        help="The slurm delete command ['scancel']")
-    job_id_regexp = CRegExp(r'\d+', config=True,
-        help=r"Regular expresion for identifying the job ID [r'\d+']")
+    submit_command = List(
+        ['sbatch'], config=True, help="The slurm submit command ['sbatch']"
+    )
+    delete_command = List(
+        ['scancel'], config=True, help="The slurm delete command ['scancel']"
+    )
+    job_id_regexp = CRegExp(
+        r'\d+',
+        config=True,
+        help=r"Regular expresion for identifying the job ID [r'\d+']",
+    )
 
-    account = Unicode(u"", config=True,
-        help="Slurm account to be used")
+    account = Unicode(u"", config=True, help="Slurm account to be used")
 
-    qos = Unicode(u"", config=True,
-        help="Slurm QoS to be used")
+    qos = Unicode(u"", config=True, help="Slurm QoS to be used")
 
-    #Note: from the man page:
+    # Note: from the man page:
     #'Acceptable time formats include "minutes", "minutes:seconds",
     # "hours:minutes:seconds", "days-hours", "days-hours:minutes"
     # and "days-hours:minutes:seconds".
-    timelimit = Any(u"", config=True,
-        help="Slurm timelimit to be used")
+    timelimit = Any(u"", config=True, help="Slurm timelimit to be used")
 
-    options = Unicode(u"", config=True,
-        help="Extra Slurm options")
+    options = Unicode(u"", config=True, help="Extra Slurm options")
 
     @observe('account')
     def _account_changed(self, change):
@@ -1306,12 +1432,12 @@ class SlurmLauncher(BatchSystemLauncher):
         """Insert 'partition' (slurm name for queue), 'account', 'time' and other options if necessary"""
         if self.queue and not self.queue_regexp.search(self.batch_template):
             self.log.debug("adding slurm queue settings to batch script")
-            firstline, rest = self.batch_template.split('\n',1)
+            firstline, rest = self.batch_template.split('\n', 1)
             self.batch_template = u'\n'.join([firstline, self.queue_template, rest])
 
         if self.account and not self.account_regexp.search(self.batch_template):
             self.log.debug("adding slurm account settings to batch script")
-            firstline, rest = self.batch_template.split('\n',1)
+            firstline, rest = self.batch_template.split('\n', 1)
             self.batch_template = u'\n'.join([firstline, self.account_template, rest])
 
         if self.qos and not self.qos_regexp.search(self.batch_template):
@@ -1321,19 +1447,26 @@ class SlurmLauncher(BatchSystemLauncher):
 
         if self.timelimit and not self.timelimit_regexp.search(self.batch_template):
             self.log.debug("adding slurm time limit settings to batch script")
-            firstline, rest = self.batch_template.split('\n',1)
+            firstline, rest = self.batch_template.split('\n', 1)
             self.batch_template = u'\n'.join([firstline, self.timelimit_template, rest])
 
 
 class SlurmControllerLauncher(SlurmLauncher, BatchClusterAppMixin):
     """Launch a controller using Slurm."""
-    batch_file_name = Unicode(u'slurm_controller.sbatch', config=True,
-        help="batch file name for the controller job.")
-    default_template = Unicode("""#!/bin/sh
+
+    batch_file_name = Unicode(
+        u'slurm_controller.sbatch',
+        config=True,
+        help="batch file name for the controller job.",
+    )
+    default_template = Unicode(
+        """#!/bin/sh
 #SBATCH --job-name=ipy-controller-{cluster_id}
 #SBATCH --ntasks=1
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-"""%(' '.join(map(pipes.quote, ipcontroller_cmd_argv))))
+"""
+        % (' '.join(map(pipes.quote, ipcontroller_cmd_argv)))
+    )
 
     def start(self):
         """Start the controller by profile or profile_dir."""
@@ -1342,17 +1475,27 @@ class SlurmControllerLauncher(SlurmLauncher, BatchClusterAppMixin):
 
 class SlurmEngineSetLauncher(SlurmLauncher, BatchClusterAppMixin):
     """Launch Engines using Slurm"""
-    batch_file_name = Unicode(u'slurm_engine.sbatch', config=True,
-        help="batch file name for the engine(s) job.")
-    default_template = Unicode(u"""#!/bin/sh
+
+    batch_file_name = Unicode(
+        u'slurm_engine.sbatch',
+        config=True,
+        help="batch file name for the engine(s) job.",
+    )
+    default_template = Unicode(
+        u"""#!/bin/sh
 #SBATCH --job-name=ipy-engine-{cluster_id}
 srun %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-""" % (' '.join(map(pipes.quote, ipengine_cmd_argv))))
+"""
+        % (' '.join(map(pipes.quote, ipengine_cmd_argv)))
+    )
 
-#SGE is very similar to PBS
+
+# SGE is very similar to PBS
+
 
 class SGELauncher(PBSLauncher):
     """Sun GridEngine is a PBS clone with slightly different syntax"""
+
     job_array_regexp = CRegExp(r'#\$\W+\-t')
     job_array_template = Unicode('#$ -t 1-{n}')
     queue_regexp = CRegExp(r'#\$\W+-q\W+\$?\w+')
@@ -1362,13 +1505,17 @@ class SGELauncher(PBSLauncher):
 class SGEControllerLauncher(SGELauncher, BatchClusterAppMixin):
     """Launch a controller using SGE."""
 
-    batch_file_name = Unicode(u'sge_controller', config=True,
-        help="batch file name for the ipontroller job.")
-    default_template = Unicode(u"""#$ -V
+    batch_file_name = Unicode(
+        u'sge_controller', config=True, help="batch file name for the ipontroller job."
+    )
+    default_template = Unicode(
+        u"""#$ -V
 #$ -S /bin/sh
 #$ -N ipcontroller
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-"""%(' '.join(map(pipes.quote, ipcontroller_cmd_argv))))
+"""
+        % (' '.join(map(pipes.quote, ipcontroller_cmd_argv)))
+    )
 
     def start(self):
         """Start the controller by profile or profile_dir."""
@@ -1377,26 +1524,35 @@ class SGEControllerLauncher(SGELauncher, BatchClusterAppMixin):
 
 class SGEEngineSetLauncher(SGELauncher, BatchClusterAppMixin):
     """Launch Engines with SGE"""
-    batch_file_name = Unicode(u'sge_engines', config=True,
-        help="batch file name for the engine(s) job.")
-    default_template = Unicode("""#$ -V
+
+    batch_file_name = Unicode(
+        u'sge_engines', config=True, help="batch file name for the engine(s) job."
+    )
+    default_template = Unicode(
+        """#$ -V
 #$ -S /bin/sh
 #$ -N ipengine
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-"""%(' '.join(map(pipes.quote, ipengine_cmd_argv))))
+"""
+        % (' '.join(map(pipes.quote, ipengine_cmd_argv)))
+    )
 
 
 # LSF launchers
 
+
 class LSFLauncher(BatchSystemLauncher):
     """A BatchSystemLauncher subclass for LSF."""
 
-    submit_command = List(['bsub'], config=True,
-                          help="The PBS submit command ['bsub']")
-    delete_command = List(['bkill'], config=True,
-                          help="The PBS delete command ['bkill']")
-    job_id_regexp = CRegExp(r'\d+', config=True,
-                            help=r"Regular expresion for identifying the job ID [r'\d+']")
+    submit_command = List(['bsub'], config=True, help="The PBS submit command ['bsub']")
+    delete_command = List(
+        ['bkill'], config=True, help="The PBS delete command ['bkill']"
+    )
+    job_id_regexp = CRegExp(
+        r'\d+',
+        config=True,
+        help=r"Regular expresion for identifying the job ID [r'\d+']",
+    )
 
     batch_file = Unicode(u'')
     job_array_regexp = CRegExp(r'#BSUB[ \t]-J+\w+\[\d+-\d+\]')
@@ -1426,14 +1582,18 @@ class LSFLauncher(BatchSystemLauncher):
 class LSFControllerLauncher(LSFLauncher, BatchClusterAppMixin):
     """Launch a controller using LSF."""
 
-    batch_file_name = Unicode(u'lsf_controller', config=True,
-                              help="batch file name for the controller job.")
-    default_template = Unicode("""#!/bin/sh
+    batch_file_name = Unicode(
+        u'lsf_controller', config=True, help="batch file name for the controller job."
+    )
+    default_template = Unicode(
+        """#!/bin/sh
     #BSUB -J ipcontroller
     #BSUB -oo ipcontroller.o.%%J
     #BSUB -eo ipcontroller.e.%%J
     %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-    """ % (' '.join(map(pipes.quote, ipcontroller_cmd_argv))))
+    """
+        % (' '.join(map(pipes.quote, ipcontroller_cmd_argv)))
+    )
 
     def start(self):
         """Start the controller by profile or profile_dir."""
@@ -1442,14 +1602,18 @@ class LSFControllerLauncher(LSFLauncher, BatchClusterAppMixin):
 
 class LSFEngineSetLauncher(LSFLauncher, BatchClusterAppMixin):
     """Launch Engines using LSF"""
-    batch_file_name = Unicode(u'lsf_engines', config=True,
-                              help="batch file name for the engine(s) job.")
-    default_template = Unicode(u"""#!/bin/sh
+
+    batch_file_name = Unicode(
+        u'lsf_engines', config=True, help="batch file name for the engine(s) job."
+    )
+    default_template = Unicode(
+        u"""#!/bin/sh
     #BSUB -oo ipengine.o.%%J
     #BSUB -eo ipengine.e.%%J
     %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
-    """%(' '.join(map(pipes.quote, ipengine_cmd_argv))))
-
+    """
+        % (' '.join(map(pipes.quote, ipengine_cmd_argv)))
+    )
 
 
 class HTCondorLauncher(BatchSystemLauncher):
@@ -1474,27 +1638,34 @@ class HTCondorLauncher(BatchSystemLauncher):
     If you need different behavior, consider making you own template.
     """
 
-    submit_command = List(['condor_submit'], config=True,
-        help="The HTCondor submit command ['condor_submit']")
-    delete_command = List(['condor_rm'], config=True,
-        help="The HTCondor delete command ['condor_rm']")
-    job_id_regexp = CRegExp(r'(\d+)\.$', config=True,
-        help=r"Regular expression for identifying the job ID [r'(\d+)\.$']")
-    job_id_regexp_group = Integer(1, config=True,
-        help="""The group we wish to match in job_id_regexp [1]""")
+    submit_command = List(
+        ['condor_submit'],
+        config=True,
+        help="The HTCondor submit command ['condor_submit']",
+    )
+    delete_command = List(
+        ['condor_rm'], config=True, help="The HTCondor delete command ['condor_rm']"
+    )
+    job_id_regexp = CRegExp(
+        r'(\d+)\.$',
+        config=True,
+        help=r"Regular expression for identifying the job ID [r'(\d+)\.$']",
+    )
+    job_id_regexp_group = Integer(
+        1, config=True, help="""The group we wish to match in job_id_regexp [1]"""
+    )
 
     job_array_regexp = CRegExp(r'queue\W+\$')
     job_array_template = Unicode('queue {n}')
 
-
     def _insert_job_array_in_script(self):
-        """Inserts a job array if required into the batch script.
-        """
+        """Inserts a job array if required into the batch script."""
         if not self.job_array_regexp.search(self.batch_template):
             self.log.debug("adding job array settings to batch script")
-            #HTCondor requires that the job array goes at the bottom of the script
-            self.batch_template = '\n'.join([self.batch_template,
-                self.job_array_template])
+            # HTCondor requires that the job array goes at the bottom of the script
+            self.batch_template = '\n'.join(
+                [self.batch_template, self.job_array_template]
+            )
 
     def _insert_options_in_script(self):
         """AFAIK, HTCondor doesn't have a concept of multiple queues that can be
@@ -1506,15 +1677,20 @@ class HTCondorLauncher(BatchSystemLauncher):
 class HTCondorControllerLauncher(HTCondorLauncher, BatchClusterAppMixin):
     """Launch a controller using HTCondor."""
 
-    batch_file_name = Unicode(u'htcondor_controller', config=True,
-                              help="batch file name for the controller job.")
-    default_template = Unicode(r"""
+    batch_file_name = Unicode(
+        u'htcondor_controller',
+        config=True,
+        help="batch file name for the controller job.",
+    )
+    default_template = Unicode(
+        r"""
 universe        = vanilla
 executable      = ipcontroller
 # by default we expect a shared file system
 transfer_executable = False
 arguments       = '--profile-dir={profile_dir}' --cluster-id='{cluster_id}'
-""")
+"""
+    )
 
     def start(self):
         """Start the controller by profile or profile_dir."""
@@ -1523,45 +1699,56 @@ arguments       = '--profile-dir={profile_dir}' --cluster-id='{cluster_id}'
 
 class HTCondorEngineSetLauncher(HTCondorLauncher, BatchClusterAppMixin):
     """Launch Engines using HTCondor"""
-    batch_file_name = Unicode(u'htcondor_engines', config=True,
-                              help="batch file name for the engine(s) job.")
-    default_template = Unicode("""
+
+    batch_file_name = Unicode(
+        u'htcondor_engines', config=True, help="batch file name for the engine(s) job."
+    )
+    default_template = Unicode(
+        """
 universe        = vanilla
 executable      = ipengine
 # by default we expect a shared file system
 transfer_executable = False
 arguments       = " '--profile-dir={profile_dir}' '--cluster-id={cluster_id}'"
-""")
+"""
+    )
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # A launcher for ipcluster itself!
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 class IPClusterLauncher(LocalProcessLauncher):
     """Launch the ipcluster program in an external process."""
 
-    ipcluster_cmd = List(ipcluster_cmd_argv, config=True,
-        help="Popen command for ipcluster")
+    ipcluster_cmd = List(
+        ipcluster_cmd_argv, config=True, help="Popen command for ipcluster"
+    )
     ipcluster_args = List(
-        ['--clean-logs=True', '--log-level=%i' % logging.INFO], config=True,
-        help="Command line arguments to pass to ipcluster.")
+        ['--clean-logs=True', '--log-level=%i' % logging.INFO],
+        config=True,
+        help="Command line arguments to pass to ipcluster.",
+    )
     ipcluster_subcommand = Unicode('start')
     profile = Unicode('default')
     n = Integer(2)
 
     def find_args(self):
-        return self.ipcluster_cmd + [self.ipcluster_subcommand] + \
-            ['--n=%i'%self.n, '--profile=%s' % self.profile] + \
-            self.ipcluster_args
+        return (
+            self.ipcluster_cmd
+            + [self.ipcluster_subcommand]
+            + ['--n=%i' % self.n, '--profile=%s' % self.profile]
+            + self.ipcluster_args
+        )
 
     def start(self):
         return super(IPClusterLauncher, self).start()
 
-#-----------------------------------------------------------------------------
+
+# -----------------------------------------------------------------------------
 # Collections of launchers
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 local_launchers = [
     LocalControllerLauncher,
@@ -1610,6 +1797,14 @@ htcondor_launchers = [
     HTCondorControllerLauncher,
     HTCondorEngineSetLauncher,
 ]
-all_launchers = local_launchers + mpi_launchers + ssh_launchers + winhpc_launchers +\
-                pbs_launchers + slurm_launchers + sge_launchers + lsf_launchers +\
-                htcondor_launchers
+all_launchers = (
+    local_launchers
+    + mpi_launchers
+    + ssh_launchers
+    + winhpc_launchers
+    + pbs_launchers
+    + slurm_launchers
+    + sge_launchers
+    + lsf_launchers
+    + htcondor_launchers
+)

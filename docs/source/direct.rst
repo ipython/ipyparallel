@@ -699,4 +699,3 @@ All of this same error handling magic works the same in non-blocking mode:
     ZeroDivisionError: integer division or modulo by zero
     
     ... 3 more exceptions ...
-

@@ -28,24 +28,25 @@ Usage
 """
 from __future__ import print_function
 
-#-----------------------------------------------------------------------------
+import ast
+
+# -----------------------------------------------------------------------------
 #  Copyright (C) 2008 The IPython Development Team
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#-----------------------------------------------------------------------------
-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Imports
-#-----------------------------------------------------------------------------
-
-import ast
+# -----------------------------------------------------------------------------
 
 try:
     from asyncio import coroutine
-except ImportError: # py2
+except ImportError:  # py2
+
     def coroutine(f):
         raise NotImplementedError()
+
 
 import inspect
 import re
@@ -55,9 +56,9 @@ from IPython.core.magic import Magics
 from IPython.core import magic_arguments
 from ipython_genutils.text import dedent
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Definitions of magic functions for use with IPython
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 def _iscoroutinefunction(f):
@@ -66,44 +67,61 @@ def _iscoroutinefunction(f):
     """
     if inspect.isgeneratorfunction(f):
         return True
-    if (
-        hasattr(inspect, 'iscoroutinefunction') and
-        inspect.iscoroutinefunction(f)
-    ):
+    if hasattr(inspect, 'iscoroutinefunction') and inspect.iscoroutinefunction(f):
         return True
     return False
 
 
-
 NO_LAST_RESULT = "%pxresult recalls last %px result, which has not yet been used."
+
 
 def exec_args(f):
     """decorator for adding block/targets args for execution
-    
+
     applied to %pxconfig and %%px
     """
     args = [
-        magic_arguments.argument('-b', '--block', action="store_const",
-            const=True, dest='block',
+        magic_arguments.argument(
+            '-b',
+            '--block',
+            action="store_const",
+            const=True,
+            dest='block',
             help="use blocking (sync) execution",
         ),
-        magic_arguments.argument('-a', '--noblock', action="store_const",
-            const=False, dest='block',
+        magic_arguments.argument(
+            '-a',
+            '--noblock',
+            action="store_const",
+            const=False,
+            dest='block',
             help="use non-blocking (async) execution",
         ),
-        magic_arguments.argument('-t', '--targets', type=str,
+        magic_arguments.argument(
+            '-t',
+            '--targets',
+            type=str,
             help="specify the targets on which to execute",
         ),
-        magic_arguments.argument('--local', action="store_const",
-            const=True, dest="local",
+        magic_arguments.argument(
+            '--local',
+            action="store_const",
+            const=True,
+            dest="local",
             help="also execute the cell in the local namespace",
         ),
-        magic_arguments.argument('--verbose', action="store_const",
-            const=True, dest="set_verbose",
+        magic_arguments.argument(
+            '--verbose',
+            action="store_const",
+            const=True,
+            dest="set_verbose",
             help="print a message at each execution",
         ),
-        magic_arguments.argument('--no-verbose', action="store_const",
-            const=False, dest="set_verbose",
+        magic_arguments.argument(
+            '--no-verbose',
+            action="store_const",
+            const=False,
+            dest="set_verbose",
             help="don't print any messages",
         ),
     ]
@@ -111,22 +129,33 @@ def exec_args(f):
         f = a(f)
     return f
 
+
 def output_args(f):
     """decorator for output-formatting args
-    
+
     applied to %pxresult and %%px
     """
     args = [
-        magic_arguments.argument('-r', action="store_const", dest='groupby',
+        magic_arguments.argument(
+            '-r',
+            action="store_const",
+            dest='groupby',
             const='order',
-            help="collate outputs in order (same as group-outputs=order)"
+            help="collate outputs in order (same as group-outputs=order)",
         ),
-        magic_arguments.argument('-e', action="store_const", dest='groupby',
+        magic_arguments.argument(
+            '-e',
+            action="store_const",
+            dest='groupby',
             const='engine',
-            help="group outputs by engine (same as group-outputs=engine)"
+            help="group outputs by engine (same as group-outputs=engine)",
         ),
-        magic_arguments.argument('--group-outputs', dest='groupby', type=str,
-            choices=['engine', 'order', 'type'], default='type',
+        magic_arguments.argument(
+            '--group-outputs',
+            dest='groupby',
+            type=str,
+            choices=['engine', 'order', 'type'],
+            default='type',
             help="""Group the outputs in a particular way.
             
             Choices are:
@@ -136,26 +165,30 @@ def output_args(f):
             **order**: like type, but individual displaypub output from each engine is collated.
               For example, if multiple plots are generated by each engine, the first
               figure of each engine will be displayed, then the second of each, etc.
-            """
+            """,
         ),
-        magic_arguments.argument('-o', '--out', dest='save_name', type=str,
+        magic_arguments.argument(
+            '-o',
+            '--out',
+            dest='save_name',
+            type=str,
             help="""store the AsyncResult object for this computation
                  in the global namespace under this name.
-            """
+            """,
         ),
     ]
     for a in args:
         f = a(f)
     return f
 
+
 class ParallelMagics(Magics):
-    """A set of magics useful when controlling a parallel IPython cluster.
-    """
-    
+    """A set of magics useful when controlling a parallel IPython cluster."""
+
     # magic-related
     magics = None
     registered = True
-    
+
     # suffix for magics
     suffix = ''
     # A flag showing if autopx is activated or not
@@ -166,29 +199,29 @@ class ParallelMagics(Magics):
     last_result = None
     # verbose flag
     verbose = False
-    
+
     def __init__(self, shell, view, suffix=''):
         self.view = view
         self.suffix = suffix
-        
+
         # register magics
-        self.magics = dict(cell={},line={})
+        self.magics = dict(cell={}, line={})
         line_magics = self.magics['line']
-        
+
         px = 'px' + suffix
         if not suffix:
             # keep %result for legacy compatibility
             line_magics['result'] = self.result
-        
+
         line_magics['pxresult' + suffix] = self.result
         line_magics[px] = self.px
         line_magics['pxconfig' + suffix] = self.pxconfig
         line_magics['auto' + px] = self.autopx
-        
+
         self.magics['cell'][px] = self.cell_px
-        
+
         super(ParallelMagics, self).__init__(shell=shell)
-    
+
     def _eval_target_str(self, ts):
         if ':' in ts:
             targets = eval("self.view.client.ids[%s]" % ts)
@@ -197,7 +230,7 @@ class ParallelMagics(Magics):
         else:
             targets = eval(ts)
         return targets
-    
+
     @magic_arguments.magic_arguments()
     @exec_args
     def pxconfig(self, line):
@@ -214,7 +247,7 @@ class ParallelMagics(Magics):
     @output_args
     def result(self, line=''):
         """Print the result of the last asynchronous %px command.
-        
+
         This lets you recall the results of %px computations after
         asynchronous submission (block=False).
 
@@ -232,23 +265,23 @@ class ParallelMagics(Magics):
             Out[11:10]: 60923
         """
         args = magic_arguments.parse_argstring(self.result, line)
-        
+
         if self.last_result is None:
             raise UsageError(NO_LAST_RESULT)
-        
+
         self.last_result.get()
         self.last_result.display_outputs(groupby=args.groupby)
 
     def px(self, line=''):
         """Executes the given python command in parallel.
-        
+
         Examples
         --------
         ::
 
             In [24]: %px a = os.getpid()
             Parallel execution on engine(s): all
-            
+
             In [25]: %px print a
             [stdout:0] 1234
             [stdout:1] 1235
@@ -256,15 +289,15 @@ class ParallelMagics(Magics):
             [stdout:3] 1237
         """
         return self.parallel_execute(line)
-        
+
     def parallel_execute(self, cell, block=None, groupby='type', save_name=None):
         """implementation used by %px and %%parallel"""
 
         # defaults:
         block = self.view.block if block is None else block
-        
+
         base = "Parallel" if block else "Async parallel"
-        
+
         targets = self.view.targets
         if isinstance(targets, list) and len(targets) > 10:
             str_targets = str(targets[:4])[:-1] + ', ..., ' + str(targets[-4:])[1:]
@@ -272,13 +305,13 @@ class ParallelMagics(Magics):
             str_targets = str(targets)
         if self.verbose:
             print(base + " execution on engine(s): %s" % str_targets)
-        
+
         result = self.view.execute(cell, silent=False, block=False)
         self.last_result = result
-        
+
         if save_name:
             self.shell.user_ns[save_name] = result
-        
+
         if block:
             result.get()
             result.display_outputs(groupby)
@@ -291,7 +324,7 @@ class ParallelMagics(Magics):
     @output_args
     def cell_px(self, line='', cell=None):
         """Executes the cell in parallel.
-        
+
         Examples
         --------
         ::
@@ -299,7 +332,7 @@ class ParallelMagics(Magics):
             In [24]: %%px --noblock
                ....: a = os.getpid()
             Async parallel execution on engine(s): all
-            
+
             In [25]: %%px
                ....: print a
             [stdout:0] 1234
@@ -307,23 +340,25 @@ class ParallelMagics(Magics):
             [stdout:2] 1236
             [stdout:3] 1237
         """
-        
+
         args = magic_arguments.parse_argstring(self.cell_px, line)
-        
+
         if args.targets:
             save_targets = self.view.targets
             self.view.targets = self._eval_target_str(args.targets)
         # if running local, don't block until after local has run
         block = False if args.local else args.block
         try:
-            ar = self.parallel_execute(cell, block=block,
-                                groupby=args.groupby,
-                                save_name=args.save_name,
+            ar = self.parallel_execute(
+                cell,
+                block=block,
+                groupby=args.groupby,
+                save_name=args.save_name,
             )
         finally:
             if args.targets:
                 self.view.targets = save_targets
-        
+
         # run locally after submitting remote
         block = self.view.block if args.block is None else args.block
         if args.local:
@@ -334,7 +369,7 @@ class ParallelMagics(Magics):
                 ar.display_outputs(args.groupby)
         if not block:
             return ar
-    
+
     def autopx(self, line=''):
         """Toggles auto parallel mode.
 
@@ -392,8 +427,7 @@ class ParallelMagics(Magics):
         print("%autopx enabled")
 
     def _disable_autopx(self):
-        """Disable %autopx by restoring the original InteractiveShell.run_cell.
-        """
+        """Disable %autopx by restoring the original InteractiveShell.run_cell."""
         if self._autopx:
             self.shell.run_cell = self._original_run_cell
             self.shell.run_ast_nodes = self._original_run_nodes
@@ -432,9 +466,10 @@ class ParallelMagics(Magics):
         self._px_cell = raw_cell
         return self._original_run_cell(raw_cell, *args, **kwargs)
 
+
 __doc__ = __doc__.format(
-                AUTOPX_DOC = dedent(ParallelMagics.autopx.__doc__),
-                PX_DOC = dedent(ParallelMagics.px.__doc__),
-                RESULT_DOC = dedent(ParallelMagics.result.__doc__),
-                CONFIG_DOC = dedent(ParallelMagics.pxconfig.__doc__),
+    AUTOPX_DOC=dedent(ParallelMagics.autopx.__doc__),
+    PX_DOC=dedent(ParallelMagics.px.__doc__),
+    RESULT_DOC=dedent(ParallelMagics.result.__doc__),
+    CONFIG_DOC=dedent(ParallelMagics.pxconfig.__doc__),
 )

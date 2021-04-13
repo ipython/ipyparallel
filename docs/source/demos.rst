@@ -206,4 +206,3 @@ parallel architecture that have been demonstrated:
 * We have run these examples on a cluster running RHEL 5 and Sun GridEngine.
   IPython's built in support for SGE (and other batch systems) makes it easy
   to get started with IPython's parallel capabilities.
-

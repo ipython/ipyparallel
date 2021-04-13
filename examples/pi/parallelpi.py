@@ -17,15 +17,17 @@ of the IPython engines.
 """
 from __future__ import print_function
 
-import ipyparallel as ipp
-from matplotlib import pyplot as plt
-import numpy as np
-from pidigits import *
 from timeit import default_timer as clock
+
+import numpy as np
+from matplotlib import pyplot as plt
+from pidigits import *
+
+import ipyparallel as ipp
 
 # Files with digits of pi (10m digits each)
 filestring = 'pi200m.ascii.%(i)02dof20'
-files = [filestring % {'i':i} for i in range(1,21)]
+files = [filestring % {'i': i} for i in range(1, 21)]
 
 # Connect to the IPython cluster
 c = ipp.Client()
@@ -35,9 +37,9 @@ c[:].run('pidigits.py')
 n = len(c)
 id0 = c.ids[0]
 v = c[:]
-v.block=True
+v.block = True
 # fetch the pi-files
-print("downloading %i files of pi"%n)
+print("downloading %i files of pi" % n)
 v.map(fetch_pi_file, files[:n])
 print("done")
 
@@ -45,7 +47,7 @@ print("done")
 t1 = clock()
 freqs10m = c[id0].apply_sync(compute_two_digit_freqs, files[0])
 t2 = clock()
-digits_per_second1 = 10.0e6/(t2-t1)
+digits_per_second1 = 10.0e6 / (t2 - t1)
 print("Digits per second (1 core, 10m digits):   ", digits_per_second1)
 
 
@@ -54,12 +56,11 @@ t1 = clock()
 freqs_all = v.map(compute_two_digit_freqs, files[:n])
 freqs150m = reduce_freqs(freqs_all)
 t2 = clock()
-digits_per_second8 = n*10.0e6/(t2-t1)
-print("Digits per second (%i engines, %i0m digits): "%(n,n), digits_per_second8)
+digits_per_second8 = n * 10.0e6 / (t2 - t1)
+print("Digits per second (%i engines, %i0m digits): " % (n, n), digits_per_second8)
 
-print("Speedup: ", digits_per_second8/digits_per_second1)
+print("Speedup: ", digits_per_second8 / digits_per_second1)
 
 plot_two_digit_freqs(freqs150m)
-plt.title("2 digit sequences in %i0m digits of pi"%n)
+plt.title("2 digit sequences in %i0m digits of pi" % n)
 plt.show()
-

@@ -3,10 +3,8 @@
 This is the master object that handles connections from engines and clients,
 and monitors traffic through the various queues.
 """
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 from __future__ import print_function
 
 import json
@@ -14,84 +12,96 @@ import os
 import sys
 import time
 
-from tornado.gen import coroutine, maybe_future
 import zmq
+from ipython_genutils.importstring import import_item
+from ipython_genutils.py3compat import buffer_to_bytes_py2
+from ipython_genutils.py3compat import cast_bytes
+from ipython_genutils.py3compat import iteritems
+from ipython_genutils.py3compat import unicode_type
+from jupyter_client.localinterfaces import localhost
+from jupyter_client.session import SessionFactory
+from tornado.gen import coroutine
+from tornado.gen import maybe_future
+from traitlets import Any
+from traitlets import Dict
+from traitlets import DottedObjectName
+from traitlets import HasTraits
+from traitlets import Instance
+from traitlets import Integer
+from traitlets import observe
+from traitlets import Set
+from traitlets import Tuple
+from traitlets import Unicode
 from zmq.eventloop.zmqstream import ZMQStream
 
-# internal:
-from ipython_genutils.importstring import import_item
 from ..util import extract_dates
-from jupyter_client.localinterfaces import localhost
-from ipython_genutils.py3compat import cast_bytes, unicode_type, iteritems, buffer_to_bytes_py2
-from traitlets import (
-    HasTraits, Any, Instance, Integer, Unicode, Dict, Set, Tuple,
-    DottedObjectName, observe
-)
-
-from ipyparallel import error, util
+from .heartmonitor import HeartMonitor
+from ipyparallel import error
+from ipyparallel import util
 from ipyparallel.factory import RegistrationFactory
 
-from jupyter_client.session import SessionFactory
-
-from .heartmonitor import HeartMonitor
+# internal:
 
 
 def _passer(*args, **kwargs):
     return
 
+
 def _printer(*args, **kwargs):
-    print (args)
-    print (kwargs)
+    print(args)
+    print(kwargs)
+
 
 def empty_record():
     """Return an empty dict with all record keys."""
     return {
-        'msg_id' : None,
-        'header' : None,
-        'metadata' : None,
+        'msg_id': None,
+        'header': None,
+        'metadata': None,
         'content': None,
         'buffers': None,
         'submitted': None,
-        'client_uuid' : None,
-        'engine_uuid' : None,
+        'client_uuid': None,
+        'engine_uuid': None,
         'started': None,
         'completed': None,
         'resubmitted': None,
         'received': None,
-        'result_header' : None,
-        'result_metadata' : None,
-        'result_content' : None,
-        'result_buffers' : None,
-        'queue' : None,
-        'execute_input' : None,
+        'result_header': None,
+        'result_metadata': None,
+        'result_content': None,
+        'result_buffers': None,
+        'queue': None,
+        'execute_input': None,
         'execute_result': None,
         'error': None,
         'stdout': '',
         'stderr': '',
     }
 
+
 def init_record(msg):
     """Initialize a TaskRecord based on a request."""
     header = msg['header']
     return {
-        'msg_id' : header['msg_id'],
-        'header' : header,
+        'msg_id': header['msg_id'],
+        'header': header,
         'content': msg['content'],
         'metadata': msg['metadata'],
         'buffers': msg['buffers'],
         'submitted': util.ensure_timezone(header['date']),
-        'client_uuid' : None,
-        'engine_uuid' : None,
+        'client_uuid': None,
+        'engine_uuid': None,
         'started': None,
         'completed': None,
         'resubmitted': None,
         'received': None,
-        'result_header' : None,
+        'result_header': None,
         'result_metadata': None,
-        'result_content' : None,
-        'result_buffers' : None,
-        'queue' : None,
-        'execute_input' : None,
+        'result_content': None,
+        'result_buffers': None,
+        'queue': None,
+        'execute_input': None,
         'execute_result': None,
         'error': None,
         'stdout': '',
@@ -107,7 +117,7 @@ class EngineConnector(HasTraits):
     pending: set of msg_ids
     stallback: tornado timeout for stalled registration
     """
-    
+
     id = Integer(0)
     uuid = Unicode()
     pending = Set()
@@ -115,81 +125,116 @@ class EngineConnector(HasTraits):
 
 
 _db_shortcuts = {
-    'sqlitedb' : 'ipyparallel.controller.sqlitedb.SQLiteDB',
-    'mongodb'  : 'ipyparallel.controller.mongodb.MongoDB',
-    'dictdb'   : 'ipyparallel.controller.dictdb.DictDB',
-    'nodb'     : 'ipyparallel.controller.dictdb.NoDB',
+    'sqlitedb': 'ipyparallel.controller.sqlitedb.SQLiteDB',
+    'mongodb': 'ipyparallel.controller.mongodb.MongoDB',
+    'dictdb': 'ipyparallel.controller.dictdb.DictDB',
+    'nodb': 'ipyparallel.controller.dictdb.NoDB',
 }
+
 
 class HubFactory(RegistrationFactory):
     """The Configurable for setting up a Hub."""
 
     # port-pairs for monitoredqueues:
-    hb = Tuple(Integer(), Integer(), config=True,
-        help="""PUB/ROUTER Port pair for Engine heartbeats""")
+    hb = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""PUB/ROUTER Port pair for Engine heartbeats""",
+    )
+
     def _hb_default(self):
         return tuple(util.select_random_ports(2))
 
-    mux = Tuple(Integer(), Integer(), config=True,
-        help="""Client/Engine Port pair for MUX queue""")
+    mux = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""Client/Engine Port pair for MUX queue""",
+    )
 
     def _mux_default(self):
         return tuple(util.select_random_ports(2))
 
-    task = Tuple(Integer(), Integer(), config=True,
-        help="""Client/Engine Port pair for Task queue""")
+    task = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""Client/Engine Port pair for Task queue""",
+    )
+
     def _task_default(self):
         return tuple(util.select_random_ports(2))
 
-    control = Tuple(Integer(), Integer(), config=True,
-        help="""Client/Engine Port pair for Control queue""")
+    control = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""Client/Engine Port pair for Control queue""",
+    )
 
     def _control_default(self):
         return tuple(util.select_random_ports(2))
 
-    iopub = Tuple(Integer(), Integer(), config=True,
-        help="""Client/Engine Port pair for IOPub relay""")
+    iopub = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""Client/Engine Port pair for IOPub relay""",
+    )
 
     def _iopub_default(self):
         return tuple(util.select_random_ports(2))
 
     # single ports:
-    mon_port = Integer(config=True,
-        help="""Monitor (SUB) port for queue traffic""")
+    mon_port = Integer(config=True, help="""Monitor (SUB) port for queue traffic""")
 
     def _mon_port_default(self):
         return util.select_random_ports(1)[0]
 
-    notifier_port = Integer(config=True,
-        help="""PUB port for sending engine status notifications""")
+    notifier_port = Integer(
+        config=True, help="""PUB port for sending engine status notifications"""
+    )
 
     def _notifier_port_default(self):
         return util.select_random_ports(1)[0]
 
-    engine_ip = Unicode(config=True,
-        help="IP on which to listen for engine connections. [default: loopback]")
+    engine_ip = Unicode(
+        config=True,
+        help="IP on which to listen for engine connections. [default: loopback]",
+    )
+
     def _engine_ip_default(self):
         return localhost()
-    engine_transport = Unicode('tcp', config=True,
-        help="0MQ transport for engine connections. [default: tcp]")
 
-    client_ip = Unicode(config=True,
-        help="IP on which to listen for client connections. [default: loopback]")
-    client_transport = Unicode('tcp', config=True,
-        help="0MQ transport for client connections. [default : tcp]")
+    engine_transport = Unicode(
+        'tcp', config=True, help="0MQ transport for engine connections. [default: tcp]"
+    )
 
-    monitor_ip = Unicode(config=True,
-        help="IP on which to listen for monitor messages. [default: loopback]")
-    monitor_transport = Unicode('tcp', config=True,
-        help="0MQ transport for monitor messages. [default : tcp]")
+    client_ip = Unicode(
+        config=True,
+        help="IP on which to listen for client connections. [default: loopback]",
+    )
+    client_transport = Unicode(
+        'tcp', config=True, help="0MQ transport for client connections. [default : tcp]"
+    )
+
+    monitor_ip = Unicode(
+        config=True,
+        help="IP on which to listen for monitor messages. [default: loopback]",
+    )
+    monitor_transport = Unicode(
+        'tcp', config=True, help="0MQ transport for monitor messages. [default : tcp]"
+    )
 
     _client_ip_default = _monitor_ip_default = _engine_ip_default
 
-
     monitor_url = Unicode('')
 
-    db_class = DottedObjectName('DictDB',
-        config=True, help="""The class to use for the DB backend
+    db_class = DottedObjectName(
+        'DictDB',
+        config=True,
+        help="""The class to use for the DB backend
         
         Options include:
         
@@ -198,22 +243,28 @@ class HubFactory(RegistrationFactory):
         DictDB  : in-memory storage (fastest, but be mindful of memory growth of the Hub)
         NoDB    : disable database altogether (default)
         
-        """)
+        """,
+    )
 
-    registration_timeout = Integer(0, config=True,
+    registration_timeout = Integer(
+        0,
+        config=True,
         help="Engine registration timeout in seconds [default: max(30,"
-             "10*heartmonitor.period)]" )
-    
+        "10*heartmonitor.period)]",
+    )
+
     def _registration_timeout_default(self):
         if self.heartmonitor is None:
             # early initialization, this value will be ignored
             return 0
             # heartmonitor period is in milliseconds, so 10x in seconds is .01
-        return max(30, int(.01 * self.heartmonitor.period))
+        return max(30, int(0.01 * self.heartmonitor.period))
 
     # not configurable
     db = Instance('ipyparallel.controller.dictdb.BaseDB', allow_none=True)
-    heartmonitor = Instance('ipyparallel.controller.heartmonitor.HeartMonitor', allow_none=True)
+    heartmonitor = Instance(
+        'ipyparallel.controller.heartmonitor.HeartMonitor', allow_none=True
+    )
 
     @observe('ip')
     def _ip_changed(self, change):
@@ -224,7 +275,11 @@ class HubFactory(RegistrationFactory):
         self._update_monitor_url()
 
     def _update_monitor_url(self):
-        self.monitor_url = "%s://%s:%i" % (self.monitor_transport, self.monitor_ip, self.mon_port)
+        self.monitor_url = "%s://%s:%i" % (
+            self.monitor_transport,
+            self.monitor_ip,
+            self.mon_port,
+        )
 
     @observe('transport')
     def _transport_changed(self, change):
@@ -238,7 +293,6 @@ class HubFactory(RegistrationFactory):
         super(HubFactory, self).__init__(**kwargs)
         self._update_monitor_url()
 
-
     def construct(self):
         self.init_hub()
 
@@ -248,12 +302,20 @@ class HubFactory(RegistrationFactory):
 
     def client_url(self, channel):
         """return full zmq url for a named client channel"""
-        return "%s://%s:%i" % (self.client_transport, self.client_ip, self.client_info[channel])
-    
+        return "%s://%s:%i" % (
+            self.client_transport,
+            self.client_ip,
+            self.client_info[channel],
+        )
+
     def engine_url(self, channel):
         """return full zmq url for a named engine channel"""
-        return "%s://%s:%i" % (self.engine_transport, self.engine_ip, self.engine_info[channel])
-    
+        return "%s://%s:%i" % (
+            self.engine_transport,
+            self.engine_ip,
+            self.engine_info[channel],
+        )
+
     def init_hub(self):
         """construct Hub object"""
 
@@ -263,42 +325,47 @@ class HubFactory(RegistrationFactory):
             scheme = self.config.TaskScheduler.scheme_name
         else:
             from .scheduler import TaskScheduler
+
             scheme = TaskScheduler.scheme_name.default_value
-        
+
         # build connection dicts
         engine = self.engine_info = {
-            'interface'     : "%s://%s" % (self.engine_transport, self.engine_ip),
-            'registration'  : self.regport,
-            'control'       : self.control[1],
-            'mux'           : self.mux[1],
-            'hb_ping'       : self.hb[0],
-            'hb_pong'       : self.hb[1],
-            'task'          : self.task[1],
-            'iopub'         : self.iopub[1],
-            }
+            'interface': "%s://%s" % (self.engine_transport, self.engine_ip),
+            'registration': self.regport,
+            'control': self.control[1],
+            'mux': self.mux[1],
+            'hb_ping': self.hb[0],
+            'hb_pong': self.hb[1],
+            'task': self.task[1],
+            'iopub': self.iopub[1],
+        }
 
         client = self.client_info = {
-            'interface'     : "%s://%s" % (self.client_transport, self.client_ip),
-            'registration'  : self.regport,
-            'control'       : self.control[0],
-            'mux'           : self.mux[0],
-            'task'          : self.task[0],
-            'task_scheme'   : scheme,
-            'iopub'         : self.iopub[0],
-            'notification'  : self.notifier_port,
-            }
-        
+            'interface': "%s://%s" % (self.client_transport, self.client_ip),
+            'registration': self.regport,
+            'control': self.control[0],
+            'mux': self.mux[0],
+            'task': self.task[0],
+            'task_scheme': scheme,
+            'iopub': self.iopub[0],
+            'notification': self.notifier_port,
+        }
+
         self.log.debug("Hub engine addrs: %s", self.engine_info)
         self.log.debug("Hub client addrs: %s", self.client_info)
-        
+
         # Registrar socket
         q = ZMQStream(ctx.socket(zmq.ROUTER), loop)
         util.set_hwm(q, 0)
         q.bind(self.client_url('registration'))
-        self.log.info("Hub listening on %s for registration.", self.client_url('registration'))
+        self.log.info(
+            "Hub listening on %s for registration.", self.client_url('registration')
+        )
         if self.client_ip != self.engine_ip:
             q.bind(self.engine_url('registration'))
-            self.log.info("Hub listening on %s for registration.", self.engine_url('registration'))
+            self.log.info(
+                "Hub listening on %s for registration.", self.engine_url('registration')
+            )
 
         ### Engine connections ###
 
@@ -308,13 +375,16 @@ class HubFactory(RegistrationFactory):
         hrep = ctx.socket(zmq.ROUTER)
         util.set_hwm(hrep, 0)
         hrep.bind(self.engine_url('hb_pong'))
-        self.heartmonitor = HeartMonitor(loop=loop, parent=self, log=self.log,
-                                pingstream=ZMQStream(hpub,loop),
-                                pongstream=ZMQStream(hrep,loop)
-                            )
+        self.heartmonitor = HeartMonitor(
+            loop=loop,
+            parent=self,
+            log=self.log,
+            pingstream=ZMQStream(hpub, loop),
+            pongstream=ZMQStream(hrep, loop),
+        )
 
         ### Client connections ###
-        
+
         # Notifier socket
         n = ZMQStream(ctx.socket(zmq.PUB), loop)
         n.bind(self.client_url('notification'))
@@ -331,21 +401,31 @@ class HubFactory(RegistrationFactory):
         # connect the db
         db_class = _db_shortcuts.get(self.db_class.lower(), self.db_class)
         self.log.info('Hub using DB backend: %r', (db_class.split('.')[-1]))
-        self.db = import_item(str(db_class))(session=self.session.session,
-                                            parent=self, log=self.log)
-        time.sleep(.25)
+        self.db = import_item(str(db_class))(
+            session=self.session.session, parent=self, log=self.log
+        )
+        time.sleep(0.25)
 
         # resubmit stream
         r = ZMQStream(ctx.socket(zmq.DEALER), loop)
         url = util.disambiguate_url(self.client_url('task'))
         r.connect(url)
 
-        self.hub = Hub(loop=loop, session=self.session, monitor=sub, heartmonitor=self.heartmonitor,
-                query=q, notifier=n, resubmit=r, db=self.db,
-                engine_info=self.engine_info, client_info=self.client_info,
-                log=self.log, registration_timeout=self.registration_timeout,
-                parent=self,
-                )
+        self.hub = Hub(
+            loop=loop,
+            session=self.session,
+            monitor=sub,
+            heartmonitor=self.heartmonitor,
+            query=q,
+            notifier=n,
+            resubmit=r,
+            db=self.db,
+            engine_info=self.engine_info,
+            client_info=self.client_info,
+            log=self.log,
+            registration_timeout=self.registration_timeout,
+            parent=self,
+        )
 
 
 class Hub(SessionFactory):
@@ -367,37 +447,36 @@ class Hub(SessionFactory):
     client_info: dict of zmq connection information for engines to connect
                 to the queues.
     """
-    
+
     engine_state_file = Unicode()
-    
+
     # internal data structures:
-    ids=Set() # engine IDs
-    keytable=Dict()
-    by_ident=Dict()
-    engines=Dict()
-    clients=Dict()
-    hearts=Dict()
-    pending=Set()
-    queues=Dict()  # pending msg_ids keyed by engine_id
-    tasks=Dict() # pending msg_ids submitted as tasks, keyed by client_id
-    completed=Dict() # completed msg_ids keyed by engine_id
-    all_completed=Set() # completed msg_ids keyed by engine_id
-    unassigned=Set() # set of task msg_ds not yet assigned a destination
-    incoming_registrations=Dict()
-    registration_timeout=Integer()
-    _idcounter=Integer(0)
+    ids = Set()  # engine IDs
+    keytable = Dict()
+    by_ident = Dict()
+    engines = Dict()
+    clients = Dict()
+    hearts = Dict()
+    pending = Set()
+    queues = Dict()  # pending msg_ids keyed by engine_id
+    tasks = Dict()  # pending msg_ids submitted as tasks, keyed by client_id
+    completed = Dict()  # completed msg_ids keyed by engine_id
+    all_completed = Set()  # completed msg_ids keyed by engine_id
+    unassigned = Set()  # set of task msg_ds not yet assigned a destination
+    incoming_registrations = Dict()
+    registration_timeout = Integer()
+    _idcounter = Integer(0)
     distributed_scheduler = Any()
 
     # objects from constructor:
-    query=Instance(ZMQStream, allow_none=True)
-    monitor=Instance(ZMQStream, allow_none=True)
-    notifier=Instance(ZMQStream, allow_none=True)
-    resubmit=Instance(ZMQStream, allow_none=True)
-    heartmonitor=Instance(HeartMonitor, allow_none=True)
-    db=Instance(object, allow_none=True)
-    client_info=Dict()
-    engine_info=Dict()
-
+    query = Instance(ZMQStream, allow_none=True)
+    monitor = Instance(ZMQStream, allow_none=True)
+    notifier = Instance(ZMQStream, allow_none=True)
+    resubmit = Instance(ZMQStream, allow_none=True)
+    heartmonitor = Instance(HeartMonitor, allow_none=True)
+    db = Instance(object, allow_none=True)
+    client_info = Dict()
+    engine_info = Dict()
 
     def __init__(self, **kwargs):
         """
@@ -423,36 +502,38 @@ class Hub(SessionFactory):
         self.heartmonitor.add_heart_failure_handler(self.handle_heart_failure)
         self.heartmonitor.add_new_heart_handler(self.handle_new_heart)
 
-        self.monitor_handlers = {b'in' : self.save_queue_request,
-                                b'out': self.save_queue_result,
-                                b'intask': self.save_task_request,
-                                b'outtask': self.save_task_result,
-                                b'tracktask': self.save_task_destination,
-                                b'incontrol': _passer,
-                                b'outcontrol': _passer,
-                                b'iopub': self.monitor_iopub_message,
+        self.monitor_handlers = {
+            b'in': self.save_queue_request,
+            b'out': self.save_queue_result,
+            b'intask': self.save_task_request,
+            b'outtask': self.save_task_result,
+            b'tracktask': self.save_task_destination,
+            b'incontrol': _passer,
+            b'outcontrol': _passer,
+            b'iopub': self.monitor_iopub_message,
         }
 
-        self.query_handlers = {'queue_request': self.queue_status,
-                                'result_request': self.get_results,
-                                'history_request': self.get_history,
-                                'db_request': self.db_query,
-                                'purge_request': self.purge_results,
-                                'load_request': self.check_load,
-                                'resubmit_request': self.resubmit_task,
-                                'shutdown_request': self.shutdown_request,
-                                'registration_request' : self.register_engine,
-                                'unregistration_request' : self.unregister_engine,
-                                'connection_request': self.connection_request,
-                                'become_dask_request': self.become_dask,
-                                'stop_distributed_request': self.stop_distributed,
+        self.query_handlers = {
+            'queue_request': self.queue_status,
+            'result_request': self.get_results,
+            'history_request': self.get_history,
+            'db_request': self.db_query,
+            'purge_request': self.purge_results,
+            'load_request': self.check_load,
+            'resubmit_request': self.resubmit_task,
+            'shutdown_request': self.shutdown_request,
+            'registration_request': self.register_engine,
+            'unregistration_request': self.unregister_engine,
+            'connection_request': self.connection_request,
+            'become_dask_request': self.become_dask,
+            'stop_distributed_request': self.stop_distributed,
         }
 
         # ignore resubmit replies
         self.resubmit.on_recv(lambda msg: None, copy=False)
 
         self.log.info("hub::created hub")
-    
+
     def new_engine_id(self, requested_id=None):
         """generate a new engine integer id.
 
@@ -463,22 +544,25 @@ class Hub(SessionFactory):
         """
         if requested_id is not None:
             if requested_id in self.engines:
-                self.log.warning("Engine id %s in use by engine with uuid=%s",
-                     requested_id, self.engines[requested_id].uuid)
-            elif requested_id in {
-                ec.id for ec in self.incoming_registrations.values()
-            }:
-                self.log.warning("Engine id %s registration already pending", requested_id)
+                self.log.warning(
+                    "Engine id %s in use by engine with uuid=%s",
+                    requested_id,
+                    self.engines[requested_id].uuid,
+                )
+            elif requested_id in {ec.id for ec in self.incoming_registrations.values()}:
+                self.log.warning(
+                    "Engine id %s registration already pending", requested_id
+                )
             else:
                 self._idcounter = max(requested_id + 1, self._idcounter)
                 return requested_id
         newid = self._idcounter
         self._idcounter += 1
         return newid
-    
-    #-----------------------------------------------------------------------------
+
+    # -----------------------------------------------------------------------------
     # message validation
-    #-----------------------------------------------------------------------------
+    # -----------------------------------------------------------------------------
 
     def _validate_targets(self, targets):
         """turn any valid targets argument into a list of integer ids"""
@@ -486,27 +570,26 @@ class Hub(SessionFactory):
             # default to all
             return self.ids
 
-        if isinstance(targets, (int,str,unicode_type)):
+        if isinstance(targets, (int, str, unicode_type)):
             # only one target specified
             targets = [targets]
         _targets = []
         for t in targets:
             # map raw identities to ids
-            if isinstance(t, (str,unicode_type)):
+            if isinstance(t, (str, unicode_type)):
                 t = self.by_ident.get(cast_bytes(t), t)
             _targets.append(t)
         targets = _targets
-        bad_targets = [ t for t in targets if t not in self.ids ]
+        bad_targets = [t for t in targets if t not in self.ids]
         if bad_targets:
             raise IndexError("No Such Engine: %r" % bad_targets)
         if not targets:
             raise IndexError("No Engines Registered")
         return targets
 
-    #-----------------------------------------------------------------------------
+    # -----------------------------------------------------------------------------
     # dispatch methods (1 per stream)
-    #-----------------------------------------------------------------------------
-
+    # -----------------------------------------------------------------------------
 
     @util.log_errors
     def dispatch_monitor_traffic(self, msg):
@@ -517,7 +600,7 @@ class Hub(SessionFactory):
         try:
             idents, msg = self.session.feed_identities(msg[1:])
         except ValueError:
-            idents=[]
+            idents = []
         if not idents:
             self.log.error("Monitor message without topic: %r", msg)
             return
@@ -544,11 +627,12 @@ class Hub(SessionFactory):
         except Exception:
             content = error.wrap_exception()
             self.log.error("Bad Query Message: %r", msg, exc_info=True)
-            self.session.send(self.query, "hub_error", ident=client_id,
-                    content=content, parent=msg)
+            self.session.send(
+                self.query, "hub_error", ident=client_id, content=content, parent=msg
+            )
             return
         # print client_id, header, parent, content
-        #switch on message type:
+        # switch on message type:
         msg_type = msg['header']['msg_type']
         self.log.info("client::client %r requested %r", client_id, msg_type)
         handler = self.query_handlers.get(msg_type, None)
@@ -558,10 +642,11 @@ class Hub(SessionFactory):
         except:
             content = error.wrap_exception()
             self.log.error("Bad Message Type: %r", msg_type, exc_info=True)
-            self.session.send(self.query, "hub_error", ident=client_id,
-                    content=content, parent=msg)
+            self.session.send(
+                self.query, "hub_error", ident=client_id, content=content, parent=msg
+            )
             return
-        
+
         try:
             f = handler(idents, msg)
             if f:
@@ -569,14 +654,15 @@ class Hub(SessionFactory):
         except Exception:
             content = error.wrap_exception()
             self.log.error("Error handling request: %r", msg_type, exc_info=True)
-            self.session.send(self.query, "hub_error", ident=client_id,
-                    content=content, parent=msg)
+            self.session.send(
+                self.query, "hub_error", ident=client_id, content=content, parent=msg
+            )
 
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
     # handler methods (1 per event)
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
 
-    #----------------------- Heartbeat --------------------------------------
+    # ----------------------- Heartbeat --------------------------------------
 
     def handle_new_heart(self, heart):
         """handler to attach to heartbeater.
@@ -588,7 +674,6 @@ class Hub(SessionFactory):
         else:
             self.finish_registration(heart)
 
-
     def handle_heart_failure(self, heart):
         """handler to attach to heartbeater.
         called when a previously registered heart fails to respond to beat request.
@@ -596,12 +681,15 @@ class Hub(SessionFactory):
         self.log.debug("heartbeat::handle_heart_failure(%r)", heart)
         eid = self.hearts.get(heart, None)
         if eid is None:
-            self.log.info("heartbeat::ignoring heart failure %r (not an engine or already dead)", heart)
+            self.log.info(
+                "heartbeat::ignoring heart failure %r (not an engine or already dead)",
+                heart,
+            )
         else:
             uuid = self.engines[eid].uuid
             self.unregister_engine(heart, dict(content=dict(id=eid, queue=uuid)))
 
-    #----------------------- MUX Queue Traffic ------------------------------
+    # ----------------------- MUX Queue Traffic ------------------------------
 
     def save_queue_request(self, idents, msg):
         if len(idents) < 2:
@@ -611,7 +699,13 @@ class Hub(SessionFactory):
         try:
             msg = self.session.deserialize(msg)
         except Exception:
-            self.log.error("queue::client %r sent invalid message to %r: %r", client_id, queue_id, msg, exc_info=True)
+            self.log.error(
+                "queue::client %r sent invalid message to %r: %r",
+                client_id,
+                queue_id,
+                msg,
+                exc_info=True,
+            )
             return
 
         eid = self.by_ident.get(queue_id, None)
@@ -621,7 +715,9 @@ class Hub(SessionFactory):
             return
         record = init_record(msg)
         msg_id = record['msg_id']
-        self.log.info("queue::client %r submitted request %r to %s", client_id, msg_id, eid)
+        self.log.info(
+            "queue::client %r submitted request %r to %s", client_id, msg_id, eid
+        )
         # Unicode in records
         record['engine_uuid'] = queue_id.decode('ascii')
         record['client_uuid'] = msg['header']['session']
@@ -630,10 +726,16 @@ class Hub(SessionFactory):
         try:
             # it's posible iopub arrived first:
             existing = self.db.get_record(msg_id)
-            for key,evalue in iteritems(existing):
+            for key, evalue in iteritems(existing):
                 rvalue = record.get(key, None)
                 if evalue and rvalue and evalue != rvalue:
-                    self.log.warn("conflicting initial state for record: %r:%r <%r> %r", msg_id, rvalue, key, evalue)
+                    self.log.warn(
+                        "conflicting initial state for record: %r:%r <%r> %r",
+                        msg_id,
+                        rvalue,
+                        key,
+                        evalue,
+                    )
                 elif evalue and not rvalue:
                     record[key] = evalue
             try:
@@ -645,7 +747,6 @@ class Hub(SessionFactory):
                 self.db.add_record(msg_id, record)
             except Exception:
                 self.log.error("DB Error adding record %r", msg_id, exc_info=True)
-
 
         self.pending.add(msg_id)
         self.queues[eid].append(msg_id)
@@ -659,8 +760,13 @@ class Hub(SessionFactory):
         try:
             msg = self.session.deserialize(msg)
         except Exception:
-            self.log.error("queue::engine %r sent invalid message to %r: %r",
-                    queue_id, client_id, msg, exc_info=True)
+            self.log.error(
+                "queue::engine %r sent invalid message to %r: %r",
+                queue_id,
+                client_id,
+                msg,
+                exc_info=True,
+            )
             return
 
         eid = self.by_ident.get(queue_id, None)
@@ -689,12 +795,12 @@ class Hub(SessionFactory):
         completed = util.ensure_timezone(rheader['date'])
         started = extract_dates(md.get('started', None))
         result = {
-            'result_header' : rheader,
+            'result_header': rheader,
             'result_metadata': md,
             'result_content': msg['content'],
             'received': util.utcnow(),
-            'started' : started,
-            'completed' : completed
+            'started': started,
+            'completed': completed,
         }
 
         result['result_buffers'] = msg['buffers']
@@ -703,8 +809,7 @@ class Hub(SessionFactory):
         except Exception:
             self.log.error("DB Error updating record %r", msg_id, exc_info=True)
 
-
-    #--------------------- Task Queue Traffic ------------------------------
+    # --------------------- Task Queue Traffic ------------------------------
 
     def save_task_request(self, idents, msg):
         """Save the submission of a task."""
@@ -713,8 +818,12 @@ class Hub(SessionFactory):
         try:
             msg = self.session.deserialize(msg)
         except Exception:
-            self.log.error("task::client %r sent invalid task message: %r",
-                    client_id, msg, exc_info=True)
+            self.log.error(
+                "task::client %r sent invalid task message: %r",
+                client_id,
+                msg,
+                exc_info=True,
+            )
             return
         record = init_record(msg)
 
@@ -736,13 +845,19 @@ class Hub(SessionFactory):
                     # still check content,header which should not change
                     # but are not expensive to compare as buffers
 
-            for key,evalue in iteritems(existing):
+            for key, evalue in iteritems(existing):
                 if key.endswith('buffers'):
                     # don't compare buffers
                     continue
                 rvalue = record.get(key, None)
                 if evalue and rvalue and evalue != rvalue:
-                    self.log.warn("conflicting initial state for record: %r:%r <%r> %r", msg_id, rvalue, key, evalue)
+                    self.log.warn(
+                        "conflicting initial state for record: %r:%r <%r> %r",
+                        msg_id,
+                        rvalue,
+                        key,
+                        evalue,
+                    )
                 elif evalue and not rvalue:
                     record[key] = evalue
             try:
@@ -763,8 +878,12 @@ class Hub(SessionFactory):
         try:
             msg = self.session.deserialize(msg)
         except Exception:
-            self.log.error("task::invalid task result message send to %r: %r",
-                    client_id, msg, exc_info=True)
+            self.log.error(
+                "task::invalid task result message send to %r: %r",
+                client_id,
+                msg,
+                exc_info=True,
+            )
             return
 
         parent = msg['parent_header']
@@ -780,7 +899,7 @@ class Hub(SessionFactory):
         md = msg['metadata']
         engine_uuid = md.get('engine', u'')
         eid = self.by_ident.get(cast_bytes(engine_uuid), None)
-        
+
         status = md.get('status', None)
 
         if msg_id in self.pending:
@@ -795,12 +914,12 @@ class Hub(SessionFactory):
             completed = util.ensure_timezone(header['date'])
             started = extract_dates(md.get('started', None))
             result = {
-                'result_header' : header,
+                'result_header': header,
                 'result_metadata': msg['metadata'],
                 'result_content': msg['content'],
-                'started' : started,
-                'completed' : completed,
-                'received' : util.utcnow(),
+                'started': started,
+                'completed': completed,
+                'received': util.utcnow(),
                 'engine_uuid': engine_uuid,
             }
 
@@ -837,8 +956,7 @@ class Hub(SessionFactory):
         except Exception:
             self.log.error("DB Error saving task destination %r", msg_id, exc_info=True)
 
-
-    #--------------------- IOPub Traffic ------------------------------
+    # --------------------- IOPub Traffic ------------------------------
 
     def monitor_iopub_message(self, topics, msg):
         '''intercept iopub traffic so events can be acted upon'''
@@ -853,10 +971,14 @@ class Hub(SessionFactory):
             session = msg['header']['session']
             eid = self.by_ident.get(session, None)
             uuid = self.engines[eid].uuid
-            self.unregister_engine(ident='shutdown_reply',
-                                   msg=dict(content=dict(id=eid, queue=uuid)))
+            self.unregister_engine(
+                ident='shutdown_reply', msg=dict(content=dict(id=eid, queue=uuid))
+            )
 
-        if msg_type not in ('status', 'shutdown_reply', ):
+        if msg_type not in (
+            'status',
+            'shutdown_reply',
+        ):
             self.save_iopub_message(topics, msg)
 
     def save_iopub_message(self, topics, msg):
@@ -868,13 +990,13 @@ class Hub(SessionFactory):
         msg_id = parent['msg_id']
         msg_type = msg['header']['msg_type']
         content = msg['content']
-        
+
         # ensure msg_id is in db
         try:
             rec = self.db.get_record(msg_id)
         except KeyError:
             rec = None
-        
+
         # stream
         d = {}
         if msg_type == 'stream':
@@ -894,7 +1016,7 @@ class Hub(SessionFactory):
 
         if not d:
             return
-        
+
         if rec is None:
             # new record
             rec = empty_record()
@@ -904,27 +1026,27 @@ class Hub(SessionFactory):
             update_record = self.db.add_record
         else:
             update_record = self.db.update_record
-        
+
         try:
             update_record(msg_id, d)
         except Exception:
             self.log.error("DB Error saving iopub message %r", msg_id, exc_info=True)
 
-
-
-    #-------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # Registration requests
-    #-------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def connection_request(self, client_id, msg):
         """Reply with connection addresses for clients."""
         self.log.info("client::client %r connected", client_id)
         content = dict(status='ok')
         jsonable = {}
-        for k,v in iteritems(self.keytable):
-                jsonable[str(k)] = v
+        for k, v in iteritems(self.keytable):
+            jsonable[str(k)] = v
         content['engines'] = jsonable
-        self.session.send(self.query, 'connection_reply', content, parent=msg, ident=client_id)
+        self.session.send(
+            self.query, 'connection_reply', content, parent=msg, ident=client_id
+        )
 
     def register_engine(self, reg, msg):
         """Register a new engine."""
@@ -939,7 +1061,7 @@ class Hub(SessionFactory):
 
         self.log.debug("registration::register_engine(%i, %r)", eid, uuid)
 
-        content = dict(id=eid,status='ok',hb_period=self.heartmonitor.period)
+        content = dict(id=eid, status='ok', hb_period=self.heartmonitor.period)
         # check if requesting available IDs:
         if cast_bytes(uuid) in self.by_ident:
             try:
@@ -964,27 +1086,31 @@ class Hub(SessionFactory):
                         content = error.wrap_exception()
                     break
 
-        msg = self.session.send(self.query, "registration_reply",
-                content=content,
-                ident=reg)
+        msg = self.session.send(
+            self.query, "registration_reply", content=content, ident=reg
+        )
 
         heart = cast_bytes(uuid)
 
         if content['status'] == 'ok':
             if heart in self.heartmonitor.hearts:
                 # already beating
-                self.incoming_registrations[heart] = EngineConnector(id=eid,uuid=uuid)
+                self.incoming_registrations[heart] = EngineConnector(id=eid, uuid=uuid)
                 self.finish_registration(heart)
             else:
-                purge = lambda : self._purge_stalled_registration(heart)
+                purge = lambda: self._purge_stalled_registration(heart)
                 t = self.loop.add_timeout(
                     self.loop.time() + self.registration_timeout,
                     purge,
                 )
-                self.incoming_registrations[heart] = EngineConnector(id=eid,uuid=uuid,stallback=t)
+                self.incoming_registrations[heart] = EngineConnector(
+                    id=eid, uuid=uuid, stallback=t
+                )
         else:
-            self.log.error("registration::registration %i failed: %r", eid, content['evalue'])
-        
+            self.log.error(
+                "registration::registration %i failed: %r", eid, content['evalue']
+            )
+
         return eid
 
     def unregister_engine(self, ident, msg):
@@ -992,21 +1118,25 @@ class Hub(SessionFactory):
         try:
             eid = msg['content']['id']
         except:
-            self.log.error("registration::bad engine id for unregistration: %r", ident, exc_info=True)
+            self.log.error(
+                "registration::bad engine id for unregistration: %r",
+                ident,
+                exc_info=True,
+            )
             return
         self.log.info("registration::unregister_engine(%r)", eid)
-        
+
         uuid = self.keytable[eid]
-        content=dict(id=eid, uuid=uuid)
-        
-        #stop the heartbeats
+        content = dict(id=eid, uuid=uuid)
+
+        # stop the heartbeats
         self.hearts.pop(uuid, None)
         self.heartmonitor.responses.discard(uuid)
         self.heartmonitor.hearts.discard(uuid)
 
         self.loop.add_timeout(
             self.loop.time() + self.registration_timeout,
-            lambda : self._handle_stranded_msgs(eid, uuid),
+            lambda: self._handle_stranded_msgs(eid, uuid),
         )
 
         # cleanup mappings
@@ -1017,7 +1147,9 @@ class Hub(SessionFactory):
         self._save_engine_state()
 
         if self.notifier:
-            self.session.send(self.notifier, "unregistration_notification", content=content)
+            self.session.send(
+                self.notifier, "unregistration_notification", content=content
+            )
 
     def _handle_stranded_msgs(self, eid, uuid):
         """Handle messages known to be on an engine when the engine unregisters.
@@ -1033,7 +1165,9 @@ class Hub(SessionFactory):
             self.pending.remove(msg_id)
             self.all_completed.add(msg_id)
             try:
-                raise error.EngineError("Engine %r died while running task %r" % (eid, msg_id))
+                raise error.EngineError(
+                    "Engine %r died while running task %r" % (eid, msg_id)
+                )
             except:
                 content = error.wrap_exception()
             # build a fake header:
@@ -1046,8 +1180,9 @@ class Hub(SessionFactory):
             try:
                 self.db.update_record(msg_id, rec)
             except Exception:
-                self.log.error("DB Error handling stranded msg %r", msg_id, exc_info=True)
-
+                self.log.error(
+                    "DB Error handling stranded msg %r", msg_id, exc_info=True
+                )
 
     def finish_registration(self, heart):
         """Second half of engine registration, called after our HeartMonitor
@@ -1055,7 +1190,9 @@ class Hub(SessionFactory):
         try:
             ec = self.incoming_registrations.pop(heart)
         except KeyError:
-            self.log.error("registration::tried to finish nonexistant registration", exc_info=True)
+            self.log.error(
+                "registration::tried to finish nonexistant registration", exc_info=True
+            )
             return
         self.log.info("registration::finished registering engine %i:%s", ec.id, ec.uuid)
         if ec.stallback is not None:
@@ -1071,9 +1208,11 @@ class Hub(SessionFactory):
         self.hearts[heart] = eid
         content = dict(id=eid, uuid=self.engines[eid].uuid)
         if self.notifier:
-            self.session.send(self.notifier, "registration_notification", content=content)
+            self.session.send(
+                self.notifier, "registration_notification", content=content
+            )
         self.log.info("engine::Engine Connected: %i", eid)
-        
+
         self._save_engine_state()
 
     def _purge_stalled_registration(self, heart):
@@ -1083,21 +1222,21 @@ class Hub(SessionFactory):
         else:
             pass
 
-    #-------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # Engine State
-    #-------------------------------------------------------------------------
-
+    # -------------------------------------------------------------------------
 
     def _cleanup_engine_state_file(self):
         """cleanup engine state mapping"""
-        
+
         if os.path.exists(self.engine_state_file):
             self.log.debug("cleaning up engine state: %s", self.engine_state_file)
             try:
                 os.remove(self.engine_state_file)
             except IOError:
-                self.log.error("Couldn't cleanup file: %s", self.engine_state_file, exc_info=True)
-
+                self.log.error(
+                    "Couldn't cleanup file: %s", self.engine_state_file, exc_info=True
+                )
 
     def _save_engine_state(self):
         """save engine mapping to JSON file"""
@@ -1108,25 +1247,24 @@ class Hub(SessionFactory):
         engines = {}
         for eid, ec in self.engines.items():
             engines[eid] = ec.uuid
-        
+
         state['engines'] = engines
-        
+
         state['next_id'] = self._idcounter
-        
+
         with open(self.engine_state_file, 'w') as f:
             json.dump(state, f)
-
 
     def _load_engine_state(self):
         """load engine mapping from JSON file"""
         if not os.path.exists(self.engine_state_file):
             return
-        
+
         self.log.info("loading engine state from %s" % self.engine_state_file)
-        
+
         with open(self.engine_state_file) as f:
             state = json.load(f)
-        
+
         save_notifier = self.notifier
         self.notifier = None
         for eid, uuid in iteritems(state['engines']):
@@ -1134,30 +1272,37 @@ class Hub(SessionFactory):
             # start with this heart as current and beating:
             self.heartmonitor.responses.add(heart)
             self.heartmonitor.hearts.add(heart)
-            
+
             self.incoming_registrations[heart] = EngineConnector(id=int(eid), uuid=uuid)
             self.finish_registration(heart)
-        
+
         self.notifier = save_notifier
-        
+
         self._idcounter = state['next_id']
 
-    #-------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
     # Client Requests
-    #-------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
 
     def shutdown_request(self, client_id, msg):
         """handle shutdown request."""
-        self.session.send(self.query, 'shutdown_reply', content={'status': 'ok'}, ident=client_id, parent=msg)
+        self.session.send(
+            self.query,
+            'shutdown_reply',
+            content={'status': 'ok'},
+            ident=client_id,
+            parent=msg,
+        )
         # also notify other clients of shutdown
-        self.session.send(self.notifier, 'shutdown_notification', content={'status': 'ok'}, parent=msg)
+        self.session.send(
+            self.notifier, 'shutdown_notification', content={'status': 'ok'}, parent=msg
+        )
         self.loop.add_timeout(self.loop.time() + 1, self._shutdown)
 
     def _shutdown(self):
         self.log.info("hub::hub shutting down.")
         time.sleep(0.1)
         sys.exit(0)
-
 
     def check_load(self, client_id, msg):
         content = msg['content']
@@ -1166,16 +1311,18 @@ class Hub(SessionFactory):
             targets = self._validate_targets(targets)
         except:
             content = error.wrap_exception()
-            self.session.send(self.query, "hub_error",
-                    content=content, ident=client_id, parent=msg)
+            self.session.send(
+                self.query, "hub_error", content=content, ident=client_id, parent=msg
+            )
             return
 
         content = dict(status='ok')
         # loads = {}
         for t in targets:
-            content[bytes(t)] = len(self.queues[t])+len(self.tasks[t])
-        self.session.send(self.query, "load_reply", content=content, ident=client_id, parent=msg)
-
+            content[bytes(t)] = len(self.queues[t]) + len(self.tasks[t])
+        self.session.send(
+            self.query, "load_reply", content=content, ident=client_id, parent=msg
+        )
 
     def queue_status(self, client_id, msg):
         """Return the Queue status of one or more targets.
@@ -1194,8 +1341,9 @@ class Hub(SessionFactory):
             targets = self._validate_targets(targets)
         except:
             content = error.wrap_exception()
-            self.session.send(self.query, "hub_error",
-                    content=content, ident=client_id, parent=msg)
+            self.session.send(
+                self.query, "hub_error", content=content, ident=client_id, parent=msg
+            )
             return
         verbose = content.get('verbose', False)
         content = dict(status='ok')
@@ -1207,10 +1355,14 @@ class Hub(SessionFactory):
                 queue = len(queue)
                 completed = len(completed)
                 tasks = len(tasks)
-            content[str(t)] = {'queue': queue, 'completed': completed , 'tasks': tasks}
-        content['unassigned'] = list(self.unassigned) if verbose else len(self.unassigned)
+            content[str(t)] = {'queue': queue, 'completed': completed, 'tasks': tasks}
+        content['unassigned'] = (
+            list(self.unassigned) if verbose else len(self.unassigned)
+        )
         # print (content)
-        self.session.send(self.query, "queue_reply", content=content, ident=client_id, parent=msg)
+        self.session.send(
+            self.query, "queue_reply", content=content, ident=client_id, parent=msg
+        )
 
     def purge_results(self, client_id, msg):
         """Purge results from memory. This method is more valuable before we move
@@ -1221,7 +1373,7 @@ class Hub(SessionFactory):
         reply = dict(status='ok')
         if msg_ids == 'all':
             try:
-                self.db.drop_matching_records(dict(completed={'$ne':None}))
+                self.db.drop_matching_records(dict(completed={'$ne': None}))
             except Exception:
                 reply = error.wrap_exception()
                 self.log.exception("Error dropping records")
@@ -1235,7 +1387,7 @@ class Hub(SessionFactory):
                     self.log.exception("Error dropping records")
             else:
                 try:
-                    self.db.drop_matching_records(dict(msg_id={'$in':msg_ids}))
+                    self.db.drop_matching_records(dict(msg_id={'$in': msg_ids}))
                 except Exception:
                     reply = error.wrap_exception()
                     self.log.exception("Error dropping records")
@@ -1252,42 +1404,56 @@ class Hub(SessionFactory):
                         break
                     uid = self.engines[eid].uuid
                     try:
-                        self.db.drop_matching_records(dict(engine_uuid=uid, completed={'$ne':None}))
+                        self.db.drop_matching_records(
+                            dict(engine_uuid=uid, completed={'$ne': None})
+                        )
                     except Exception:
                         reply = error.wrap_exception()
                         self.log.exception("Error dropping records")
                         break
 
-        self.session.send(self.query, 'purge_reply', content=reply, ident=client_id, parent=msg)
+        self.session.send(
+            self.query, 'purge_reply', content=reply, ident=client_id, parent=msg
+        )
 
     def resubmit_task(self, client_id, msg):
         """Resubmit one or more tasks."""
         parent = msg
+
         def finish(reply):
-            self.session.send(self.query, 'resubmit_reply', content=reply, ident=client_id, parent=parent)
+            self.session.send(
+                self.query,
+                'resubmit_reply',
+                content=reply,
+                ident=client_id,
+                parent=parent,
+            )
 
         content = msg['content']
         msg_ids = content['msg_ids']
         reply = dict(status='ok')
         try:
-            records = self.db.find_records({'msg_id' : {'$in' : msg_ids}}, keys=[
-                'header', 'content', 'buffers'])
+            records = self.db.find_records(
+                {'msg_id': {'$in': msg_ids}}, keys=['header', 'content', 'buffers']
+            )
         except Exception:
             self.log.error('db::db error finding tasks to resubmit', exc_info=True)
             return finish(error.wrap_exception())
 
         # validate msg_ids
-        found_ids = [ rec['msg_id'] for rec in records ]
-        pending_ids = [ msg_id for msg_id in found_ids if msg_id in self.pending ]
+        found_ids = [rec['msg_id'] for rec in records]
+        pending_ids = [msg_id for msg_id in found_ids if msg_id in self.pending]
         if len(records) > len(msg_ids):
             try:
-                raise RuntimeError("DB appears to be in an inconsistent state."
-                    "More matching records were found than should exist")
+                raise RuntimeError(
+                    "DB appears to be in an inconsistent state."
+                    "More matching records were found than should exist"
+                )
             except Exception:
                 self.log.exception("Failed to resubmit task")
                 return finish(error.wrap_exception())
         elif len(records) < len(msg_ids):
-            missing = [ m for m in msg_ids if m not in found_ids ]
+            missing = [m for m in msg_ids if m not in found_ids]
             try:
                 raise KeyError("No such msg(s): %r" % missing)
             except KeyError:
@@ -1312,7 +1478,7 @@ class Hub(SessionFactory):
             msg = self.session.msg(header['msg_type'], parent=header)
             msg_id = msg['msg_id']
             msg['content'] = rec['content']
-            
+
             # use the old header, but update msg_id and timestamp
             fresh = msg['header']
             header['msg_id'] = fresh['msg_id']
@@ -1327,32 +1493,35 @@ class Hub(SessionFactory):
             try:
                 self.db.add_record(msg_id, init_record(msg))
             except Exception:
-                self.log.error("db::DB Error updating record: %s", msg_id, exc_info=True)
+                self.log.error(
+                    "db::DB Error updating record: %s", msg_id, exc_info=True
+                )
                 return finish(error.wrap_exception())
 
         finish(dict(status='ok', resubmitted=resubmitted))
-        
+
         # store the new IDs in the Task DB
         for msg_id, resubmit_id in iteritems(resubmitted):
             try:
-                self.db.update_record(msg_id, {'resubmitted' : resubmit_id})
+                self.db.update_record(msg_id, {'resubmitted': resubmit_id})
             except Exception:
-                self.log.error("db::DB Error updating record: %s", msg_id, exc_info=True)
-
+                self.log.error(
+                    "db::DB Error updating record: %s", msg_id, exc_info=True
+                )
 
     def _extract_record(self, rec):
         """decompose a TaskRecord dict into subsection of reply for get_result"""
         io_dict = {}
         for key in ('execute_input', 'execute_result', 'error', 'stdout', 'stderr'):
-                io_dict[key] = rec[key]
-        content = { 
+            io_dict[key] = rec[key]
+        content = {
             'header': rec['header'],
             'metadata': rec['metadata'],
             'result_metadata': rec['result_metadata'],
-            'result_header' : rec['result_header'],
+            'result_header': rec['result_header'],
             'result_content': rec['result_content'],
-            'received' : rec['received'],
-            'io' : io_dict,
+            'received': rec['received'],
+            'io': io_dict,
         }
         if rec['result_buffers']:
             buffers = list(map(buffer_to_bytes_py2, rec['result_buffers']))
@@ -1374,7 +1543,7 @@ class Hub(SessionFactory):
         buffers = []
         if not statusonly:
             try:
-                matches = self.db.find_records(dict(msg_id={'$in':msg_ids}))
+                matches = self.db.find_records(dict(msg_id={'$in': msg_ids}))
                 # turn match list into dict, for faster lookup
                 records = {}
                 for rec in matches:
@@ -1382,8 +1551,13 @@ class Hub(SessionFactory):
             except Exception:
                 content = error.wrap_exception()
                 self.log.exception("Failed to get results")
-                self.session.send(self.query, "result_reply", content=content,
-                                                    parent=msg, ident=client_id)
+                self.session.send(
+                    self.query,
+                    "result_reply",
+                    content=content,
+                    parent=msg,
+                    ident=client_id,
+                )
                 return
         else:
             records = {}
@@ -1393,26 +1567,31 @@ class Hub(SessionFactory):
             elif msg_id in self.all_completed:
                 completed.append(msg_id)
                 if not statusonly:
-                    c,bufs = self._extract_record(records[msg_id])
+                    c, bufs = self._extract_record(records[msg_id])
                     content[msg_id] = c
                     buffers.extend(bufs)
             elif msg_id in records:
                 if rec['completed']:
                     completed.append(msg_id)
-                    c,bufs = self._extract_record(records[msg_id])
+                    c, bufs = self._extract_record(records[msg_id])
                     content[msg_id] = c
                     buffers.extend(bufs)
                 else:
                     pending.append(msg_id)
             else:
                 try:
-                    raise KeyError('No such message: '+msg_id)
+                    raise KeyError('No such message: ' + msg_id)
                 except:
                     content = error.wrap_exception()
                 break
-        self.session.send(self.query, "result_reply", content=content,
-                                            parent=msg, ident=client_id,
-                                            buffers=buffers)
+        self.session.send(
+            self.query,
+            "result_reply",
+            content=content,
+            parent=msg,
+            ident=client_id,
+            buffers=buffers,
+        )
 
     def get_history(self, client_id, msg):
         """Get a list of all msg_ids in our DB records"""
@@ -1424,8 +1603,9 @@ class Hub(SessionFactory):
         else:
             content = dict(status='ok', history=msg_ids)
 
-        self.session.send(self.query, "history_reply", content=content,
-                                            parent=msg, ident=client_id)
+        self.session.send(
+            self.query, "history_reply", content=content, parent=msg, ident=client_id
+        )
 
     def db_query(self, client_id, msg):
         """Perform a raw query on the task record database."""
@@ -1458,12 +1638,21 @@ class Hub(SessionFactory):
                 if result_buffer_lens is not None:
                     result_buffer_lens.append(len(rb))
                     buffers.extend(rb)
-            content = dict(status='ok', records=records, buffer_lens=buffer_lens,
-                                    result_buffer_lens=result_buffer_lens)
+            content = dict(
+                status='ok',
+                records=records,
+                buffer_lens=buffer_lens,
+                result_buffer_lens=result_buffer_lens,
+            )
         # self.log.debug (content)
-        self.session.send(self.query, "db_reply", content=content,
-                                            parent=msg, ident=client_id,
-                                            buffers=buffers)
+        self.session.send(
+            self.query,
+            "db_reply",
+            content=content,
+            parent=msg,
+            ident=client_id,
+            buffers=buffers,
+        )
 
     @coroutine
     def become_dask(self, client_id, msg):
@@ -1472,6 +1661,7 @@ class Hub(SessionFactory):
             kwargs = msg['content'].get('scheduler_args', {})
             self.log.info("Becoming dask.distributed scheduler: %s", kwargs)
             from distributed import Scheduler
+
             self.distributed_scheduler = scheduler = Scheduler(**kwargs)
             yield scheduler.start()
         content = {
@@ -1480,11 +1670,16 @@ class Hub(SessionFactory):
             'address': self.distributed_scheduler.address,
             'port': self.distributed_scheduler.port,
         }
-        self.log.info("dask.distributed scheduler running at {address}".format(**content))
-        self.session.send(self.query, "become_dask_reply", content=content,
-            parent=msg, ident=client_id,
+        self.log.info(
+            "dask.distributed scheduler running at {address}".format(**content)
         )
-
+        self.session.send(
+            self.query,
+            "become_dask_reply",
+            content=content,
+            parent=msg,
+            ident=client_id,
+        )
 
     def stop_distributed(self, client_id, msg):
         """Start a dask.distributed Scheduler."""
@@ -1495,7 +1690,10 @@ class Hub(SessionFactory):
         else:
             self.log.info("No dask.distributed scheduler running.")
         content = {'status': 'ok'}
-        self.session.send(self.query, "stop_distributed_reply", content=content,
-            parent=msg, ident=client_id,
+        self.session.send(
+            self.query,
+            "stop_distributed_reply",
+            content=content,
+            parent=msg,
+            ident=client_id,
         )
-
