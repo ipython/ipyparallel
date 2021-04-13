@@ -1,4 +1,5 @@
 import ipyparallel as ipp
+from ipyparallel import Dependency
 
 client = ipp.Client()
 
@@ -113,7 +114,7 @@ with flags(after=d6, follow=d2b):
 def should_fail(f):
     try:
         f()
-    except error.KernelError:
+    except ipp.error.KernelError:
         pass
     else:
         print('should have raised')

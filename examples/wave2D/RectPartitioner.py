@@ -237,7 +237,7 @@ class MPIRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 self.out_lower_buffers[0] = ascontiguousarray(solution_array[1, :])
             else:
-                for i in xrange(0, loc_ny + 1):
+                for i in range(0, loc_ny + 1):
                     self.out_lower_buffers[0][i] = solution_array[1, i]
             mpi.Isend(self.out_lower_buffers[0], lower_x_neigh)
 
@@ -249,7 +249,7 @@ class MPIRectPartitioner2D(RectPartitioner2D):
                     solution_array[loc_nx - 1, :]
                 )
             else:
-                for i in xrange(0, loc_ny + 1):
+                for i in range(0, loc_ny + 1):
                     solution_array[loc_nx, i] = self.in_upper_buffers[0][i]
                     self.out_upper_buffers[0][i] = solution_array[loc_nx - 1, i]
             mpi.Isend(self.out_upper_buffers[0], upper_x_neigh)
@@ -259,7 +259,7 @@ class MPIRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 solution_array[0, :] = self.in_lower_buffers[0]
             else:
-                for i in xrange(0, loc_ny + 1):
+                for i in range(0, loc_ny + 1):
                     solution_array[0, i] = self.in_lower_buffers[0][i]
 
         # communicate in the y-direction afterwards
@@ -267,7 +267,7 @@ class MPIRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 self.out_lower_buffers[1] = ascontiguousarray(solution_array[:, 1])
             else:
-                for i in xrange(0, loc_nx + 1):
+                for i in range(0, loc_nx + 1):
                     self.out_lower_buffers[1][i] = solution_array[i, 1]
             mpi.Isend(self.out_lower_buffers[1], lower_y_neigh)
 
@@ -279,7 +279,7 @@ class MPIRectPartitioner2D(RectPartitioner2D):
                     solution_array[:, loc_ny - 1]
                 )
             else:
-                for i in xrange(0, loc_nx + 1):
+                for i in range(0, loc_nx + 1):
                     solution_array[i, loc_ny] = self.in_upper_buffers[1][i]
                     self.out_upper_buffers[1][i] = solution_array[i, loc_ny - 1]
             mpi.Isend(self.out_upper_buffers[1], upper_y_neigh)
@@ -289,7 +289,7 @@ class MPIRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 solution_array[:, 0] = self.in_lower_buffers[1]
             else:
-                for i in xrange(0, loc_nx + 1):
+                for i in range(0, loc_nx + 1):
                     solution_array[i, 0] = self.in_lower_buffers[1][i]
 
 
@@ -349,7 +349,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 self.out_lower_buffers[0] = ascontiguousarray(solution_array[1, :])
             else:
-                for i in xrange(0, loc_ny + 1):
+                for i in range(0, loc_ny + 1):
                     self.out_lower_buffers[0][i] = solution_array[1, i]
             t = self.comm.west.send(self.out_lower_buffers[0], **flags)
             trackers.append(t)
@@ -363,7 +363,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
                     solution_array[loc_nx - 1, :]
                 )
             else:
-                for i in xrange(0, loc_ny + 1):
+                for i in range(0, loc_ny + 1):
                     solution_array[loc_nx, i] = self.in_upper_buffers[0][i]
                     self.out_upper_buffers[0][i] = solution_array[loc_nx - 1, i]
             t = self.comm.east.send(self.out_upper_buffers[0], **flags)
@@ -375,7 +375,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 solution_array[0, :] = self.in_lower_buffers[0]
             else:
-                for i in xrange(0, loc_ny + 1):
+                for i in range(0, loc_ny + 1):
                     solution_array[0, i] = self.in_lower_buffers[0][i]
 
         # communicate in the y-direction afterwards
@@ -383,7 +383,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 self.out_lower_buffers[1] = ascontiguousarray(solution_array[:, 1])
             else:
-                for i in xrange(0, loc_nx + 1):
+                for i in range(0, loc_nx + 1):
                     self.out_lower_buffers[1][i] = solution_array[i, 1]
             t = self.comm.south.send(self.out_lower_buffers[1], **flags)
             trackers.append(t)
@@ -397,7 +397,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
                     solution_array[:, loc_ny - 1]
                 )
             else:
-                for i in xrange(0, loc_nx + 1):
+                for i in range(0, loc_nx + 1):
                     solution_array[i, loc_ny] = self.in_upper_buffers[1][i]
                     self.out_upper_buffers[1][i] = solution_array[i, loc_ny - 1]
             t = self.comm.north.send(self.out_upper_buffers[1], **flags)
@@ -409,7 +409,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 solution_array[:, 0] = self.in_lower_buffers[1]
             else:
-                for i in xrange(0, loc_nx + 1):
+                for i in range(0, loc_nx + 1):
                     solution_array[i, 0] = self.in_lower_buffers[1][i]
 
         # wait for sends to complete:
@@ -443,7 +443,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 self.out_lower_buffers[0] = ascontiguousarray(solution_array[1, :])
             else:
-                for i in xrange(0, loc_ny + 1):
+                for i in range(0, loc_ny + 1):
                     self.out_lower_buffers[0][i] = solution_array[1, i]
             t = self.comm.west.send(self.out_lower_buffers[0], **flags)
             trackers.append(t)
@@ -452,7 +452,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 self.out_lower_buffers[1] = ascontiguousarray(solution_array[:, 1])
             else:
-                for i in xrange(0, loc_nx + 1):
+                for i in range(0, loc_nx + 1):
                     self.out_lower_buffers[1][i] = solution_array[i, 1]
             t = self.comm.south.send(self.out_lower_buffers[1], **flags)
             trackers.append(t)
@@ -463,7 +463,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
                     solution_array[loc_nx - 1, :]
                 )
             else:
-                for i in xrange(0, loc_ny + 1):
+                for i in range(0, loc_ny + 1):
                     self.out_upper_buffers[0][i] = solution_array[loc_nx - 1, i]
             t = self.comm.east.send(self.out_upper_buffers[0], **flags)
             trackers.append(t)
@@ -474,7 +474,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
                     solution_array[:, loc_ny - 1]
                 )
             else:
-                for i in xrange(0, loc_nx + 1):
+                for i in range(0, loc_nx + 1):
                     self.out_upper_buffers[1][i] = solution_array[i, loc_ny - 1]
             t = self.comm.north.send(self.out_upper_buffers[1], **flags)
             trackers.append(t)
@@ -486,7 +486,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 solution_array[loc_nx, :] = self.in_upper_buffers[0]
             else:
-                for i in xrange(0, loc_ny + 1):
+                for i in range(0, loc_ny + 1):
                     solution_array[loc_nx, i] = self.in_upper_buffers[0][i]
 
         if lower_x_neigh > -1:
@@ -495,7 +495,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 solution_array[0, :] = self.in_lower_buffers[0]
             else:
-                for i in xrange(0, loc_ny + 1):
+                for i in range(0, loc_ny + 1):
                     solution_array[0, i] = self.in_lower_buffers[0][i]
 
         if upper_y_neigh > -1:
@@ -504,7 +504,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 solution_array[:, loc_ny] = self.in_upper_buffers[1]
             else:
-                for i in xrange(0, loc_nx + 1):
+                for i in range(0, loc_nx + 1):
                     solution_array[i, loc_ny] = self.in_upper_buffers[1][i]
 
         if lower_y_neigh > -1:
@@ -513,7 +513,7 @@ class ZMQRectPartitioner2D(RectPartitioner2D):
             if self.slice_copy:
                 solution_array[:, 0] = self.in_lower_buffers[1]
             else:
-                for i in xrange(0, loc_nx + 1):
+                for i in range(0, loc_nx + 1):
                     solution_array[i, 0] = self.in_lower_buffers[1][i]
 
         # wait for sends to complete:

@@ -111,7 +111,7 @@ class TestView(ClusterTestCase):
 
         @interactive
         def geta():
-            return a
+            return a  # noqa: F821
 
         # self.add_engines(1)
         v = self.client[-1]
@@ -296,7 +296,9 @@ class TestView(ClusterTestCase):
         view['RR'] = R
         R2 = view['RR']
 
-        r_dtype, r_shape = view.apply_sync(interactive(lambda: (RR.dtype, RR.shape)))
+        r_dtype, r_shape = view.apply_sync(
+            interactive(lambda: (RR.dtype, RR.shape))  # noqa: F821
+        )
         self.assertEqual(r_dtype, R.dtype)
         self.assertEqual(r_shape, R.shape)
         self.assertEqual(R2.dtype, R.dtype)
@@ -606,7 +608,7 @@ class TestView(ClusterTestCase):
 
         @interactive
         def publish():
-            [display(i) for i in range(5)]
+            [display(i) for i in range(5)]  # noqa: F821
 
         ar = view.apply_async(publish)
         ar.get(5)
@@ -864,7 +866,7 @@ class TestView(ClusterTestCase):
 
         @interactive
         def get_a():
-            return _a
+            return _a  # noqa: F821
 
         # verify initial condition
         a_list = view.apply_sync(get_a)

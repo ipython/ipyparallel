@@ -144,12 +144,12 @@ class WaveSolver(object):
         # set initial condition (pointwise - allows straight if-tests in I(x,y)):
         t = 0.0
         if implementation['ic'] == 'scalar':
-            for i in xrange(0, nx + 1):
-                for j in xrange(0, ny + 1):
+            for i in range(0, nx + 1):
+                for j in range(0, ny + 1):
                     u_1[i, j] = I(x[i], y[j])
 
-            for i in xrange(1, nx):
-                for j in xrange(1, ny):
+            for i in range(1, nx):
+                for j in range(1, ny):
                     u_2[i, j] = (
                         u_1[i, j]
                         + 0.5 * Cx2 * (u_1[i - 1, j] - 2 * u_1[i, j] + u_1[i + 1, j])
@@ -159,16 +159,16 @@ class WaveSolver(object):
 
             # boundary values of u_2 (equals u(t=dt) due to du/dt=0)
             i = 0
-            for j in xrange(0, ny + 1):
+            for j in range(0, ny + 1):
                 u_2[i, j] = bc(x[i], y[j], t + dt)
             j = 0
-            for i in xrange(0, nx + 1):
+            for i in range(0, nx + 1):
                 u_2[i, j] = bc(x[i], y[j], t + dt)
             i = nx
-            for j in xrange(0, ny + 1):
+            for j in range(0, ny + 1):
                 u_2[i, j] = bc(x[i], y[j], t + dt)
             j = ny
-            for i in xrange(0, nx + 1):
+            for i in range(0, nx + 1):
                 u_2[i, j] = bc(x[i], y[j], t + dt)
 
         elif implementation['ic'] == 'vectorized':
@@ -237,8 +237,8 @@ class WaveSolver(object):
                 print('solving (%s version) at t=%g' % (implementation['inner'], t))
             # update all inner points:
             if implementation['inner'] == 'scalar':
-                for i in xrange(1, nx):
-                    for j in xrange(1, ny):
+                for i in range(1, nx):
+                    for j in range(1, ny):
                         u[i, j] = (
                             -u_2[i, j]
                             + 2 * u_1[i, j]
@@ -269,28 +269,28 @@ class WaveSolver(object):
             if lower_x_neigh < 0:
                 if implementation['bc'] == 'scalar':
                     i = 0
-                    for j in xrange(0, ny + 1):
+                    for j in range(0, ny + 1):
                         u[i, j] = bc(x[i], y[j], t)
                 elif implementation['bc'] == 'vectorized':
                     u[0, :] = bc(x[0], y, t)
             if upper_x_neigh < 0:
                 if implementation['bc'] == 'scalar':
                     i = nx
-                    for j in xrange(0, ny + 1):
+                    for j in range(0, ny + 1):
                         u[i, j] = bc(x[i], y[j], t)
                 elif implementation['bc'] == 'vectorized':
                     u[nx, :] = bc(x[nx], y, t)
             if lower_y_neigh < 0:
                 if implementation['bc'] == 'scalar':
                     j = 0
-                    for i in xrange(0, nx + 1):
+                    for i in range(0, nx + 1):
                         u[i, j] = bc(x[i], y[j], t)
                 elif implementation['bc'] == 'vectorized':
                     u[:, 0] = bc(x, y[0], t)
             if upper_y_neigh < 0:
                 if implementation['bc'] == 'scalar':
                     j = ny
-                    for i in xrange(0, nx + 1):
+                    for i in range(0, nx + 1):
                         u[i, j] = bc(x[i], y[j], t)
                 elif implementation['bc'] == 'vectorized':
                     u[:, ny] = bc(x, y[ny], t)

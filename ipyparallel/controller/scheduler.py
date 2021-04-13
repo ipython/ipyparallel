@@ -154,9 +154,6 @@ class Job(object):
     def __lt__(self, other):
         return self.timestamp < other.timestamp
 
-    def __cmp__(self, other):
-        return cmp(self.timestamp, other.timestamp)
-
     @property
     def dependents(self):
         return self.follow.union(self.after)

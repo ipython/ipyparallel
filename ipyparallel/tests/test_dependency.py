@@ -13,7 +13,7 @@ from ipyparallel.util import interactive
 
 @ipp.require('time')
 def wait(n):
-    time.sleep(n)
+    time.sleep(n)  # noqa: F821
     return n
 
 
@@ -69,7 +69,7 @@ class DependencyTest(ClusterTestCase):
         @ipp.require('base64')
         @interactive
         def encode(arg):
-            return base64.b64encode(arg)
+            return base64.b64encode(arg)  # noqa: F821
 
         # must pass through canning to properly connect namespaces
         self.assertEqual(encode(b'foo'), b'Zm9v')
@@ -121,7 +121,7 @@ class DependencyTest(ClusterTestCase):
         @ipp.require(foo=func)
         @ipp.interactive
         def bar(a):
-            return foo(a)
+            return foo(a)  # noqa: F821
 
         ar = self.view.apply_async(bar, 5)
         self.assertEqual(ar.get(5), func(5))

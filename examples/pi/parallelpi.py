@@ -21,7 +21,10 @@ from timeit import default_timer as clock
 
 import numpy as np
 from matplotlib import pyplot as plt
-from pidigits import *
+from pidigits import compute_two_digit_freqs
+from pidigits import fetch_pi_file
+from pidigits import plot_two_digit_freqs
+from pidigits import reduce_freqs
 
 import ipyparallel as ipp
 
@@ -40,7 +43,7 @@ v = c[:]
 v.block = True
 # fetch the pi-files
 print("downloading %i files of pi" % n)
-v.map(fetch_pi_file, files[:n])
+v.map(fetch_pi_file, files[:n])  # noqa: F821
 print("done")
 
 # Run 10m digits on 1 engine

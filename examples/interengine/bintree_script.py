@@ -31,8 +31,7 @@ root = rc[root_id]
 
 view = rc[:]
 
-# run bintree.py script defining bintree functions, etc.
-exec(compile(open('bintree.py').read(), 'bintree.py', 'exec'))
+from bintree import bintree, print_bintree
 
 # generate binary tree of parents
 btree = bintree(ids)
@@ -46,10 +45,10 @@ view['root_id'] = root_id
 
 # create the Communicator objects on the engines
 view.execute('com = BinaryTreeCommunicator(id, root = id==root_id )')
-pub_url = root.apply_sync(lambda: com.pub_url)
+pub_url = root.apply_sync(lambda: com.pub_url)  # noqa: F821
 
 # gather the connection information into a dict
-ar = view.apply_async(lambda: com.info)
+ar = view.apply_async(lambda: com.info)  # noqa: F821
 peers = ar.get_dict()
 # this is a dict, keyed by engine ID, of the connection info for the EngineCommunicators
 

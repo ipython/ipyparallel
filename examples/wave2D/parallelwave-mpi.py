@@ -36,7 +36,7 @@ import ipyparallel as ipp
 def setup_partitioner(index, num_procs, gnum_cells, parts):
     """create a partitioner in the engine namespace"""
     global partitioner
-    p = MPIRectPartitioner2D(my_id=index, num_procs=num_procs)
+    p = MPIRectPartitioner2D(my_id=index, num_procs=num_procs)  # noqa: F821
     p.redim(global_num_cells=gnum_cells, num_parts=parts)
     p.prepare_communication()
     # put the partitioner into the global namespace:
@@ -46,7 +46,7 @@ def setup_partitioner(index, num_procs, gnum_cells, parts):
 def setup_solver(*args, **kwargs):
     """create a WaveSolver in the engine namespace"""
     global solver
-    solver = WaveSolver(*args, **kwargs)
+    solver = WaveSolver(*args, **kwargs)  # noqa: F821
 
 
 def wave_saver(u, x, y, t):
@@ -85,7 +85,7 @@ if __name__ == '__main__':
     paa('-t', '--tstop', type=float, default=1.0, help="Time units to run")
     paa(
         '--profile',
-        type=unicode,
+        type=str,
         default=u'default',
         help="Specify the ipcluster profile for the client to connect to.",
     )
