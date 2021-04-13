@@ -40,7 +40,7 @@ from ipython_genutils.py3compat import cast_bytes, string_types, xrange, iterite
 from traitlets import HasTraits, Instance, Unicode, Dict, List, Bool, Set, Any
 from decorator import decorator
 
-from ipyparallel import Reference
+from ipyparallel.serialize import Reference
 from ipyparallel import error
 from ipyparallel import util
 
