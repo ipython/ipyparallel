@@ -1,20 +1,21 @@
 """test serialization tools"""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import pickle
 from collections import namedtuple
 
 import pytest
 
-from ipyparallel.serialize import serialize_object, deserialize_object
 from ipyparallel import interactive
-from ipyparallel.serialize.canning import CannedArray, CannedClass
+from ipyparallel.serialize import deserialize_object
+from ipyparallel.serialize import serialize_object
+from ipyparallel.serialize.canning import CannedArray
+from ipyparallel.serialize.canning import CannedClass
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Globals and Utilities
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 def roundtrip(obj):
     """roundtrip an object through serialization"""
@@ -24,46 +25,48 @@ def roundtrip(obj):
     return obj2
 
 
-SHAPES = ((100,), (1024,10), (10,8,6,5), (), (0,))
+SHAPES = ((100,), (1024, 10), (10, 8, 6, 5), (), (0,))
 DTYPES = ('uint8', 'float64', 'int32', [('g', 'float32')], '|S10')
 
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
 # Tests
-#-------------------------------------------------------------------------------
+# -------------------------------------------------------------------------------
+
 
 def new_array(shape, dtype):
     import numpy
+
     return numpy.random.random(shape).astype(dtype)
+
 
 def test_roundtrip_simple():
     for obj in [
         'hello',
         dict(a='b', b=10),
-        [1,2,'hi'],
+        [1, 2, 'hi'],
         (b'123', 'hello'),
     ]:
         obj2 = roundtrip(obj)
         assert obj == obj2
 
+
 def test_roundtrip_nested():
     for obj in [
-        dict(a=range(5), b={1:b'hello'}),
-        [range(5),[range(3),(1,[b'whoda'])]],
+        dict(a=range(5), b={1: b'hello'}),
+        [range(5), [range(3), (1, [b'whoda'])]],
     ]:
         obj2 = roundtrip(obj)
         assert obj == obj2
 
+
 def test_roundtrip_buffered():
-    for obj in [
-        dict(a=b"x"*1025),
-        b"hello"*500,
-        [b"hello"*501, 1,2,3]
-    ]:
+    for obj in [dict(a=b"x" * 1025), b"hello" * 500, [b"hello" * 501, 1, 2, 3]]:
         bufs = serialize_object(obj)
         assert len(bufs) == 2
         obj2, remainder = deserialize_object(bufs)
         assert remainder == []
         assert obj == obj2
+
 
 def test_roundtrip_memoryview():
     b = b'asdf' * 1025
@@ -74,9 +77,11 @@ def test_roundtrip_memoryview():
     assert remainder == []
     assert v2.tobytes() == b
 
+
 def test_numpy():
     pytest.importorskip('numpy')
     from numpy.testing.utils import assert_array_equal
+
     for shape in SHAPES:
         for dtype in DTYPES:
             A = new_array(shape, dtype=dtype)
@@ -86,11 +91,13 @@ def test_numpy():
             assert r == []
             assert A.shape == B.shape
             assert A.dtype == B.dtype
-            assert_array_equal(A,B)
+            assert_array_equal(A, B)
+
 
 def test_recarray():
     pytest.importorskip('numpy')
     from numpy.testing.utils import assert_array_equal
+
     for shape in SHAPES:
         for dtype in [
             [('f', float), ('s', '|S10')],
@@ -103,15 +110,17 @@ def test_recarray():
             assert r == []
             assert A.shape == B.shape
             assert A.dtype == B.dtype
-            assert_array_equal(A,B)
+            assert_array_equal(A, B)
+
 
 def test_numpy_in_seq():
     pytest.importorskip('numpy')
     from numpy.testing.utils import assert_array_equal
+
     for shape in SHAPES:
         for dtype in DTYPES:
             A = new_array(shape, dtype=dtype)
-            bufs = serialize_object((A,1,2,b'hello'))
+            bufs = serialize_object((A, 1, 2, b'hello'))
             canned = pickle.loads(bufs[0])
             assert isinstance(canned[0], CannedArray)
             tup, r = deserialize_object(bufs)
@@ -119,15 +128,17 @@ def test_numpy_in_seq():
             assert r == []
             assert A.shape == B.shape
             assert A.dtype == B.dtype
-            assert_array_equal(A,B)
+            assert_array_equal(A, B)
+
 
 def test_numpy_in_dict():
     pytest.importorskip('numpy')
     from numpy.testing.utils import assert_array_equal
+
     for shape in SHAPES:
         for dtype in DTYPES:
             A = new_array(shape, dtype=dtype)
-            bufs = serialize_object(dict(a=A,b=1,c=range(20)))
+            bufs = serialize_object(dict(a=A, b=1, c=range(20)))
             canned = pickle.loads(bufs[0])
             assert isinstance(canned['a'], CannedArray)
             d, r = deserialize_object(bufs)
@@ -135,23 +146,26 @@ def test_numpy_in_dict():
             assert r == []
             assert A.shape == B.shape
             assert A.dtype == B.dtype
-            assert_array_equal(A,B)
+            assert_array_equal(A, B)
+
 
 def test_class():
     @interactive
     class C(object):
-        a=5
+        a = 5
+
     bufs = serialize_object(dict(C=C))
     canned = pickle.loads(bufs[0])
     assert isinstance(canned['C'], CannedClass)
     d, r = deserialize_object(bufs)
     C2 = d['C']
     assert C2.a == C.a
+
 
 def test_class_oldstyle():
     @interactive
     class C:
-        a=5
+        a = 5
 
     bufs = serialize_object(dict(C=C))
     canned = pickle.loads(bufs[0])
@@ -160,18 +174,21 @@ def test_class_oldstyle():
     C2 = d['C']
     assert C2.a == C.a
 
+
 def test_tuple():
-    tup = (lambda x:x, 1)
+    tup = (lambda x: x, 1)
     bufs = serialize_object(tup)
     canned = pickle.loads(bufs[0])
     assert isinstance(canned, tuple)
     t2, r = deserialize_object(bufs)
     assert t2[0](t2[1]) == tup[0](tup[1])
 
+
 point = namedtuple('point', 'x y')
 
+
 def test_namedtuple():
-    p = point(1,2)
+    p = point(1, 2)
     bufs = serialize_object(p)
     canned = pickle.loads(bufs[0])
     assert isinstance(canned, point)
@@ -179,22 +196,24 @@ def test_namedtuple():
     assert p2.x == p.x
     assert p2.y == p.y
 
+
 def test_list():
-    lis = [lambda x:x, 1]
+    lis = [lambda x: x, 1]
     bufs = serialize_object(lis)
     canned = pickle.loads(bufs[0])
     assert isinstance(canned, list)
     l2, r = deserialize_object(bufs)
     assert l2[0](l2[1]) == lis[0](lis[1])
 
+
 def test_class_inheritance():
     @interactive
     class C(object):
-        a=5
+        a = 5
 
     @interactive
     class D(C):
-        b=10
+        b = 10
 
     bufs = serialize_object(dict(D=D))
     canned = pickle.loads(bufs[0])
@@ -204,9 +223,11 @@ def test_class_inheritance():
     assert D2.a == D.a
     assert D2.b == D.b
 
+
 def test_pickle_threshold():
     numpy = pytest.importorskip('numpy')
     from numpy.testing.utils import assert_array_equal
+
     A = numpy.ones((5, 5))
     bufs = serialize_object(A, 1024)
     assert len(bufs) == 1
@@ -218,4 +239,3 @@ def test_pickle_threshold():
     assert len(bufs) == 2
     B, _ = deserialize_object(bufs)
     assert_array_equal(A, B)
-

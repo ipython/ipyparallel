@@ -17,8 +17,10 @@ except (ImportError, TypeError):
 else:
     have_joblib = True
 
+
 def neg(x):
     return -1 * x
+
 
 class TestJobLib(ClusterTestCase):
     def setUp(self):
@@ -33,9 +35,9 @@ class TestJobLib(ClusterTestCase):
         with mock.patch.object(ipp.Client, "__new__", lambda *a, **kw: self.client):
             p = Parallel(backend='ipyparallel')
             assert p._backend._view.client is self.client
-        
+
         self.client[:].use_pickle()
-    
+
     def test_register_backend(self):
         view = self.client.load_balanced_view()
         view.register_joblib_backend('view')

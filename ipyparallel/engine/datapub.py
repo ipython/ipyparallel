@@ -1,13 +1,17 @@
 """Publishing native (typically pickled) objects."""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-from traitlets.config import Configurable
-from traitlets import Instance, Dict, CBytes, Any
 from ipykernel.jsonutil import json_clean
+from jupyter_client.session import extract_header
+from jupyter_client.session import Session
+from traitlets import Any
+from traitlets import CBytes
+from traitlets import Dict
+from traitlets import Instance
+from traitlets.config import Configurable
+
 from ipyparallel.serialize import serialize_object
-from jupyter_client.session import Session, extract_header
+
 
 class ZMQDataPublisher(Configurable):
 
@@ -30,12 +34,16 @@ class ZMQDataPublisher(Configurable):
             The data to be published. Think of it as a namespace.
         """
         session = self.session
-        buffers = serialize_object(data,
+        buffers = serialize_object(
+            data,
             buffer_threshold=session.buffer_threshold,
             item_threshold=session.item_threshold,
         )
         content = json_clean(dict(keys=list(data.keys())))
-        session.send(self.pub_socket, 'data_message', content=content,
+        session.send(
+            self.pub_socket,
+            'data_message',
+            content=content,
             parent=self.parent_header,
             buffers=buffers,
             ident=self.topic,
@@ -52,4 +60,5 @@ def publish_data(data):
         The data to be published. Think of it as a namespace.
     """
     from ipykernel.zmqshell import ZMQInteractiveShell
+
     ZMQInteractiveShell.instance().data_pub.publish_data(data)

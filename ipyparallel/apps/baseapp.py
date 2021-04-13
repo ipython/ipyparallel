@@ -2,40 +2,43 @@
 """
 The Base Application class for ipyparallel apps
 """
-
-
-import os
 import logging
+import os
 import re
 import sys
 
-from traitlets.config.application import catch_config_error, LevelFormatter
 from IPython.core import release
+from IPython.core.application import base_aliases as base_ip_aliases
+from IPython.core.application import base_flags as base_ip_flags
+from IPython.core.application import BaseIPythonApplication
 from IPython.core.crashhandler import CrashHandler
-from IPython.core.application import (
-    BaseIPythonApplication,
-    base_aliases as base_ip_aliases,
-    base_flags as base_ip_flags
-)
 from IPython.utils.path import expand_path
 from IPython.utils.process import check_pid
 from ipython_genutils import py3compat
 from ipython_genutils.py3compat import unicode_type
+from traitlets import Bool
+from traitlets import Dict
+from traitlets import Instance
+from traitlets import observe
+from traitlets import Unicode
+from traitlets.config.application import catch_config_error
+from traitlets.config.application import LevelFormatter
+
 from .._version import __version__
 
-from traitlets import Unicode, Bool, Instance, Dict, observe
-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Module errors
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 class PIDFileError(Exception):
     pass
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Crash handler for this application
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 class ParallelCrashHandler(CrashHandler):
     """sys.excepthook for IPython itself, leaves a detailed report on disk."""
@@ -44,37 +47,40 @@ class ParallelCrashHandler(CrashHandler):
         contact_name = release.authors['Min'][0]
         contact_email = release.author_email
         bug_tracker = 'https://github.com/ipython/ipython/issues'
-        super(ParallelCrashHandler,self).__init__(
+        super(ParallelCrashHandler, self).__init__(
             app, contact_name, contact_email, bug_tracker
         )
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Main application
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 base_aliases = {}
 base_aliases.update(base_ip_aliases)
-base_aliases.update({
-    'work-dir' : 'BaseParallelApplication.work_dir',
-    'log-to-file' : 'BaseParallelApplication.log_to_file',
-    'clean-logs' : 'BaseParallelApplication.clean_logs',
-    'log-url' : 'BaseParallelApplication.log_url',
-    'cluster-id' : 'BaseParallelApplication.cluster_id',
-})
+base_aliases.update(
+    {
+        'work-dir': 'BaseParallelApplication.work_dir',
+        'log-to-file': 'BaseParallelApplication.log_to_file',
+        'clean-logs': 'BaseParallelApplication.clean_logs',
+        'log-url': 'BaseParallelApplication.log_url',
+        'cluster-id': 'BaseParallelApplication.cluster_id',
+    }
+)
 
 base_flags = {
-    'log-to-file' : (
-        {'BaseParallelApplication' : {'log_to_file' : True}},
-        "send log output to a file"
+    'log-to-file': (
+        {'BaseParallelApplication': {'log_to_file': True}},
+        "send log output to a file",
     )
 }
 base_flags.update(base_ip_flags)
 
+
 class BaseParallelApplication(BaseIPythonApplication):
     """The base Application for ipyparallel apps
-    
+
     Primary extensions to BaseIPythonApplication:
-    
+
     * work_dir
     * remote logging via pyzmq
     * IOLoop instance
@@ -83,33 +89,36 @@ class BaseParallelApplication(BaseIPythonApplication):
     version = __version__
 
     crash_handler_class = ParallelCrashHandler
-    
+
     def _log_level_default(self):
         # temporarily override default_log_level to INFO
         return logging.INFO
-    
+
     def _log_format_default(self):
         """override default log format to include time"""
         return u"%(asctime)s.%(msecs).03d [%(name)s]%(highlevel)s %(message)s"
 
-    work_dir = Unicode(py3compat.getcwd(), config=True,
-        help='Set the working dir for the process.'
+    work_dir = Unicode(
+        py3compat.getcwd(), config=True, help='Set the working dir for the process.'
     )
 
     @observe('work_dir')
     def _work_dir_changed(self, change):
         self.work_dir = unicode_type(expand_path(change['new']))
 
-    log_to_file = Bool(config=True,
-        help="whether to log to a file")
+    log_to_file = Bool(config=True, help="whether to log to a file")
 
-    clean_logs = Bool(False, config=True,
-        help="whether to cleanup old logfiles before starting")
+    clean_logs = Bool(
+        False, config=True, help="whether to cleanup old logfiles before starting"
+    )
 
-    log_url = Unicode('', config=True,
-        help="The ZMQ URL of the iplogger to aggregate logging.")
+    log_url = Unicode(
+        '', config=True, help="The ZMQ URL of the iplogger to aggregate logging."
+    )
 
-    cluster_id = Unicode('', config=True,
+    cluster_id = Unicode(
+        '',
+        config=True,
         help="""String id to add to runtime files, to prevent name collisions when
         using multiple clusters with a single profile simultaneously.
 
@@ -118,7 +127,7 @@ class BaseParallelApplication(BaseIPythonApplication):
         Since this is text inserted into filenames, typical recommendations apply:
         Simple character strings are ideal, and spaces are not recommended (but should
         generally work).
-        """
+        """,
     )
 
     @observe('cluster_id')
@@ -132,8 +141,10 @@ class BaseParallelApplication(BaseIPythonApplication):
         return ['ipcontroller_config.py', 'ipengine_config.py', 'ipcluster_config.py']
 
     loop = Instance('tornado.ioloop.IOLoop')
+
     def _loop_default(self):
         from ipyparallel.util import ioloop
+
         return ioloop.IOLoop.current()
 
     aliases = Dict(base_aliases)
@@ -181,8 +192,7 @@ class BaseParallelApplication(BaseIPythonApplication):
         else:
             self._log_handler = self.log.handlers[0]
         # Add timestamps to log format:
-        self._log_formatter = LevelFormatter(self.log_format,
-                                                datefmt=self.log_datefmt)
+        self._log_formatter = LevelFormatter(self.log_format, datefmt=self.log_datefmt)
         self._log_handler.setFormatter(self._log_formatter)
         # do not propagate log messages to root logger
         # ipcluster app will sometimes print duplicate messages during shutdown
@@ -205,7 +215,7 @@ class BaseParallelApplication(BaseIPythonApplication):
                 )
         with open(pid_file, 'w') as f:
             self.log.info("Creating pid file: %s" % pid_file)
-            f.write(repr(os.getpid())+'\n')
+            f.write(repr(os.getpid()) + '\n')
 
     def remove_pid_file(self):
         """Remove the pid file.
@@ -234,17 +244,19 @@ class BaseParallelApplication(BaseIPythonApplication):
                 try:
                     pid = int(s)
                 except:
-                    raise PIDFileError("invalid pid file: %s (contents: %r)"%(pid_file, s))
+                    raise PIDFileError(
+                        "invalid pid file: %s (contents: %r)" % (pid_file, s)
+                    )
                 return pid
         else:
             raise PIDFileError('pid file not found: %s' % pid_file)
-    
+
     def check_pid(self, pid):
         try:
             return check_pid(pid)
         except Exception:
             self.log.warn(
                 "Could not determine whether pid %i is running. "
-                " Making the likely assumption that it is."%pid
+                " Making the likely assumption that it is." % pid
             )
             return True

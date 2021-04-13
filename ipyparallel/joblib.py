@@ -18,15 +18,18 @@ At this point, you can use it with::
 """
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 from __future__ import absolute_import
 
 from joblib.parallel import register_parallel_backend
+
 from .client._joblib import IPythonParallelBackend
+
 
 def register(name='ipyparallel', make_default=False):
     """Register the default ipyparallel Client as a joblib backend
-    
+
     See joblib.parallel.register_parallel_backend for details.
     """
-    return register_parallel_backend(name, IPythonParallelBackend, make_default=make_default)
+    return register_parallel_backend(
+        name, IPythonParallelBackend, make_default=make_default
+    )

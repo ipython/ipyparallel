@@ -1,8 +1,6 @@
 """A semi-synchronous Client for IPython parallel"""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 from __future__ import print_function
 
 import threading
@@ -391,7 +389,7 @@ class Client(HasTraits):
         paramiko=None,
         timeout=10,
         cluster_id=None,
-        **extra_args
+        **extra_args,
     ):
         if profile:
             super(Client, self).__init__(debug=debug, profile=profile)
@@ -550,7 +548,7 @@ class Client(HasTraits):
                 cfg['registration'],
                 sshserver,
                 timeout=timeout,
-                **ssh_kwargs
+                **ssh_kwargs,
             )
         else:
             self._query_socket.connect(cfg['registration'])
@@ -713,9 +711,7 @@ class Client(HasTraits):
             connect_socket(self._task_socket, cfg['task'])
 
             self._broadcast_socket = self._context.socket(zmq.DEALER)
-            connect_socket(
-                self._broadcast_socket, cfg['broadcast']
-            )
+            connect_socket(self._broadcast_socket, cfg['broadcast'])
 
             self._notification_socket = self._context.socket(zmq.SUB)
             self._notification_socket.setsockopt(zmq.SUBSCRIBE, b'')
@@ -762,9 +758,7 @@ class Client(HasTraits):
             'follow': msg_meta.get('follow', []),
             'after': msg_meta.get('after', []),
             'status': content['status'],
-            'is_broadcast': msg_meta.get(
-                'is_broadcast', False
-            ),
+            'is_broadcast': msg_meta.get('is_broadcast', False),
             'is_coalescing': msg_meta.get('is_coalescing', False),
         }
 
@@ -973,9 +967,7 @@ class Client(HasTraits):
         self._notification_stream = ZMQStream(self._notification_socket, self._io_loop)
         self._notification_stream.on_recv(self._dispatch_notification, copy=False)
 
-        self._broadcast_stream = ZMQStream(
-            self._broadcast_socket, self._io_loop
-        )
+        self._broadcast_stream = ZMQStream(self._broadcast_socket, self._io_loop)
         self._broadcast_stream.on_recv(self._dispatch_reply, copy=False)
 
     def _start_io_thread(self):
@@ -1625,9 +1617,7 @@ class Client(HasTraits):
     def send_execute_request(
         self, socket, code, silent=True, metadata=None, ident=None
     ):
-        """construct and send an execute request via a socket.
-
-        """
+        """construct and send an execute request via a socket."""
 
         if self._closed:
             raise RuntimeError(

@@ -5,11 +5,13 @@
 from __future__ import print_function
 
 import heapq
+
 import ipyparallel as ipp
 from ipyparallel.error import RemoteError
 
+
 def mergesort(list_of_lists, key=None):
-    """ Perform an N-way merge operation on sorted lists.
+    """Perform an N-way merge operation on sorted lists.
 
     @param list_of_lists: (really iterable of iterable) of sorted elements
     (either by naturally or by C{key})
@@ -62,7 +64,7 @@ def mergesort(list_of_lists, key=None):
             yield item
             try:
                 item = next(itr)
-                heapq.heapreplace(heap, (key(item), idx, item, itr) )
+                heapq.heapreplace(heap, (key(item), idx, item, itr))
             except StopIteration:
                 heapq.heappop(heap)
 
@@ -76,13 +78,12 @@ def mergesort(list_of_lists, key=None):
                 heapq.heappop(heap)
 
 
-def remote_iterator(view,name):
-    """Return an iterator on an object living on a remote engine.
-    """
-    view.execute('it%s=iter(%s)'%(name,name), block=True)
+def remote_iterator(view, name):
+    """Return an iterator on an object living on a remote engine."""
+    view.execute('it%s=iter(%s)' % (name, name), block=True)
     while True:
         try:
-            result = view.apply_sync(next, ipp.Reference('it'+name))
+            result = view.apply_sync(next, ipp.Reference('it' + name))
         # This causes the StopIteration exception to be raised.
         except RemoteError as e:
             if e.ename == 'StopIteration':
@@ -92,6 +93,7 @@ def remote_iterator(view,name):
         else:
             yield result
 
+
 # Main, interactive testing
 if __name__ == '__main__':
 
@@ -100,9 +102,9 @@ if __name__ == '__main__':
     print('Engine IDs:', rc.ids)
 
     # Make a set of 'sorted datasets'
-    a0 = range(5,20)
+    a0 = range(5, 20)
     a1 = range(10)
-    a2 = range(15,25)
+    a2 = range(15, 25)
 
     # Now, imagine these had been created in the remote engines by some long
     # computation.  In this simple example, we just send them over into the
@@ -112,13 +114,13 @@ if __name__ == '__main__':
     rc[2]['a'] = a2
 
     # And we now make a local object which represents the remote iterator
-    aa0 = remote_iterator(rc[0],'a')
-    aa1 = remote_iterator(rc[1],'a')
-    aa2 = remote_iterator(rc[2],'a')
+    aa0 = remote_iterator(rc[0], 'a')
+    aa1 = remote_iterator(rc[1], 'a')
+    aa2 = remote_iterator(rc[2], 'a')
 
     # Let's merge them, both locally and remotely:
     print('Merge the local datasets:')
-    print(list(mergesort([a0,a1,a2])))
-    
+    print(list(mergesort([a0, a1, a2])))
+
     print('Locally merge the remote sets:')
-    print(list(mergesort([aa0,aa1,aa2])))
+    print(list(mergesort([aa0, aa1, aa2])))

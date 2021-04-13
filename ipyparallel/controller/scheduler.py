@@ -4,28 +4,28 @@ The Pure ZMQ scheduler does not allow routing schemes other than LRU,
 nor does it check msg_id DAG dependencies. For those, a slightly slower
 Python Scheduler exists.
 """
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import logging
 
-from ipython_genutils.py3compat import cast_bytes
-from traitlets import observe, Instance, Set, CBytes
-
-
+import jupyter_client.session
 import zmq
-from zmq.eventloop import zmqstream
-
-# local imports
 from decorator import decorator
+from ipython_genutils.py3compat import cast_bytes
+from traitlets import CBytes
+from traitlets import Instance
+from traitlets import observe
+from traitlets import Set
 from traitlets.config.application import Application
 from traitlets.config.loader import Config
+from zmq.eventloop import zmqstream
 
 from ipyparallel import util
-from ipyparallel.util import connect_logger, local_logger, ioloop
+from ipyparallel.util import connect_logger
+from ipyparallel.util import ioloop
+from ipyparallel.util import local_logger
 
-import jupyter_client.session
+# local imports
 
 jupyter_client.session.extract_dates = lambda obj: obj
 from jupyter_client.session import SessionFactory

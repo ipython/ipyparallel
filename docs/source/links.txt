@@ -97,5 +97,3 @@
 
 .. _Cell magics: notebook_cell_magics_
 .. _notebook_cell_magics: http://nbviewer.ipython.org/urls/raw.github.com/ipython/ipython/1.x/examples/notebooks/Cell%20Magics.ipynb
-
-

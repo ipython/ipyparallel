@@ -1,34 +1,46 @@
 """Views of remote engines."""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-from __future__ import absolute_import, print_function
+from __future__ import absolute_import
+from __future__ import print_function
 
 import imp
 import threading
 import warnings
 from contextlib import contextmanager
 
-from .. import serialize
-from traitlets import (
-    HasTraits, Any, Bool, List, Dict, Set, Instance, CFloat, Integer
-)
 from decorator import decorator
-
 from IPython import get_ipython
-from ipyparallel import util
-from ipyparallel.controller.dependency import Dependency, dependent
-from ipython_genutils.py3compat import string_types, iteritems, PY3
+from ipython_genutils.py3compat import iteritems
+from ipython_genutils.py3compat import PY3
+from ipython_genutils.py3compat import string_types
+from traitlets import Any
+from traitlets import Bool
+from traitlets import CFloat
+from traitlets import Dict
+from traitlets import HasTraits
+from traitlets import Instance
+from traitlets import Integer
+from traitlets import List
+from traitlets import Set
 
-from ..serialize import PrePickled
 from . import map as Map
-from .asyncresult import AsyncResult, AsyncMapResult
-from .remotefunction import ParallelFunction, parallel, remote, getname
+from .. import serialize
+from ..serialize import PrePickled
+from .asyncresult import AsyncMapResult
+from .asyncresult import AsyncResult
+from .remotefunction import getname
+from .remotefunction import parallel
+from .remotefunction import ParallelFunction
+from .remotefunction import remote
+from ipyparallel import util
+from ipyparallel.controller.dependency import Dependency
+from ipyparallel.controller.dependency import dependent
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Decorators
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 @decorator
 def save_ids(f, self, *args, **kwargs):
@@ -42,6 +54,7 @@ def save_ids(f, self, *args, **kwargs):
         self.history.extend(msg_ids)
         self.outstanding.update(msg_ids)
     return ret
+
 
 @decorator
 def sync_results(f, self, *args, **kwargs):
@@ -57,9 +70,10 @@ def sync_results(f, self, *args, **kwargs):
     return ret
 
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Classes
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 class View(HasTraits):
     """Base View class for more convenint apply(f,*args,**kwargs) syntax via attributes.
@@ -90,6 +104,7 @@ class View(HasTraits):
         abort, shutdown
 
     """
+
     # flags
     block = Bool(False)
     track = Bool(False)
@@ -119,9 +134,9 @@ class View(HasTraits):
     def __repr__(self):
         strtargets = str(self.targets)
         if len(strtargets) > 16:
-            strtargets = strtargets[:12]+'...]'
-        return "<%s %s>"%(self.__class__.__name__, strtargets)
-    
+            strtargets = strtargets[:12] + '...]'
+        return "<%s %s>" % (self.__class__.__name__, strtargets)
+
     def __len__(self):
         if isinstance(self.targets, list):
             return len(self.targets)
@@ -148,7 +163,7 @@ class View(HasTraits):
         """
         for name, value in iteritems(kwargs):
             if name not in self._flag_names:
-                raise KeyError("Invalid name: %r"%name)
+                raise KeyError("Invalid name: %r" % name)
             else:
                 setattr(self, name, value)
 
@@ -182,20 +197,19 @@ class View(HasTraits):
             # postflight: restore saved flags
             self.set_flags(**saved_flags)
 
-
-    #----------------------------------------------------------------
+    # ----------------------------------------------------------------
     # apply
-    #----------------------------------------------------------------
+    # ----------------------------------------------------------------
 
     def _sync_results(self):
         """to be called by @sync_results decorator
-        
+
         after submitting any tasks.
         """
         delta = self.outstanding.difference(self.client.outstanding)
         completed = self.outstanding.intersection(delta)
         self.outstanding = self.outstanding.difference(completed)
-    
+
     @sync_results
     @save_ids
     def _really_apply(self, f, args, kwargs, block=None, **options):
@@ -222,13 +236,13 @@ class View(HasTraits):
 
     def apply_sync(self, f, *args, **kwargs):
         """calls ``f(*args, **kwargs)`` on remote engines in a blocking manner,
-         returning the result.
+        returning the result.
         """
         return self._really_apply(f, args, kwargs, block=True)
 
-    #----------------------------------------------------------------
+    # ----------------------------------------------------------------
     # wrappers for client and control methods
-    #----------------------------------------------------------------
+    # ----------------------------------------------------------------
     @sync_results
     def spin(self):
         """spin the client, and sync"""
@@ -272,7 +286,7 @@ class View(HasTraits):
         block = block if block is not None else self.block
         targets = targets if targets is not None else self.targets
         jobs = jobs if jobs is not None else list(self.outstanding)
-        
+
         return self.client.abort(jobs=jobs, targets=targets, block=block)
 
     def queue_status(self, targets=None, verbose=False):
@@ -287,12 +301,13 @@ class View(HasTraits):
         return self.client.purge_results(jobs=jobs, targets=targets)
 
     def shutdown(self, targets=None, restart=False, hub=False, block=None):
-        """Terminates one or more engine processes, optionally including the hub.
-        """
+        """Terminates one or more engine processes, optionally including the hub."""
         block = self.block if block is None else block
         if targets is None or targets == 'all':
             targets = self.targets
-        return self.client.shutdown(targets=targets, restart=restart, hub=hub, block=block)
+        return self.client.shutdown(
+            targets=targets, restart=restart, hub=hub, block=block
+        )
 
     def get_result(self, indices_or_msg_ids=None, block=None, owner=False):
         """return one or more results, specified by history index or msg_id.
@@ -304,16 +319,16 @@ class View(HasTraits):
             indices_or_msg_ids = -1
         if isinstance(indices_or_msg_ids, int):
             indices_or_msg_ids = self.history[indices_or_msg_ids]
-        elif isinstance(indices_or_msg_ids, (list,tuple,set)):
+        elif isinstance(indices_or_msg_ids, (list, tuple, set)):
             indices_or_msg_ids = list(indices_or_msg_ids)
-            for i,index in enumerate(indices_or_msg_ids):
+            for i, index in enumerate(indices_or_msg_ids):
                 if isinstance(index, int):
                     indices_or_msg_ids[i] = self.history[index]
         return self.client.get_result(indices_or_msg_ids, block=block, owner=owner)
 
-    #-------------------------------------------------------------------
+    # -------------------------------------------------------------------
     # Map
-    #-------------------------------------------------------------------
+    # -------------------------------------------------------------------
 
     @sync_results
     def map(self, f, *sequences, **kwargs):
@@ -330,7 +345,7 @@ class View(HasTraits):
         if 'block' in kwargs:
             raise TypeError("map_async doesn't take a `block` keyword argument.")
         kwargs['block'] = False
-        return self.map(f,*sequences,**kwargs)
+        return self.map(f, *sequences, **kwargs)
 
     def map_sync(self, f, *sequences, **kwargs):
         """Parallel version of builtin :func:`python:map`, using this view's engines.
@@ -342,7 +357,7 @@ class View(HasTraits):
         if 'block' in kwargs:
             raise TypeError("map_sync doesn't take a `block` keyword argument.")
         kwargs['block'] = True
-        return self.map(f,*sequences,**kwargs)
+        return self.map(f, *sequences, **kwargs)
 
     def imap(self, f, *sequences, **kwargs):
         """Parallel version of :func:`itertools.imap`.
@@ -351,11 +366,11 @@ class View(HasTraits):
 
         """
 
-        return iter(self.map_async(f,*sequences, **kwargs))
+        return iter(self.map_async(f, *sequences, **kwargs))
 
-    #-------------------------------------------------------------------
+    # -------------------------------------------------------------------
     # Decorators
-    #-------------------------------------------------------------------
+    # -------------------------------------------------------------------
 
     def remote(self, block=None, **flags):
         """Decorator for making a RemoteFunction"""
@@ -366,6 +381,7 @@ class View(HasTraits):
         """Decorator for making a ParallelFunction"""
         block = self.block if block is None else block
         return parallel(self, dist=dist, block=block, **flags)
+
 
 class DirectView(View):
     """Direct Multiplexer View of one or more engines.
@@ -403,29 +419,32 @@ class DirectView(View):
         """Context Manager for performing simultaneous local and remote imports.
 
         'import x as y' will *not* work.  The 'as y' part will simply be ignored.
-        
+
         If `local=True`, then the package will also be imported locally.
-        
-        If `quiet=True`, no output will be produced when attempting remote 
-        imports. 
-        
+
+        If `quiet=True`, no output will be produced when attempting remote
+        imports.
+
         Note that remote-only (`local=False`) imports have not been implemented.
-        
+
         >>> with view.sync_imports():
         ...    from numpy import recarray
         importing recarray from numpy on engine(s)
 
         """
         from ipython_genutils.py3compat import builtin_mod
+
         local_import = builtin_mod.__import__
         modules = set()
         results = []
+
         @util.interactive
         def remote_import(name, fromlist, level):
             """the function to be passed to apply, that actually performs the import
             on the engine, and loads up the user namespace.
             """
             import sys
+
             user_ns = globals()
             mod = __import__(name, fromlist=fromlist, level=level)
             if fromlist:
@@ -454,14 +473,17 @@ class DirectView(View):
                 raise NotImplementedError("remote-only imports not yet implemented")
             imp.release_lock()
 
-            key = name+':'+','.join(fromlist or [])
+            key = name + ':' + ','.join(fromlist or [])
             if level <= 0 and key not in modules:
                 modules.add(key)
                 if not quiet:
                     if fromlist:
-                        print("importing %s from %s on engine(s)"%(','.join(fromlist), name))
+                        print(
+                            "importing %s from %s on engine(s)"
+                            % (','.join(fromlist), name)
+                        )
                     else:
-                        print("importing %s on engine(s)"%name)
+                        print("importing %s on engine(s)" % name)
                 results.append(self.apply_async(remote_import, name, fromlist, level))
             # restore override
             builtin_mod.__import__ = save_import
@@ -486,12 +508,12 @@ class DirectView(View):
         for r in results:
             # raise possible remote ImportErrors here
             r.get()
-    
+
     def use_dill(self):
         """Expand serialization support with dill
-        
+
         adds support for closures, etc.
-        
+
         This calls ipyparallel.serialize.use_dill() here and on each engine.
         """
         serialize.use_dill()
@@ -499,7 +521,7 @@ class DirectView(View):
 
     def use_cloudpickle(self):
         """Expand serialization support with cloudpickle.
-        
+
         This calls ipyparallel.serialize.use_cloudpickle() here and on each engine.
         """
         serialize.use_cloudpickle()
@@ -507,16 +529,17 @@ class DirectView(View):
 
     def use_pickle(self):
         """Restore
-        
+
         This reverts changes to serialization caused by `use_dill|.cloudpickle`.
         """
         serialize.use_pickle()
         return self.apply(serialize.use_pickle)
 
-
     @sync_results
     @save_ids
-    def _really_apply(self, f, args=None, kwargs=None, targets=None, block=None, track=None):
+    def _really_apply(
+        self, f, args=None, kwargs=None, targets=None, block=None, track=None
+    ):
         """calls f(*args, **kwargs) on remote engines, returning the result.
 
         This method sets all of `apply`'s flags via this View's attributes.
@@ -552,7 +575,7 @@ class DirectView(View):
         block = self.block if block is None else block
         track = self.track if track is None else track
         targets = self.targets if targets is None else targets
-        
+
         _idents, _targets = self.client._build_targets(targets)
         futures = []
 
@@ -562,8 +585,8 @@ class DirectView(View):
 
         for ident in _idents:
             future = self.client.send_apply_request(
-                self._socket, pf, pargs, pkwargs,
-                track=track, ident=ident)
+                self._socket, pf, pargs, pkwargs, track=track, ident=ident
+            )
             futures.append(future)
         if track:
             trackers = [_.tracker for _ in futures]
@@ -571,7 +594,9 @@ class DirectView(View):
             trackers = []
         if isinstance(targets, int):
             futures = futures[0]
-        ar = AsyncResult(self.client, futures, fname=getname(f), targets=_targets, owner=True)
+        ar = AsyncResult(
+            self.client, futures, fname=getname(f), targets=_targets, owner=True
+        )
         if block:
             try:
                 return ar.get()
@@ -616,7 +641,7 @@ class DirectView(View):
         block = kwargs.pop('block', self.block)
         for k in kwargs.keys():
             if k not in ['block', 'track']:
-                raise TypeError("invalid keyword arg, %r"%k)
+                raise TypeError("invalid keyword arg, %r" % k)
 
         assert len(sequences) > 0, "must have some sequences to map onto!"
         pf = ParallelFunction(self, f, block=block, **kwargs)
@@ -644,11 +669,15 @@ class DirectView(View):
         _idents, _targets = self.client._build_targets(targets)
         futures = []
         for ident in _idents:
-            future = self.client.send_execute_request(self._socket, code, silent=silent, ident=ident)
+            future = self.client.send_execute_request(
+                self._socket, code, silent=silent, ident=ident
+            )
             futures.append(future)
         if isinstance(targets, int):
             futures = futures[0]
-        ar = AsyncResult(self.client, futures, fname='execute', targets=_targets, owner=True)
+        ar = AsyncResult(
+            self.client, futures, fname='execute', targets=_targets, owner=True
+        )
         if block:
             try:
                 ar.get()
@@ -678,7 +707,7 @@ class DirectView(View):
         with open(filename, 'r') as f:
             # add newline in case of trailing indented whitespace
             # which will cause SyntaxError
-            code = f.read()+'\n'
+            code = f.read() + '\n'
         return self.execute(code, block=block, targets=targets)
 
     def update(self, ns):
@@ -706,8 +735,10 @@ class DirectView(View):
         targets = targets if targets is not None else self.targets
         # applier = self.apply_sync if block else self.apply_async
         if not isinstance(ns, dict):
-            raise TypeError("Must be a dict, not %s"%type(ns))
-        return self._really_apply(util._push, kwargs=ns, block=block, track=track, targets=targets)
+            raise TypeError("Must be a dict, not %s" % type(ns))
+        return self._really_apply(
+            util._push, kwargs=ns, block=block, track=track, targets=targets
+        )
 
     def get(self, key_s):
         """get object(s) by `key_s` from remote namespace
@@ -727,22 +758,24 @@ class DirectView(View):
         targets = targets if targets is not None else self.targets
         if isinstance(names, string_types):
             pass
-        elif isinstance(names, (list,tuple,set)):
+        elif isinstance(names, (list, tuple, set)):
             for key in names:
                 if not isinstance(key, string_types):
-                    raise TypeError("keys must be str, not type %r"%type(key))
+                    raise TypeError("keys must be str, not type %r" % type(key))
         else:
-            raise TypeError("names must be strs, not %r"%names)
+            raise TypeError("names must be strs, not %r" % names)
         return self._really_apply(util._pull, (names,), block=block, targets=targets)
 
-    def scatter(self, key, seq, dist='b', flatten=False, targets=None, block=None, track=None):
+    def scatter(
+        self, key, seq, dist='b', flatten=False, targets=None, block=None, track=None
+    ):
         """
         Partition a Python sequence and send the partitions to a set of engines.
         """
         block = block if block is not None else self.block
         track = track if track is not None else self.track
         targets = targets if targets is not None else self.targets
-        
+
         # construct integer ID list:
         targets = self.client._build_targets(targets)[1]
 
@@ -760,7 +793,9 @@ class DirectView(View):
             r.owner = False
             futures.extend(r._children)
 
-        r = AsyncResult(self.client, futures, fname='scatter', targets=targets, owner=True)
+        r = AsyncResult(
+            self.client, futures, fname='scatter', targets=targets, owner=True
+        )
         if block:
             r.wait()
         else:
@@ -779,7 +814,7 @@ class DirectView(View):
 
         # construct integer ID list:
         targets = self.client._build_targets(targets)[1]
-        
+
         futures = []
         for index, engineid in enumerate(targets):
             ar = self.pull(key, block=False, targets=engineid)
@@ -798,8 +833,8 @@ class DirectView(View):
     def __getitem__(self, key):
         return self.get(key)
 
-    def __setitem__(self,key, value):
-        self.update({key:value})
+    def __setitem__(self, key, value):
+        self.update({key: value})
 
     def clear(self, targets=None, block=None):
         """Clear the remote namespaces on my engines."""
@@ -807,34 +842,37 @@ class DirectView(View):
         targets = targets if targets is not None else self.targets
         return self.client.clear(targets=targets, block=block)
 
-    #----------------------------------------
+    # ----------------------------------------
     # activate for %px, %autopx, etc. magics
-    #----------------------------------------
+    # ----------------------------------------
 
     def activate(self, suffix=''):
         """Activate IPython magics associated with this View
-        
+
         Defines the magics `%px, %autopx, %pxresult, %%px, %pxconfig`
-        
+
         Parameters
         ----------
-        
+
 
         suffix: str [default: '']
             The suffix, if any, for the magics.  This allows you to have
             multiple views associated with parallel magics at the same time.
-            
+
             e.g. ``rc[::2].activate(suffix='_even')`` will give you
-            the magics ``%px_even``, ``%pxresult_even``, etc. for running magics 
+            the magics ``%px_even``, ``%pxresult_even``, etc. for running magics
             on the even engines.
         """
-        
+
         from ipyparallel.client.magics import ParallelMagics
+
         ip = get_ipython()
         if ip is None:
-            warnings.warn("The IPython parallel magics (%px, etc.) only work within IPython.")
+            warnings.warn(
+                "The IPython parallel magics (%px, etc.) only work within IPython."
+            )
             return
-        
+
         M = ParallelMagics(ip, self, suffix)
         ip.magics_manager.register(M)
 
@@ -844,7 +882,9 @@ class BroadcastView(DirectView):
 
     @sync_results
     @save_ids
-    def _really_apply(self, f, args=None, kwargs=None, block=None, track=None, targets=None):
+    def _really_apply(
+        self, f, args=None, kwargs=None, block=None, track=None, targets=None
+    ):
         args = [] if args is None else args
         kwargs = {} if kwargs is None else kwargs
         block = self.block if block is None else block
@@ -859,16 +899,20 @@ class BroadcastView(DirectView):
 
         s_idents = [ident.decode("utf8") for ident in idents]
 
-        metadata = dict(targets=s_idents, is_broadcast=True, is_coalescing=self.is_coalescing)
+        metadata = dict(
+            targets=s_idents, is_broadcast=True, is_coalescing=self.is_coalescing
+        )
         if not self.is_coalescing:
             original_future = self.client.send_apply_request(
-                self._socket, pf, pargs, pkwargs,
-                track=track, metadata=metadata)
+                self._socket, pf, pargs, pkwargs, track=track, metadata=metadata
+            )
             original_msg_id = original_future.msg_id
 
             for ident in s_idents:
                 msg_and_target_id = f'{original_msg_id}_{ident}'
-                future = self.client.create_message_futures(msg_and_target_id, async_result=True, track=True)
+                future = self.client.create_message_futures(
+                    msg_and_target_id, async_result=True, track=True
+                )
                 self.client.outstanding.add(msg_and_target_id)
                 self.outstanding.add(msg_and_target_id)
                 futures.append(future[0])
@@ -876,14 +920,14 @@ class BroadcastView(DirectView):
                 self.outstanding.remove(original_msg_id)
         else:
             message_future = self.client.send_apply_request(
-                self._socket, pf, pargs, pkwargs,
-                track=track, metadata=metadata
+                self._socket, pf, pargs, pkwargs, track=track, metadata=metadata
             )
             self.client.outstanding.add(message_future.msg_id)
             futures = message_future
 
-        ar = AsyncResult(self.client, futures, fname=getname(f), targets=_targets,
-                         owner=True)
+        ar = AsyncResult(
+            self.client, futures, fname=getname(f), targets=_targets, owner=True
+        )
         if block:
             try:
                 return ar.get()
@@ -893,6 +937,7 @@ class BroadcastView(DirectView):
 
     def map(self, f, *sequences, **kwargs):
         pass
+
 
 class LoadBalancedView(View):
     """An load-balancing View that only executes via the Task scheduler.
@@ -909,17 +954,19 @@ class LoadBalancedView(View):
 
     """
 
-    follow=Any()
-    after=Any()
-    timeout=CFloat()
+    follow = Any()
+    after = Any()
+    timeout = CFloat()
     retries = Integer(0)
 
     _task_scheme = Any()
-    _flag_names = List(['targets', 'block', 'track', 'follow', 'after', 'timeout', 'retries'])
+    _flag_names = List(
+        ['targets', 'block', 'track', 'follow', 'after', 'timeout', 'retries']
+    )
 
     def __init__(self, client=None, socket=None, **flags):
         super(LoadBalancedView, self).__init__(client=client, socket=socket, **flags)
-        self._task_scheme=client._task_scheme
+        self._task_scheme = client._task_scheme
 
     def _validate_dependency(self, dep):
         """validate a dependency.
@@ -928,7 +975,7 @@ class LoadBalancedView(View):
         """
         if dep is None or isinstance(dep, string_types + (AsyncResult, Dependency)):
             return True
-        elif isinstance(dep, (list,set, tuple)):
+        elif isinstance(dep, (list, set, tuple)):
             for d in dep:
                 if not isinstance(d, string_types + (AsyncResult,)):
                     return False
@@ -1003,23 +1050,33 @@ class LoadBalancedView(View):
                 if self._validate_dependency(value):
                     setattr(self, name, value)
                 else:
-                    raise ValueError("Invalid dependency: %r"%value)
+                    raise ValueError("Invalid dependency: %r" % value)
         if 'timeout' in kwargs:
             t = kwargs['timeout']
             if not isinstance(t, (int, float, type(None))):
                 if (not PY3) and (not isinstance(t, long)):
-                    raise TypeError("Invalid type for timeout: %r"%type(t))
+                    raise TypeError("Invalid type for timeout: %r" % type(t))
             if t is not None:
                 if t < 0:
-                    raise ValueError("Invalid timeout: %s"%t)
+                    raise ValueError("Invalid timeout: %s" % t)
 
             self.timeout = t
 
     @sync_results
     @save_ids
-    def _really_apply(self, f, args=None, kwargs=None, block=None, track=None,
-                                        after=None, follow=None, timeout=None,
-                                        targets=None, retries=None):
+    def _really_apply(
+        self,
+        f,
+        args=None,
+        kwargs=None,
+        block=None,
+        track=None,
+        after=None,
+        follow=None,
+        timeout=None,
+        targets=None,
+        retries=None,
+    ):
         """calls f(*args, **kwargs) on a remote engine, returning the result.
 
         This method temporarily sets all of `apply`'s flags for a single call.
@@ -1063,7 +1120,7 @@ class LoadBalancedView(View):
             # pure zmq scheme doesn't support extra features
             msg = "Pure ZMQ scheduler doesn't support the following flags:"
             "follow, after, retries, targets, timeout"
-            if (follow or after or retries or targets or timeout):
+            if follow or after or retries or targets or timeout:
                 # hard fail on Scheduler flags
                 raise RuntimeError(msg)
             if isinstance(f, dependent):
@@ -1082,24 +1139,31 @@ class LoadBalancedView(View):
         targets = self.targets if targets is None else targets
 
         if not isinstance(retries, int):
-            raise TypeError('retries must be int, not %r'%type(retries))
+            raise TypeError('retries must be int, not %r' % type(retries))
 
         if targets is None:
             idents = []
         else:
             idents = self.client._build_targets(targets)[0]
             # ensure *not* bytes
-            idents = [ ident.decode() for ident in idents ]
+            idents = [ident.decode() for ident in idents]
 
         after = self._render_dependency(after)
         follow = self._render_dependency(follow)
-        metadata = dict(after=after, follow=follow, timeout=timeout, targets=idents, retries=retries)
+        metadata = dict(
+            after=after, follow=follow, timeout=timeout, targets=idents, retries=retries
+        )
 
-        future = self.client.send_apply_request(self._socket, f, args, kwargs, track=track,
-                                metadata=metadata)
+        future = self.client.send_apply_request(
+            self._socket, f, args, kwargs, track=track, metadata=metadata
+        )
 
-        ar = AsyncResult(self.client, future, fname=getname(f),
-            targets=None, owner=True,
+        ar = AsyncResult(
+            self.client,
+            future,
+            fname=getname(f),
+            targets=None,
+            owner=True,
         )
         if block:
             try:
@@ -1138,7 +1202,7 @@ class LoadBalancedView(View):
         ordered : bool [default True]
             Whether the results should be gathered as they arrive, or enforce
             the order of submission.
-            
+
             Only applies when iterating through AsyncMapResult as results arrive.
             Has no effect when block=True.
 
@@ -1162,11 +1226,13 @@ class LoadBalancedView(View):
         keyset = set(kwargs.keys())
         extra_keys = keyset.difference_update(set(['block', 'chunksize']))
         if extra_keys:
-            raise TypeError("Invalid kwargs: %s"%list(extra_keys))
+            raise TypeError("Invalid kwargs: %s" % list(extra_keys))
 
         assert len(sequences) > 0, "must have some sequences to map onto!"
 
-        pf = ParallelFunction(self, f, block=block, chunksize=chunksize, ordered=ordered)
+        pf = ParallelFunction(
+            self, f, block=block, chunksize=chunksize, ordered=ordered
+        )
         return pf.map(*sequences)
 
     def register_joblib_backend(self, name='ipyparallel', make_default=False):
@@ -1187,24 +1253,30 @@ class LoadBalancedView(View):
         """
         from joblib.parallel import register_parallel_backend
         from ._joblib import IPythonParallelBackend
-        register_parallel_backend(name,
+
+        register_parallel_backend(
+            name,
             lambda **kwargs: IPythonParallelBackend(view=self, **kwargs),
-            make_default=make_default)
+            make_default=make_default,
+        )
+
 
 from concurrent.futures import Executor
 
+
 class ViewExecutor(Executor):
     """A PEP-3148 Executor API for Views
-    
+
     Access as view.executor
     """
+
     def __init__(self, view):
         self.view = view
-    
+
     def submit(self, fn, *args, **kwargs):
         """Same as View.apply_async"""
         return self.view.apply_async(fn, *args, **kwargs)
-    
+
     def map(self, func, *iterables, **kwargs):
         """Return generator for View.map_async"""
         if 'timeout' in kwargs:
@@ -1212,14 +1284,14 @@ class ViewExecutor(Executor):
             kwargs.pop('timeout')
         for r in self.view.map_async(func, *iterables, **kwargs):
             yield r
-    
+
     def shutdown(self, wait=True):
         """ViewExecutor does *not* shutdown engines
-        
+
         results are awaited if wait=True, but engines are *not* shutdown.
         """
         if wait:
             self.view.wait()
 
-__all__ = ['LoadBalancedView', 'DirectView', 'ViewExecutor', 'BroadcastView']
 
+__all__ = ['LoadBalancedView', 'DirectView', 'ViewExecutor', 'BroadcastView']

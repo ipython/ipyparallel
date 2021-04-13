@@ -1,16 +1,15 @@
 """Tests for mongodb backend"""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 import os
-
 from unittest import TestCase
+
 import pytest
 
 from . import test_db
 
 c = None
+
 
 @pytest.fixture(scope='module')
 def mongo_conn(request):
@@ -29,13 +28,13 @@ def mongo_conn(request):
         conn_kwargs['host'] = os.environ['DBA_MONGODB_ADMIN_URI']
     if 'DB_PORT' in os.environ:
         conn_kwargs['port'] = int(os.environ['DB_PORT'])
-    
+
     try:
         c = MongoClient(**conn_kwargs)
     except Exception:
         c = None
     if c is not None:
-        request.addfinalizer(lambda : c.drop_database('iptestdb'))
+        request.addfinalizer(lambda: c.drop_database('iptestdb'))
     return c
 
 
@@ -46,7 +45,7 @@ class TestMongoBackend(test_db.TaskDBTest, TestCase):
     def create_db(self):
         try:
             from ipyparallel.controller.mongodb import MongoDB
+
             return MongoDB(database='iptestdb', _connection=c)
         except Exception:
             pytest.skip("Couldn't connect to mongodb")
-

@@ -5,9 +5,16 @@ from types import FunctionType
 
 import zmq
 from ipython_genutils.py3compat import cast_bytes
-from traitlets import Integer, Enum, observe, Instance, Dict, List
+from traitlets import Dict
+from traitlets import Enum
+from traitlets import Instance
+from traitlets import Integer
+from traitlets import List
+from traitlets import observe
 
-from ipyparallel import util, error, Dependency
+from ipyparallel import Dependency
+from ipyparallel import error
+from ipyparallel import util
 from ipyparallel.controller.scheduler import Scheduler
 
 try:

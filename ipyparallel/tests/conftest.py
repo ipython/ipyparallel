@@ -1,11 +1,10 @@
 """pytest fixtures"""
-
 import pytest
-
-from IPython.testing.tools import default_config
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
+from IPython.testing.tools import default_config
 
-from . import setup, teardown
+from . import setup
+from . import teardown
 
 
 @pytest.fixture(scope="session")
@@ -22,10 +21,11 @@ def ipython():
     shell = TerminalInteractiveShell.instance(config=config)
     return shell
 
+
 @pytest.fixture()
 def ipython_interactive(request, ipython):
     """Activate IPython's builtin hooks
-    
+
     for the duration of the test scope.
     """
     with ipython.builtin_trap:

@@ -13,22 +13,27 @@ and some engines using something like::
 from __future__ import print_function
 
 import sys
-import ipyparallel as ipp
 import time
-import bs4 # this isn't necessary, but it helps throw the dependency error earlier
+
+import bs4  # this isn't necessary, but it helps throw the dependency error earlier
+
+import ipyparallel as ipp
 
 try:
     raw_input
 except NameError:
     raw_input = input
 
+
 def fetchAndParse(url, data=None):
     import requests
+
     try:
         from urllib.parse import urljoin
     except ImportError:
         from urlparse import urljoin
     import bs4
+
     links = []
     r = requests.get(url, data=data)
     r.raise_for_status()
@@ -39,6 +44,7 @@ def fetchAndParse(url, data=None):
             if href:
                 links.append(urljoin(url, href))
     return links
+
 
 class DistributedSpider(object):
 
@@ -92,6 +98,7 @@ class DistributedSpider(object):
             else:
                 self.onVisitDone(links, url)
 
+
 def main():
     if len(sys.argv) > 1:
         site = sys.argv[1]
@@ -99,6 +106,7 @@ def main():
         site = raw_input('Enter site to crawl: ')
     distributedSpider = DistributedSpider(site)
     distributedSpider.run()
+
 
 if __name__ == '__main__':
     main()
