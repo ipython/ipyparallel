@@ -1,4 +1,5 @@
 import ipyparallel as ipp
+from ipyparallel import Dependency
 
 client = ipp.Client()
 
@@ -6,20 +7,28 @@ client = ipp.Client()
 @ipp.require('numpy')
 def norm(A):
     from numpy.linalg import norm
-    return norm(A,2)
+
+    return norm(A, 2)
+
 
 def checkpid(pid):
     """return the pid of the engine"""
     import os
+
     return os.getpid() == pid
+
 
 def checkhostname(host):
     import socket
+
     return socket.gethostname() == host
+
 
 def getpid():
     import os
+
     return os.getpid()
+
 
 pid0 = client[0].apply_sync(getpid)
 
@@ -27,43 +36,52 @@ pid0 = client[0].apply_sync(getpid)
 @ipp.depend(checkpid, pid0)
 def getpid2():
     import os
+
     return os.getpid()
 
+
 view = client.load_balanced_view()
-view.block=True
+view.block = True
 
 # will run on anything:
-pids1 = [ view.apply(getpid) for i in range(len(client.ids)) ]
+pids1 = [view.apply(getpid) for i in range(len(client.ids))]
 print(pids1)
 # will only run on e0:
-pids2 = [ view.apply(getpid2) for i in range(len(client.ids)) ]
+pids2 = [view.apply(getpid2) for i in range(len(client.ids))]
 print(pids2)
 
 print("now test some dependency behaviors")
 
+
 def wait(t):
     import time
+
     time.sleep(t)
     return t
+
 
 # fail after some time:
 def wait_and_fail(t):
     import time
+
     time.sleep(t)
-    return 1/0
+    return 1 / 0
 
-successes = [ view.apply_async(wait, 1).msg_ids[0] for i in range(len(client.ids)) ]
-failures = [ view.apply_async(wait_and_fail, 1).msg_ids[0] for i in range(len(client.ids)) ]
 
-mixed = [failures[0],successes[0]]
-d1a = Dependency(mixed, all=False, failure=True) # yes
-d1b = Dependency(mixed, all=False) # yes
-d2a = Dependency(mixed, all=True, failure=True) # yes after / no follow
-d2b = Dependency(mixed, all=True) # no
-d3 = Dependency(failures, all=False) # no
-d4 = Dependency(failures, all=False, failure=True) # yes
-d5 = Dependency(failures, all=True, failure=True) # yes after / no follow
-d6 = Dependency(successes, all=True, failure=True) # yes after / no follow
+successes = [view.apply_async(wait, 1).msg_ids[0] for i in range(len(client.ids))]
+failures = [
+    view.apply_async(wait_and_fail, 1).msg_ids[0] for i in range(len(client.ids))
+]
+
+mixed = [failures[0], successes[0]]
+d1a = Dependency(mixed, all=False, failure=True)  # yes
+d1b = Dependency(mixed, all=False)  # yes
+d2a = Dependency(mixed, all=True, failure=True)  # yes after / no follow
+d2b = Dependency(mixed, all=True)  # no
+d3 = Dependency(failures, all=False)  # no
+d4 = Dependency(failures, all=False, failure=True)  # yes
+d5 = Dependency(failures, all=True, failure=True)  # yes after / no follow
+d6 = Dependency(successes, all=True, failure=True)  # yes after / no follow
 
 view.block = False
 flags = view.temp_flags
@@ -92,14 +110,16 @@ with flags(follow=d6):
 with flags(after=d6, follow=d2b):
     r6b = view.apply(getpid)
 
+
 def should_fail(f):
     try:
         f()
-    except error.KernelError:
+    except ipp.error.KernelError:
         pass
     else:
         print('should have raised')
         # raise Exception("should have raised")
+
 
 # print(r1a.msg_ids)
 r1a.get()
@@ -122,7 +142,7 @@ r5.get()
 # print(r5b.msg_ids)
 should_fail(r5b.get)
 # print(r6.msg_ids)
-should_fail(r6.get) # assuming > 1 engine
+should_fail(r6.get)  # assuming > 1 engine
 # print(r6b.msg_ids)
 should_fail(r6b.get)
 print('done')

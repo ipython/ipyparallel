@@ -1,13 +1,21 @@
 import time
 from collections import deque
 from random import randint
+from random import random
 from types import FunctionType
 
 import zmq
 from ipython_genutils.py3compat import cast_bytes
-from traitlets import Integer, Enum, observe, Instance, Dict, List
+from traitlets import Dict
+from traitlets import Enum
+from traitlets import Instance
+from traitlets import Integer
+from traitlets import List
+from traitlets import observe
 
-from ipyparallel import util, error, Dependency
+from ipyparallel import Dependency
+from ipyparallel import error
+from ipyparallel import util
 from ipyparallel.controller.scheduler import Scheduler
 
 try:
@@ -124,9 +132,6 @@ class Job(object):
 
     def __lt__(self, other):
         return self.timestamp < other.timestamp
-
-    def __cmp__(self, other):
-        return cmp(self.timestamp, other.timestamp)
 
     @property
     def dependents(self):

@@ -43,4 +43,3 @@ Exceptions
 .. autoexception:: NoEnginesRegistered
 .. autoexception:: ImpossibleDependency
 .. autoexception:: InvalidDependency
-

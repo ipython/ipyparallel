@@ -143,4 +143,3 @@ hist_data = hist(pdiffs, bins=30, normed=True)
 plot(s, rhos)
 xlabel('Normalized level spacing s')
 ylabel('Probability $P(s)$')
-

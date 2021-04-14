@@ -23,7 +23,7 @@ import ipyparallel as ipp
 
 # connect client and create views
 rc = ipp.Client()
-rc.block=True
+rc.block = True
 ids = rc.ids
 
 root_id = ids[0]
@@ -31,8 +31,7 @@ root = rc[root_id]
 
 view = rc[:]
 
-# run bintree.py script defining bintree functions, etc.
-exec(compile(open('bintree.py').read(), 'bintree.py', 'exec'))
+from bintree import bintree, print_bintree
 
 # generate binary tree of parents
 btree = bintree(ids)
@@ -46,10 +45,10 @@ view['root_id'] = root_id
 
 # create the Communicator objects on the engines
 view.execute('com = BinaryTreeCommunicator(id, root = id==root_id )')
-pub_url = root.apply_sync(lambda : com.pub_url)
+pub_url = root.apply_sync(lambda: com.pub_url)  # noqa: F821
 
 # gather the connection information into a dict
-ar = view.apply_async(lambda : com.info)
+ar = view.apply_async(lambda: com.info)  # noqa: F821
 peers = ar.get_dict()
 # this is a dict, keyed by engine ID, of the connection info for the EngineCommunicators
 
@@ -58,17 +57,20 @@ def connect(com, peers, tree, pub_url, root_id):
     """this function will be called on the engines"""
     com.connect(peers, tree, pub_url, root_id)
 
+
 view.apply_sync(connect, ipp.Reference('com'), peers, btree, pub_url, root_id)
 
 # functions that can be used for reductions
 # max and min builtins can be used as well
-def add(a,b):
+def add(a, b):
     """cumulative sum reduction"""
-    return a+b
+    return a + b
 
-def mul(a,b):
+
+def mul(a, b):
     """cumulative product reduction"""
-    return a*b
+    return a * b
+
 
 view['add'] = add
 view['mul'] = mul

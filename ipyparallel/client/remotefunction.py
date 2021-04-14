@@ -1,8 +1,6 @@
 """Remote Functions and decorators for Views."""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 from __future__ import division
 
 import sys
@@ -10,23 +8,25 @@ import warnings
 
 from decorator import decorator
 
-from ..serialize import PrePickled
 from . import map as Map
+from ..serialize import PrePickled
 from .asyncresult import AsyncMapResult
+
 try:
     from inspect import signature
-except ImportError: # py2
+except ImportError:  # py2
     from IPython.utils.signatures import signature
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Functions and Decorators
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 def remote(view, block=None, **flags):
     """Turn a function into a remote function.
 
     This method can be used for map::
-    
+
         In [1]: @remote(view,block=True)
            ...: def func(a):
            ...:    pass
@@ -34,7 +34,9 @@ def remote(view, block=None, **flags):
 
     def remote_function(f):
         return RemoteFunction(view, f, block=block, **flags)
+
     return remote_function
+
 
 def parallel(view, dist='b', block=None, ordered=True, **flags):
     """Turn a function into a parallel remote function.
@@ -47,15 +49,19 @@ def parallel(view, dist='b', block=None, ordered=True, **flags):
     """
 
     def parallel_function(f):
-        return ParallelFunction(view, f, dist=dist, block=block, ordered=ordered, **flags)
+        return ParallelFunction(
+            view, f, dist=dist, block=block, ordered=ordered, **flags
+        )
+
     return parallel_function
+
 
 def getname(f):
     """Get the name of an object.
-    
+
     For use in case of callables that are not functions, and
     thus may not have __name__ defined.
-    
+
     Order: f.__name__ >  f.name > str(f)
     """
     try:
@@ -66,13 +72,14 @@ def getname(f):
         return f.name
     except:
         pass
-    
+
     return str(f)
+
 
 @decorator
 def sync_view_results(f, self, *args, **kwargs):
     """sync relevant results from self.client to our results attribute.
-    
+
     This is a clone of view.sync_results, but for remote functions
     """
     view = self.view
@@ -85,10 +92,12 @@ def sync_view_results(f, self, *args, **kwargs):
         view._in_sync_results = False
         view._sync_results()
     return ret
-    
-#--------------------------------------------------------------------------
+
+
+# --------------------------------------------------------------------------
 # Classes
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
+
 
 class RemoteFunction(object):
     """Turn an existing function into a remote function.
@@ -107,23 +116,24 @@ class RemoteFunction(object):
     **flags : remaining kwargs are passed to View.temp_flags
     """
 
-    view = None # the remote connection
-    func = None # the wrapped function
-    block = None # whether to block
-    flags = None # dict of extra kwargs for temp_flags
+    view = None  # the remote connection
+    func = None  # the wrapped function
+    block = None  # whether to block
+    flags = None  # dict of extra kwargs for temp_flags
 
     def __init__(self, view, f, block=None, **flags):
         self.view = view
         self.func = f
-        self.block=block
-        self.flags=flags
+        self.block = block
+        self.flags = flags
 
         # copy function attributes for nicer inspection
         # of decorated functions
         self.__name__ = getname(f)
         if getattr(f, '__doc__', None):
             self.__doc__ = '{} wrapping:\n{}'.format(
-                self.__class__.__name__, f.__doc__,
+                self.__class__.__name__,
+                f.__doc__,
             )
         if getattr(f, '__signature__', None):
             self.__signature__ = f.__signature__
@@ -138,6 +148,7 @@ class RemoteFunction(object):
         block = self.view.block if self.block is None else self.block
         with self.view.temp_flags(block=block, **self.flags):
             return self.view.apply(self.func, *args, **kwargs)
+
 
 if sys.version_info[0] >= 3:
     _map = lambda f, *sequences: list(map(f, *sequences))
@@ -183,14 +194,16 @@ class ParallelFunction(RemoteFunction):
     ordered = None
     mapObject = None
 
-    def __init__(self, view, f, dist='b', block=None, chunksize=None, ordered=True, **flags):
+    def __init__(
+        self, view, f, dist='b', block=None, chunksize=None, ordered=True, **flags
+    ):
         super(ParallelFunction, self).__init__(view, f, block=block, **flags)
         self.chunksize = chunksize
         self.ordered = ordered
 
         mapClass = Map.dists[dist]
         self.mapObject = mapClass()
-    
+
     @sync_view_results
     def __call__(self, *sequences, **kwargs):
         global _prepickled_map
@@ -200,7 +213,7 @@ class ParallelFunction(RemoteFunction):
         _mapping = kwargs.pop('__ipp_mapping', False)
         if kwargs:
             raise TypeError("Unexpected keyword arguments: %s" % kwargs)
-        
+
         lens = []
         maxlen = minlen = -1
         for i, seq in enumerate(sequences):
@@ -218,26 +231,28 @@ class ParallelFunction(RemoteFunction):
             if minlen == -1 or n < minlen:
                 minlen = n
             lens.append(n)
-        
+
         if maxlen == 0:
             # nothing to iterate over
             return []
-        
+
         # check that the length of sequences match
         if not _mapping and minlen != maxlen:
             msg = 'all sequences must have equal length, but have %s' % lens
             raise ValueError(msg)
-        
+
         balanced = 'Balanced' in self.view.__class__.__name__
         if balanced:
             if self.chunksize:
                 nparts = maxlen // self.chunksize + int(maxlen % self.chunksize > 0)
             else:
                 nparts = maxlen
-            targets = [None]*nparts
+            targets = [None] * nparts
         else:
             if self.chunksize:
-                warnings.warn("`chunksize` is ignored unless load balancing", UserWarning)
+                warnings.warn(
+                    "`chunksize` is ignored unless load balancing", UserWarning
+                )
             # multiplexed:
             targets = self.view.targets
             # 'all' is lazily evaluated at execution time, which is now:
@@ -275,10 +290,13 @@ class ParallelFunction(RemoteFunction):
 
             futures.extend(ar._children)
 
-        r = AsyncMapResult(self.view.client, futures, self.mapObject,
-                            fname=getname(self.func),
-                            ordered=self.ordered
-                        )
+        r = AsyncMapResult(
+            self.view.client,
+            futures,
+            self.mapObject,
+            fname=getname(self.func),
+            ordered=self.ordered,
+        )
 
         if self.block:
             try:
@@ -292,10 +310,11 @@ class ParallelFunction(RemoteFunction):
         """call a function on each element of one or more sequence(s) remotely.
         This should behave very much like the builtin map, but return an AsyncMapResult
         if self.block is False.
-        
+
         That means it can take generators (will be cast to lists locally),
         and mismatched sequence lengths will be padded with None.
         """
         return self(*sequences, __ipp_mapping=True)
+
 
 __all__ = ['remote', 'parallel', 'RemoteFunction', 'ParallelFunction']

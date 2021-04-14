@@ -1,12 +1,12 @@
 # Interactive Parallel Computing with IPython
 
-ipyparallel is the new home of IPython.parallel. ipyparallel is a Python package and collection of CLI scripts for controlling clusters for Jupyter. 
+ipyparallel is the new home of IPython.parallel. ipyparallel is a Python package and collection of CLI scripts for controlling clusters for Jupyter.
 
 ipyparallel contains the following CLI scripts:
 
-* ipcluster - start/stop a cluster
-* ipcontroller - start a scheduler
-* ipengine - start an engine
+- ipcluster - start/stop a cluster
+- ipcontroller - start a scheduler
+- ipengine - start an engine
 
 ## Install
 
@@ -17,7 +17,6 @@ Install ipyparallel:
 To enable the `IPython Clusters` tab in Jupyter Notebook:
 
     ipcluster nbextension enable
-
 
 To disable it again:
 

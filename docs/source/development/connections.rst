@@ -151,4 +151,3 @@ The Hub publishes all registration/unregistration events via a ``PUB`` socket. T
 allows clients to stay up to date with what engines are available by subscribing to the
 feed with a ``SUB`` socket. Other processes could selectively subscribe to just
 registration or unregistration events.
-

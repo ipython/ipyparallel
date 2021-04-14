@@ -1,7 +1,7 @@
 {
-    "NotebookApp": {
-        "nbserver_extensions": {
-            "ipyparallel.nbextension": true
-        }
+  "NotebookApp": {
+    "nbserver_extensions": {
+      "ipyparallel.nbextension": true
     }
+  }
 }

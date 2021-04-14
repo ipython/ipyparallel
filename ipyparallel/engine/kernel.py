@@ -1,24 +1,32 @@
 """IPython kernel for parallel computing"""
-
 import sys
 
-from ipython_genutils.py3compat import cast_bytes, unicode_type, safe_unicode, string_types
-from traitlets import Integer, Type
-
 from ipykernel.ipkernel import IPythonKernel
-from ipyparallel.serialize import serialize_object, unpack_apply_message
-from ipyparallel.util import utcnow
+from ipython_genutils.py3compat import cast_bytes
+from ipython_genutils.py3compat import safe_unicode
+from ipython_genutils.py3compat import string_types
+from ipython_genutils.py3compat import unicode_type
+from traitlets import Integer
+from traitlets import Type
+
 from .datapub import ZMQDataPublisher
+from ipyparallel.serialize import serialize_object
+from ipyparallel.serialize import unpack_apply_message
+from ipyparallel.util import utcnow
 
 
 class IPythonParallelKernel(IPythonKernel):
     """Extend IPython kernel for parallel computing"""
+
     engine_id = Integer(-1)
     msg_types = getattr(IPythonKernel, 'msg_types', []) + ['apply_request']
-    control_msg_types = getattr(IPythonKernel, 'control_msg_types', []) + ['abort_request', 'clear_request']
+    control_msg_types = getattr(IPythonKernel, 'control_msg_types', []) + [
+        'abort_request',
+        'clear_request',
+    ]
     _execute_sleep = 0
     data_pub_class = Type(ZMQDataPublisher)
-    
+
     def _topic(self, topic):
         """prefixed topic for IOPub messages"""
         base = "engine.%s" % self.engine_id
@@ -57,8 +65,8 @@ class IPythonParallelKernel(IPythonKernel):
         parent_metadata = parent.get('metadata', {})
         return {
             'started': utcnow(),
-            'dependencies_met' : True,
-            'engine' : self.ident,
+            'dependencies_met': True,
+            'engine': self.ident,
             'is_broadcast': parent_metadata.get('is_broadcast', False),
             'is_coalescing': parent_metadata.get('is_coalescing', False),
             'original_msg_id': parent_metadata.get('original_msg_id', ''),
@@ -100,26 +108,33 @@ class IPythonParallelKernel(IPythonKernel):
         sys.stdout.flush()
         sys.stderr.flush()
         self.log.debug('engine: sending apply_reply')
-        self.session.send(stream, u'apply_reply', reply_content,
-                    parent=parent, ident=ident, buffers=result_buf, metadata=md)
+        self.session.send(
+            stream,
+            u'apply_reply',
+            reply_content,
+            parent=parent,
+            ident=ident,
+            buffers=result_buf,
+            metadata=md,
+        )
 
     def do_apply(self, content, bufs, msg_id, reply_metadata):
         shell = self.shell
         try:
             working = shell.user_ns
 
-            prefix = "_"+str(msg_id).replace("-","")+"_"
+            prefix = "_" + str(msg_id).replace("-", "") + "_"
 
-            f,args,kwargs = unpack_apply_message(bufs, working, copy=False)
+            f, args, kwargs = unpack_apply_message(bufs, working, copy=False)
 
             fname = getattr(f, '__name__', 'f')
 
-            fname = prefix+"f"
-            argname = prefix+"args"
-            kwargname = prefix+"kwargs"
-            resultname = prefix+"result"
+            fname = prefix + "f"
+            argname = prefix + "args"
+            kwargname = prefix + "kwargs"
+            resultname = prefix + "result"
 
-            ns = { fname : f, argname : args, kwargname : kwargs , resultname : None }
+            ns = {fname: f, argname: args, kwargname: kwargs, resultname: None}
             # print ns
             working.update(ns)
             code = "%s = %s(*%s,**%s)" % (resultname, fname, argname, kwargname)
@@ -130,7 +145,8 @@ class IPythonParallelKernel(IPythonKernel):
                 for key in ns:
                     working.pop(key)
 
-            result_buf = serialize_object(result,
+            result_buf = serialize_object(
+                result,
                 buffer_threshold=self.session.buffer_threshold,
                 item_threshold=self.session.item_threshold,
             )
@@ -157,13 +173,16 @@ class IPythonParallelKernel(IPythonKernel):
             e_info = dict(engine_uuid=self.ident, engine_id=self.int_id, method='apply')
             reply_content['engine_info'] = e_info
 
-            self.send_response(self.iopub_socket, u'error', reply_content,
-                                ident=self._topic('error'))
-            self.log.info("Exception in apply request:\n%s", '\n'.join(reply_content['traceback']))
+            self.send_response(
+                self.iopub_socket, u'error', reply_content, ident=self._topic('error')
+            )
+            self.log.info(
+                "Exception in apply request:\n%s", '\n'.join(reply_content['traceback'])
+            )
             result_buf = []
             reply_content['status'] = 'error'
         else:
-            reply_content = {'status' : 'ok'}
+            reply_content = {'status': 'ok'}
 
         return reply_content, result_buf
 
@@ -180,15 +199,15 @@ class IPythonParallelKernel(IPythonKernel):
             self.aborted.add(str(mid))
 
         content = dict(status='ok')
-        reply_msg = self.session.send(stream, 'abort_reply', content=content,
-                parent=parent, ident=ident)
+        reply_msg = self.session.send(
+            stream, 'abort_reply', content=content, parent=parent, ident=ident
+        )
         self.log.debug("%s", reply_msg)
-
 
     def clear_request(self, stream, idents, parent):
         """Clear our namespace."""
         self.shell.reset(False)
         content = dict(status='ok')
-        self.session.send(stream, 'clear_reply', ident=idents, parent=parent,
-                content = content)
-
+        self.session.send(
+            stream, 'clear_reply', ident=idents, parent=parent, content=content
+        )

@@ -2,15 +2,15 @@ import logging
 import os
 
 import zmq
-
-from traitlets import Integer, List, Bytes, Bool
+from traitlets import Bool
+from traitlets import Bytes
+from traitlets import Integer
+from traitlets import List
 
 from ipyparallel import util
-from ipyparallel.controller.scheduler import (
-    Scheduler,
-    get_common_scheduler_streams,
-    ZMQStream,
-)
+from ipyparallel.controller.scheduler import get_common_scheduler_streams
+from ipyparallel.controller.scheduler import Scheduler
+from ipyparallel.controller.scheduler import ZMQStream
 
 
 class BroadcastScheduler(Scheduler):
@@ -36,7 +36,7 @@ class BroadcastScheduler(Scheduler):
         if is_coalescing:
             self.accumulated_replies[original_msg_id] = {
                 bytes(target, 'utf8'): None for target in targets
-                }
+            }
 
         for target in targets:
             new_msg = self.append_new_msg_id_to_msg(

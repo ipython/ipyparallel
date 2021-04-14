@@ -1,17 +1,15 @@
 #!/usr/bin/env python
 # coding: utf-8
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 from __future__ import print_function
 
 # the name of the project
 name = 'ipyparallel'
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Minimal Python version sanity check
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 import sys
 
@@ -21,11 +19,11 @@ if v[:2] < (2, 7) or (v[0] >= 3 and v[:2] < (3, 4)):
     print(error, file=sys.stderr)
     sys.exit(1)
 
-PY3 = (sys.version_info[0] >= 3)
+PY3 = sys.version_info[0] >= 3
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Add test command
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 
 from setuptools.command.bdist_egg import bdist_egg
@@ -37,12 +35,16 @@ class bdist_egg_disabled(bdist_egg):
     Prevents setup.py install performing setuptools' default easy_install,
     which it should never ever do.
     """
-    def run(self):
-        sys.exit("Aborting implicit building of eggs. Use `pip install .` to install from source.")
 
-#-----------------------------------------------------------------------------
+    def run(self):
+        sys.exit(
+            "Aborting implicit building of eggs. Use `pip install .` to install from source."
+        )
+
+
+# -----------------------------------------------------------------------------
 # get on with it
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 
 import os
 from glob import glob
@@ -56,7 +58,7 @@ pkg_root = pjoin(here, name)
 packages = []
 for d, _, _ in os.walk(pjoin(here, name)):
     if os.path.exists(pjoin(d, '__init__.py')):
-        packages.append(d[len(here)+1:].replace(os.path.sep, '.'))
+        packages.append(d[len(here) + 1 :].replace(os.path.sep, '.'))
 
 package_data = {'ipyparallel.nbextension': [pjoin('static', '*')]}
 

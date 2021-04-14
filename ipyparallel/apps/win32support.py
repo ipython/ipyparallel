@@ -7,33 +7,30 @@ Authors:
 * MinRK
 
 """
-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 #  Copyright (C) 2011  The IPython Development Team
 #
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
-#-----------------------------------------------------------------------------
-
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Imports
-#-----------------------------------------------------------------------------
-
+# -----------------------------------------------------------------------------
 import uuid
-import zmq
-
 from threading import Thread
 
+import zmq
 from ipython_genutils.py3compat import unicode_type
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # Code
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
 
 class ForwarderThread(Thread):
     def __init__(self, sock, fd):
         Thread.__init__(self)
-        self.daemon=True
+        self.daemon = True
         self.sock = sock
         self.fd = fd
 
@@ -52,6 +49,7 @@ class ForwarderThread(Thread):
         self.fd.close()
         self.sock.close()
 
+
 def forward_read_events(fd, context=None):
     """Forward read events from an FD over a socket.
 
@@ -63,7 +61,7 @@ def forward_read_events(fd, context=None):
     push = context.socket(zmq.PUSH)
     push.setsockopt(zmq.LINGER, -1)
     pull = context.socket(zmq.PULL)
-    addr='inproc://%s'%uuid.uuid4()
+    addr = 'inproc://%s' % uuid.uuid4()
     push.bind(addr)
     pull.connect(addr)
     forwarder = ForwarderThread(push, fd)

@@ -1,17 +1,16 @@
 """Future-related utils"""
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
+import sys
 from concurrent.futures import Future
 from threading import Event
-import sys
 
 from tornado.log import app_log
 
 
 class MessageFuture(Future):
     """Future class to wrap async messages"""
+
     def __init__(self, msg_id, track=False):
         super(MessageFuture, self).__init__()
         self.msg_id = msg_id
@@ -27,6 +26,7 @@ class MessageFuture(Future):
         if not self.done():
             return self._evt.wait(timeout)
         return True
+
 
 # The following are from tornado 5.0b1
 # avoids hang using gen.multi_future on asyncio,
@@ -101,8 +101,9 @@ def multi_future(children):
                     result_list.append(f.result())
                 except Exception as e:
                     if future.done():
-                        app_log.error("Multiple exceptions in yield list",
-                                      exc_info=True)
+                        app_log.error(
+                            "Multiple exceptions in yield list", exc_info=True
+                        )
                     else:
                         future_set_exc_info(future, sys.exc_info())
             if not future.done():

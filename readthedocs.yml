@@ -1,5 +1,5 @@
 conda:
-    file: docs/environment.yml
+  file: docs/environment.yml
 python:
-    version: 3
-    pip_install: true
+  version: 3
+  pip_install: true

@@ -1,4 +1,5 @@
 import socket
+
 try:
     from unittest import mock
 except ImportError:
@@ -18,6 +19,6 @@ def test_disambiguate_ip(warn_mock):
     assert warn_mock.called_once_with(
         'IPython could not determine IPs for {}: '
         '[Errno -2] Name or service not known'.format(wontresolve),
-        RuntimeWarning
+        RuntimeWarning,
     )
     assert util.disambiguate_ip_address('0.0.0.0', public_ip) == localhost()

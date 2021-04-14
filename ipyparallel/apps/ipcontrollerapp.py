@@ -3,46 +3,47 @@
 """
 The IPython controller application.
 """
-
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
 from __future__ import with_statement
 
 import json
 import os
+import socket
 import stat
 import sys
-
 from multiprocessing import Process
-from signal import signal, SIGINT, SIGABRT, SIGTERM
-import socket
+from signal import SIGABRT
+from signal import SIGINT
+from signal import signal
+from signal import SIGTERM
 
 import zmq
+from IPython.core.profiledir import ProfileDir
+from ipython_genutils.importstring import import_item
+from jupyter_client.session import Session
+from jupyter_client.session import session_aliases
+from jupyter_client.session import session_flags
+from traitlets import Bool
+from traitlets import Dict
+from traitlets import List
+from traitlets import observe
+from traitlets import TraitError
+from traitlets import Unicode
 from zmq.devices import ProcessMonitoredQueue
 from zmq.log.handlers import PUBHandler
 
-from IPython.core.profiledir import ProfileDir
-
-from ipyparallel.apps.baseapp import (
-    BaseParallelApplication,
-    base_aliases,
-    base_flags,
-    catch_config_error,
-)
-from ipython_genutils.importstring import import_item
-from traitlets import Unicode, Bool, List, Dict, TraitError, observe
-
-from jupyter_client.session import Session, session_aliases, session_flags
-
-from ipyparallel.controller.broadcast_scheduler import launch_broadcast_scheduler, \
-    BroadcastScheduler
+from ipyparallel.apps.baseapp import base_aliases
+from ipyparallel.apps.baseapp import base_flags
+from ipyparallel.apps.baseapp import BaseParallelApplication
+from ipyparallel.apps.baseapp import catch_config_error
+from ipyparallel.controller.broadcast_scheduler import BroadcastScheduler
+from ipyparallel.controller.broadcast_scheduler import launch_broadcast_scheduler
+from ipyparallel.controller.dictdb import DictDB
 from ipyparallel.controller.heartmonitor import HeartMonitor
 from ipyparallel.controller.hub import HubFactory
 from ipyparallel.controller.scheduler import launch_scheduler
 from ipyparallel.controller.task_scheduler import TaskScheduler
-from ipyparallel.controller.dictdb import DictDB
-
 from ipyparallel.util import disambiguate_url
 
 # conditional import of SQLiteDB / MongoDB backend class
@@ -460,9 +461,7 @@ class IPControllerApp(BaseParallelApplication):
                 children,
             )
 
-        self.launch_broadcast_schedulers(
-            f, monitor_url, children
-        )
+        self.launch_broadcast_schedulers(f, monitor_url, children)
 
         # set unlimited HWM for all relay devices
         if hasattr(zmq, 'SNDHWM'):
@@ -567,16 +566,12 @@ class IPControllerApp(BaseParallelApplication):
             'config': dict(self.config),
         }
 
-    def launch_broadcast_schedulers(
-        self, factory, monitor_url, children
-    ):
+    def launch_broadcast_schedulers(self, factory, monitor_url, children):
         def launch_in_thread_or_process(scheduler_args):
 
             if 'Process' in self.mq_class:
                 # run the Python scheduler in a Process
-                q = Process(
-                    target=launch_broadcast_scheduler, kwargs=scheduler_args
-                )
+                q = Process(target=launch_broadcast_scheduler, kwargs=scheduler_args)
                 q.daemon = True
                 children.append(q)
             else:
