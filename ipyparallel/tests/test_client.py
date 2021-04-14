@@ -611,8 +611,12 @@ class TestClient(ClusterTestCase):
                 None
             ) as record:  # should not trigger warning
                 c = self.connect_client()
-                assert len(record) == 0, str([str(w) for w in record])
-                c.close()
+            # only capture runtime warnings
+            runtime_warnings = [
+                w for w in record if isinstance(w.message, RuntimeWarning)
+            ]
+            assert len(runtime_warnings) == 0, str([str(w) for w in runtime_warnings])
+            c.close()
 
     def test_local_ip_true_doesnt_trigger_warning(self):
         with mock.patch(
