@@ -624,6 +624,8 @@ class DirectView(View):
             the sequences to be distributed and passed to `f`
         block : bool
             whether to wait for the result or not [default self.block]
+        track:
+            See `ParallelFunction`
 
         Returns
         -------
