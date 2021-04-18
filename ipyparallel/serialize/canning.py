@@ -118,16 +118,14 @@ class CannedObject(object):
         """can an object for safe pickling
 
         Parameters
-        ==========
-
-        obj:
+        ----------
+        obj
             The object to be canned
-        keys: list (optional)
+        keys : list (optional)
             list of attribute names that will be explicitly canned / uncanned
-        hook: callable (optional)
+        hook : callable (optional)
             An optional extra callable,
             which can do additional processing of the uncanned object.
-
         large data may be offloaded into the buffers list,
         used for zero-copy transfers.
         """

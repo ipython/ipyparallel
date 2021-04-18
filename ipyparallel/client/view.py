@@ -153,7 +153,6 @@ class View(HasTraits):
 
         Parameters
         ----------
-
         block : bool
             whether to wait for results
         track : bool
@@ -175,7 +174,6 @@ class View(HasTraits):
 
         Examples
         --------
-
         >>> view.track=False
         ...
         >>> with view.temp_flags(track=True):
@@ -254,18 +252,16 @@ class View(HasTraits):
 
         Parameters
         ----------
-
         jobs : int, str, or list of ints and/or strs, or one or more AsyncResult objects
-                ints are indices to self.history
-                strs are msg_ids
-                default: wait on all outstanding messages
+            ints are indices to self.history
+            strs are msg_ids
+            default: wait on all outstanding messages
         timeout : float
-                a time in seconds, after which to give up.
-                default is -1, which means no timeout
+            a time in seconds, after which to give up.
+            default is -1, which means no timeout
 
         Returns
         -------
-
         True : when all msg_ids are done
         False : timeout reached, some msg_ids still outstanding
         """
@@ -278,7 +274,6 @@ class View(HasTraits):
 
         Parameters
         ----------
-
         jobs : None, str, list of strs, optional
             if None: abort all jobs.
             else: abort specific msg_id(s).
@@ -546,13 +541,9 @@ class DirectView(View):
 
         Parameters
         ----------
-
         f : callable
-
         args : list [default: empty]
-
         kwargs : dict [default: empty]
-
         targets : target list [default: self.targets]
             where to run
         block : bool [default: self.block]
@@ -562,7 +553,6 @@ class DirectView(View):
 
         Returns
         -------
-
         if self.block is False:
             returns AsyncResult
         else:
@@ -617,25 +607,22 @@ class DirectView(View):
 
         Parameters
         ----------
-
         f : callable
             function to be mapped
-        *sequences: one or more sequences of matching length
+        *sequences : one or more sequences of matching length
             the sequences to be distributed and passed to `f`
         block : bool
             whether to wait for the result or not [default self.block]
-        track:
+        track
             See `ParallelFunction`
 
         Returns
         -------
-
-
         If block=False
-          An :class:`~ipyparallel.client.asyncresult.AsyncMapResult` instance.
-          An object like AsyncResult, but which reassembles the sequence of results
-          into a single list. AsyncMapResults can be iterated through before all
-          results are complete.
+            An :class:`~ipyparallel.client.asyncresult.AsyncMapResult` instance.
+            An object like AsyncResult, but which reassembles the sequence of results
+            into a single list. AsyncMapResults can be iterated through before all
+            results are complete.
         else
             A list, the result of ``map(f,*sequences)``
         """
@@ -658,12 +645,11 @@ class DirectView(View):
 
         Parameters
         ----------
-
         code : str
-                the code string to be executed
+            the code string to be executed
         block : bool
-                whether or not to wait until done to return
-                default: self.block
+            whether or not to wait until done to return
+            default: self.block
         """
         block = self.block if block is None else block
         targets = self.targets if targets is None else targets
@@ -695,15 +681,14 @@ class DirectView(View):
 
         Parameters
         ----------
-
         filename : str
-                The path to the file
+            The path to the file
         targets : int/str/list of ints/strs
-                the engines on which to execute
-                default : all
+            the engines on which to execute
+            default : all
         block : bool
-                whether or not to wait until done
-                default: self.block
+            whether or not to wait until done
+            default: self.block
 
         """
         with open(filename, 'r') as f:
@@ -724,7 +709,6 @@ class DirectView(View):
 
         Parameters
         ----------
-
         ns : dict
             dict of keys with which to update engine namespace(s)
         block : bool [default : self.block]
@@ -855,9 +839,7 @@ class DirectView(View):
 
         Parameters
         ----------
-
-
-        suffix: str [default: '']
+        suffix : str [default: '']
             The suffix, if any, for the magics.  This allows you to have
             multiple views associated with parallel magics at the same time.
 
@@ -1015,32 +997,27 @@ class LoadBalancedView(View):
 
         Parameters
         ----------
-
         block : bool
             whether to wait for results
         track : bool
             whether to create a MessageTracker to allow the user to
             safely edit after arrays and buffers during non-copying
             sends.
-
         after : Dependency or collection of msg_ids
             Only for load-balanced execution (targets=None)
             Specify a list of msg_ids as a time-based dependency.
             This job will only be run *after* the dependencies
             have been met.
-
         follow : Dependency or collection of msg_ids
             Only for load-balanced execution (targets=None)
             Specify a list of msg_ids as a location-based dependency.
             This job will only be run on an engine where this dependency
             is met.
-
         timeout : float/int or None
             Only for load-balanced execution (targets=None)
             Specify an amount of time (in seconds) for the scheduler to
             wait for dependencies to be met before failing with a
             DependencyTimeout.
-
         retries : int
             Number of times a task will be retried on failure.
         """
@@ -1084,23 +1061,17 @@ class LoadBalancedView(View):
 
         Parameters
         ----------
-
         f : callable
-
         args : list [default: empty]
-
         kwargs : dict [default: empty]
-
         block : bool [default: self.block]
             whether to block
         track : bool [default: self.track]
             whether to ask zmq to track the message, for safe non-copying sends
-
-        !!!!!! TODO: THE REST HERE  !!!!
+        !!!!!! TODO : THE REST HERE  !!!!
 
         Returns
         -------
-
         if self.block is False:
             returns AsyncResult
         else:
@@ -1187,10 +1158,9 @@ class LoadBalancedView(View):
 
         Parameters
         ----------
-
         f : callable
             function to be mapped
-        *sequences: one or more sequences of matching length
+        *sequences : one or more sequences of matching length
             the sequences to be distributed and passed to `f`
         block : bool [default self.block]
             whether to wait for the result or not
@@ -1209,12 +1179,11 @@ class LoadBalancedView(View):
 
         Returns
         -------
-
         if block=False
-          An :class:`~ipyparallel.client.asyncresult.AsyncMapResult` instance.
-          An object like AsyncResult, but which reassembles the sequence of results
-          into a single list. AsyncMapResults can be iterated through before all
-          results are complete.
+            An :class:`~ipyparallel.client.asyncresult.AsyncMapResult` instance.
+            An object like AsyncResult, but which reassembles the sequence of results
+            into a single list. AsyncMapResults can be iterated through before all
+            results are complete.
         else
             A list, the result of ``map(f,*sequences)``
         """

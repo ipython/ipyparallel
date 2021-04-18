@@ -425,10 +425,9 @@ class SQLiteDB(BaseDB):
 
         Parameters
         ----------
-
-        check: dict
+        check : dict
             mongodb-style query argument
-        keys: list of strs [optional]
+        keys : list of strs [optional]
             if specified, the subset of keys to extract.  msg_id will *always* be
             included.
         """

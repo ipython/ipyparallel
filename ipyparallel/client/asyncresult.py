@@ -447,7 +447,6 @@ class AsyncResult(Future):
 
         Parameters
         ----------
-
         start : one or more datetime objects (e.g. ar.submitted)
         end : one or more datetime objects (e.g. ar.received)
         start_key : callable
@@ -459,7 +458,6 @@ class AsyncResult(Future):
 
         Returns
         -------
-
         dt : float
             The time elapsed (in seconds) between the two selected timestamps.
         """
@@ -579,7 +577,6 @@ class AsyncResult(Future):
 
         Parameters
         ----------
-
         groupby : str [default: type]
             if 'type':
                 Group outputs by type (show all stdout, then all stderr, etc.):

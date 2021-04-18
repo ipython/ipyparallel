@@ -234,10 +234,9 @@ def disambiguate_ip_address(ip, location=None):
 
     Parameters
     ----------
-
     ip : IP address
         An IP address, or the special values 0.0.0.0, or *
-    location: IP address or hostname, optional
+    location : IP address or hostname, optional
         A public IP of the target machine, or its hostname.
         If location is an IP of the current machine,
         localhost will be returned,
@@ -499,10 +498,9 @@ def become_dask_worker(address, nanny=False, **kwargs):
 
     Parameters
     ----------
-
-    address: str
+    address : str
         The URL of the dask Scheduler.
-    **kwargs:
+    **kwargs
         Any additional keyword arguments will be passed to the Worker constructor.
     """
     shell = get_ipython()
