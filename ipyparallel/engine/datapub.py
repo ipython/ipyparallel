@@ -29,7 +29,6 @@ class ZMQDataPublisher(Configurable):
 
         Parameters
         ----------
-
         data : dict
             The data to be published. Think of it as a namespace.
         """
@@ -55,7 +54,6 @@ def publish_data(data):
 
     Parameters
     ----------
-
     data : dict
         The data to be published. Think of it as a namespace.
     """

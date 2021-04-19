@@ -104,7 +104,7 @@ def find_launcher_class(clsname, kind):
     """Return a launcher for a given clsname and kind.
 
     Parameters
-    ==========
+    ----------
     clsname : str
         The full name of the launcher class, either with or without the
         module path, or an abbreviation (MPI, SSH, SGE, PBS, LSF, HTCondor

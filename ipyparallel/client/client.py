@@ -1185,10 +1185,9 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
-        targets: int, list of ints, or 'all'
+        targets : int, list of ints, or 'all'
             The engines on which the view's magics will run
-        suffix: str [default: '']
+        suffix : str [default: '']
             The suffix, if any, for the magics.  This allows you to have
             multiple views associated with parallel magics at the same time.
 
@@ -1270,18 +1269,16 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
         jobs : int, str, or list of ints and/or strs, or one or more AsyncResult objects
-                ints are indices to self.history
-                strs are msg_ids
-                default: wait on all outstanding messages
+            ints are indices to self.history
+            strs are msg_ids
+            default: wait on all outstanding messages
         timeout : float
-                a time in seconds, after which to give up.
-                default is -1, which means no timeout
+            a time in seconds, after which to give up.
+            default is -1, which means no timeout
 
         Returns
         -------
-
         True : when all msg_ids are done
         False : timeout reached, some msg_ids still outstanding
         """
@@ -1356,7 +1353,6 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
         jobs : msg_id, list of msg_ids, or AsyncResult
             The jobs to be aborted
 
@@ -1405,14 +1401,13 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
-        targets: list of ints or 'all' [default: all]
+        targets : list of ints or 'all' [default: all]
             Which engines to shutdown.
-        hub: bool [default: False]
+        hub : bool [default: False]
             Whether to include the Hub.  hub=True implies targets='all'.
-        block: bool [default: self.block]
+        block : bool [default: self.block]
             Whether to wait for clean shutdown replies or not.
-        restart: bool [default: False]
+        restart : bool [default: False]
             NOT IMPLEMENTED
             whether to restart engines after shutting them down.
         """
@@ -1466,22 +1461,20 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
-        targets: target spec (default: all)
+        targets : target spec (default: all)
             Which engines to turn into dask workers.
-        port: int (default: random)
+        port : int (default: random)
             Which port
-        nanny: bool (default: False)
+        nanny : bool (default: False)
             Whether to start workers as subprocesses instead of in the engine process.
             Using a nanny allows restarting the worker processes via ``executor.restart``.
-        scheduler_args: dict
+        scheduler_args : dict
             Keyword arguments (e.g. ip) to pass to the distributed.Scheduler constructor.
-        **worker_args:
+        **worker_args
             Any additional keyword arguments (e.g. ncores) are passed to the distributed.Worker constructor.
 
         Returns
         -------
-
         client = distributed.Client
             A dask.distributed.Client connected to the dask cluster.
         """
@@ -1527,8 +1520,7 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
-        targets: target spec (default: all)
+        targets : target spec (default: all)
             Which engines to stop dask workers on.
         """
         dview = self.direct_view(targets)
@@ -1665,10 +1657,9 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
-        targets: list,slice,int,etc. [default: use all engines]
+        targets : list,slice,int,etc. [default: use all engines]
             The subset of engines across which to load-balance execution
-        kwargs: passed to LoadBalancedView
+        **kwargs : passed to LoadBalancedView
         """
         if targets == 'all':
             targets = None
@@ -1683,13 +1674,11 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
-        targets: list,slice,int,etc. [default: use all engines]
+        targets : list,slice,int,etc. [default: use all engines]
             The subset of engines across which to load-balance execution
 
         Returns
         -------
-
         executor: Executor
             The Executor object
         """
@@ -1709,10 +1698,9 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
-        targets: list,slice,int,etc. [default: use all engines]
+        targets : list,slice,int,etc. [default: use all engines]
             The engines to use for the View
-        kwargs: passed to DirectView
+        **kwargs : passed to DirectView
         """
         single = isinstance(targets, int)
         # allow 'all' to be lazily evaluated at each execution
@@ -1731,11 +1719,10 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
-        targets: list,slice,int,etc. [default: use all engines]
+        targets : list,slice,int,etc. [default: use all engines]
             The subset of engines across which to load-balance execution
-        is_coalescing: scheduler collects all messages from engines and returns them as one
-        kwargs: passed to BroadCastView
+        is_coalescing : scheduler collects all messages from engines and returns them as one
+        **kwargs : passed to BroadCastView
         """
         targets = self._build_targets(targets)[1]
 
@@ -1771,11 +1758,9 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
         indices_or_msg_ids : integer history index, str msg_id, AsyncResult,
             or a list of same.
             The indices or msg_ids of indices to be retrieved
-
         block : bool
             Whether to wait for the result to be done
         owner : bool [default: True]
@@ -1786,10 +1771,8 @@ class Client(HasTraits):
 
         Returns
         -------
-
         AsyncResult
             A single AsyncResult object will always be returned.
-
         AsyncHubResult
             A subclass of AsyncResult that retrieves results from the Hub
 
@@ -1812,16 +1795,13 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
         indices_or_msg_ids : integer history index, str msg_id, or list of either
             The indices or msg_ids of indices to be retrieved
-
         block : bool
             Whether to wait for the result to be done
 
         Returns
         -------
-
         AsyncHubResult
             A subclass of AsyncResult that retrieves results from the Hub
 
@@ -1855,7 +1835,6 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
         msg_ids : list of msg_ids
             if int:
                 Passed as index to self.history for convenience.
@@ -1865,7 +1844,6 @@ class Client(HasTraits):
 
         Returns
         -------
-
         results : dict
             There will always be the keys 'pending' and 'completed', which will
             be lists of msg_ids that are incomplete or complete. If `status_only`
@@ -1952,12 +1930,11 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
         targets : int/str/list of ints/strs
-                the engines whose states are to be queried.
-                default : all
+            the engines whose states are to be queried.
+            default : all
         verbose : bool
-                Whether to return lengths only, or lists of ids for each element
+            Whether to return lengths only, or lists of ids for each element
         """
         if targets == 'all':
             # allow 'all' to be evaluated on the engine
@@ -2068,15 +2045,13 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
         jobs : str or list of str or AsyncResult objects
-                the msg_ids whose results should be purged.
+            the msg_ids whose results should be purged.
         targets : int/list of ints
-                The engines, by integer ID, whose entire result histories are to be purged.
+            The engines, by integer ID, whose entire result histories are to be purged.
 
         Raises
         ------
-
         RuntimeError : if any of the tasks to be purged are still outstanding.
 
         """
@@ -2117,13 +2092,12 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
         jobs : str or list of str or AsyncResult objects
-                the msg_ids whose results should be forgotten.
+            the msg_ids whose results should be forgotten.
         targets : int/str/list of ints/strs
-                The targets, by int_id, whose entire history is to be purged.
+            The targets, by int_id, whose entire history is to be purged.
 
-                default : None
+            default : None
         """
         if not targets and not jobs:
             raise ValueError("Must specify at least one of `targets` and `jobs`")
@@ -2156,13 +2130,12 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
         jobs : str or list of str or AsyncResult objects
-                the msg_ids whose results should be forgotten.
+            the msg_ids whose results should be forgotten.
         targets : int/str/list of ints/strs
-                The targets, by int_id, whose entire history is to be purged.
+            The targets, by int_id, whose entire history is to be purged.
 
-                default : None
+            default : None
         """
         self.purge_local_results(jobs=jobs, targets=targets)
         self.purge_hub_results(jobs=jobs, targets=targets)
@@ -2188,9 +2161,8 @@ class Client(HasTraits):
 
         Returns
         -------
-
         msg_ids : list of strs
-                list of all msg_ids, ordered by task submission time.
+            list of all msg_ids, ordered by task submission time.
         """
 
         reply = self._send_recv(self._query_stream, "history_request", content={})
@@ -2207,7 +2179,6 @@ class Client(HasTraits):
 
         Parameters
         ----------
-
         query : mongodb query dict
             The search dict. See mongodb query docs for details.
         keys : list of strs [optional]

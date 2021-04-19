@@ -99,7 +99,6 @@ def serialize_object(obj, buffer_threshold=MAX_BYTES, item_threshold=MAX_ITEMS):
 
     Parameters
     ----------
-
     obj : object
         The object to be serialized
     buffer_threshold : int
@@ -140,14 +139,11 @@ def deserialize_object(buffers, g=None):
 
     Parameters
     ----------
-
-    bufs : list of buffers/bytes
-
+    buffers : list of buffers/bytes
     g : globals to be used when uncanning
 
     Returns
     -------
-
     (newobj, bufs) : unpacked object, and the list of remaining unused buffers.
     """
     bufs = list(buffers)

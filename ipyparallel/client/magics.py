@@ -378,7 +378,6 @@ class ParallelMagics(Magics):
         used, the ``targets`` attribute of the view before
         entering ``%autopx`` mode.
 
-
         Then you can do the following::
 
             In [25]: %autopx
@@ -392,7 +391,6 @@ class ParallelMagics(Magics):
             [stdout:1] 10
             [stdout:2] 10
             [stdout:3] 10
-
 
             In [27]: %autopx
             %autopx disabled

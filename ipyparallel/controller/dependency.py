@@ -115,7 +115,6 @@ def require(*objects, **mapping):
 
     Examples
     --------
-
     ::
 
         In [1]: @ipp.require('numpy')
