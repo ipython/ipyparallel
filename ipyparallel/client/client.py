@@ -1607,6 +1607,7 @@ class Client(HasTraits):
             # possibly routed to a specific engine
             if isinstance(ident, list):
                 ident = ident[-1]
+            ident = ident.decode("utf-8")
             if ident in self._engines.values():
                 # save for later, in case of engine death
                 self._outstanding_dict[ident].add(msg_id)
@@ -1645,6 +1646,7 @@ class Client(HasTraits):
             # possibly routed to a specific engine
             if isinstance(ident, list):
                 ident = ident[-1]
+            ident = ident.decode("utf-8")
             if ident in self._engines.values():
                 # save for later, in case of engine death
                 self._outstanding_dict[ident].add(msg_id)
