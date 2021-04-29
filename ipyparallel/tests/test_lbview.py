@@ -20,17 +20,16 @@ class TestLoadBalancedView(ClusterTestCase):
         ClusterTestCase.setUp(self)
         self.view = self.client.load_balanced_view()
 
-    @pytest.mark.xfail
-    def test_z_crash_task(self):
+    def test_z_crash(self):
         """test graceful handling of engine death (balanced)"""
-        # self.add_engines(1)
+        self.add_engines(1)
         ar = self.view.apply_async(crash)
         self.assertRaisesRemote(error.EngineError, ar.get, 10)
         eid = ar.engine_id
         tic = time.time()
         while eid in self.client.ids and time.time() - tic < 5:
             time.sleep(0.01)
-        self.assertFalse(eid in self.client.ids, "Engine should have died")
+        assert eid not in self.client.ids
 
     def test_map(self):
         def f(x):
