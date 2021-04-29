@@ -70,6 +70,19 @@ class TestClient(ClusterTestCase):
         self.assertEqual(v.targets, targets[-1])
         self.assertRaises(TypeError, lambda: self.client[None])
 
+    def test_outstanding(self):
+        self.minimum_engines(1)
+        e = self.client[-1]
+        engine_id = self.client._engines[e.targets]
+        ar = e.apply_async(time.sleep, 0.5)
+        msg_id = ar.msg_ids[0]
+        # verify that msg id
+        assert msg_id in self.client.outstanding
+        assert msg_id in self.client._outstanding_dict[engine_id]
+        ar.get()
+        assert msg_id not in self.client.outstanding
+        assert msg_id not in self.client._outstanding_dict[engine_id]
+
     def test_lbview_targets(self):
         """test load_balanced_view targets"""
         v = self.client.load_balanced_view()

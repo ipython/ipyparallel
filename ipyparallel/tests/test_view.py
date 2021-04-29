@@ -39,10 +39,9 @@ class TestView(ClusterTestCase):
             time.sleep(2)
         super(TestView, self).setUp()
 
-    @pytest.mark.xfail
     def test_z_crash_mux(self):
         """test graceful handling of engine death (direct)"""
-        # self.add_engines(1)
+        self.add_engines(1)
         eid = self.client.ids[-1]
         ar = self.client[eid].apply_async(crash)
         self.assertRaisesRemote(error.EngineError, ar.get, 10)
@@ -50,7 +49,7 @@ class TestView(ClusterTestCase):
         tic = time.time()
         while eid in self.client.ids and time.time() - tic < 5:
             time.sleep(0.01)
-        self.assertFalse(eid in self.client.ids, "Engine should have died")
+        assert eid not in self.client.ids
 
     def test_push_pull(self):
         """test pushing and pulling"""
