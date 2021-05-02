@@ -71,7 +71,7 @@ class LSFJob(Job):
         if queue is not None:
             header_lines.append("#BSUB -q %s" % queue)
         if project is not None:
-            header_lines.append("#BSUB -P %s" % project)
+            header_lines.append('#BSUB -P "%s"' % project)
         if ncpus is None:
             # Compute default cores specifications
             ncpus = self.worker_cores
