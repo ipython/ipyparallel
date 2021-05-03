@@ -1049,6 +1049,9 @@ class Client(HasTraits):
             name = content['name']
             s = md[name] or ''
             md[name] = s + content['text']
+            msg_future = self._futures[msg_id]
+            for callback in msg_future.io_stream_callbacks:
+                callback(msg)
         elif msg_type == 'error':
             md.update({'error': self._unwrap_exception(content)})
         elif msg_type == 'execute_input':

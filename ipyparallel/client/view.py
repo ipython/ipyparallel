@@ -638,7 +638,7 @@ class DirectView(View):
 
     @sync_results
     @save_ids
-    def execute(self, code, silent=True, targets=None, block=None):
+    def execute(self, code, silent=True, targets=None, block=None, stream_output=True):
         """Executes `code` on `targets` in blocking or nonblocking manner.
 
         ``execute`` is always `bound` (affects engine namespace)
@@ -666,6 +666,8 @@ class DirectView(View):
         ar = AsyncResult(
             self.client, futures, fname='execute', targets=_targets, owner=True
         )
+        if stream_output:
+            ar._enable_streaming_output()
         if block:
             try:
                 ar.get()

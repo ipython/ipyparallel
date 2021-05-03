@@ -134,6 +134,15 @@ class AsyncResult(Future):
         self._output_future.add_done_callback(self._resolve_output)
         self.add_done_callback(self._finalize_result)
 
+    def _enable_streaming_output(self):
+        def io_stream_callback(msg):
+            print(msg['content']['text'])  # CHANGE
+
+        for msg_id in self.msg_ids:
+            self._client._futures[msg_id].io_stream_callbacks.append(
+                io_stream_callback
+            )  # TODO
+
     def __repr__(self):
         if self._ready:
             return "<%s: %s:finished>" % (self.__class__.__name__, self._fname)
