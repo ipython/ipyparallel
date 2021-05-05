@@ -158,6 +158,10 @@ class AsyncResult(Future):
 
         yield
 
+        # This throws a KeyError. It seems to be already cleaned up before we get here.
+        # for msg_id in self.msg_ids:
+        #     self._client._futures[msg_id].iopub_callbacks.pop()
+
     def __repr__(self):
         if self._ready:
             return "<%s: %s:finished>" % (self.__class__.__name__, self._fname)
@@ -624,6 +628,8 @@ class AsyncResult(Future):
                 plots together, then all of the second plots, and so on.
         """
         self.wait_for_output()
+        if get_ipython() is not None:
+            clear_output(wait=True)
         if self._single_result:
             self._display_single_result()
             return

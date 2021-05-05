@@ -29,6 +29,7 @@ Usage
 from __future__ import print_function
 
 import ast
+from contextlib import nullcontext
 
 # -----------------------------------------------------------------------------
 #  Copyright (C) 2008 The IPython Development Team
@@ -99,15 +100,13 @@ def exec_args(f):
         ),
         magic_arguments.argument(
             '--stream',
-            action="store_const",
-            const=True,
-            dest='stream',
+            action="store_true",
+            default=True,
             help="stream stdout/stderr in real-time",
         ),
         magic_arguments.argument(
             '--no-stream',
-            action="store_const",
-            const=False,
+            action="store_false",
             dest='stream',
             help="do not stream stdout/stderr in real-time",
         ),
@@ -256,8 +255,6 @@ class ParallelMagics(Magics):
             self.view.block = args.block
         if args.set_verbose is not None:
             self.verbose = args.set_verbose
-        if args.stream is not None:
-            self.view.stream_output = args.stream
 
     @magic_arguments.magic_arguments()
     @output_args
@@ -324,16 +321,16 @@ class ParallelMagics(Magics):
         if self.verbose:
             print(base + " execution on engine(s): %s" % str_targets)
 
-        result = self.view.execute(
-            cell, silent=False, block=False, stream_output=stream_output
-        )
+        result = self.view.execute(cell, silent=False, block=False)
         self.last_result = result
 
         if save_name:
             self.shell.user_ns[save_name] = result
 
         if block:
-            result.get()
+            cm = result.stream_output() if stream_output else nullcontext()
+            with cm:
+                result.get()
             result.display_outputs(groupby)
         else:
             # return AsyncResult only on non-blocking submission

@@ -7,7 +7,7 @@ from __future__ import print_function
 import imp
 import threading
 import warnings
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 
 from decorator import decorator
 from IPython import get_ipython
@@ -108,7 +108,6 @@ class View(HasTraits):
     # flags
     block = Bool(False)
     track = Bool(False)
-    stream_output = Bool(True)
     targets = Any()
 
     history = List()
@@ -639,7 +638,7 @@ class DirectView(View):
 
     @sync_results
     @save_ids
-    def execute(self, code, silent=True, targets=None, block=None, stream_output=None):
+    def execute(self, code, silent=True, targets=None, block=None):
         """Executes `code` on `targets` in blocking or nonblocking manner.
 
         ``execute`` is always `bound` (affects engine namespace)
@@ -654,7 +653,6 @@ class DirectView(View):
         """
         block = self.block if block is None else block
         targets = self.targets if targets is None else targets
-        stream_output = self.stream_output if stream_output is None else stream_output
 
         _idents, _targets = self.client._build_targets(targets)
         futures = []
@@ -669,14 +667,12 @@ class DirectView(View):
             self.client, futures, fname='execute', targets=_targets, owner=True
         )
 
-        cm = ar.stream_output() if stream_output else nullcontext()
-        with cm:
-            if block:
-                try:
-                    ar.get()
-                    ar.wait_for_output()
-                except KeyboardInterrupt:
-                    pass
+        if block:
+            try:
+                ar.get()
+                ar.wait_for_output()
+            except KeyboardInterrupt:
+                pass
 
         return ar
 
