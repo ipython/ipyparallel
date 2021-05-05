@@ -666,14 +666,12 @@ class DirectView(View):
         ar = AsyncResult(
             self.client, futures, fname='execute', targets=_targets, owner=True
         )
-
         if block:
             try:
                 ar.get()
                 ar.wait_for_output()
             except KeyboardInterrupt:
                 pass
-
         return ar
 
     def run(self, filename, targets=None, block=None):
