@@ -29,7 +29,13 @@ Usage
 from __future__ import print_function
 
 import ast
-from contextlib import nullcontext
+from contextlib import contextmanager
+
+# Python 3.6 doesn't have nullcontext, so we define our own
+@contextmanager
+def nullcontext():
+    yield
+
 
 # -----------------------------------------------------------------------------
 #  Copyright (C) 2008 The IPython Development Team
@@ -102,7 +108,7 @@ def exec_args(f):
             '--stream',
             action="store_true",
             default=True,
-            help="stream stdout/stderr in real-time",
+            help="stream stdout/stderr in real-time (only valid when using blocking execution)",
         ),
         magic_arguments.argument(
             '--no-stream',

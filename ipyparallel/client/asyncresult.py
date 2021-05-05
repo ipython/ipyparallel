@@ -152,15 +152,18 @@ class AsyncResult(Future):
 
         from functools import partial
 
+        # Keep a handle on the futures so we can remove the callback later
+        msg_futures = []
         for eid, msg_id in zip(self._targets, self.msg_ids):
             callback_func = partial(self.iopub_streaming_output_callback, eid)
             self._client._futures[msg_id].iopub_callbacks.append(callback_func)
+            msg_futures.append(self._client._futures[msg_id])
 
         yield
 
-        # This throws a KeyError. It seems to be already cleaned up before we get here.
-        # for msg_id in self.msg_ids:
-        #     self._client._futures[msg_id].iopub_callbacks.pop()
+        # Remove the callback
+        for msg_future in msg_futures:
+            msg_future.iopub_callbacks.pop()
 
     def __repr__(self):
         if self._ready:
@@ -628,8 +631,6 @@ class AsyncResult(Future):
                 plots together, then all of the second plots, and so on.
         """
         self.wait_for_output()
-        if get_ipython() is not None:
-            clear_output(wait=True)
         if self._single_result:
             self._display_single_result()
             return
