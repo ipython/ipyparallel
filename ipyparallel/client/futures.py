@@ -18,7 +18,7 @@ class MessageFuture(Future):
         self.track = track
         self._tracker = None
         self.tracker = Future()
-        self.io_stream_callbacks = []
+        self.iopub_callbacks = []
         if not track:
             self.tracker.set_result(None)
         self.add_done_callback(lambda f: self._evt.set())

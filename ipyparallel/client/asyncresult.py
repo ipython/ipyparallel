@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 from concurrent.futures import Future
+from contextlib import contextmanager
 from datetime import datetime
 from threading import Event
 
@@ -134,26 +135,28 @@ class AsyncResult(Future):
         self._output_future.add_done_callback(self._resolve_output)
         self.add_done_callback(self._finalize_result)
 
-    @staticmethod
-    def io_stream_callback(ar, eid, msg):
+    def iopub_streaming_output_callback(self, eid, msg):
         msg_type = msg['header']['msg_type']
         if msg_type == 'stream':
             msg_content = msg['content']
             stream_name = msg_content['name']
             if stream_name == 'stdout':
-                ar._display_stream(msg_content['text'], '[stdout:%i] ' % eid)
+                self._display_stream(msg_content['text'], '[stdout:%i] ' % eid)
             elif stream_name == 'stderr':
-                ar._display_stream(
+                self._display_stream(
                     msg_content['text'], '[stderr:%i] ' % eid, file=sys.stderr
                 )
 
-    def _enable_streaming_output(self):
+    @contextmanager
+    def stream_output(self):
 
         from functools import partial
 
         for eid, msg_id in zip(self._targets, self.msg_ids):
-            callback_func = partial(self.io_stream_callback, self, eid)
-            self._client._futures[msg_id].io_stream_callbacks.append(callback_func)
+            callback_func = partial(self.iopub_streaming_output_callback, eid)
+            self._client._futures[msg_id].iopub_callbacks.append(callback_func)
+
+        yield
 
     def __repr__(self):
         if self._ready:

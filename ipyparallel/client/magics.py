@@ -98,6 +98,20 @@ def exec_args(f):
             help="use non-blocking (async) execution",
         ),
         magic_arguments.argument(
+            '--stream',
+            action="store_const",
+            const=True,
+            dest='stream',
+            help="stream stdout/stderr in real-time",
+        ),
+        magic_arguments.argument(
+            '--no-stream',
+            action="store_const",
+            const=False,
+            dest='stream',
+            help="do not stream stdout/stderr in real-time",
+        ),
+        magic_arguments.argument(
             '-t',
             '--targets',
             type=str,
@@ -242,6 +256,8 @@ class ParallelMagics(Magics):
             self.view.block = args.block
         if args.set_verbose is not None:
             self.verbose = args.set_verbose
+        if args.stream is not None:
+            self.view.stream_output = args.stream
 
     @magic_arguments.magic_arguments()
     @output_args
@@ -290,7 +306,9 @@ class ParallelMagics(Magics):
         """
         return self.parallel_execute(line)
 
-    def parallel_execute(self, cell, block=None, groupby='type', save_name=None):
+    def parallel_execute(
+        self, cell, block=None, groupby='type', save_name=None, stream_output=None
+    ):
         """implementation used by %px and %%parallel"""
 
         # defaults:
@@ -306,7 +324,9 @@ class ParallelMagics(Magics):
         if self.verbose:
             print(base + " execution on engine(s): %s" % str_targets)
 
-        result = self.view.execute(cell, silent=False, block=False)
+        result = self.view.execute(
+            cell, silent=False, block=False, stream_output=stream_output
+        )
         self.last_result = result
 
         if save_name:
@@ -354,6 +374,7 @@ class ParallelMagics(Magics):
                 block=block,
                 groupby=args.groupby,
                 save_name=args.save_name,
+                stream_output=args.stream,
             )
         finally:
             if args.targets:
