@@ -147,6 +147,14 @@ class AsyncResult(Future):
                     msg_content['text'], '[stderr:%i] ' % eid, file=sys.stderr
                 )
 
+        if get_ipython() is None:
+            return
+
+        if msg_type == 'display_data':
+            msg_content = msg['content']
+            _raw_text('[output:%i]' % eid)
+            self._republish_displaypub(msg_content, eid)
+
     @contextmanager
     def stream_output(self):
 
@@ -601,6 +609,41 @@ class AsyncResult(Future):
 
         if self.execute_result is not None:
             display(self.get())
+
+    def _display_results_only_single_result(self):
+        if get_ipython() is None:
+            # displaypub is meaningless outside IPython
+            return
+        if self.execute_result is not None:
+            display(self.get())
+
+    @check_ready
+    def display_results_only(self, groupby="type"):
+        self.wait_for_output()
+        if self._single_result:
+            self._display_results_only_single_result()
+            return
+        execute_results = self.execute_result
+        results = self.get()
+        targets = self.engine_id
+
+        if get_ipython() is None:
+            # displaypub is meaningless outside IPython
+            return
+
+        if groupby == "engine":
+            for eid, r, execute_result in zip(targets, results, execute_results):
+                if execute_result is not None:
+                    _raw_text('[output:%i]' % eid)
+                    display(r)
+        elif groupby in ('type', 'order'):
+            for eid, r, execute_result in zip(targets, results, execute_results):
+                if execute_result is not None:
+                    display(r)
+        else:
+            raise ValueError(
+                "groupby must be one of 'type', 'engine', 'collate', not %r" % groupby
+            )
 
     @check_ready
     def display_outputs(self, groupby="type"):
