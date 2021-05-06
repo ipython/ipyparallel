@@ -615,26 +615,29 @@ class TestClient(ClusterTestCase):
     def test_warning_on_hostname_match(self):
         location = socket.gethostname()
         with mock.patch('ipyparallel.client.client.is_local_ip', lambda x: False):
-            with mock.patch('socket.gethostname', lambda: location[0:-1]), pytest.warns(
-                RuntimeWarning
-            ):  # should trigger warning
-                c = self.connect_client()
+            with mock.patch('socket.gethostname', lambda: location[0:-1]):
+                with pytest.warns(RuntimeWarning):  # should trigger warning
+                    c = self.connect_client()
                 c.close()
-            with mock.patch('socket.gethostname', lambda: location), pytest.warns(
-                None
-            ) as record:  # should not trigger warning
+            with mock.patch('socket.gethostname', lambda: location):
+                with pytest.warns(None) as record:  # should not trigger warning
+                    c = self.connect_client()
+                # only capture runtime warnings
+                runtime_warnings = [
+                    w for w in record if isinstance(w.message, RuntimeWarning)
+                ]
+                assert len(runtime_warnings) == 0, str(
+                    [str(w) for w in runtime_warnings]
+                )
+                c.close()
+
+    def test_local_ip_true_doesnt_trigger_warning(self):
+        with mock.patch('ipyparallel.client.client.is_local_ip', lambda x: True):
+            with pytest.warns(None) as record:
                 c = self.connect_client()
             # only capture runtime warnings
             runtime_warnings = [
                 w for w in record if isinstance(w.message, RuntimeWarning)
             ]
             assert len(runtime_warnings) == 0, str([str(w) for w in runtime_warnings])
-            c.close()
-
-    def test_local_ip_true_doesnt_trigger_warning(self):
-        with mock.patch(
-            'ipyparallel.client.client.is_local_ip', lambda x: True
-        ), pytest.warns(None) as record:
-            c = self.connect_client()
-            assert len(record) == 0, str([str(w) for w in record])
             c.close()
