@@ -85,7 +85,9 @@ class TestParallelMagics(ClusterTestCase):
         v['generate_output'] = generate_output
 
         with capture_output(display=False) as io:
-            ip.run_cell_magic('px', '--group-outputs=engine', 'generate_output()')
+            ip.run_cell_magic(
+                'px', '--group-outputs=engine --no-stream', 'generate_output()'
+            )
 
         self.assertNotIn('\n\n', io.stdout)
         lines = io.stdout.splitlines()
@@ -118,7 +120,9 @@ class TestParallelMagics(ClusterTestCase):
         v['generate_output'] = generate_output
 
         with capture_output(display=False) as io:
-            ip.run_cell_magic('px', '--group-outputs=order', 'generate_output()')
+            ip.run_cell_magic(
+                'px', '--group-outputs=order --no-stream', 'generate_output()'
+            )
 
         self.assertNotIn('\n\n', io.stdout)
         lines = io.stdout.splitlines()
@@ -166,7 +170,9 @@ class TestParallelMagics(ClusterTestCase):
         v['generate_output'] = generate_output
 
         with capture_output(display=False) as io:
-            ip.run_cell_magic('px', '--group-outputs=type', 'generate_output()')
+            ip.run_cell_magic(
+                'px', '--group-outputs=type --no-stream', 'generate_output()'
+            )
 
         self.assertNotIn('\n\n', io.stdout)
         lines = io.stdout.splitlines()
@@ -198,6 +204,11 @@ class TestParallelMagics(ClusterTestCase):
                 assert re.search(ex, line) is not None, "Expected %r in %r" % (ex, line)
 
         self._check_generated_stderr(io.stderr, len(v))
+
+    def test_cellpx_stream(self):
+        """%%px --stream"""
+        # TODO
+        pass
 
     def test_px_nonblocking(self):
         ip = get_ipython()
