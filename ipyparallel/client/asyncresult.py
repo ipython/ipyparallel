@@ -597,56 +597,23 @@ class AsyncResult(Future):
             prefix = prefix + '\n'
         print("%s%s" % (prefix, text), file=file, end=end)
 
-    def _display_single_result(self):
-        self._display_stream(self.stdout)
-        self._display_stream(self.stderr, file=sys.stderr)
+    def _display_single_result(self, result_only=False):
+        if not result_only:
+            self._display_stream(self.stdout)
+            self._display_stream(self.stderr, file=sys.stderr)
         if get_ipython() is None:
             # displaypub is meaningless outside IPython
             return
 
-        for output in self.outputs:
-            self._republish_displaypub(output, self.engine_id)
+        if not result_only:
+            for output in self.outputs:
+                self._republish_displaypub(output, self.engine_id)
 
         if self.execute_result is not None:
             display(self.get())
 
-    def _display_results_only_single_result(self):
-        if get_ipython() is None:
-            # displaypub is meaningless outside IPython
-            return
-        if self.execute_result is not None:
-            display(self.get())
-
     @check_ready
-    def display_results_only(self, groupby="type"):
-        self.wait_for_output()
-        if self._single_result:
-            self._display_results_only_single_result()
-            return
-        execute_results = self.execute_result
-        results = self.get()
-        targets = self.engine_id
-
-        if get_ipython() is None:
-            # displaypub is meaningless outside IPython
-            return
-
-        if groupby == "engine":
-            for eid, r, execute_result in zip(targets, results, execute_results):
-                if execute_result is not None:
-                    _raw_text('[output:%i]' % eid)
-                    display(r)
-        elif groupby in ('type', 'order'):
-            for eid, r, execute_result in zip(targets, results, execute_results):
-                if execute_result is not None:
-                    display(r)
-        else:
-            raise ValueError(
-                "groupby must be one of 'type', 'engine', 'collate', not %r" % groupby
-            )
-
-    @check_ready
-    def display_outputs(self, groupby="type"):
+    def display_outputs(self, groupby="type", result_only=False):
         """republish the outputs of the computation
 
         Parameters
@@ -672,6 +639,11 @@ class AsyncResult(Future):
                 outputs.  This is meant for cases of each command producing
                 several plots, and you would like to see all of the first
                 plots together, then all of the second plots, and so on.
+
+        result_only: boolean [default: False]
+            Only display the execution result and skip stdout, stderr,
+            and display outputs. Usually used when using streaming output
+            since these outputs would have already been displayed.
         """
         self.wait_for_output()
         if self._single_result:
@@ -690,53 +662,57 @@ class AsyncResult(Future):
             for eid, stdout, stderr, outputs, r, execute_result in zip(
                 targets, stdouts, stderrs, output_lists, results, execute_results
             ):
-                self._display_stream(stdout, '[stdout:%i] ' % eid)
-                self._display_stream(stderr, '[stderr:%i] ' % eid, file=sys.stderr)
+                if not result_only:
+                    self._display_stream(stdout, '[stdout:%i] ' % eid)
+                    self._display_stream(stderr, '[stderr:%i] ' % eid, file=sys.stderr)
 
                 if get_ipython() is None:
                     # displaypub is meaningless outside IPython
                     continue
 
-                if outputs or execute_result is not None:
+                if (outputs and not result_only) or execute_result is not None:
                     _raw_text('[output:%i]' % eid)
 
-                for output in outputs:
-                    self._republish_displaypub(output, eid)
+                if not result_only:
+                    for output in outputs:
+                        self._republish_displaypub(output, eid)
 
                 if execute_result is not None:
                     display(r)
 
         elif groupby in ('type', 'order'):
-            # republish stdout:
-            for eid, stdout in zip(targets, stdouts):
-                self._display_stream(stdout, '[stdout:%i] ' % eid)
+            if not result_only:
+                # republish stdout:
+                for eid, stdout in zip(targets, stdouts):
+                    self._display_stream(stdout, '[stdout:%i] ' % eid)
 
-            # republish stderr:
-            for eid, stderr in zip(targets, stderrs):
-                self._display_stream(stderr, '[stderr:%i] ' % eid, file=sys.stderr)
+                # republish stderr:
+                for eid, stderr in zip(targets, stderrs):
+                    self._display_stream(stderr, '[stderr:%i] ' % eid, file=sys.stderr)
 
             if get_ipython() is None:
                 # displaypub is meaningless outside IPython
                 return
 
-            if groupby == 'order':
-                output_dict = dict(
-                    (eid, outputs) for eid, outputs in zip(targets, output_lists)
-                )
-                N = max(len(outputs) for outputs in output_lists)
-                for i in range(N):
-                    for eid in targets:
-                        outputs = output_dict[eid]
-                        if len(outputs) >= N:
+            if not result_only:
+                if groupby == 'order':
+                    output_dict = dict(
+                        (eid, outputs) for eid, outputs in zip(targets, output_lists)
+                    )
+                    N = max(len(outputs) for outputs in output_lists)
+                    for i in range(N):
+                        for eid in targets:
+                            outputs = output_dict[eid]
+                            if len(outputs) >= N:
+                                _raw_text('[output:%i]' % eid)
+                                self._republish_displaypub(outputs[i], eid)
+                else:
+                    # republish displaypub output
+                    for eid, outputs in zip(targets, output_lists):
+                        if outputs:
                             _raw_text('[output:%i]' % eid)
-                            self._republish_displaypub(outputs[i], eid)
-            else:
-                # republish displaypub output
-                for eid, outputs in zip(targets, output_lists):
-                    if outputs:
-                        _raw_text('[output:%i]' % eid)
-                    for output in outputs:
-                        self._republish_displaypub(output, eid)
+                        for output in outputs:
+                            self._republish_displaypub(output, eid)
 
             # finally, add execute_result:
             for eid, r, execute_result in zip(targets, results, execute_results):

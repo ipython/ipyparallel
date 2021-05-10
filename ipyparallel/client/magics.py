@@ -337,11 +337,8 @@ class ParallelMagics(Magics):
             cm = result.stream_output() if stream_output else nullcontext()
             with cm:
                 result.get()
-            if stream_output:
-                result.display_results_only(groupby)
-            else:
-                result.display_outputs(groupby)
-
+            # Only display final execution result if streaming outputs
+            result.display_outputs(groupby, result_only=bool(stream_output))
         else:
             # return AsyncResult only on non-blocking submission
             return result
