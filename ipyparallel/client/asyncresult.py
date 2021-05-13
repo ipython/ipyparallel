@@ -593,17 +593,16 @@ class AsyncResult(Future):
             prefix = prefix + '\n'
         print("%s%s" % (prefix, text), file=file, end=end)
 
-    def _display_single_result(self, result_only=False):
-        if not result_only:
+    def _display_single_result(self, skip_stdout_stderr=False):
+        if not skip_stdout_stderr:
             self._display_stream(self.stdout)
             self._display_stream(self.stderr, file=sys.stderr)
         if get_ipython() is None:
             # displaypub is meaningless outside IPython
             return
 
-        if not result_only:
-            for output in self.outputs:
-                self._republish_displaypub(output, self.engine_id)
+        for output in self.outputs:
+            self._republish_displaypub(output, self.engine_id)
 
         if self.execute_result is not None:
             display(self.get())
@@ -643,7 +642,7 @@ class AsyncResult(Future):
         """
         self.wait_for_output()
         if self._single_result:
-            self._display_single_result()
+            self._display_single_result(skip_stdout_stderr=skip_stdout_stderr)
             return
 
         stdouts = self.stdout
