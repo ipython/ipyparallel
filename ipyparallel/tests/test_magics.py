@@ -50,6 +50,15 @@ class TestParallelMagics(ClusterTestCase):
             for ex in expect:
                 assert re.search(ex, line) is not None, "Expected %r in %r" % (ex, line)
 
+    def _check_expected_lines_unordered(self, expected, lines):
+        for expect in expected:
+            found = False
+            for line in lines:
+                found = found | (re.search(expect, line) is not None)
+                if found:
+                    break
+            assert found, "Expected %r in output" % (expect,)
+
     def test_cellpx_block_args(self):
         """%%px --[no]block flags work"""
         ip = get_ipython()
@@ -207,8 +216,53 @@ class TestParallelMagics(ClusterTestCase):
 
     def test_cellpx_stream(self):
         """%%px --stream"""
-        # TODO
-        pass
+        ip = get_ipython()
+        v = self.client[:]
+        v.block = True
+        v.activate()
+
+        v['generate_output'] = generate_output
+
+        with capture_output(display=False) as io:
+            ip.run_cell_magic('px', '--stream', 'generate_output()')
+
+        self.assertNotIn('\n\n', io.stdout)
+        lines = io.stdout.splitlines()
+        expected = []
+        expected.extend(
+            [
+                r'\[stdout:\d+\] stdout',
+                r'\[stdout:\d+\] stdout2',
+            ]
+            * len(v)
+        )
+        expected.extend(
+            [
+                r'\[output:\d+\]',
+                r'IPython\.core\.display\.HTML',
+                r'IPython\.core\.display\.Math',
+            ]
+            * len(v)
+        )
+        expected.extend([r'Out\[\d+:\d+\]:.*IPython\.core\.display\.Math'] * len(v))
+
+        self.assertEqual(len(lines), len(expected), io.stdout)
+        # Check that all expected lines are in the output
+        self._check_expected_lines_unordered(expected, lines)
+
+        # Do the same for stderr
+        self.assertNotIn('\n\n', io.stderr)
+        lines = io.stderr.splitlines()
+        expected = []
+        expected.extend(
+            [
+                r'\[stderr:\d+\] stderr',
+                r'\[stderr:\d+\] stderr2',
+            ]
+            * len(v)
+        )
+        self.assertEqual(len(lines), len(expected), io.stderr)
+        self._check_expected_lines_unordered(expected, lines)
 
     def test_px_nonblocking(self):
         ip = get_ipython()
