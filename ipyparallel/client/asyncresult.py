@@ -147,16 +147,12 @@ class AsyncResult(Future):
                     msg_content['text'], '[stderr:%i] ' % eid, file=sys.stderr
                 )
 
-        if get_ipython() is None:
-            return
-
-        if msg_type == 'display_data':
-            msg_content = msg['content']
-            _raw_text('[output:%i]' % eid)
-            self._republish_displaypub(msg_content, eid)
-
     @contextmanager
     def stream_output(self):
+        """
+        Context manager that adds a iopub callback to stream stdout/stderr
+        (instead of displaying it all at the end).
+        """
 
         from functools import partial
 
@@ -613,7 +609,7 @@ class AsyncResult(Future):
             display(self.get())
 
     @check_ready
-    def display_outputs(self, groupby="type", result_only=False):
+    def display_outputs(self, groupby="type", skip_stdout_stderr=False):
         """republish the outputs of the computation
 
         Parameters
@@ -640,9 +636,9 @@ class AsyncResult(Future):
                 several plots, and you would like to see all of the first
                 plots together, then all of the second plots, and so on.
 
-        result_only: boolean [default: False]
-            Only display the execution result and skip stdout, stderr,
-            and display outputs. Usually used when using streaming output
+        skip_stdout_stderr: boolean [default: False]
+            Only display the display-outputs and execution result and skip stdout
+            & stderr. Usually used when using streaming output
             since these outputs would have already been displayed.
         """
         self.wait_for_output()
@@ -662,7 +658,7 @@ class AsyncResult(Future):
             for eid, stdout, stderr, outputs, r, execute_result in zip(
                 targets, stdouts, stderrs, output_lists, results, execute_results
             ):
-                if not result_only:
+                if not skip_stdout_stderr:
                     self._display_stream(stdout, '[stdout:%i] ' % eid)
                     self._display_stream(stderr, '[stderr:%i] ' % eid, file=sys.stderr)
 
@@ -670,18 +666,17 @@ class AsyncResult(Future):
                     # displaypub is meaningless outside IPython
                     continue
 
-                if (outputs and not result_only) or execute_result is not None:
+                if outputs or execute_result is not None:
                     _raw_text('[output:%i]' % eid)
 
-                if not result_only:
-                    for output in outputs:
-                        self._republish_displaypub(output, eid)
+                for output in outputs:
+                    self._republish_displaypub(output, eid)
 
                 if execute_result is not None:
                     display(r)
 
         elif groupby in ('type', 'order'):
-            if not result_only:
+            if not skip_stdout_stderr:
                 # republish stdout:
                 for eid, stdout in zip(targets, stdouts):
                     self._display_stream(stdout, '[stdout:%i] ' % eid)
@@ -694,25 +689,24 @@ class AsyncResult(Future):
                 # displaypub is meaningless outside IPython
                 return
 
-            if not result_only:
-                if groupby == 'order':
-                    output_dict = dict(
-                        (eid, outputs) for eid, outputs in zip(targets, output_lists)
-                    )
-                    N = max(len(outputs) for outputs in output_lists)
-                    for i in range(N):
-                        for eid in targets:
-                            outputs = output_dict[eid]
-                            if len(outputs) >= N:
-                                _raw_text('[output:%i]' % eid)
-                                self._republish_displaypub(outputs[i], eid)
-                else:
-                    # republish displaypub output
-                    for eid, outputs in zip(targets, output_lists):
-                        if outputs:
+            if groupby == 'order':
+                output_dict = dict(
+                    (eid, outputs) for eid, outputs in zip(targets, output_lists)
+                )
+                N = max(len(outputs) for outputs in output_lists)
+                for i in range(N):
+                    for eid in targets:
+                        outputs = output_dict[eid]
+                        if len(outputs) >= N:
                             _raw_text('[output:%i]' % eid)
-                        for output in outputs:
-                            self._republish_displaypub(output, eid)
+                            self._republish_displaypub(outputs[i], eid)
+            else:
+                # republish displaypub output
+                for eid, outputs in zip(targets, output_lists):
+                    if outputs:
+                        _raw_text('[output:%i]' % eid)
+                    for output in outputs:
+                        self._republish_displaypub(output, eid)
 
             # finally, add execute_result:
             for eid, r, execute_result in zip(targets, results, execute_results):
