@@ -339,7 +339,7 @@ class ParallelMagics(Magics):
                 result.wait_for_output()
                 result.get()
             # Skip stdout/stderr if streaming stdout/stderr
-            result.display_outputs(groupby, skip_stdout_stderr=bool(stream_output))
+            result.display_outputs(groupby, result_only=bool(stream_output))
         else:
             # return AsyncResult only on non-blocking submission
             return result

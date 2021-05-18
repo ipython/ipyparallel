@@ -233,13 +233,9 @@ class TestParallelMagics(ClusterTestCase):
             [
                 r'\[stdout:\d+\] stdout',
                 r'\[stdout:\d+\] stdout2',
-            ]
-            * len(v)
-        )
-        expected.extend(
-            [
                 r'\[output:\d+\]',
                 r'IPython\.core\.display\.HTML',
+                r'\[output:\d+\]',
                 r'IPython\.core\.display\.Math',
             ]
             * len(v)
