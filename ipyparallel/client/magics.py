@@ -336,6 +336,7 @@ class ParallelMagics(Magics):
         if block:
             cm = result.stream_output() if stream_output else nullcontext()
             with cm:
+                result.wait_for_output()
                 result.get()
             # Skip stdout/stderr if streaming stdout/stderr
             result.display_outputs(groupby, skip_stdout_stderr=bool(stream_output))
