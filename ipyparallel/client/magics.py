@@ -106,13 +106,15 @@ def exec_args(f):
         ),
         magic_arguments.argument(
             '--stream',
-            action="store_true",
-            default=True,
+            action="store_const",
+            const=True,
+            dest='stream',
             help="stream stdout/stderr in real-time (only valid when using blocking execution)",
         ),
         magic_arguments.argument(
             '--no-stream',
-            action="store_false",
+            action="store_const",
+            const=False,
             dest='stream',
             help="do not stream stdout/stderr in real-time",
         ),
@@ -218,6 +220,8 @@ class ParallelMagics(Magics):
     last_result = None
     # verbose flag
     verbose = False
+    # streaming output flag
+    stream_ouput = True
 
     def __init__(self, shell, view, suffix=''):
         self.view = view
@@ -261,6 +265,8 @@ class ParallelMagics(Magics):
             self.view.block = args.block
         if args.set_verbose is not None:
             self.verbose = args.set_verbose
+        if args.stream is not None:
+            self.stream_ouput = args.stream
 
     @magic_arguments.magic_arguments()
     @output_args
@@ -316,6 +322,7 @@ class ParallelMagics(Magics):
 
         # defaults:
         block = self.view.block if block is None else block
+        stream_output = self.stream_ouput if stream_output is None else stream_output
 
         base = "Parallel" if block else "Async parallel"
 
