@@ -178,9 +178,9 @@ def output_args(f):
             choices=['engine', 'order', 'type'],
             default='type',
             help="""Group the outputs in a particular way.
-            
+
             Choices are:
-            
+
             **type**: group outputs of all engines by type (stdout, stderr, displaypub, etc.).
             **engine**: display all output for each engine together.
             **order**: like type, but individual displaypub output from each engine is collated.
@@ -345,8 +345,8 @@ class ParallelMagics(Magics):
             with cm:
                 result.wait_for_output()
                 result.get()
-            # Skip stdout/stderr if streaming stdout/stderr
-            result.display_outputs(groupby, result_only=bool(stream_output))
+            # Skip stdout/stderr if streaming output
+            result.display_outputs(groupby, result_only=stream_output)
         else:
             # return AsyncResult only on non-blocking submission
             return result

@@ -9,6 +9,7 @@ import time
 from concurrent.futures import Future
 from contextlib import contextmanager
 from datetime import datetime
+from functools import partial
 from threading import Event
 
 try:
@@ -135,17 +136,18 @@ class AsyncResult(Future):
         self._output_future.add_done_callback(self._resolve_output)
         self.add_done_callback(self._finalize_result)
 
-    def iopub_streaming_output_callback(self, eid, msg):
+    def _iopub_streaming_output_callback(self, eid, msg):
+        """Callback registered during AsyncResult.stream_output()"""
         msg_type = msg['header']['msg_type']
         if msg_type == 'stream':
             msg_content = msg['content']
             stream_name = msg_content['name']
-            if stream_name == 'stdout':
-                self._display_stream(msg_content['text'], '[stdout:%i] ' % eid)
-            elif stream_name == 'stderr':
-                self._display_stream(
-                    msg_content['text'], '[stderr:%i] ' % eid, file=sys.stderr
-                )
+            stream = getattr(sys, stream_name, sys.stdout)
+            self._display_stream(
+                msg_content['text'],
+                f'[{stream_name}:{eid}] ',
+                file=stream,
+            )
 
         if get_ipython() is None:
             return
@@ -157,25 +159,25 @@ class AsyncResult(Future):
 
     @contextmanager
     def stream_output(self):
-        """
-        Context manager that adds a iopub callback to stream stdout/stderr
-        (instead of displaying it all at the end).
-        """
+        """Stream output for this result as it arrives.
 
-        from functools import partial
+        Returns a context manager, during which output is streamed.
+        """
 
         # Keep a handle on the futures so we can remove the callback later
-        msg_futures = []
+        future_callbacks = {}
         for eid, msg_id in zip(self._targets, self.msg_ids):
-            callback_func = partial(self.iopub_streaming_output_callback, eid)
-            self._client._futures[msg_id].iopub_callbacks.append(callback_func)
-            msg_futures.append(self._client._futures[msg_id])
+            callback_func = partial(self._iopub_streaming_output_callback, eid)
+            f = self._client._futures[msg_id]
+            future_callbacks[f] = callback_func
+            f.iopub_callbacks.append(callback_func)
 
-        yield
-
-        # Remove the callback
-        for msg_future in msg_futures:
-            msg_future.iopub_callbacks.pop()
+        try:
+            yield
+        finally:
+            # Remove the callback
+            for msg_future, callback in future_callbacks.items():
+                msg_future.iopub_callbacks.remove(callback)
 
     def __repr__(self):
         if self._ready:
