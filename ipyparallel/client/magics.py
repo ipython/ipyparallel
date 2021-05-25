@@ -29,6 +29,13 @@ Usage
 from __future__ import print_function
 
 import ast
+from contextlib import contextmanager
+
+# Python 3.6 doesn't have nullcontext, so we define our own
+@contextmanager
+def nullcontext():
+    yield
+
 
 # -----------------------------------------------------------------------------
 #  Copyright (C) 2008 The IPython Development Team
@@ -98,6 +105,20 @@ def exec_args(f):
             help="use non-blocking (async) execution",
         ),
         magic_arguments.argument(
+            '--stream',
+            action="store_const",
+            const=True,
+            dest='stream',
+            help="stream stdout/stderr in real-time (only valid when using blocking execution)",
+        ),
+        magic_arguments.argument(
+            '--no-stream',
+            action="store_const",
+            const=False,
+            dest='stream',
+            help="do not stream stdout/stderr in real-time",
+        ),
+        magic_arguments.argument(
             '-t',
             '--targets',
             type=str,
@@ -157,9 +178,9 @@ def output_args(f):
             choices=['engine', 'order', 'type'],
             default='type',
             help="""Group the outputs in a particular way.
-            
+
             Choices are:
-            
+
             **type**: group outputs of all engines by type (stdout, stderr, displaypub, etc.).
             **engine**: display all output for each engine together.
             **order**: like type, but individual displaypub output from each engine is collated.
@@ -199,6 +220,8 @@ class ParallelMagics(Magics):
     last_result = None
     # verbose flag
     verbose = False
+    # streaming output flag
+    stream_ouput = True
 
     def __init__(self, shell, view, suffix=''):
         self.view = view
@@ -242,6 +265,8 @@ class ParallelMagics(Magics):
             self.view.block = args.block
         if args.set_verbose is not None:
             self.verbose = args.set_verbose
+        if args.stream is not None:
+            self.stream_ouput = args.stream
 
     @magic_arguments.magic_arguments()
     @output_args
@@ -290,11 +315,14 @@ class ParallelMagics(Magics):
         """
         return self.parallel_execute(line)
 
-    def parallel_execute(self, cell, block=None, groupby='type', save_name=None):
+    def parallel_execute(
+        self, cell, block=None, groupby='type', save_name=None, stream_output=None
+    ):
         """implementation used by %px and %%parallel"""
 
         # defaults:
         block = self.view.block if block is None else block
+        stream_output = self.stream_ouput if stream_output is None else stream_output
 
         base = "Parallel" if block else "Async parallel"
 
@@ -313,8 +341,12 @@ class ParallelMagics(Magics):
             self.shell.user_ns[save_name] = result
 
         if block:
-            result.get()
-            result.display_outputs(groupby)
+            cm = result.stream_output() if stream_output else nullcontext()
+            with cm:
+                result.wait_for_output()
+                result.get()
+            # Skip stdout/stderr if streaming output
+            result.display_outputs(groupby, result_only=stream_output)
         else:
             # return AsyncResult only on non-blocking submission
             return result
@@ -354,6 +386,7 @@ class ParallelMagics(Magics):
                 block=block,
                 groupby=args.groupby,
                 save_name=args.save_name,
+                stream_output=args.stream,
             )
         finally:
             if args.targets:

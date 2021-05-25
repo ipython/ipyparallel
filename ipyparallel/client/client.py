@@ -1071,6 +1071,12 @@ class Client(HasTraits):
             # unhandled msg_type (status, etc.)
             pass
 
+        msg_future = self._futures.get(msg_id, None)
+        if msg_future:
+            # Run any callback functions
+            for callback in msg_future.iopub_callbacks:
+                callback(msg)
+
     def create_message_futures(self, msg_id, async_result=False, track=False):
         msg_future = MessageFuture(msg_id, track=track)
         futures = [msg_future]
