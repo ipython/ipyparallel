@@ -5,7 +5,7 @@
 import copy
 import logging
 import os
-import pipes
+import shlex
 import stat
 import sys
 import time
@@ -633,7 +633,7 @@ class SSHLauncher(LocalProcessLauncher):
             self.ssh_cmd
             + self.ssh_args
             + [self.location]
-            + list(map(pipes.quote, self.program + self.program_args))
+            + list(map(shlex.quote, self.program + self.program_args))
         )
 
     def _send_file(self, local, remote):
@@ -1341,7 +1341,7 @@ class PBSControllerLauncher(PBSLauncher, BatchClusterAppMixin):
 #PBS -N ipcontroller
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """
-        % (' '.join(map(pipes.quote, ipcontroller_cmd_argv)))
+        % (' '.join(map(shlex.quote, ipcontroller_cmd_argv)))
     )
 
     def start(self):
@@ -1361,7 +1361,7 @@ class PBSEngineSetLauncher(PBSLauncher, BatchClusterAppMixin):
 #PBS -N ipengine
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """
-        % (' '.join(map(pipes.quote, ipengine_cmd_argv)))
+        % (' '.join(map(shlex.quote, ipengine_cmd_argv)))
     )
 
 
@@ -1465,7 +1465,7 @@ class SlurmControllerLauncher(SlurmLauncher, BatchClusterAppMixin):
 #SBATCH --ntasks=1
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """
-        % (' '.join(map(pipes.quote, ipcontroller_cmd_argv)))
+        % (' '.join(map(shlex.quote, ipcontroller_cmd_argv)))
     )
 
     def start(self):
@@ -1486,7 +1486,7 @@ class SlurmEngineSetLauncher(SlurmLauncher, BatchClusterAppMixin):
 #SBATCH --job-name=ipy-engine-{cluster_id}
 srun %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """
-        % (' '.join(map(pipes.quote, ipengine_cmd_argv)))
+        % (' '.join(map(shlex.quote, ipengine_cmd_argv)))
     )
 
 
@@ -1514,7 +1514,7 @@ class SGEControllerLauncher(SGELauncher, BatchClusterAppMixin):
 #$ -N ipcontroller
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """
-        % (' '.join(map(pipes.quote, ipcontroller_cmd_argv)))
+        % (' '.join(map(shlex.quote, ipcontroller_cmd_argv)))
     )
 
     def start(self):
@@ -1534,7 +1534,7 @@ class SGEEngineSetLauncher(SGELauncher, BatchClusterAppMixin):
 #$ -N ipengine
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """
-        % (' '.join(map(pipes.quote, ipengine_cmd_argv)))
+        % (' '.join(map(shlex.quote, ipengine_cmd_argv)))
     )
 
 
@@ -1592,7 +1592,7 @@ class LSFControllerLauncher(LSFLauncher, BatchClusterAppMixin):
     #BSUB -eo ipcontroller.e.%%J
     %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
     """
-        % (' '.join(map(pipes.quote, ipcontroller_cmd_argv)))
+        % (' '.join(map(shlex.quote, ipcontroller_cmd_argv)))
     )
 
     def start(self):
@@ -1612,7 +1612,7 @@ class LSFEngineSetLauncher(LSFLauncher, BatchClusterAppMixin):
     #BSUB -eo ipengine.e.%%J
     %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
     """
-        % (' '.join(map(pipes.quote, ipengine_cmd_argv)))
+        % (' '.join(map(shlex.quote, ipengine_cmd_argv)))
     )
 
 
