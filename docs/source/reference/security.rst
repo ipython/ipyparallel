@@ -244,7 +244,7 @@ capabilities based authentication model, in conjunction with SSH tunneled
 TCP/IP channels, address the core potential vulnerabilities in the system,
 while still enabling user's to use the system in open networks.
 
-.. [RFC5246] <http://tools.ietf.org/html/rfc5246>
+.. _RFC5246: <http://tools.ietf.org/html/rfc5246>
 
 .. [OpenSSH] <http://www.openssh.com/>
 .. [Paramiko] <https://www.lag.net/paramiko/>

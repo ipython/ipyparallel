@@ -1,5 +1,0 @@
-name: rtd
-dependencies:
-  - python==3.5
-  - ipykernel
-  - sphinx>=1.3

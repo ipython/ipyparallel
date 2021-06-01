@@ -103,7 +103,7 @@ step the counts from each engine will be added up. To perform this
 calculation, we will need two top-level functions from :file:`pidigits.py`,
 :func:`compute_two_digit_freqs` and :func:`reduce_freqs`:
 
-.. literalinclude:: ../../examples/pi/pidigits.py
+.. literalinclude:: ../../../examples/pi/pidigits.py
    :language: python
    :lines: 52-67
 
