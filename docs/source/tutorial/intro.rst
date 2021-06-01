@@ -299,4 +299,4 @@ You are now ready to learn more about the :ref:`Direct
 <parallel_direct>` and :ref:`LoadBalanced <parallel_task>` interfaces to the
 controller.
 
-.. [ZeroMQ] http://zeromq.org/
+.. _ZeroMQ: http://zeromq.org/

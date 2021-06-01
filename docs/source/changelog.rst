@@ -1,7 +1,9 @@
 .. _changelog:
 
+Changelog
+=========
+
 Changes in IPython Parallel
-===========================
 
 6.3.0
 -----

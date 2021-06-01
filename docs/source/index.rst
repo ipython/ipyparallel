@@ -36,24 +36,15 @@ Contents
 --------
 
 .. toctree::
+   :maxdepth: 2
+
+   tutorial/index
+   reference/index
+
+.. toctree::
    :maxdepth: 1
 
    changelog
-   intro
-   process
-   direct
-   magics
-   task
-   asyncresult
-   mpi
-   db
-   security
-   demos
-   dag_dependencies
-   details
-   transition
-   development/messages
-   development/connections
 
 ipyparallel API
 ===============

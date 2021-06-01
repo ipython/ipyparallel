@@ -1,5 +1,5 @@
-ipyparallel
-===========
+API Reference
+=============
 
 .. module:: ipyparallel
 

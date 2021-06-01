@@ -49,6 +49,7 @@ extensions = [
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
+    'myst_parser',
     'IPython.sphinxext.ipython_console_highlighting',
 ]
 
@@ -57,8 +58,7 @@ extensions = [
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-# source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ['.rst', '.md']
 
 # Add dev disclaimer.
 if iprelease['version_info'][-1] == 'dev':
@@ -144,12 +144,27 @@ todo_include_todos = False
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-# html_theme = 'alabaster'
+html_theme = 'pydata_sphinx_theme'
+
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-# html_theme_options = {}
+# https://pydata-sphinx-theme.readthedocs.io/en/latest/user_guide/configuring.html
+html_theme_options = {
+    # "navbar_center": [],  # disable navbar-nav because it's way too big right now
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/ipyparallel",
+            "icon": "fab fa-github-square",
+        },
+    ],
+}
+
+html_context = {
+    "github_url": "https://github.com/ipython/ipyparallel",
+}
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = []
@@ -261,14 +276,6 @@ latex_documents = [
         u'IPython Parallel Documentation',
         u'The IPython Development Team',
         'manual',
-    ),
-    (
-        'parallel/winhpc_index',
-        'winhpc_whitepaper.tex',
-        u'Using IPython on Windows HPC Server 2008',
-        u"Brian E. Granger",
-        'manual',
-        True,
     ),
 ]
 
