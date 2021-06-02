@@ -291,6 +291,7 @@ class LocalProcessLauncher(BaseLauncher):
                 stdin=PIPE,
                 env=os.environ,
                 cwd=self.work_dir,
+                start_new_session=True,  # don't forward signals
             )
             if WINDOWS:
                 self.stdout = forward_read_events(self.process.stdout)
