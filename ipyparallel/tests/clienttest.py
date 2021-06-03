@@ -3,7 +3,9 @@ from __future__ import print_function
 
 import os
 import signal
+import sys
 import time
+from contextlib import contextmanager
 
 import pytest
 import zmq
@@ -50,7 +52,6 @@ def generate_output():
     a rich displayable object.
     """
 
-    import sys
     from IPython.core.display import display, HTML, Math
 
     print("stdout")
@@ -81,6 +82,28 @@ def skip_without(*names):
         return f(*args, **kwargs)
 
     return skip_without_names
+
+
+@contextmanager
+def raises_remote(etype):
+    if isinstance(etype, str):
+        # allow Exception or 'Exception'
+        expected_ename = etype
+    else:
+        expected_ename = etype.__name__
+
+    try:
+        try:
+            yield
+        except error.CompositeError as e:
+            e.raise_exception()
+    except error.RemoteError as e:
+        assert (
+            expected_ename == e.ename
+        ), f"Should have raised {expected_ename}, but raised {e.ename}"
+
+    else:
+        pytest.fail("should have raised a RemoteError")
 
 
 # -------------------------------------------------------------------------------
@@ -130,19 +153,8 @@ class ClusterTestCase(BaseZMQTestCase):
         return c
 
     def assertRaisesRemote(self, etype, f, *args, **kwargs):
-        try:
-            try:
-                f(*args, **kwargs)
-            except error.CompositeError as e:
-                e.raise_exception()
-        except error.RemoteError as e:
-            self.assertEqual(
-                etype.__name__,
-                e.ename,
-                "Should have raised %r, but raised %r" % (etype.__name__, e.ename),
-            )
-        else:
-            self.fail("should have raised a RemoteError")
+        with raises_remote(etype):
+            f(*args, **kwargs)
 
     def _wait_for(self, f, timeout=10):
         """wait for a condition"""
