@@ -32,13 +32,13 @@ def test_getattr():
         a.sync_method_sync
 
 
-def test_asyncio_run():
+def test_sync_no_asyncio():
     a = A()
     assert a.async_method_sync() == 'async'
     assert a._async_thread is None
 
 
-async def test_asyncio_sync():
+async def test_sync_asyncio():
     a = A()
     assert a.async_method_sync() == 'async'
     assert a._async_thread is not None
