@@ -125,12 +125,11 @@ class BroadcastScheduler(Scheduler):
             msg = self.session.deserialize(msg, content=False, copy=False)
             outgoing_id = idents[0]
 
-        except:
+        except Exception:
             self.log.error(
                 f'broadcast::Invalid broadcast msg: {raw_msg}', exc_info=True
             )
             return
-
         original_msg_id = msg['metadata']['original_msg_id']
         is_coalescing = msg['metadata']['is_coalescing']
         if is_coalescing:
