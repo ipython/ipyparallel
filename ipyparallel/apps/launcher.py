@@ -2,6 +2,7 @@
 """Facilities for launching IPython processes asynchronously."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
 import copy
 import logging
 import os
@@ -326,8 +327,8 @@ class LocalProcessLauncher(BaseLauncher):
         except Exception:
             self.log.debug("interrupt failed")
             pass
-        self.killer = self.loop.add_timeout(
-            self.loop.time() + delay, lambda: self.signal(SIGKILL)
+        self.killer = asyncio.get_event_loop().call_later(
+            delay, lambda: self.signal(SIGKILL)
         )
 
     # callbacks, etc:
