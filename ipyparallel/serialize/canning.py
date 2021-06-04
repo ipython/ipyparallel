@@ -194,9 +194,14 @@ class CannedFunction(CannedObject):
             self.defaults = None
 
         if f.__kwdefaults__:
-            self.kwdefaults = can(f.__kwdefaults__)
+            self.kwdefaults = can_dict(f.__kwdefaults__)
         else:
             self.kwdefaults = None
+
+        if f.__annotations__:
+            self.annotations = can_dict(f.__annotations__)
+        else:
+            self.annotations = None
 
         closure = py3compat.get_closure(f)
         if closure:
@@ -225,16 +230,23 @@ class CannedFunction(CannedObject):
             defaults = None
 
         if self.kwdefaults:
-            kwdefaults = uncan(self.kwdefaults)
+            kwdefaults = uncan_dict(self.kwdefaults)
         else:
             kwdefaults = None
+        if self.annotations:
+            annotations = uncan_dict(self.annotations)
+        else:
+            annotations = {}
 
         if self.closure:
             closure = tuple(uncan(cell, g) for cell in self.closure)
         else:
             closure = None
         newFunc = FunctionType(self.code, g, self.__name__, defaults, closure)
-        newFunc.__kwdefaults__ = kwdefaults
+        if kwdefaults:
+            newFunc.__kwdefaults__ = kwdefaults
+        if annotations:
+            newFunc.__annotations__ = annotations
         return newFunc
 
 
