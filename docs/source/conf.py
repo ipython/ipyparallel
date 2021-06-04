@@ -60,6 +60,15 @@ extensions = [
 # You can specify multiple suffix as a list of string:
 source_suffix = ['.rst', '.md']
 
+from traitlets.config import HasTraits
+
+# exclude members inherited from HasTraits by default
+autodoc_default_options = {
+    'members': None,
+    "inherited-members": None,
+    "exclude-members": ','.join(dir(HasTraits)),
+}
+
 # Add dev disclaimer.
 if iprelease['version_info'][-1] == 'dev':
     rst_prolog = """
