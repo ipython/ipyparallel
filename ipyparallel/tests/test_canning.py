@@ -21,6 +21,10 @@ def loads(obj):
     return uncan(pickle.loads(obj))
 
 
+def roundtrip(obj):
+    return loads(dumps(obj))
+
+
 def test_no_closure():
     @interactive
     def foo():
@@ -109,3 +113,20 @@ def test_can_partial_buffers():
     loaded.buffers = buffers
     pfoo2 = uncan(loaded)
     assert pfoo2() == partial_foo()
+
+
+def test_keyword_only_arguments():
+    def compute(a, *, b=3):
+        return a * b
+
+    assert compute(2) == 6
+    compute_2 = roundtrip(compute)
+    assert compute_2(2) == 6
+
+
+def test_annotations():
+    def f(a: int):
+        return a
+
+    f2 = roundtrip(f)
+    assert f2.__annotations__ == f.__annotations__
