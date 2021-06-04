@@ -1325,6 +1325,8 @@ class Client(HasTraits):
         if jobs is None:
             # get futures for results
             futures = [f for f in self._futures.values() if hasattr(f, 'output')]
+            if not futures:
+                return
             ar = AsyncResult(self, futures, owner=False)
         else:
             ar = self._asyncresult_from_jobs(jobs, owner=False)
