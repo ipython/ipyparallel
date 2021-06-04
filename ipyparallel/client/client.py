@@ -1103,6 +1103,7 @@ class Client(HasTraits):
         track=False,
         header=None,
         metadata=None,
+        track_outstanding=False,
     ):
         """Send a message in the IO thread
 
@@ -1113,6 +1114,22 @@ class Client(HasTraits):
             msg_type, content=content, parent=parent, header=header, metadata=metadata
         )
         msg_id = msg['header']['msg_id']
+
+        if track_outstanding:
+            # add to outstanding, history
+            self.outstanding.add(msg_id)
+            self.history.append(msg_id)
+
+            if ident:
+                # possibly routed to a specific engine
+                ident_str = ident
+                if isinstance(ident_str, list):
+                    ident_str = ident_str[-1]
+                ident_str = ident_str.decode("utf-8")
+                if ident_str in self._engines.values():
+                    # save for later, in case of engine death
+                    self._outstanding_dict[ident_str].add(msg_id)
+            self.metadata['submitted'] = util.utcnow()
 
         futures = self.create_message_futures(
             msg_id,
@@ -1599,19 +1616,9 @@ class Client(HasTraits):
             ident=ident,
             metadata=metadata,
             track=track,
+            track_outstanding=True,
         )
-
         msg_id = future.msg_id
-        self.outstanding.add(msg_id)
-        if ident:
-            # possibly routed to a specific engine
-            if isinstance(ident, list):
-                ident = ident[-1]
-            ident = ident.decode("utf-8")
-            if ident in self._engines.values():
-                # save for later, in case of engine death
-                self._outstanding_dict[ident].add(msg_id)
-        self.history.append(msg_id)
 
         return future
 
@@ -1637,21 +1644,13 @@ class Client(HasTraits):
         content = dict(code=code, silent=bool(silent), user_expressions={})
 
         future = self._send(
-            socket, "execute_request", content=content, ident=ident, metadata=metadata
+            socket,
+            "execute_request",
+            content=content,
+            ident=ident,
+            metadata=metadata,
+            track_outstanding=True,
         )
-
-        msg_id = future.msg_id
-        self.outstanding.add(msg_id)
-        if ident:
-            # possibly routed to a specific engine
-            if isinstance(ident, list):
-                ident = ident[-1]
-            ident = ident.decode("utf-8")
-            if ident in self._engines.values():
-                # save for later, in case of engine death
-                self._outstanding_dict[ident].add(msg_id)
-        self.history.append(msg_id)
-        self.metadata[msg_id]['submitted'] = util.utcnow()
 
         return future
 
