@@ -5,6 +5,19 @@ Changelog
 
 Changes in IPython Parallel
 
+7.0.0
+-----
+
+**prerelease** there are some big things coming! This is a first prerelease to get some things out there for testing
+
+- **Require Python 3.6**
+- Fix compatibility issues with ipykernel 6, jupyter-client 7
+- New prototype BroadcastScheduler with vastly improved scaling in 'do-on-all' operations,
+  c/o Tom-Olav Bøyum's Master's thesis.
+- Add :meth:`.AsyncResult.stream_output` context manager for streaming output.
+  Stream output by default in parallel magics.
+- The repo has been updated to use pre-commit, black, myst, and friends and GitHub Actions for CI, but this should not affect users, only making it a bit nicer for contributors.
+
 6.3.0
 -----
 

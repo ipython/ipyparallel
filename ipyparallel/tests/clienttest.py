@@ -167,6 +167,8 @@ class ClusterTestCase(BaseZMQTestCase):
         self.engines = []
 
     def tearDown(self):
+        self.client[:].use_pickle()
+
         # self.client.clear(block=True)
         # close fds:
         for e in filter(lambda e: e.poll() is not None, launchers):

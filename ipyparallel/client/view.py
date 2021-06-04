@@ -864,6 +864,34 @@ class DirectView(View):
 class BroadcastView(DirectView):
     is_coalescing = Bool(False)
 
+    def _init_metadata(self, s_idents):
+        """initialize request metadata"""
+        return dict(
+            targets=s_idents,
+            is_broadcast=True,
+            is_coalescing=self.is_coalescing,
+        )
+
+    def _make_async_result(self, message_future, s_idents, **kwargs):
+        original_msg_id = message_future.msg_id
+        if not self.is_coalescing:
+            futures = []
+            for ident in s_idents:
+                msg_and_target_id = f'{original_msg_id}_{ident}'
+                future = self.client.create_message_futures(
+                    msg_and_target_id, async_result=True, track=True
+                )
+                self.client.outstanding.add(msg_and_target_id)
+                self.outstanding.add(msg_and_target_id)
+                futures.append(future[0])
+            if original_msg_id in self.outstanding:
+                self.outstanding.remove(original_msg_id)
+        else:
+            self.client.outstanding.add(original_msg_id)
+            futures = message_future
+
+        return AsyncResult(self.client, futures, owner=True, **kwargs)
+
     @sync_results
     @save_ids
     def _really_apply(
@@ -883,35 +911,14 @@ class BroadcastView(DirectView):
 
         s_idents = [ident.decode("utf8") for ident in idents]
 
-        metadata = dict(
-            targets=s_idents, is_broadcast=True, is_coalescing=self.is_coalescing
+        metadata = self._init_metadata(s_idents)
+        message_future = self.client.send_apply_request(
+            self._socket, pf, pargs, pkwargs, track=track, metadata=metadata
         )
-        if not self.is_coalescing:
-            original_future = self.client.send_apply_request(
-                self._socket, pf, pargs, pkwargs, track=track, metadata=metadata
-            )
-            original_msg_id = original_future.msg_id
-
-            for ident in s_idents:
-                msg_and_target_id = f'{original_msg_id}_{ident}'
-                future = self.client.create_message_futures(
-                    msg_and_target_id, async_result=True, track=True
-                )
-                self.client.outstanding.add(msg_and_target_id)
-                self.outstanding.add(msg_and_target_id)
-                futures.append(future[0])
-            if original_msg_id in self.outstanding:
-                self.outstanding.remove(original_msg_id)
-        else:
-            message_future = self.client.send_apply_request(
-                self._socket, pf, pargs, pkwargs, track=track, metadata=metadata
-            )
-            self.client.outstanding.add(message_future.msg_id)
-            futures = message_future
-
-        ar = AsyncResult(
-            self.client, futures, fname=getname(f), targets=_targets, owner=True
+        ar = self._make_async_result(
+            message_future, s_idents, fname=getname(f), targets=targets
         )
+
         if block:
             try:
                 return ar.get()
@@ -919,8 +926,47 @@ class BroadcastView(DirectView):
                 pass
         return ar
 
+    @sync_results
+    @save_ids
+    def execute(self, code, silent=True, targets=None, block=None):
+        """Executes `code` on `targets` in blocking or nonblocking manner.
+
+        ``execute`` is always `bound` (affects engine namespace)
+
+        Parameters
+        ----------
+        code : str
+            the code string to be executed
+        block : bool
+            whether or not to wait until done to return
+            default: self.block
+        """
+        block = self.block if block is None else block
+        targets = self.targets if targets is None else targets
+
+        _idents, _targets = self.client._build_targets(targets)
+        s_idents = [ident.decode("utf8") for ident in _idents]
+
+        metadata = self._init_metadata(s_idents)
+        message_future = self.client.send_execute_request(
+            self._socket,
+            code,
+            silent=silent,
+            metadata=metadata,
+        )
+        ar = self._make_async_result(
+            message_future, s_idents, fname='execute', targets=_targets
+        )
+        if block:
+            try:
+                ar.get()
+                ar.wait_for_output()
+            except KeyboardInterrupt:
+                pass
+        return ar
+
     def map(self, f, *sequences, **kwargs):
-        pass
+        raise NotImplementedError("BroadcastView.map not yet implemented")
 
 
 class LoadBalancedView(View):
