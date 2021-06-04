@@ -12,16 +12,14 @@ Classes
 -------
 
 .. autoclass:: Client
-    :members:
 
 .. autoclass:: DirectView
-    :members:
 
 .. autoclass:: LoadBalancedView
-    :members:
+
+.. autoclass:: BroadcastView
 
 .. autoclass:: ViewExecutor
-    :members:
 
 Decorators
 ----------
