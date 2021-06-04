@@ -36,8 +36,6 @@ class TestJobLib(ClusterTestCase):
             p = Parallel(backend='ipyparallel')
             assert p._backend._view.client is self.client
 
-        self.client[:].use_pickle()
-
     def test_register_backend(self):
         view = self.client.load_balanced_view()
         view.register_joblib_backend('view')
