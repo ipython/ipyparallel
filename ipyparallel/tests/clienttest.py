@@ -2,7 +2,7 @@
 from __future__ import print_function
 
 import os
-import sys
+import signal
 import time
 
 import pytest
@@ -156,8 +156,20 @@ class ClusterTestCase(BaseZMQTestCase):
         if not f():
             print("Warning: Awaited condition never arrived")
 
+    test_timeout = 30
+
     def setUp(self):
         BaseZMQTestCase.setUp(self)
+        if hasattr(signal, 'SIGALRM'):
+            # use sigalarm for test timeout
+            def _sigalarm(sig, frame):
+                raise TimeoutError(
+                    f"test did not finish in {self.test_timeout} seconds"
+                )
+
+            signal.signal(signal.SIGALRM, _sigalarm)
+            signal.alarm(self.test_timeout)
+
         add_engines(self.engine_count, total=True)
 
         self.client = self.connect_client()
@@ -176,10 +188,8 @@ class ClusterTestCase(BaseZMQTestCase):
 
         # allow flushing of incoming messages to prevent crash on socket close
         self.client.wait(timeout=2)
-        # time.sleep(2)
         self.client.close()
         BaseZMQTestCase.tearDown(self)
-        # this will be redundant when pyzmq merges PR #88
-        # self.context.term()
-        # print tempfile.TemporaryFile().fileno(),
-        # sys.stdout.flush()
+        if hasattr(signal, 'SIGALRM'):
+            signal.alarm(0)
+            signal.signal(signal.SIGALRM, signal.SIG_DFL)
