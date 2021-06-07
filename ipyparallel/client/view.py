@@ -912,11 +912,23 @@ class BroadcastView(DirectView):
         s_idents = [ident.decode("utf8") for ident in idents]
 
         metadata = self._init_metadata(s_idents)
-        message_future = self.client.send_apply_request(
-            self._socket, pf, pargs, pkwargs, track=track, metadata=metadata
-        )
-        ar = self._make_async_result(
-            message_future, s_idents, fname=getname(f), targets=targets
+
+        ar = None
+
+        def make_asyncresult(message_future):
+            nonlocal ar
+            ar = self._make_async_result(
+                message_future, s_idents, fname=getname(f), targets=_targets
+            )
+
+        self.client.send_apply_request(
+            self._socket,
+            pf,
+            pargs,
+            pkwargs,
+            track=track,
+            metadata=metadata,
+            message_future_hook=make_asyncresult,
         )
 
         if block:
@@ -948,14 +960,21 @@ class BroadcastView(DirectView):
         s_idents = [ident.decode("utf8") for ident in _idents]
 
         metadata = self._init_metadata(s_idents)
+
+        ar = None
+
+        def make_asyncresult(message_future):
+            nonlocal ar
+            ar = self._make_async_result(
+                message_future, s_idents, fname='execute', targets=_targets
+            )
+
         message_future = self.client.send_execute_request(
             self._socket,
             code,
             silent=silent,
             metadata=metadata,
-        )
-        ar = self._make_async_result(
-            message_future, s_idents, fname='execute', targets=_targets
+            message_future_hook=make_asyncresult,
         )
         if block:
             try:
