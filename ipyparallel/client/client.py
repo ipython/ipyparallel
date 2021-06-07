@@ -1104,6 +1104,7 @@ class Client(HasTraits):
         header=None,
         metadata=None,
         track_outstanding=False,
+        message_future_hook=None,
     ):
         """Send a message in the IO thread
 
@@ -1136,6 +1137,8 @@ class Client(HasTraits):
             async_result=msg_type in {'execute_request', 'apply_request'},
             track=track,
         )
+        if message_future_hook is not None:
+            message_future_hook(futures[0])
 
         def cleanup(f):
             """Purge caches on Future resolution"""
@@ -1574,7 +1577,15 @@ class Client(HasTraits):
         return result
 
     def send_apply_request(
-        self, socket, f, args=None, kwargs=None, metadata=None, track=False, ident=None
+        self,
+        socket,
+        f,
+        args=None,
+        kwargs=None,
+        metadata=None,
+        track=False,
+        ident=None,
+        message_future_hook=None,
     ):
         """construct and send an apply message via a socket.
 
@@ -1617,13 +1628,20 @@ class Client(HasTraits):
             metadata=metadata,
             track=track,
             track_outstanding=True,
+            message_future_hook=message_future_hook,
         )
         msg_id = future.msg_id
 
         return future
 
     def send_execute_request(
-        self, socket, code, silent=True, metadata=None, ident=None
+        self,
+        socket,
+        code,
+        silent=True,
+        metadata=None,
+        ident=None,
+        message_future_hook=None,
     ):
         """construct and send an execute request via a socket."""
 
@@ -1650,6 +1668,7 @@ class Client(HasTraits):
             ident=ident,
             metadata=metadata,
             track_outstanding=True,
+            message_future_hook=message_future_hook,
         )
 
         return future
