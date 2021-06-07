@@ -30,14 +30,6 @@ class TestBroadcastView(test_view.TestView):
         if not self._broadcast_view_used:
             pytest.skip("No broadcast view used")
 
-    @pytest.mark.xfail(reason="aborted replies missing metadata")
-    def test_abort(self):
-        pass
-
-    @pytest.mark.xfail(reason="aborted replies missing metadata")
-    def test_abort_all(self):
-        pass
-
     @needs_map
     def test_map(self):
         pass
