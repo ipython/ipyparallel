@@ -211,3 +211,24 @@ class IPythonParallelKernel(IPythonKernel):
         self.session.send(
             stream, 'clear_reply', ident=idents, parent=parent, content=content
         )
+
+    def _send_abort_reply(self, stream, msg, idents):
+        """Send a reply to an aborted request"""
+        # FIXME: forward-port ipython/ipykernel#684
+        self.log.info(
+            f"Aborting {msg['header']['msg_id']}: {msg['header']['msg_type']}"
+        )
+        reply_type = msg["header"]["msg_type"].rsplit("_", 1)[0] + "_reply"
+        status = {"status": "aborted"}
+        md = self.init_metadata(msg)
+        md = self.finish_metadata(msg, md, status)
+        md.update(status)
+
+        self.session.send(
+            stream,
+            reply_type,
+            metadata=md,
+            content=status,
+            parent=msg,
+            ident=idents,
+        )
