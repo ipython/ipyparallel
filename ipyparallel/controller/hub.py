@@ -277,14 +277,14 @@ class HubFactory(RegistrationFactory):
         'DictDB',
         config=True,
         help="""The class to use for the DB backend
-        
+
         Options include:
-        
+
         SQLiteDB: SQLite
         MongoDB : use MongoDB
         DictDB  : in-memory storage (fastest, but be mindful of memory growth of the Hub)
         NoDB    : disable database altogether (default)
-        
+
         """,
     )
 
@@ -1100,7 +1100,11 @@ class Hub(SessionFactory):
         msg_type = msg['header']['msg_type']
         if msg_type == 'shutdown_reply':
             session = msg['header']['session']
-            eid = self.by_ident.get(session, None)
+            uuid_bytes = session.encode("utf8", "replace")
+            eid = self.by_ident.get(uuid_bytes, None)
+            if eid is None:
+                self.log.error(f"Found no engine for {session}")
+                return
             uuid = self.engines[eid].uuid
             self.unregister_engine(
                 ident='shutdown_reply', msg=dict(content=dict(id=eid, queue=uuid))
