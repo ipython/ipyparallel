@@ -123,6 +123,7 @@ setup_args = dict(
         "ipykernel>=4.4",
         "tornado>=5.1",
         "python-dateutil>=2.1",
+        "tqdm",
     ],
     python_requires=">=3.6",
     extras_require={

@@ -18,11 +18,12 @@ except ImportError:  # py2
     from Queue import Queue
 
 from decorator import decorator
+import tqdm
 import zmq
 from zmq import MessageTracker
 
 from IPython import get_ipython
-from IPython.core.display import clear_output, display, display_pretty
+from IPython.core.display import display, display_pretty
 from ipyparallel import error
 from ipyparallel.util import utcnow, compare_datetimes, _parse_date
 from ipython_genutils.py3compat import string_types
@@ -57,7 +58,8 @@ _FOREVER = getattr(threading, 'TIMEOUT_MAX', int(1e6))
 class AsyncResult(Future):
     """Class for representing results of non-blocking calls.
 
-    Provides the same interface as :py:class:`multiprocessing.pool.AsyncResult`.
+    Extends the interfaces of :py:class:`multiprocessing.pool.AsyncResult`
+    and :py:class:`concurrent.futures.Future`.
     """
 
     msg_ids = None
@@ -73,6 +75,7 @@ class AsyncResult(Future):
         fname='unknown',
         targets=None,
         owner=False,
+        progress_bar=tqdm.tqdm,
     ):
         super(AsyncResult, self).__init__()
         if not isinstance(children, list):
@@ -92,6 +95,7 @@ class AsyncResult(Future):
         self._fname = fname
         self._targets = targets
         self.owner = owner
+        self.progress_bar = progress_bar
 
         self._ready = False
         self._ready_event = Event()
@@ -566,37 +570,22 @@ class AsyncResult(Future):
         """
         return self.timedelta(self.submitted, self.received)
 
-    def wait_interactive(self, interval=1.0, timeout=-1, progress=None):
-        """interactive wait, printing progress at regular intervals.
-
-        progress can be a tqdm-like progress bar."""
-
-        use_progressbar = progress is not None
+    def wait_interactive(self, interval=1.0, timeout=-1):
+        """interactive wait, printing progress at regular intervals."""
         if timeout is None:
             timeout = -1
         N = len(self)
-        tic = time.time()
-        if use_progressbar:
-            progress_bar = progress(total=N)
-            n_prev = 0
-        while not self.ready() and (timeout < 0 or time.time() - tic <= timeout):
+        tic = time.perf_counter()
+        progress_bar = self.progress_bar(total=N, unit='tasks', desc=self._fname)
+        n_prev = 0
+        while not self.ready() and (
+            timeout < 0 or time.perf_counter() - tic <= timeout
+        ):
             self.wait(interval)
-            if use_progressbar:
-                progress_bar.update(self.progress - n_prev)
-                n_prev = self.progress
-            else:
-                clear_output(wait=True)
-                print(
-                    "%4i/%i tasks finished after %4i s"
-                    % (self.progress, N, self.elapsed),
-                    end="",
-                )
-                sys.stdout.flush()
+            progress_bar.update(self.progress - n_prev)
+            n_prev = self.progress
 
-        if use_progressbar:
-            progress_bar.close()
-        else:
-            print("\ndone")
+        progress_bar.close()
 
     def _republish_displaypub(self, content, eid):
         """republish individual displaypub content dicts"""
