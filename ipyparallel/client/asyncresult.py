@@ -269,6 +269,8 @@ class AsyncResult(Future):
         return self._ready
 
     def _resolve_result(self, f=None):
+        if self.done():
+            return
         try:
             if f:
                 results = f.result()
