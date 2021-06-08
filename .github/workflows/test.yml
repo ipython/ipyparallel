@@ -46,10 +46,29 @@ jobs:
           - python: "3.6"
           - python: "3.7"
           - python: "3.8"
+            mpi: true
           - python: "3.9"
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Cache conda environment
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/conda
+          key: conda
+
+      - name: install MPI
+        if: matrix.mpi
+        run: |
+          export MAMBA_ROOT_PREFIX=$HOME/conda
+          test -d $MAMBA_ROOT_PREFIX || mkdir $MAMBA_ROOT_PREFIX
+          wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
+          eval "$(./bin/micromamba shell hook -s posix)"
+          micromamba activate
+          micromamba install -y -c conda-forge mpich
+          echo "PATH=$MAMBA_ROOT_PREFIX/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install Python ${{ matrix.python }}
         uses: actions/setup-python@v2
