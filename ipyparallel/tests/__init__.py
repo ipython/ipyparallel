@@ -12,11 +12,11 @@ from IPython.paths import get_ipython_dir
 
 from ipyparallel import Client
 from ipyparallel import error
-from ipyparallel.apps.launcher import ipcontroller_cmd_argv
-from ipyparallel.apps.launcher import ipengine_cmd_argv
-from ipyparallel.apps.launcher import LocalProcessLauncher
-from ipyparallel.apps.launcher import ProcessStateError
-from ipyparallel.apps.launcher import SIGKILL
+from ipyparallel.cluster.launcher import ipcontroller_cmd_argv
+from ipyparallel.cluster.launcher import ipengine_cmd_argv
+from ipyparallel.cluster.launcher import LocalProcessLauncher
+from ipyparallel.cluster.launcher import ProcessStateError
+from ipyparallel.cluster.launcher import SIGKILL
 
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.

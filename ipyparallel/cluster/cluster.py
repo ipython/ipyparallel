@@ -26,8 +26,8 @@ from traitlets import Type
 from traitlets import Unicode
 from traitlets.config import LoggingConfigurable
 
+from . import launcher
 from .._async import AsyncFirst
-from ..apps import launcher
 
 _suffix_chars = string.ascii_lowercase + string.digits
 

@@ -7,7 +7,6 @@ import pytest
 
 from .clienttest import raises_remote
 from ipyparallel import cluster
-from ipyparallel.apps import launcher
 from ipyparallel.apps.ipclusterapp import find_launcher_class
 
 

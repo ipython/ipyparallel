@@ -113,12 +113,12 @@ def find_launcher_class(clsname, kind):
         Either 'EngineSet' or 'Controller'.
     """
     if '.' not in clsname:
-        # not a module, presume it's the raw name in apps.launcher
+        # not a module, presume it's the raw name in cluster.launcher
         if kind and kind not in clsname:
             # doesn't match necessary full class name, assume it's
             # just 'PBS' or 'MPI' etc prefix:
             clsname = clsname + kind + 'Launcher'
-        clsname = 'ipyparallel.apps.launcher.' + clsname
+        clsname = 'ipyparallel.cluster.launcher.' + clsname
     klass = import_item(clsname)
     return klass
 
@@ -251,10 +251,9 @@ class IPClusterEngines(BaseParallelApplication):
     classes = List()
 
     def _classes_default(self):
-        from ipyparallel.apps import launcher
+        from ipyparallel.cluster.launcher import all_launchers
 
-        launchers = launcher.all_launchers
-        eslaunchers = [l for l in launchers if 'EngineSet' in l.__name__]
+        eslaunchers = [l for l in all_launchers if 'EngineSet' in l.__name__]
         return [ProfileDir] + eslaunchers
 
     n = Integer(
@@ -488,9 +487,9 @@ class IPClusterStart(IPClusterEngines):
     def _classes_default(
         self,
     ):
-        from ipyparallel.apps import launcher
+        from ipyparallel.cluster.launcher import all_launchers
 
-        return [ProfileDir] + [IPClusterEngines] + launcher.all_launchers
+        return [ProfileDir] + [IPClusterEngines] + all_launchers
 
     clean_logs = Bool(
         True, config=True, help="whether to cleanup old logs before starting"
@@ -506,7 +505,7 @@ class IPClusterStart(IPClusterEngines):
     controller_location = Unicode(
         config=True,
         help="""Set the location (hostname or ip) of the controller.
-        
+
         This is used by engines and clients to locate the controller
         when the controller listens on all interfaces
         """,

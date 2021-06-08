@@ -165,7 +165,7 @@ and Windows HPC Server.
 
 In general, these are configured by the :attr:`IPClusterEngines.engine_set_launcher_class`,
 and :attr:`IPClusterStart.controller_launcher_class` configurables, which can be the
-fully specified object name (e.g. ``'ipyparallel.apps.launcher.LocalControllerLauncher'``),
+fully specified object name (e.g. ``'ipyparallel.cluster.launcher.LocalControllerLauncher'``),
 but if you are using IPython's builtin launchers, you can specify a launcher by its prefix e.g:
 
 .. sourcecode:: python
@@ -174,7 +174,7 @@ but if you are using IPython's builtin launchers, you can specify a launcher by 
     # equivalent to
     c.IPClusterEngines.engine_launcher_class = 'SSHEngineSetLauncher'
     # both of which expand to
-    c.IPClusterEngines.engine_launcher_class = 'ipyparallel.apps.launcher.SSHEngineSetLauncher'
+    c.IPClusterEngines.engine_launcher_class = 'ipyparallel.cluster.launcher.SSHEngineSetLauncher'
 
 The shortest form being of particular use on the command line, where all you need to do to
 get an IPython cluster running with engines started with MPI is:
