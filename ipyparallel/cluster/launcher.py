@@ -39,6 +39,7 @@ except ImportError:
         return out
 
 
+from traitlets import import_item
 from traitlets.config.configurable import LoggingConfigurable
 from IPython.utils.text import EvalFormatter
 from traitlets import (
@@ -59,8 +60,8 @@ from IPython.utils.process import find_cmd, FindCmdError
 from ipython_genutils.py3compat import iteritems, itervalues
 
 from ..util import ioloop
-from .win32support import forward_read_events
-from .winhpcjob import IPControllerTask, IPEngineTask, IPControllerJob, IPEngineSetJob
+from ._win32support import forward_read_events
+from ._winhpcjob import IPControllerTask, IPEngineTask, IPControllerJob, IPEngineSetJob
 
 WINDOWS = os.name == 'nt'
 
@@ -1484,7 +1485,7 @@ class SlurmEngineSetLauncher(SlurmLauncher, BatchClusterAppMixin):
         help="batch file name for the engine(s) job.",
     )
     default_template = Unicode(
-        u"""#!/bin/sh
+        """#!/bin/sh
 #SBATCH --job-name=ipy-engine-{cluster_id}
 srun %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
 """
@@ -1511,7 +1512,7 @@ class SGEControllerLauncher(SGELauncher, BatchClusterAppMixin):
         u'sge_controller', config=True, help="batch file name for the ipontroller job."
     )
     default_template = Unicode(
-        u"""#$ -V
+        """#$ -V
 #$ -S /bin/sh
 #$ -N ipcontroller
 %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
@@ -1609,7 +1610,7 @@ class LSFEngineSetLauncher(LSFLauncher, BatchClusterAppMixin):
         u'lsf_engines', config=True, help="batch file name for the engine(s) job."
     )
     default_template = Unicode(
-        u"""#!/bin/sh
+        """#!/bin/sh
     #BSUB -oo ipengine.o.%%J
     #BSUB -eo ipengine.e.%%J
     %s --profile-dir="{profile_dir}" --cluster-id="{cluster_id}"
@@ -1810,3 +1811,26 @@ all_launchers = (
     + lsf_launchers
     + htcondor_launchers
 )
+
+
+def find_launcher_class(clsname, kind):
+    """Return a launcher class for a given clsname and kind.
+
+    Parameters
+    ----------
+    clsname : str
+        The full name of the launcher class, either with or without the
+        module path, or an abbreviation (MPI, SSH, SGE, PBS, LSF, HTCondor
+        Slurm, WindowsHPC).
+    kind : str
+        Either 'EngineSet' or 'Controller'.
+    """
+    if '.' not in clsname:
+        # not a module, presume it's the raw name in cluster.launcher
+        if kind and kind not in clsname:
+            # doesn't match necessary full class name, assume it's
+            # just 'PBS' or 'MPI' etc prefix:
+            clsname = clsname + kind + 'Launcher'
+        clsname = 'ipyparallel.cluster.launcher.' + clsname
+    klass = import_item(clsname)
+    return klass

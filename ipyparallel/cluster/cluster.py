@@ -21,13 +21,17 @@ from IPython.core.profiledir import ProfileDir
 from traitlets import Any
 from traitlets import default
 from traitlets import Dict
+from traitlets import Float
 from traitlets import Integer
+from traitlets import List
 from traitlets import Type
 from traitlets import Unicode
+from traitlets import validate
 from traitlets.config import LoggingConfigurable
 
 from . import launcher
 from .._async import AsyncFirst
+from ..traitlets import Launcher
 
 _suffix_chars = string.ascii_lowercase + string.digits
 
@@ -40,17 +44,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     Can start/stop/monitor/poll cluster resources
     """
 
-    controller_launcher_class = Type(
-        default_value=launcher.LocalControllerLauncher,
-        klass=launcher.BaseLauncher,
-        help="""Launcher class for controllers""",
-    )
-    engine_launcher_class = Type(
-        default_value=launcher.LocalEngineSetLauncher,
-        klass=launcher.BaseLauncher,
-        help="""Launcher class for sets of engines""",
-    )
-
+    # general configuration
     cluster_id = Unicode(help="The id of the cluster (default: random string)")
 
     @default("cluster_id")
@@ -83,6 +77,107 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         "",
         help="""The profile name,
              a shortcut for specifying profile_dir within $IPYTHONDIR.""",
+    )
+
+    controller_launcher_class = Launcher(
+        default_value=launcher.LocalControllerLauncher,
+        kind='Controller',
+        help="""The class for launching a Controller. Change this value if you want
+        your controller to also be launched by a batch system, such as PBS,SGE,MPI,etc.
+
+        Each launcher class has its own set of configuration options, for making sure
+        it will work in your environment.
+
+        Note that using a batch launcher for the controller *does not* put it
+        in the same batch job as the engines, so they will still start separately.
+
+        IPython's bundled examples include:
+
+            Local : start engines locally as subprocesses
+            MPI : use mpiexec to launch the controller in an MPI universe
+            PBS : use PBS (qsub) to submit the controller to a batch queue
+            SGE : use SGE (qsub) to submit the controller to a batch queue
+            LSF : use LSF (bsub) to submit the controller to a batch queue
+            HTCondor : use HTCondor to submit the controller to a batch queue
+            Slurm : use Slurm to submit engines to a batch queue
+            SSH : use SSH to start the controller
+            WindowsHPC : use Windows HPC
+
+        If you are using one of IPython's builtin launchers, you can specify just the
+        prefix, e.g:
+
+            c.IPClusterStart.controller_launcher_class = 'SSH'
+
+        or:
+
+            ipcluster start --controller=MPI
+
+        """,
+        config=True,
+    )
+
+    engine_launcher_class = Launcher(
+        default_value=launcher.LocalEngineSetLauncher,
+        kind='EngineSet',
+        help="""The class for launching a set of Engines. Change this value
+        to use various batch systems to launch your engines, such as PBS,SGE,MPI,etc.
+        Each launcher class has its own set of configuration options, for making sure
+        it will work in your environment.
+
+        You can also write your own launcher, and specify it's absolute import path,
+        as in 'mymodule.launcher.FTLEnginesLauncher`.
+
+        IPython's bundled examples include:
+
+            Local : start engines locally as subprocesses [default]
+            MPI : use mpiexec to launch engines in an MPI environment
+            PBS : use PBS (qsub) to submit engines to a batch queue
+            SGE : use SGE (qsub) to submit engines to a batch queue
+            LSF : use LSF (bsub) to submit engines to a batch queue
+            SSH : use SSH to start the controller
+                        Note that SSH does *not* move the connection files
+                        around, so you will likely have to do this manually
+                        unless the machines are on a shared file system.
+            HTCondor : use HTCondor to submit engines to a batch queue
+            Slurm : use Slurm to submit engines to a batch queue
+            WindowsHPC : use Windows HPC
+
+        If you are using one of IPython's builtin launchers, you can specify just the
+        prefix, e.g:
+
+            c.IPClusterEngines.engine_launcher_class = 'SSH'
+
+        or:
+
+            ipcluster start --engines=MPI
+
+        """,
+        config=True,
+    )
+
+    # controller configuration
+
+    controller_args = List(
+        Unicode(),
+        config=True,
+        help="Additional CLI args to pass to the controller.",
+    )
+    controller_ip = Unicode(config=True, help="Set the IP address of the controller.")
+    controller_location = Unicode(
+        config=True,
+        help="""Set the location (hostname or ip) of the controller.
+
+        This is used by engines and clients to locate the controller
+        when the controller listens on all interfaces
+        """,
+    )
+
+    # engine configuration
+
+    delay = Float(
+        1.0,
+        config=True,
+        help="delay (in s) between starting the controller and the engines",
     )
 
     n = Integer(None, allow_none=True, help="The number of engines to start")
@@ -129,13 +224,35 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             raise RuntimeError(
                 "controller is already running. Call stop_controller() first."
             )
-        self._controller = self.controller_launcher_class(
+        self._controller = controller = self.controller_launcher_class(
             work_dir=u'.',
             parent=self,
             log=self.log,
             profile_dir=self.profile_dir,
             cluster_id=self.cluster_id,
         )
+
+        controller_args = getattr(controller, 'controller_args', None)
+        if controller_args is None:
+
+            def add_args(args):
+                # only some Launchers support modifying controller args
+                self.log.warning(
+                    "Not adding controller args %s. "
+                    "controller_args passthrough is not supported by %s",
+                    args,
+                    self.controller_launcher_class.__name__,
+                )
+
+        else:
+            add_args = controller_args.extend
+        if self.controller_ip:
+            add_args(['--ip=%s' % self.controller_ip])
+        if self.controller_location:
+            add_args(['--location=%s' % self.controller_location])
+        if self.controller_args:
+            add_args(self.controller_args)
+
         self._controller.on_stop(self._controller_stopped)
         r = self._controller.start()
         if inspect.isawaitable(r):
@@ -182,6 +299,8 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         starts one controller and n engines (default: self.n)
         """
         await self.start_controller()
+        if self.delay:
+            await asyncio.sleep(self.delay)
         await self.start_engines(n)
 
     async def stop_engines(self, engine_set_id=None):

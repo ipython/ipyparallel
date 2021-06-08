@@ -7,7 +7,7 @@ import pytest
 
 from .clienttest import raises_remote
 from ipyparallel import cluster
-from ipyparallel.apps.ipclusterapp import find_launcher_class
+from ipyparallel.cluster import launcher
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def Cluster(request):
 
         if launcher_prefix == "MPI" and shutil.which("mpiexec") is None:
             pytest.skip("requires mpiexec")
-        launcher_class = find_launcher_class(launcher_prefix, "EngineSet")
+        launcher_class = launcher.find_launcher_class(launcher_prefix, "EngineSet")
         kwargs['engine_launcher_class'] = launcher_class
 
         c = cluster.Cluster(**kwargs)
@@ -107,3 +107,19 @@ def test_sync_with(Cluster):
         assert sorted(rc.ids) == list(range(5))
         rc[:]['a'] = 5
         assert rc[:]['a'] == [5] * 5
+
+
+@pytest.mark.parametrize(
+    "classname, expected_class",
+    [
+        ("MPI", cluster.launcher.MPIEngineSetLauncher),
+        ("SGE", cluster.launcher.SGEEngineSetLauncher),
+        (
+            "ipyparallel.cluster.launcher.LocalEngineSetLauncher",
+            cluster.launcher.LocalEngineSetLauncher,
+        ),
+    ],
+)
+def test_cluster_abbreviations(classname, expected_class):
+    c = cluster.Cluster(engine_launcher_class=classname)
+    assert c.engine_launcher_class is expected_class
