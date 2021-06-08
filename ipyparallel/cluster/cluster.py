@@ -307,12 +307,13 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """Stop an engine set
 
         If engine_set_id is not given,
-        all engines are stopped"""
+        all engines are stopped.
+        """
         if engine_set_id is None:
             for engine_set_id in list(self._engine_sets):
                 await self.stop_engines(engine_set_id)
             return
-
+        self.log.info(f"Stopping engine(s): {engine_set_id}")
         engine_set = self._engine_sets[engine_set_id]
         r = engine_set.stop()
         if inspect.isawaitable(r):
@@ -352,12 +353,14 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
     async def signal_engines(self, engine_set_id, signum):
         """Signal all engines in a set"""
+        self.log.info(f"Sending signal {signum} to engine(s) {engine_set_id}")
         engine_set = self._engine_sets[engine_set_id]
         engine_set.signal(signum)
 
     async def stop_controller(self):
         """Stop the controller"""
         if self._controller and self._controller.running:
+            self.log.info("Stopping controller")
             r = self._controller.stop()
             if inspect.isawaitable(r):
                 await r

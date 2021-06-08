@@ -17,8 +17,9 @@ from signal import SIGTERM
 try:
     from signal import SIGKILL
 except ImportError:
-    # Windows
-    SIGKILL = SIGTERM
+    # Windows, just need a singleton.
+    # value is not relevant.
+    SIGKILL = -1
 
 try:
     # Windows >= 2.7, 3.2
@@ -317,14 +318,17 @@ class LocalProcessLauncher(BaseLauncher):
         if self.state == 'running':
             if WINDOWS and sig != SIGINT:
                 # use Windows tree-kill for better child cleanup
-                check_output(['taskkill', '-pid', str(self.process.pid), '-t', '-f'])
+                cmd = ['taskkill', '-pid', str(self.process.pid), '-t']
+                if sig == SIGKILL:
+                    cmd.append("-f")
+                check_output(cmd)
             else:
                 self.process.send_signal(sig)
 
     def interrupt_then_kill(self, delay=2.0):
-        """Send INT, wait a delay and then send KILL."""
+        """Send TERM, wait a delay and then send KILL."""
         try:
-            self.signal(SIGINT)
+            self.signal(SIGTERM)
         except Exception:
             self.log.debug("interrupt failed")
             pass
