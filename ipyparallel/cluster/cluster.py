@@ -5,6 +5,7 @@ defines the basic interface to a single IPython Parallel cluster
 starts/stops/polls controllers, engines, etc.
 """
 import asyncio
+import atexit
 import inspect
 import logging
 import os
@@ -304,7 +305,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             n = cpu_count()
         self.log.info(f"Starting {n or ''} engines with {self.engine_launcher_class}")
         r = engine_set.start(n)
-        engine_set.on_stop(self._engines_stopped)
+        engine_set.on_stop(partial(self._engines_stopped, engine_set_id))
         if inspect.isawaitable(r):
             await r
         return engine_set_id
@@ -347,8 +348,12 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """
         raise NotImplementedError("How do we find an engine by id?")
 
-    async def restart_engine_set(self, engine_set_id):
+    async def restart_engines(self, engine_set_id=None):
         """Restart an engine set"""
+        if engine_set_id is None:
+            for engine_set_id in list(self._engine_sets):
+                await self.restart_engines(engine_set_id)
+            return
         engine_set = self._engine_sets[engine_set_id]
         n = engine_set.n
         await self.stop_engines(engine_set_id)
@@ -362,7 +367,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """
         raise NotImplementedError("How do we find an engine by id?")
 
-    async def signal_engine(self, engine_id, signum):
+    async def signal_engine(self, signum, engine_id):
         """Signal one engine
 
         *May* signal all engines in a set,
@@ -370,11 +375,20 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """
         raise NotImplementedError("How do we find an engine by id?")
 
-    async def signal_engines(self, engine_set_id, signum):
-        """Signal all engines in a set"""
+    async def signal_engines(self, signum, engine_set_id=None):
+        """Signal all engines in a set
+
+        If no engine set is specified, signal all engine sets.
+        """
+        if engine_set_id is None:
+            for engine_set_id in list(self._engine_sets):
+                await self.signal_engines(signum, engine_set_id)
+            return
         self.log.info(f"Sending signal {signum} to engine(s) {engine_set_id}")
         engine_set = self._engine_sets[engine_set_id]
-        engine_set.signal(signum)
+        r = engine_set.signal(signum)
+        if inspect.isawaitable(r):
+            await r
 
     async def stop_controller(self):
         """Stop the controller"""
@@ -443,19 +457,37 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 class ClusterManager(LoggingConfigurable):
     """A manager of clusters
 
-    Wraps Cluster, adding"""
+    Wraps Cluster, adding lookup/list by cluster id
+    """
 
     _clusters = Dict(help="My cluster objects")
 
-    def load_clusters(self):
+    def load_clusters(self, serialized_state):
         """Load serialized cluster state"""
-        raise NotImplementedError()
+        raise NotImplementedError("Serializing clusters not implemented")
 
     def list_clusters(self):
         """List current clusters"""
+        # TODO: what should we return?
+        # just cluster ids or the full dict?
+        # just cluster ids for now
+        return sorted(self._clusters)
 
-    def new_cluster(self, cluster_cls):
+    def new_cluster(self, cluster_cls, **kwargs):
         """Create a new cluster"""
+        cluster = Cluster(parent=self)
+        if cluster.cluster_id in self._clusters:
+            raise KeyError(f"Cluster {cluster.cluster_id} already exists!")
+        self._clusters[cluster]
+
+    def get_cluster(self, cluster_id):
+        """Get a Cluster object by id"""
+        return self._clusters[cluster_id]
+
+    def remove_cluster(self, cluster_id):
+        """Delete a cluster by id"""
+        # TODO: check running?
+        del self._clusters[cluster_id]
 
     def _cluster_method(self, method_name, cluster_id, *args, **kwargs):
         """Wrapper around single-cluster methods
