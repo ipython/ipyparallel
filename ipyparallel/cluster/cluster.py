@@ -7,6 +7,7 @@ starts/stops/polls controllers, engines, etc.
 import asyncio
 import inspect
 import logging
+import os
 import random
 import socket
 import string
@@ -24,9 +25,7 @@ from traitlets import Dict
 from traitlets import Float
 from traitlets import Integer
 from traitlets import List
-from traitlets import Type
 from traitlets import Unicode
-from traitlets import validate
 from traitlets.config import LoggingConfigurable
 
 from . import launcher
@@ -106,7 +105,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         If you are using one of IPython's builtin launchers, you can specify just the
         prefix, e.g:
 
-            c.IPClusterStart.controller_launcher_class = 'SSH'
+            c.Cluster.controller_launcher_class = 'SSH'
 
         or:
 
@@ -145,7 +144,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         If you are using one of IPython's builtin launchers, you can specify just the
         prefix, e.g:
 
-            c.IPClusterEngines.engine_launcher_class = 'SSH'
+            c.Cluster.engine_launcher_class = 'SSH'
 
         or:
 
@@ -205,6 +204,26 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     # private state
     _controller = Any()
     _engine_sets = Dict()
+
+    def __repr__(self):
+        profile_dir = self.profile_dir
+        home_dir = os.path.expanduser("~")
+        if profile_dir.startswith(home_dir + os.path.sep):
+            # truncate $HOME/. -> ~/...
+            profile_dir = "~" + profile_dir[len(home_dir) :]
+
+        fields = {
+            "cluster_id": repr(self.cluster_id),
+            "profile_dir": repr(profile_dir),
+        }
+        if self._controller:
+            fields["controller"] = "<running>"
+        if self._engine_sets:
+            fields["engine_sets"] = list(self._engine_sets)
+
+        fields_str = ', '.join(f"{key}={value}" for key, value in fields.items())
+
+        return f"<{self.__class__.__name__}({fields_str})>"
 
     @classmethod
     def from_json(self, json_dict):

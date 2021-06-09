@@ -143,3 +143,18 @@ def test_sync_with(Cluster):
 def test_cluster_abbreviations(classname, expected_class):
     c = cluster.Cluster(engine_launcher_class=classname)
     assert c.engine_launcher_class is expected_class
+
+
+async def test_cluster_repr(Cluster):
+    c = Cluster(cluster_id="test", profile_dir='/tmp')
+    assert repr(c) == "<Cluster(cluster_id='test', profile_dir='/tmp')>"
+    await c.start_controller()
+    assert (
+        repr(c)
+        == "<Cluster(cluster_id='test', profile_dir='/tmp', controller=<running>)>"
+    )
+    await c.start_engines(1, 'engineid')
+    assert (
+        repr(c)
+        == "<Cluster(cluster_id='test', profile_dir='/tmp', controller=<running>, engine_sets=['engineid'])>"
+    )
