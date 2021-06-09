@@ -10,21 +10,22 @@ import time
 from concurrent.futures import Future
 from datetime import datetime
 from threading import Thread
-
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import mock
 
 import pytest
 import tornado
-
 from IPython import get_ipython
-from ipyparallel.client import client as clientmod
-from ipyparallel import error, AsyncHubResult, DirectView, Reference
-from ipyparallel.util import utc
 
-from .clienttest import ClusterTestCase, wait, add_engines, skip_without
+from .clienttest import add_engines
+from .clienttest import ClusterTestCase
+from .clienttest import skip_without
+from .clienttest import wait
+from ipyparallel import AsyncHubResult
+from ipyparallel import DirectView
+from ipyparallel import error
+from ipyparallel import Reference
+from ipyparallel.client import client as clientmod
+from ipyparallel.util import utc
 
 
 @pytest.mark.usefixtures('ipython')

@@ -116,7 +116,7 @@ setup_args = dict(
     install_requires=[
         "ipython_genutils",
         "decorator",
-        "pyzmq>=13",
+        "pyzmq>=18",
         "traitlets>=4.3",
         "ipython>=4",
         "jupyter_client",
@@ -128,7 +128,7 @@ setup_args = dict(
     python_requires=">=3.6",
     extras_require={
         "nbext": ["notebook"],
-        "test": ["pytest", "pytest-cov", "ipython[test]", "testpath", "mock"],
+        "test": ["pytest", "pytest-cov", "pytest-asyncio", "ipython[test]", "testpath"],
     },
     entry_points={
         "console_scripts": [

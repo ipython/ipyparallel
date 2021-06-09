@@ -2,6 +2,9 @@
 import sys
 import types
 from subprocess import check_output
+from unittest.mock import create_autospec
+from unittest.mock import MagicMock
+from unittest.mock import patch
 
 import zmq
 from ipykernel import iostream
@@ -12,11 +15,6 @@ from zmq.eventloop import zmqstream
 import ipyparallel
 from ipyparallel.apps import ipengineapp
 from ipyparallel.util import ioloop
-
-try:
-    from unittest.mock import patch, MagicMock, create_autospec
-except ImportError:  # py2
-    from mock import patch, MagicMock, create_autospec
 
 
 def _get_output(cmd):
