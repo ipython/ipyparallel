@@ -3,8 +3,6 @@
 # Distributed under the terms of the Modified BSD License.
 from __future__ import print_function
 
-import threading
-
 try:
     from collections.abc import Iterable
 except ImportError:  # py2
@@ -367,6 +365,7 @@ class Client(HasTraits):
     _mux_socket = Instance('zmq.Socket', allow_none=True)
     _task_socket = Instance('zmq.Socket', allow_none=True)
     _broadcast_socket = Instance('zmq.Socket', allow_none=True)
+    _registration_callbacks = List()
 
     _task_scheme = Unicode()
     _closed = False
@@ -778,6 +777,8 @@ class Client(HasTraits):
         eid = content['id']
         d = {eid: content['uuid']}
         self._update_engines(d)
+        for callback in self._registration_callbacks:
+            callback(content)
 
     def _unregister_engine(self, msg):
         """Unregister an engine that has died."""
@@ -1289,6 +1290,80 @@ class Client(HasTraits):
             if f:
                 futures.append(f)
         return futures
+
+    def wait_for_engines(self, n, *, timeout=-1, block=True):
+        """Wait for `n` engines to become available.
+
+        Returns when `n` engines are available,
+        or raises TimeoutError if `timeout` is reached
+        before `n` engines are ready.
+
+        Parameters
+        ----------
+        n : int
+            Number of engines to wait for.
+        timeout : float
+            Time (in seconds) to wait before raising a TimeoutError
+        block : bool
+            if False, return Future instead of waiting
+
+        Returns
+        ------
+        f : concurrent.futures.Future or None
+            Future object to wait on if block is False,
+            None if block is True.
+
+        Raises
+        ------
+        TimeoutError : if timeout is reached.
+        """
+        if len(self.ids) >= n:
+            return
+        tic = now = time.perf_counter()
+        if timeout >= 0:
+            deadline = tic + timeout
+        else:
+            deadline = None
+            seconds_remaining = 1000
+
+        future = Future()
+
+        def notify(_):
+            if future.done():
+                return
+            if len(self.ids) >= n:
+                future.set_result(None)
+
+        future.add_done_callback(lambda f: self._registration_callbacks.remove(notify))
+        self._registration_callbacks.append(notify)
+
+        def on_timeout():
+            """Called when timeout is reached"""
+            if future.done():
+                return
+
+            if len(self.ids) >= n:
+                future.set_result(None)
+            else:
+                future.set_exception(
+                    TimeoutError(
+                        "{n} engines not ready in {timeout} seconds. Currently ready: {len(self.ids)}"
+                    )
+                )
+
+        def schedule_timeout():
+            handle = self._io_loop.add_timeout(
+                self._io_loop.time() + timeout, on_timeout
+            )
+            future.add_done_callback(lambda f: self._io_loop.remove_timeout(handle))
+
+        if timeout >= 0:
+            self._io_loop.add_callback(schedule_timeout)
+
+        if block:
+            return future.result()
+        else:
+            return future
 
     def wait(self, jobs=None, timeout=-1):
         """waits on one or more `jobs`, for up to `timeout` seconds.
