@@ -420,7 +420,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         from ipyparallel import Client
 
         return Client(
-            parent=self, profile_dir=self.profile_dir, cluster_id=self.cluster_id
+            cluster=self,
+            profile_dir=self.profile_dir,
+            cluster_id=self.cluster_id,
         )
 
     # context managers (both async and sync)

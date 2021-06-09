@@ -330,6 +330,7 @@ class Client(HasTraits):
     outstanding = Set()
     results = Instance('collections.defaultdict', (dict,))
     metadata = Instance('collections.defaultdict', (Metadata,))
+    cluster = Instance('ipyparallel.cluster.Cluster', allow_none=True)
     history = List()
     debug = Bool(False)
     _futures = Dict()
@@ -388,12 +389,14 @@ class Client(HasTraits):
         paramiko=None,
         timeout=10,
         cluster_id=None,
+        cluster=None,
         **extra_args,
     ):
+
+        super_kwargs = {'debug': debug, 'cluster': cluster}
         if profile:
-            super(Client, self).__init__(debug=debug, profile=profile)
-        else:
-            super(Client, self).__init__(debug=debug)
+            super_kwargs['profile'] = profile
+        super(Client, self).__init__(**super_kwargs)
         if context is None:
             context = zmq.Context.instance()
         self._context = context
