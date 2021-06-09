@@ -63,6 +63,7 @@ async def test_start_stop_controller(Cluster):
     # TODO: wait for connection
     client = cluster.connect_client()
     assert client.queue_status() == {'unassigned': 0}
+    client.close()
     await cluster.stop_controller()
     assert not proc.poll() is not None
     assert cluster._controller is None
@@ -105,11 +106,12 @@ async def test_signal_engines(Cluster, engine_launcher_class):
     # wait for it to be running
     await asyncio.sleep(0.5)
     # send signal
-    await cluster.signal_engines(engine_set_id, signal.SIGINT)
+    await cluster.signal_engines(signal.SIGINT, engine_set_id)
 
     # wait for result, which should raise KeyboardInterrupt
     with raises_remote(KeyboardInterrupt) as e:
         ar.get(timeout=10)
+    rc.close()
 
     await cluster.stop_engines()
     await cluster.stop_controller()
