@@ -108,9 +108,7 @@ class ClusterTestCase(BaseZMQTestCase):
     def wait_on_engines(self, timeout=5):
         """wait for our engines to connect."""
         n = len(self.engines) + self.base_engine_count
-        tic = time.time()
-        while time.time() - tic < timeout and len(self.client.ids) < n:
-            time.sleep(0.1)
+        self.client.wait_for_engines(n, timeout=timeout)
 
         assert not len(self.client.ids) < n, "waiting for engines timed out"
 

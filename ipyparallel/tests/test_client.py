@@ -641,3 +641,13 @@ class TestClient(ClusterTestCase):
             ]
             assert len(runtime_warnings) == 0, str([str(w) for w in runtime_warnings])
             c.close()
+
+    def test_wait_for_engines(self):
+        n = len(self.client)
+        assert self.client.wait_for_engines(n) is None
+        with pytest.raises(TimeoutError):
+            self.client.wait_for_engines(n + 1, timeout=0.1)
+
+        f = self.client.wait_for_engines(n + 1, timeout=10, block=False)
+        self.add_engines(1)
+        assert f.result() is None
