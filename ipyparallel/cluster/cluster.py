@@ -5,6 +5,7 @@ defines the basic interface to a single IPython Parallel cluster
 starts/stops/polls controllers, engines, etc.
 """
 import asyncio
+import atexit
 import inspect
 import logging
 import os
@@ -15,12 +16,14 @@ import sys
 import time
 from functools import partial
 from multiprocessing import cpu_count
+from weakref import WeakSet
 
 import IPython
 import traitlets.log
 from IPython.core.profiledir import ProfileDir
 from IPython.core.profiledir import ProfileDirError
 from traitlets import Any
+from traitlets import Bool
 from traitlets import default
 from traitlets import Dict
 from traitlets import Float
@@ -35,6 +38,23 @@ from ..traitlets import Launcher
 
 _suffix_chars = string.ascii_lowercase + string.digits
 
+# weak set of clusters to be cleaned up at exit
+_atexit_clusters = WeakSet()
+
+
+def _atexit_cleanup_clusters(*args):
+    """Cleanup clusters during process shutdown"""
+    for cluster in _atexit_clusters:
+        if not cluster.shutdown_atexit:
+            # overridden after register
+            continue
+        if cluster._controller or cluster._engine_sets:
+            print(f"Stopping cluster {cluster}", file=sys.stderr)
+            cluster.stop_cluster_sync()
+
+
+_atexit_cleanup_clusters.registered = False
+
 
 class Cluster(AsyncFirst, LoggingConfigurable):
     """Class representing an IPP cluster
@@ -48,6 +68,17 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     """
 
     # general configuration
+
+    shutdown_atexit = Bool(
+        True,
+        help="""
+        Shutdown the cluster at process exit.
+
+        Set to False if you want to launch a cluster and leave it running
+        after the launching process exits.
+        """,
+    )
+
     cluster_id = Unicode(help="The id of the cluster (default: random string)")
 
     @default("cluster_id")
@@ -224,6 +255,12 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     _controller = Any()
     _engine_sets = Dict()
 
+    def __del__(self):
+        if not self.shutdown_atexit:
+            return
+        if self._controller or self._engine_sets:
+            self.stop_cluster_sync()
+
     def __repr__(self):
 
         fields = {
@@ -271,6 +308,11 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             raise RuntimeError(
                 "controller is already running. Call stop_controller() first."
             )
+
+        if self.shutdown_atexit:
+            _atexit_clusters.add(self)
+            if not _atexit_cleanup_clusters.registered:
+                atexit.register(_atexit_cleanup_clusters)
 
         self._controller = controller = self.controller_launcher_class(
             work_dir=u'.',
