@@ -5,7 +5,6 @@ defines the basic interface to a single IPython Parallel cluster
 starts/stops/polls controllers, engines, etc.
 """
 import asyncio
-import atexit
 import inspect
 import logging
 import os
@@ -77,6 +76,15 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         "",
         help="""The profile name,
              a shortcut for specifying profile_dir within $IPYTHONDIR.""",
+    )
+
+    engine_timeout = Integer(
+        60,
+        help="""Timeout to use when waiting for engines to register
+
+        before giving up.
+        """,
+        config=True,
     )
 
     controller_launcher_class = Launcher(
@@ -424,9 +432,11 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         client = self._context_client = self.connect_client()
         if self.n:
             # wait for engine registration
-            # TODO: timeout
-            while len(client) < self.n:
-                await asyncio.sleep(0.1)
+            await asyncio.wrap_future(
+                client.wait_for_engines(
+                    self.n, block=False, timeout=self.engine_timeout
+                )
+            )
         return client
 
     async def __aexit__(self, *args):
@@ -442,8 +452,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         client = self._context_client = self.connect_client()
         if self.n:
             # wait for engine registration
-            while len(client) < self.n:
-                time.sleep(0.1)
+            client.wait_for_engines(self.n, block=True, timeout=self.engine_timeout)
         return client
 
     def __exit__(self, *args):
