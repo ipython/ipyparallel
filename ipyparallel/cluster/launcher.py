@@ -29,15 +29,7 @@ except ImportError:
 
 from subprocess import Popen, PIPE, STDOUT
 
-try:
-    from subprocess import check_output
-except ImportError:
-    # pre-2.7, define check_output with Popen
-    def check_output(*args, **kwargs):
-        kwargs.update(dict(stdout=PIPE))
-        p = Popen(*args, **kwargs)
-        out, err = p.communicate()
-        return out
+from subprocess import check_output
 
 
 from traitlets import import_item
@@ -51,7 +43,6 @@ from traitlets import (
     Unicode,
     Dict,
     Instance,
-    HasTraits,
     CRegExp,
     observe,
 )
@@ -220,7 +211,7 @@ class BaseLauncher(LoggingConfigurable):
         raise NotImplementedError('signal must be implemented in a subclass')
 
 
-class ClusterAppMixin(HasTraits):
+class ClusterAppMixin(LoggingConfigurable):
     """MixIn for cluster args as traits"""
 
     profile_dir = Unicode('')
@@ -231,7 +222,7 @@ class ClusterAppMixin(HasTraits):
         return ['--profile-dir', self.profile_dir, '--cluster-id', self.cluster_id]
 
 
-class ControllerMixin(ClusterAppMixin):
+class ControllerLauncher(ClusterAppMixin):
     controller_cmd = List(
         ipcontroller_cmd_argv,
         config=True,
@@ -245,7 +236,7 @@ class ControllerMixin(ClusterAppMixin):
     )
 
 
-class EngineMixin(ClusterAppMixin):
+class EngineLauncher(ClusterAppMixin):
     engine_cmd = List(
         ipengine_cmd_argv, config=True, help="""command to launch the Engine."""
     )
@@ -370,7 +361,7 @@ class LocalProcessLauncher(BaseLauncher):
         return status
 
 
-class LocalControllerLauncher(LocalProcessLauncher, ControllerMixin):
+class LocalControllerLauncher(LocalProcessLauncher, ControllerLauncher):
     """Launch a controller as a regular external process."""
 
     def find_args(self):
@@ -381,7 +372,7 @@ class LocalControllerLauncher(LocalProcessLauncher, ControllerMixin):
         return super(LocalControllerLauncher, self).start()
 
 
-class LocalEngineLauncher(LocalProcessLauncher, EngineMixin):
+class LocalEngineLauncher(LocalProcessLauncher, EngineLauncher):
     """Launch a single engine as a regular external process."""
 
     def find_args(self):
@@ -521,7 +512,7 @@ class MPILauncher(LocalProcessLauncher):
         return super(MPILauncher, self).start()
 
 
-class MPIControllerLauncher(MPILauncher, ControllerMixin):
+class MPIControllerLauncher(MPILauncher, ControllerLauncher):
     """Launch a controller using mpiexec."""
 
     # alias back to *non-configurable* program[_args] for use in find_args()
@@ -540,7 +531,7 @@ class MPIControllerLauncher(MPILauncher, ControllerMixin):
         return super(MPIControllerLauncher, self).start(1)
 
 
-class MPIEngineSetLauncher(MPILauncher, EngineMixin):
+class MPIEngineSetLauncher(MPILauncher, EngineLauncher):
     """Launch engines using mpiexec"""
 
     # alias back to *non-configurable* program[_args] for use in find_args()
@@ -762,7 +753,7 @@ class SSHClusterLauncher(SSHLauncher, ClusterAppMixin):
         return ['--profile-dir', self.remote_profile_dir]
 
 
-class SSHControllerLauncher(SSHClusterLauncher, ControllerMixin):
+class SSHControllerLauncher(SSHClusterLauncher, ControllerLauncher):
 
     # alias back to *non-configurable* program[_args] for use in find_args()
     # this way all Controller/EngineSetLaunchers have the same form, rather
@@ -789,7 +780,7 @@ class SSHControllerLauncher(SSHClusterLauncher, ControllerMixin):
         ]
 
 
-class SSHEngineLauncher(SSHClusterLauncher, EngineMixin):
+class SSHEngineLauncher(SSHClusterLauncher, EngineLauncher):
 
     # alias back to *non-configurable* program[_args] for use in find_args()
     # this way all Controller/EngineSetLaunchers have the same form, rather

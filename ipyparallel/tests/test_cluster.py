@@ -39,11 +39,12 @@ def Cluster(request, io_loop):
             pytest.skip("requires mpiexec")
 
         cfg = kwargs.setdefault("config", Config())
-        cfg.EngineMixin.engine_args = ['--log-level=10']
-        cfg.ControllerMixin.controller_args = ['--log-level=10']
+        cfg.EngineLauncher.engine_args = ['--log-level=10']
+        cfg.ControllerLauncher.controller_args = ['--log-level=10']
         kwargs.setdefault("controller_args", ['--ping=250'])
 
         c = cluster.Cluster(**kwargs)
+        assert c.config is cfg
         request.addfinalizer(c.stop_cluster_sync)
         return c
 
@@ -72,6 +73,8 @@ async def test_start_stop_controller(Cluster):
     await cluster.start_controller()
     with pytest.raises(RuntimeError):
         await cluster.start_controller()
+    assert cluster.config is not None
+    assert cluster._controller.config is cluster.config
     assert cluster._controller is not None
     proc = cluster._controller.process
     assert proc.poll() is None
@@ -91,11 +94,17 @@ async def test_start_stop_controller(Cluster):
 async def test_start_stop_engines(Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class)
     await cluster.start_controller()
-    engine_set_id = await cluster.start_engines(n=3)
+
+    n = 3
+    engine_set_id = await cluster.start_engines(n)
     assert engine_set_id in cluster._engine_sets
     engine_set = cluster._engine_sets[engine_set_id]
     launcher_class = find_launcher_class(engine_launcher_class, "EngineSet")
     assert isinstance(engine_set, launcher_class)
+
+    with cluster.connect_client() as rc:
+        rc.wait_for_engines(n, timeout=_timeout)
+
     await cluster.stop_engines(engine_set_id)
     assert cluster._engine_sets == {}
     with pytest.raises(KeyError):
