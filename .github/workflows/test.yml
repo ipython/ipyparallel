@@ -86,11 +86,18 @@ jobs:
       - name: Show environment
         run: pip freeze
 
+      - name: Run mpi tests
+        if: ${{ matrix.mpi }}
+        run: |
+          pytest -vsx --color=yes --cov=ipyparallel ipyparallel/tests/test_cluster.py
+
       - name: Run tests
+        if: ${{ ! matrix.mpi }}
         # FIXME: --color=yes explicitly set because:
         #        https://github.com/actions/runner/issues/241
         run: |
           pytest -v --maxfail=3 --color=yes --cov=ipyparallel ipyparallel/tests
+
       - name: Submit codecov report
         run: |
           codecov
