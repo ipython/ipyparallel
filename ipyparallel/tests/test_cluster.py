@@ -19,7 +19,7 @@ if shutil.which("mpiexec"):
 
 
 @pytest.fixture
-def Cluster(request):
+def Cluster(request, io_loop):
     """Fixture for instantiating Clusters"""
 
     def ClusterConstructor(**kwargs):

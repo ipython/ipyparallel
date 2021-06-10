@@ -128,7 +128,14 @@ setup_args = dict(
     python_requires=">=3.6",
     extras_require={
         "nbext": ["notebook"],
-        "test": ["pytest", "pytest-cov", "pytest-asyncio", "ipython[test]", "testpath"],
+        "test": [
+            "pytest",
+            "pytest-cov",
+            "pytest-asyncio",
+            "pytest-tornado",
+            "ipython[test]",
+            "testpath",
+        ],
     },
     entry_points={
         "console_scripts": [
