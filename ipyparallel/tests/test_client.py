@@ -646,6 +646,11 @@ class TestClient(ClusterTestCase):
     def test_wait_for_engines(self):
         n = len(self.client)
         assert self.client.wait_for_engines(n) is None
+
+        f = self.client.wait_for_engines(n, block=False)
+        assert isinstance(f, Future)
+        assert f.done()
+
         with pytest.raises(TimeoutError):
             self.client.wait_for_engines(n + 1, timeout=0.1)
 

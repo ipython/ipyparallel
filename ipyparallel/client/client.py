@@ -1334,7 +1334,12 @@ class Client(HasTraits):
         TimeoutError : if timeout is reached.
         """
         if len(self.ids) >= n:
-            return
+            if block:
+                return
+            else:
+                f = Future()
+                f.set_result(None)
+                return f
         tic = now = time.perf_counter()
         if timeout >= 0:
             deadline = tic + timeout
@@ -1363,7 +1368,7 @@ class Client(HasTraits):
             else:
                 future.set_exception(
                     TimeoutError(
-                        "{n} engines not ready in {timeout} seconds. Currently ready: {len(self.ids)}"
+                        f"{n} engines not ready in {timeout} seconds. Currently ready: {len(self.ids)}"
                     )
                 )
 
