@@ -91,7 +91,7 @@ jobs:
       - name: Run mpi tests
         if: ${{ matrix.mpi }}
         run: |
-          pytest -vsx --color=yes --cov=ipyparallel ipyparallel/tests/test_cluster.py
+          pytest -vx --color=yes --cov=ipyparallel ipyparallel/tests/test_cluster.py
 
       - name: Run tests
         if: ${{ ! matrix.mpi }}
