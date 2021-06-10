@@ -170,11 +170,10 @@ class AsyncResult(Future):
 
         # Keep a handle on the futures so we can remove the callback later
         future_callbacks = {}
-        for eid, msg_id in zip(self._targets, self.msg_ids):
+        for eid, msg_future in zip(self._targets, self._children):
             callback_func = partial(self._iopub_streaming_output_callback, eid)
-            f = self._client._futures[msg_id]
-            future_callbacks[f] = callback_func
-            f.iopub_callbacks.append(callback_func)
+            future_callbacks[msg_future] = callback_func
+            msg_future.iopub_callbacks.append(callback_func)
 
         try:
             yield
