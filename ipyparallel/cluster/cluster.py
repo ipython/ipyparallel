@@ -42,6 +42,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     i.e. one controller and a groups of engines
 
     Can start/stop/monitor/poll cluster resources
+
+    All async methods can be called synchronously with a `_sync` suffix,
+    e.g. `cluster.start_cluster_sync()`
     """
 
     # general configuration
@@ -424,7 +427,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         await self.stop_engines()
         await self.stop_controller()
 
-    def connect_client(self):
+    def connect_client(self, **client_kwargs):
         """Return a client connected to the cluster"""
         # TODO: get connect info directly from controller
         # this assumes local files exist
@@ -434,6 +437,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             cluster=self,
             profile_dir=self.profile_dir,
             cluster_id=self.cluster_id,
+            **client_kwargs,
         )
 
     # context managers (both async and sync)

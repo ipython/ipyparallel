@@ -14,6 +14,7 @@ from .client.asyncresult import *
 from .client.client import Client
 from .client.remotefunction import *
 from .client.view import *
+from .cluster import Cluster
 from .controller.dependency import *
 from .error import *
 from .serialize import *
