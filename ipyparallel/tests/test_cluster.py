@@ -17,6 +17,8 @@ _engine_launcher_classes = ["Local"]
 if shutil.which("mpiexec"):
     _engine_launcher_classes.append("MPI")
 
+_timeout = 30
+
 
 @pytest.fixture
 def Cluster(request, io_loop):
@@ -112,7 +114,7 @@ async def test_start_stop_cluster(Cluster, engine_launcher_class):
     assert len(cluster._engine_sets) == 1
 
     with cluster.connect_client() as rc:
-        rc.wait_for_engines(n, timeout=10)
+        rc.wait_for_engines(n, timeout=_timeout)
     await cluster.stop_cluster()
     assert cluster._controller is None
     assert cluster._engine_sets == {}
@@ -130,7 +132,7 @@ async def test_signal_engines(request, Cluster, engine_launcher_class):
     # seems to be a problem if we start too soon...
     await asyncio.sleep(1)
     # ensure responsive
-    rc[:].apply_async(lambda: None).get(timeout=10)
+    rc[:].apply_async(lambda: None).get(timeout=_timeout)
     # submit request to be interrupted
     ar = rc[:].apply_async(time.sleep, 3)
     # wait for it to be running
@@ -140,7 +142,7 @@ async def test_signal_engines(request, Cluster, engine_launcher_class):
 
     # wait for result, which should raise KeyboardInterrupt
     with raises_remote(KeyboardInterrupt) as e:
-        ar.get(timeout=10)
+        ar.get(timeout=_timeout)
     rc.close()
 
     await cluster.stop_engines()
@@ -161,7 +163,7 @@ async def test_restart_engines(Cluster, engine_launcher_class):
         while any(eid in rc.ids for eid in range(n)):
             await asyncio.sleep(0.1)
         # wait for register
-        rc.wait_for_engines(n, timeout=10)
+        rc.wait_for_engines(n, timeout=_timeout)
         after_pids = rc[:].apply_sync(os.getpid)
         assert set(after_pids).intersection(before_pids) == set()
 
