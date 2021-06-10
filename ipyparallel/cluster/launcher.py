@@ -412,6 +412,7 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
 
     def start(self, n):
         """Start n engines by profile or profile_dir."""
+        self.n = n
         dlist = []
         for i in range(n):
             if i > 0:

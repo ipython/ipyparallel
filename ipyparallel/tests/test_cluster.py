@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import os
 import shutil
 import signal
 import sys
@@ -11,6 +12,10 @@ from traitlets.config import Config
 from .clienttest import raises_remote
 from ipyparallel import cluster
 from ipyparallel.cluster.launcher import find_launcher_class
+
+_engine_launcher_classes = ["Local"]
+if shutil.which("mpiexec"):
+    _engine_launcher_classes.append("MPI")
 
 
 @pytest.fixture
@@ -52,6 +57,13 @@ async def test_cluster_id(Cluster):
     assert cluster.cluster_id == 'abc'
 
 
+async def test_ipython_log(ipython):
+    c = cluster.Cluster(parent=ipython)
+    assert c.log.name == f"{cluster.Cluster.__module__}.{c.cluster_id}"
+    assert len(c.log.handlers) == 1
+    assert c.log.handlers[0].stream is sys.stdout
+
+
 async def test_start_stop_controller(Cluster):
     cluster = Cluster()
     await cluster.start_controller()
@@ -72,7 +84,7 @@ async def test_start_stop_controller(Cluster):
     # TODO: test file cleanup
 
 
-@pytest.mark.parametrize("engine_launcher_class", ["Local", "MPI"])
+@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
 async def test_start_stop_engines(Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class)
     await cluster.start_controller()
@@ -89,7 +101,23 @@ async def test_start_stop_engines(Cluster, engine_launcher_class):
     await cluster.stop_controller()
 
 
-@pytest.mark.parametrize("engine_launcher_class", ["Local", "MPI"])
+@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
+async def test_start_stop_cluster(Cluster, engine_launcher_class):
+    n = 2
+    cluster = Cluster(engine_launcher_class=engine_launcher_class, n=n)
+    await cluster.start_cluster()
+    controller = cluster._controller
+    assert controller is not None
+    assert len(cluster._engine_sets) == 1
+
+    rc = cluster.connect_client()
+    rc.wait_for_engines(n, timeout=10)
+    await cluster.stop_cluster()
+    assert cluster._controller is None
+    assert cluster._engine_sets == {}
+
+
+@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
 async def test_signal_engines(Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class)
     await cluster.start_controller()
@@ -115,6 +143,25 @@ async def test_signal_engines(Cluster, engine_launcher_class):
 
     await cluster.stop_engines()
     await cluster.stop_controller()
+
+
+@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
+async def test_restart_engines(Cluster, engine_launcher_class):
+    n = 3
+    async with Cluster(engine_launcher_class=engine_launcher_class, n=n) as rc:
+        cluster = rc.cluster
+        engine_set_id = next(iter(cluster._engine_sets))
+        engine_set = cluster._engine_sets[engine_set_id]
+        assert rc.ids == list(range(n))
+        before_pids = rc[:].apply_sync(os.getpid)
+        await cluster.restart_engines()
+        # wait for unregister
+        while any(eid in rc.ids for eid in range(n)):
+            await asyncio.sleep(0.1)
+        # wait for register
+        rc.wait_for_engines(n, timeout=10)
+        after_pids = rc[:].apply_sync(os.getpid)
+        assert set(after_pids).intersection(before_pids) == set()
 
 
 async def test_async_with(Cluster):
@@ -160,3 +207,22 @@ async def test_cluster_repr(Cluster):
         repr(c)
         == "<Cluster(cluster_id='test', profile_dir='/tmp', controller=<running>, engine_sets=['engineid'])>"
     )
+
+
+async def test_cluster_manager():
+    m = cluster.ClusterManager()
+    assert m.list_clusters() == []
+    c = m.new_cluster(profile_dir="/tmp")
+    assert c.profile_dir == "/tmp"
+    assert m.get_cluster(c.cluster_id) is c
+    with pytest.raises(KeyError):
+        m.get_cluster("nosuchcluster")
+
+    with pytest.raises(KeyError):
+        m.new_cluster(cluster_id=c.cluster_id)
+
+    assert m.list_clusters() == [c.cluster_id]
+    m.remove_cluster(c.cluster_id)
+    assert m.list_clusters() == []
+    with pytest.raises(KeyError):
+        m.remove_cluster("nosuchcluster")

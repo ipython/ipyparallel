@@ -19,6 +19,7 @@ from multiprocessing import cpu_count
 import IPython
 import traitlets.log
 from IPython.core.profiledir import ProfileDir
+from IPython.core.profiledir import ProfileDirError
 from traitlets import Any
 from traitlets import default
 from traitlets import Dict
@@ -68,9 +69,13 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             ip = IPython.get_ipython()
             if ip is not None:
                 return ip.profile_dir.location
-        return ProfileDir.find_profile_dir_by_name(
-            IPython.paths.get_ipython_dir(), name=self.profile or 'default'
-        ).location
+        ipython_dir = IPython.paths.get_ipython_dir()
+        profile_name = self.profile or 'default'
+        try:
+            pd = ProfileDir.find_profile_dir_by_name(ipython_dir, name=profile_name)
+        except ProfileDirError:
+            pd = ProfileDir.create_profile_dir_by_name(ipython_dir, name=profile_name)
+        return pd.location
 
     profile = Unicode(
         "",
@@ -215,16 +220,22 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     _engine_sets = Dict()
 
     def __repr__(self):
-        profile_dir = self.profile_dir
-        home_dir = os.path.expanduser("~")
-        if profile_dir.startswith(home_dir + os.path.sep):
-            # truncate $HOME/. -> ~/...
-            profile_dir = "~" + profile_dir[len(home_dir) :]
 
         fields = {
             "cluster_id": repr(self.cluster_id),
-            "profile_dir": repr(profile_dir),
         }
+        profile_dir = self.profile_dir
+        profile_prefix = os.path.join(IPython.paths.get_ipython_dir(), "profile_")
+        if profile_dir.startswith(profile_prefix):
+            fields["profile"] = repr(profile_dir[len(profile_prefix) :])
+        else:
+            home_dir = os.path.expanduser("~")
+
+            if profile_dir.startswith(home_dir + os.path.sep):
+                # truncate $HOME/. -> ~/...
+                profile_dir = "~" + profile_dir[len(home_dir) :]
+            fields["profile_dir"] = repr(profile_dir)
+
         if self._controller:
             fields["controller"] = "<running>"
         if self._engine_sets:
@@ -473,7 +484,7 @@ class ClusterManager(LoggingConfigurable):
 
     _clusters = Dict(help="My cluster objects")
 
-    def load_clusters(self, serialized_state):
+    def from_dict(self, serialized_state):
         """Load serialized cluster state"""
         raise NotImplementedError("Serializing clusters not implemented")
 
@@ -484,12 +495,13 @@ class ClusterManager(LoggingConfigurable):
         # just cluster ids for now
         return sorted(self._clusters)
 
-    def new_cluster(self, cluster_cls, **kwargs):
+    def new_cluster(self, **kwargs):
         """Create a new cluster"""
-        cluster = Cluster(parent=self)
+        cluster = Cluster(parent=self, **kwargs)
         if cluster.cluster_id in self._clusters:
             raise KeyError(f"Cluster {cluster.cluster_id} already exists!")
-        self._clusters[cluster]
+        self._clusters[cluster.cluster_id] = cluster
+        return cluster
 
     def get_cluster(self, cluster_id):
         """Get a Cluster object by id"""
@@ -499,19 +511,3 @@ class ClusterManager(LoggingConfigurable):
         """Delete a cluster by id"""
         # TODO: check running?
         del self._clusters[cluster_id]
-
-    def _cluster_method(self, method_name, cluster_id, *args, **kwargs):
-        """Wrapper around single-cluster methods
-
-        Defines ClusterManager.method(cluster_id, ...)
-
-        which returns ClusterManager.clusters[cluster_id].method(...)
-        """
-        cluster = self._clusters[cluster_id]
-        method = getattr(cluster, method_name)
-        return method(*args, **kwargs)
-
-    def __getattr__(self, key):
-        if key in Cluster.__dict__:
-            return partial(self._cluster_method, key)
-        return super().__getattr__(self, key)
