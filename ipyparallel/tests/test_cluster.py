@@ -39,6 +39,7 @@ def Cluster(request, io_loop):
         cfg = kwargs.setdefault("config", Config())
         cfg.EngineMixin.engine_args = ['--log-level=10']
         cfg.ControllerMixin.controller_args = ['--log-level=10']
+        kwargs.setdefault("controller_args", ['--ping=250'])
 
         c = cluster.Cluster(**kwargs)
         request.addfinalizer(c.stop_cluster_sync)
