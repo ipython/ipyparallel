@@ -605,6 +605,19 @@ class Client(HasTraits):
                 pass
         self._cd = None
 
+    def __enter__(self):
+        """A client can be used as a context manager
+
+        which will close the client on exit
+
+        .. versionadded: 7.0
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Exiting a client context closes the client"""
+        self.close()
+
     def _update_engines(self, engines):
         """Update our engines dict and _ids from a dict of the form: {id:uuid}."""
         for k, v in iteritems(engines):

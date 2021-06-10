@@ -73,9 +73,9 @@ async def test_start_stop_controller(Cluster):
     proc = cluster._controller.process
     assert proc.poll() is None
     # TODO: wait for connection
-    client = cluster.connect_client()
-    assert client.queue_status() == {'unassigned': 0}
-    client.close()
+    with cluster.connect_client() as rc:
+        assert rc.queue_status() == {'unassigned': 0}
+
     await cluster.stop_controller()
     assert not proc.poll() is not None
     assert cluster._controller is None
@@ -110,19 +110,20 @@ async def test_start_stop_cluster(Cluster, engine_launcher_class):
     assert controller is not None
     assert len(cluster._engine_sets) == 1
 
-    rc = cluster.connect_client()
-    rc.wait_for_engines(n, timeout=10)
+    with cluster.connect_client() as rc:
+        rc.wait_for_engines(n, timeout=10)
     await cluster.stop_cluster()
     assert cluster._controller is None
     assert cluster._engine_sets == {}
 
 
 @pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
-async def test_signal_engines(Cluster, engine_launcher_class):
+async def test_signal_engines(request, Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class)
     await cluster.start_controller()
     engine_set_id = await cluster.start_engines(n=3)
     rc = cluster.connect_client()
+    request.addfinalizer(rc.close)
     while len(rc) < 3:
         await asyncio.sleep(0.1)
     # seems to be a problem if we start too soon...
