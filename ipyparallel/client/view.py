@@ -4,15 +4,13 @@
 from __future__ import absolute_import
 from __future__ import print_function
 
-import imp
-import threading
+import inspect
 import warnings
 from contextlib import contextmanager
 
 from decorator import decorator
 from IPython import get_ipython
 from ipython_genutils.py3compat import iteritems
-from ipython_genutils.py3compat import PY3
 from ipython_genutils.py3compat import string_types
 from traitlets import Any
 from traitlets import Bool
@@ -433,6 +431,10 @@ class DirectView(View):
         modules = set()
         results = []
 
+        # get the calling frame
+        # that's two steps up due to `@contextmanager`
+        context_frame = inspect.getouterframes(inspect.currentframe())[2].frame
+
         @util.interactive
         def remote_import(name, fromlist, level):
             """the function to be passed to apply, that actually performs the import
@@ -456,17 +458,17 @@ class DirectView(View):
             save_import = builtin_mod.__import__
             builtin_mod.__import__ = local_import
 
-            if imp.lock_held():
-                # this is a side-effect import, don't do it remotely, or even
-                # ignore the local effects
+            import_frame = inspect.getouterframes(inspect.currentframe())[1].frame
+            if import_frame is not context_frame:
+                # only forward imports from the context frame,
+                # not secondary imports
+                # TODO: does this ever happen, or is the above `__import__` enough?
                 return local_import(name, globals, locals, fromlist, level)
 
-            imp.acquire_lock()
             if local:
                 mod = local_import(name, globals, locals, fromlist, level)
             else:
                 raise NotImplementedError("remote-only imports not yet implemented")
-            imp.release_lock()
 
             key = name + ':' + ','.join(fromlist or [])
             if level <= 0 and key not in modules:
