@@ -1,18 +1,12 @@
 # -*- coding: utf-8 -*-
 """test LoadBalancedView objects"""
-import sys
 import time
+from itertools import count
 
-import pytest
-import zmq
-
-import ipyparallel as pmod
+import ipyparallel as ipp
 from .clienttest import ClusterTestCase
 from .clienttest import crash
-from .clienttest import skip_without
-from .clienttest import wait
 from ipyparallel import error
-from ipyparallel.tests import add_engines
 
 
 class TestLoadBalancedView(ClusterTestCase):
@@ -89,7 +83,7 @@ class TestLoadBalancedView(ClusterTestCase):
         reference = list(map(f, data))
 
         amr = self.view.map_async(slow_f, data, ordered=False)
-        self.assertTrue(isinstance(amr, pmod.AsyncMapResult))
+        self.assertTrue(isinstance(amr, ipp.AsyncMapResult))
         # check individual elements, retrieved as they come
         # list comprehension uses __iter__
         astheycame = [r for r in amr]
@@ -113,7 +107,7 @@ class TestLoadBalancedView(ClusterTestCase):
         reference = list(map(f, data))
 
         amr = self.view.map_async(slow_f, data)
-        self.assertTrue(isinstance(amr, pmod.AsyncMapResult))
+        self.assertTrue(isinstance(amr, ipp.AsyncMapResult))
         # check individual elements, retrieved as they come
         # list(amr) uses __iter__
         astheycame = list(amr)
@@ -130,6 +124,85 @@ class TestLoadBalancedView(ClusterTestCase):
         it = iter(arr)
         r = view.map_sync(lambda x: x, arr)
         self.assertEqual(r, list(arr))
+
+    def test_imap_max_outstanding(self):
+        view = self.view
+
+        source = count()
+
+        def task(i):
+            import time
+
+            time.sleep(0.1)
+            return i
+
+        gen = view.imap(task, source, max_outstanding=5)
+        # should submit at least max_outstanding
+        first_result = next(gen)
+        assert len(view.history) == 5
+        # retrieving results should first result
+        second_result = next(gen)
+        assert 6 <= len(view.history) <= 8
+        self.client.wait(timeout=self.timeout)
+
+    def test_imap_infinite(self):
+        view = self.view
+
+        source = count()
+
+        def task(i):
+            import time
+
+            time.sleep(0.1)
+            return i
+
+        gen = view.imap(task, source, max_outstanding=2)
+        results = []
+        for i in gen:
+            results.append(i)
+            if i >= 3:
+                break
+
+        assert len(results) == 4
+
+        # wait
+        self.client.wait(timeout=self.timeout)
+        # verify that max_outstanding wasn't exceeded
+        assert 5 <= len(self.view.history) < 8
+
+    def test_imap_unordered(self):
+        self.minimum_engines(4)
+        view = self.view
+
+        source = count()
+
+        def yield_up_and_down(n):
+            for i in range(n):
+                if i % 4 == 0:
+                    yield 1 + i / 100
+                else:
+                    yield i / 100
+
+        def task(t):
+            import time
+
+            time.sleep(t)
+            return t
+
+        gen = view.imap(task, yield_up_and_down(10), max_outstanding=2, ordered=False)
+        results = []
+        for i, t in enumerate(gen):
+            results.append(t)
+            if i >= 2:
+                break
+        assert len(results) == 3
+        print(results)
+        assert all([r < 1 for r in results])
+
+        # wait
+        self.client.wait(timeout=self.timeout)
+        # verify that max_outstanding wasn't exceeded
+        assert 4 <= len(self.view.history) <= 6
 
     def test_abort(self):
         view = self.view

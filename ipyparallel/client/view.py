@@ -1,11 +1,10 @@
 """Views of remote engines."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import absolute_import
-from __future__ import print_function
-
+import concurrent.futures
 import inspect
 import warnings
+from collections import deque
 from contextlib import contextmanager
 
 from decorator import decorator
@@ -1213,9 +1212,8 @@ class LoadBalancedView(View):
 
     @sync_results
     @save_ids
-    def map(self, f, *sequences, **kwargs):
-        """``view.map(f, *sequences, block=self.block, chunksize=1, ordered=True)`` => list|AsyncMapResult
-        Parallel version of builtin `map`, load-balanced by this View.
+    def map(self, f, *sequences, block=None, chunksize=1, ordered=True):
+        """Parallel version of builtin `map`, load-balanced by this View.
 
         `block`, and `chunksize` can be specified by keyword only.
 
@@ -1231,10 +1229,6 @@ class LoadBalancedView(View):
             the sequences to be distributed and passed to `f`
         block : bool [default self.block]
             whether to wait for the result or not
-        track : bool
-            whether to create a MessageTracker to allow the user to
-            safely edit after arrays and buffers during non-copying
-            sends.
         chunksize : int [default 1]
             how many elements should be in each task.
         ordered : bool [default True]
@@ -1256,14 +1250,8 @@ class LoadBalancedView(View):
         """
 
         # default
-        block = kwargs.get('block', self.block)
-        chunksize = kwargs.get('chunksize', 1)
-        ordered = kwargs.get('ordered', True)
-
-        keyset = set(kwargs.keys())
-        extra_keys = keyset.difference_update(set(['block', 'chunksize']))
-        if extra_keys:
-            raise TypeError("Invalid kwargs: %s" % list(extra_keys))
+        if block is None:
+            block = self.block
 
         assert len(sequences) > 0, "must have some sequences to map onto!"
 
@@ -1271,6 +1259,139 @@ class LoadBalancedView(View):
             self, f, block=block, chunksize=chunksize, ordered=ordered
         )
         return pf.map(*sequences)
+
+    def imap(
+        self,
+        f,
+        *sequences,
+        ordered=True,
+        max_outstanding='auto',
+    ):
+        """Parallel version of lazily-evaluated `imap`, load-balanced by this View.
+
+        `ordered`, and `max_outstanding` can be specified by keyword only.
+
+        Unlike other map functions in IPython Parallel,
+        this one does not consume the full iterable before submitting work,
+        returning a single 'AsyncMapResult' representing the full computation.
+
+        Instead, it consumes iterables as they come, submitting up to `max_outstanding`
+        tasks to the cluster before waiting on results (default: one task per engine).
+        This allows it to work with infinite generators,
+        and avoid potentially expensive read-ahead for large streams of inputs
+        that may not fit in memory all at once.
+
+        .. versionadded: 7.0
+
+        Parameters
+        ----------
+        f : callable
+            function to be mapped
+        *sequences : one or more sequences of matching length
+            the sequences to be distributed and passed to `f`
+        ordered : bool [default True]
+            Whether the results should be yielded on a first-come-first-yield basis,
+            or preserve the order of submission.
+
+        max_outstanding : int [default len(engines)]
+            The maximum number of tasks to be outstanding.
+
+            max_outstanding=0 will greedily consume the whole generator
+            (map_async may be more efficient).
+
+            A limit of 1 should be strictly worse than running a local map,
+            as there will be no parallelism.
+
+            Use this to tune how greedily input generator should be consumed.
+
+        Returns
+        -------
+
+        lazily-evaluated generator, yielding results of `f` on each item of sequences.
+        Yield-order depends on `ordered` argument.
+        """
+
+        assert len(sequences) > 0, "must have some sequences to map onto!"
+
+        if max_outstanding == 'auto':
+            max_outstanding = len(self)
+
+        pf = PrePickled(f)
+
+        if ordered:
+            outstanding = deque()
+
+            def wait_for_ready():
+                ar = outstanding.popleft()
+                return [ar]
+
+            def should_yield():
+                # ordered: yield first result if it's ready
+                if outstanding[0].ready():
+                    return True
+
+                if max_outstanding == 0:
+                    # no limit
+                    return False
+
+                # or if we've reached capacity (only counting still-outstanding computations)
+                # not counting locally available, but not yet yielded results
+                # TODO: should we limit the local?
+                # if consumers are much slower than producers,
+                # this can fill up local memory
+                return sum(not ar.ready() for ar in outstanding) >= max_outstanding
+
+        else:
+            outstanding = []
+
+            def wait_for_ready():
+                # unordered, yield whatever finishes first, as soon as it's ready
+                done, outstanding[:] = concurrent.futures.wait(
+                    outstanding, return_when=concurrent.futures.FIRST_COMPLETED
+                )
+                return done
+
+            def should_yield():
+                # unordered, we are ready to yield if any result is ready
+                if any(ar.ready() for ar in outstanding):
+                    return True
+
+                if max_outstanding == 0:
+                    # no limit
+                    return False
+
+                # or wait if we are full
+                if len(outstanding) >= max_outstanding:
+                    return True
+                return False
+
+        # zip is a lazy iterator
+        for args in zip(*sequences):
+            # submit one work item
+            ar = self.apply_async(pf, *args)
+            outstanding.append(ar)
+            # count 'pending' tasks
+            # yield first result if it's ready
+            # *or* the number of outstanding tasks has reached our limit
+            # yielding immediately means
+            if should_yield():
+                for ready_ar in wait_for_ready():
+                    yield ready_ar.get()
+
+            # we've filled the buffer, wait for at least one result before continuing
+            if len(outstanding) == max_outstanding:
+                for ready_ar in wait_for_ready():
+                    yield ready_ar.get()
+
+        # yield any remaining results
+        if ordered:
+            for ar in outstanding:
+                yield ar.get()
+        else:
+            while outstanding:
+                done, outstanding = concurrent.futures.wait(outstanding)
+                for ar in done:
+                    yield ar.get()
 
     def register_joblib_backend(self, name='ipyparallel', make_default=False):
         """Register this View as a joblib parallel backend
@@ -1319,7 +1440,7 @@ class ViewExecutor(Executor):
         if 'timeout' in kwargs:
             warnings.warn("timeout unsupported in ViewExecutor.map")
             kwargs.pop('timeout')
-        for r in self.view.map_async(func, *iterables, **kwargs):
+        for r in self.view.imap(func, *iterables, **kwargs):
             yield r
 
     def shutdown(self, wait=True):
