@@ -1,0 +1,58 @@
+services:
+  # need /ipython to be writable by the container user (1000)
+  # can't seem to start volumes with the right permissions
+  init-permissions:
+    image: alpine
+    volumes:
+      - ipython:/ipython
+    command: chown -Rv 1000:1000 /ipython
+
+  controller:
+    depends_on:
+      - init-permissions
+      # condition: service_completed_successfully
+
+    build: .
+    volumes:
+      - ipython:/ipython
+    environment:
+      IPYTHONDIR: /ipython
+    command: |
+      ipcontroller --location controller --ip 0.0.0.0 --nodb --HubFactory.broadcast_scheduler_depth=2
+    deploy:
+      restart_policy:
+        condition: on-failure
+  engines:
+    build: .
+    depends_on:
+      - controller
+    volumes_from:
+      - controller
+    environment:
+      IPYTHONDIR: /ipython
+    links:
+      - controller
+    command: |
+      ipcluster engines -n 16
+    deploy:
+      mode: replicated
+      replicas: 4
+      restart_policy:
+        condition: on-failure
+
+  client:
+    build: .
+    ports:
+      - "9999:8888"
+    links:
+      - controller
+    volumes_from:
+      - controller
+    volumes:
+      - .:/home/jovyan/example
+    environment:
+      IPYTHONDIR: /ipython
+      JUPYTER_CONFIG_DIR: /ipython/jupyter
+
+volumes:
+  ipython: {}
