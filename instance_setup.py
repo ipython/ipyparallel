@@ -6,7 +6,7 @@ env["PATH"] = DEFAULT_MINICONDA_PATH + env["PATH"]
 
 from subprocess import check_call
 
-GITHUB_TOKEN = "***REMOVED***"  # Token for machine user
+GITHUB_TOKEN = ""  # Token for machine user
 ASV_TESTS_REPO = "github.com/tomoboy/ipyparallel_master_project.git"
 IPYPARALLEL_REPO = "github.com/tomoboy/ipyparallel.git"
 
