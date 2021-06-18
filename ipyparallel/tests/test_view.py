@@ -230,7 +230,7 @@ class TestView(ClusterTestCase):
     @skip_without('numpy')
     def test_scatter_gather_numpy(self):
         import numpy
-        from numpy.testing.utils import assert_array_equal
+        from numpy.testing import assert_array_equal
 
         view = self.client[:]
         a = numpy.arange(64)
@@ -250,7 +250,7 @@ class TestView(ClusterTestCase):
     def test_apply_numpy(self):
         """view.apply(f, ndarray)"""
         import numpy
-        from numpy.testing.utils import assert_array_equal
+        from numpy.testing import assert_array_equal
 
         A = numpy.random.random((100, 100))
         view = self.client[-1]
@@ -263,7 +263,7 @@ class TestView(ClusterTestCase):
     def test_apply_numpy_object_dtype(self):
         """view.apply(f, ndarray) with dtype=object"""
         import numpy
-        from numpy.testing.utils import assert_array_equal
+        from numpy.testing import assert_array_equal
 
         view = self.client[-1]
 
@@ -279,7 +279,7 @@ class TestView(ClusterTestCase):
     def test_push_pull_recarray(self):
         """push/pull recarrays"""
         import numpy
-        from numpy.testing.utils import assert_array_equal
+        from numpy.testing import assert_array_equal
 
         view = self.client[-1]
 
@@ -348,7 +348,7 @@ class TestView(ClusterTestCase):
     def test_map_numpy(self):
         """test map on numpy arrays (direct)"""
         import numpy
-        from numpy.testing.utils import assert_array_equal
+        from numpy.testing import assert_array_equal
 
         view = self.client[:]
         # 101 is prime, so it won't be evenly distributed
@@ -366,7 +366,7 @@ class TestView(ClusterTestCase):
     @skip_without('numpy')
     def test_scatter_gather_numpy_nonblocking(self):
         import numpy
-        from numpy.testing.utils import assert_array_equal
+        from numpy.testing import assert_array_equal
 
         a = numpy.arange(64)
         view = self.client[:]

@@ -80,7 +80,7 @@ def test_roundtrip_memoryview():
 
 def test_numpy():
     pytest.importorskip('numpy')
-    from numpy.testing.utils import assert_array_equal
+    from numpy.testing import assert_array_equal
 
     for shape in SHAPES:
         for dtype in DTYPES:
@@ -96,7 +96,7 @@ def test_numpy():
 
 def test_recarray():
     pytest.importorskip('numpy')
-    from numpy.testing.utils import assert_array_equal
+    from numpy.testing import assert_array_equal
 
     for shape in SHAPES:
         for dtype in [
@@ -115,7 +115,7 @@ def test_recarray():
 
 def test_numpy_in_seq():
     pytest.importorskip('numpy')
-    from numpy.testing.utils import assert_array_equal
+    from numpy.testing import assert_array_equal
 
     for shape in SHAPES:
         for dtype in DTYPES:
@@ -133,7 +133,7 @@ def test_numpy_in_seq():
 
 def test_numpy_in_dict():
     pytest.importorskip('numpy')
-    from numpy.testing.utils import assert_array_equal
+    from numpy.testing import assert_array_equal
 
     for shape in SHAPES:
         for dtype in DTYPES:
@@ -226,7 +226,7 @@ def test_class_inheritance():
 
 def test_pickle_threshold():
     numpy = pytest.importorskip('numpy')
-    from numpy.testing.utils import assert_array_equal
+    from numpy.testing import assert_array_equal
 
     A = numpy.ones((5, 5))
     bufs = serialize_object(A, 1024)
