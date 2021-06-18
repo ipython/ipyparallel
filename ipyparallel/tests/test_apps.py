@@ -18,7 +18,7 @@ from ipyparallel.util import ioloop
 
 
 def _get_output(cmd):
-    out = check_output([sys.executable, '-m', 'ipyparallel.cluster', '--version'])
+    out = check_output(cmd)
     if isinstance(out, bytes):
         out = out.decode('utf8', 'replace')
     return out
@@ -30,6 +30,18 @@ def test_version():
             [sys.executable, '-m', 'ipyparallel.%s' % submod, '--version']
         )
         assert out.strip() == ipyparallel.__version__
+
+
+@pytest.mark.parametrize(
+    "submod",
+    [
+        "cluster",
+        "engine",
+        "controller",
+    ],
+)
+def test_help_all(submod):
+    out = _get_output([sys.executable, '-m', 'ipyparallel.%s' % submod, '--help-all'])
 
 
 def bind_kernel(engineapp):
