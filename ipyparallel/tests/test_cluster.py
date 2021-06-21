@@ -9,6 +9,7 @@ import time
 import pytest
 from traitlets.config import Config
 
+import ipyparallel as ipp
 from .clienttest import raises_remote
 from ipyparallel import cluster
 from ipyparallel.cluster.launcher import find_launcher_class
@@ -238,3 +239,9 @@ async def test_cluster_manager():
     assert m.list_clusters() == []
     with pytest.raises(KeyError):
         m.remove_cluster("nosuchcluster")
+
+
+async def test_to_dict(self):
+    cluster = ipp.Cluster()
+    d = cluster.to_dict()
+    cluster2 = ipp.Cluster.from_dict(d)

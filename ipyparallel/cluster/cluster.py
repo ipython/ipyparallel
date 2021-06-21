@@ -27,6 +27,7 @@ from traitlets import Bool
 from traitlets import default
 from traitlets import Dict
 from traitlets import Float
+from traitlets import import_item
 from traitlets import Integer
 from traitlets import List
 from traitlets import Unicode
@@ -79,7 +80,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """,
     )
 
-    cluster_id = Unicode(help="The id of the cluster (default: random string)")
+    cluster_id = Unicode(help="The id of the cluster (default: random string)").tag(
+        to_dict=True
+    )
 
     @default("cluster_id")
     def _default_cluster_id(self):
@@ -95,7 +98,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     - use profile name (default: 'default')
 
     """
-    )
+    ).tag(to_dict=True)
 
     @default("profile_dir")
     def _default_profile_dir(self):
@@ -208,8 +211,10 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         Unicode(),
         config=True,
         help="Additional CLI args to pass to the controller.",
-    )
-    controller_ip = Unicode(config=True, help="Set the IP address of the controller.")
+    ).tag(to_dict=True)
+    controller_ip = Unicode(
+        config=True, help="Set the IP address of the controller."
+    ).tag(to_dict=True)
     controller_location = Unicode(
         config=True,
         help="""Set the location (hostname or ip) of the controller.
@@ -217,7 +222,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         This is used by engines and clients to locate the controller
         when the controller listens on all interfaces
         """,
-    )
+    ).tag(to_dict=True)
 
     # engine configuration
 
@@ -225,10 +230,10 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         1.0,
         config=True,
         help="delay (in s) between starting the controller and the engines",
-    )
+    ).tag(to_dict=True)
 
-    n = Integer(
-        None, allow_none=True, config=True, help="The number of engines to start"
+    n = Integer(None, allow_none=True, config=True, help="The number of engines to start").tag(
+        to_dict=True
     )
 
     @default("parent")
@@ -236,7 +241,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """Default to inheriting config from current IPython session"""
         return IPython.get_ipython()
 
-    log_level = Integer(logging.INFO)
+    log_level = Integer(logging.INFO).tag(to_dict=True)
 
     @default("log")
     def _default_log(self):
@@ -287,14 +292,69 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         return f"<{self.__class__.__name__}({fields_str})>"
 
-    @classmethod
-    def from_json(self, json_dict):
-        """Construct a Cluster from serialized state"""
-        raise NotImplementedError()
-
-    def to_json(self):
+    def to_dict(self):
         """Serialize a Cluster object for later reconstruction"""
-        raise NotImplementedError()
+        cluster_info = {}
+        d = {"cluster": cluster_info}
+        for attr in self.traits(to_dict=True):
+            cluster_info[attr] = getattr(self, attr)
+
+        def _cls_str(cls):
+            return f"{cls.__module__}.{cls.__name__}"
+
+        cluster_info["class"] = _cls_str(self.__class__)
+
+        if self._controller:
+            d["controller"] = {
+                "class": _cls_str(self.controller_launcher_class),
+                "state": None,
+            }
+            if self._controller:
+                d["controller"]["state"] = self._controller.to_dict()
+
+        d["engines"] = {
+            "cls": _cls_str(self.engine_launcher_class),
+            "sets": {},
+        }
+        sets = d["engines"]["sets"]
+        for engine_set_id, engine_launcher in self._engine_sets.items():
+            sets[engine_set_id] = engine_launcher.to_dict()
+        return d
+
+    @classmethod
+    def from_dict(cls, d, config=None, parent=None):
+        """Construct a Cluster from serialized state"""
+        cluster_info = d["cluster"]
+        if cluster_info.get("class"):
+            specified_cls = import_item(cluster_info["cls"])
+            if specified_cls is not cls:
+                # specified a custom Cluster class,
+                # dispatch to from_dict from that class
+                return specified_cls.from_dict(d, config=config, parent=parent)
+
+        self = cls(config=config, parent=parent)
+        for attr in self.traits(to_dict=True):
+            cluster_info[attr] = getattr(self, attr)
+
+        for attr in self.traits(to_dict=True):
+            if attr in d:
+                setattr(self, attr, d[attr])
+
+        if d.get("controller"):
+            controller_info = d["controller"]
+            cls = self.controller_launcher_class = import_item(controller_info["class"])
+            if controller_info["state"]:
+                self._controller = cls.from_dict(controller_info["state"], parent=self)
+
+        engine_info = d.get("engines")
+        if engine_info:
+            cls = self.engine_launcher_class = import_item(engine_info["class"])
+            for engine_set_id, engine_state in engine_info.get("sets", {}):
+                self._engine_sets[engine_set_id] = cls.from_dict(
+                    engine_state, parent=self
+                )
+
+        return self
 
     async def start_controller(self, **kwargs):
         """Start the controller

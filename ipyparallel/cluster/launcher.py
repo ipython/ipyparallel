@@ -1,5 +1,5 @@
 # encoding: utf-8
-"""Facilities for launching IPython processes asynchronously."""
+"""Facilities for launching IPython Parallel processes asynchronously."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -33,7 +33,7 @@ from subprocess import Popen, PIPE, STDOUT
 
 from subprocess import check_output
 
-
+import psutil
 from tornado import ioloop
 from traitlets import import_item
 from traitlets.config.configurable import LoggingConfigurable
@@ -123,12 +123,29 @@ class BaseLauncher(LoggingConfigurable):
     def _loop_default(self):
         return ioloop.IOLoop.current()
 
-    profile_dir = Unicode('')
-    cluster_id = Unicode('')
+    profile_dir = Unicode('').tag(to_dict=True)
+    cluster_id = Unicode('').tag(to_dict=True)
 
-    state = Unicode("before")
+    state = Unicode("before").tag(to_dict=True)
 
     stop_callbacks = List()
+
+    def to_dict(self):
+        """Serialize a Launcher to a dict, for later restoration"""
+        d = {}
+        for attr in self.traits(to_dict=True):
+            d[attr] = getattr(self, attr)
+
+        return d
+
+    @classmethod
+    def from_dict(cls, d, *, config=None, parent=None):
+        """Restore a Launcher from a dict"""
+        launcher = cls(config=config, parent=parent)
+        for attr in launcher.traits(to_dict=True):
+            if attr in d:
+                setattr(launcher, attr, d[attr])
+        return launcher
 
     @property
     def cluster_args(self):
@@ -290,6 +307,29 @@ class EngineLauncher(BaseLauncher):
 # -----------------------------------------------------------------------------
 
 
+class ReattachedProcess:
+    """API for reattaching to a process when we are no longer the parent.
+
+    Implements the necessary APIs,
+
+    specifically:
+
+    .pid
+    .poll()
+    """
+
+    def __init__(self, pid):
+        self.pid = pid
+        # TODO: check for existence
+        self.process = psutil.Process(self.pid)
+
+    def __repr__(self):
+        return "self.__class__.__name__(pid={self.pid!r})"
+
+    def poll(self):
+        return self.process.poll()
+
+
 class LocalProcessLauncher(BaseLauncher):
     """Start and stop an external process in an asynchronous manner.
 
@@ -299,18 +339,30 @@ class LocalProcessLauncher(BaseLauncher):
 
     # This is used to to construct self.args, which is passed to
     # spawnProcess.
-    cmd_and_args = List([])
+    cmd_and_args = List(Unicode())
     poll_frequency = Integer(100)  # in ms
-
-    def __init__(self, work_dir=u'.', config=None, **kwargs):
-        super(LocalProcessLauncher, self).__init__(
-            work_dir=work_dir, config=config, **kwargs
-        )
-        self.process = None
-        self.poller = None
+    stdout = None
+    stderr = None
+    process = None
+    poller = None
 
     def find_args(self):
         return self.cmd_and_args
+
+    def to_dict(self):
+        d = super().to_dict()
+        if self.process:
+            d['pid'] = self.process.pid
+        return d
+
+    @classmethod
+    def from_dict(cls, d, **kwargs):
+        self = super().from_dict(d, **kwargs)
+        if 'pid' in d:
+            self.process = psutil.Process(d['pid'])
+            self.poller = ioloop.PeriodicCallback(self.poll, self.poll_frequency)
+            self.poller.start()
+        return self
 
     def start(self):
         self.log.debug("Starting %s: %r", self.__class__.__name__, self.args)
