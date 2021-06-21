@@ -114,18 +114,38 @@ class BaseLauncher(LoggingConfigurable):
     # controller_args, engine_args attributes of the launchers to add
     # the work_dir option.
     work_dir = Unicode(u'.')
-    loop = Instance('tornado.ioloop.IOLoop', allow_none=True)
 
     start_data = Any()
     stop_data = Any()
 
+    loop = Instance(ioloop.IOLoop, allow_none=True)
+
     def _loop_default(self):
         return ioloop.IOLoop.current()
 
-    def __init__(self, work_dir=u'.', config=None, **kwargs):
-        super(BaseLauncher, self).__init__(work_dir=work_dir, config=config, **kwargs)
-        self.state = 'before'  # can be before, running, after
-        self.stop_callbacks = []
+    profile_dir = Unicode('')
+    cluster_id = Unicode('')
+
+    state = Unicode("before")
+
+    stop_callbacks = List()
+
+    @property
+    def cluster_args(self):
+        """Common cluster arguments"""
+        return ['--profile-dir', self.profile_dir, '--cluster-id', self.cluster_id]
+
+    @property
+    def connection_files(self):
+        """Dict of connection file paths"""
+        security_dir = os.path.join(self.profile_dir, 'security')
+        name_prefix = "ipcontroller"
+        if self.cluster_id:
+            name_prefix = f"{name_prefix}-{self.cluster_id}"
+        return {
+            kind: os.path.join(security_dir, f"{name_prefix}-{kind}.json")
+            for kind in ("client", "engine")
+        }
 
     @property
     def args(self):
@@ -214,30 +234,8 @@ class BaseLauncher(LoggingConfigurable):
         raise NotImplementedError('signal must be implemented in a subclass')
 
 
-class ClusterAppMixin(LoggingConfigurable):
-    """MixIn for cluster args as traits"""
 
-    profile_dir = Unicode('')
-    cluster_id = Unicode('')
-
-    @property
-    def cluster_args(self):
-        return ['--profile-dir', self.profile_dir, '--cluster-id', self.cluster_id]
-
-    @property
-    def connection_files(self):
-        """Dict of connection file paths"""
-        security_dir = os.path.join(self.profile_dir, 'security')
-        name_prefix = "ipcontroller"
-        if self.cluster_id:
-            name_prefix = f"{name_prefix}-{self.cluster_id}"
-        return {
-            kind: os.path.join(security_dir, f"{name_prefix}-{kind}.json")
-            for kind in ("client", "engine")
-        }
-
-
-class ControllerLauncher(ClusterAppMixin):
+class ControllerLauncher(BaseLauncher):
     controller_cmd = List(
         ipcontroller_cmd_argv,
         config=True,
@@ -275,7 +273,7 @@ class ControllerLauncher(ClusterAppMixin):
         return connection_info
 
 
-class EngineLauncher(ClusterAppMixin):
+class EngineLauncher(BaseLauncher):
     engine_cmd = List(
         ipengine_cmd_argv, config=True, help="""command to launch the Engine."""
     )
@@ -749,7 +747,7 @@ class SSHLauncher(LocalProcessLauncher):
             self.process.stdin.flush()
 
 
-class SSHClusterLauncher(SSHLauncher, ClusterAppMixin):
+class SSHClusterLauncher(SSHLauncher):
 
     remote_profile_dir = Unicode(
         '',
@@ -1077,7 +1075,7 @@ class WindowsHPCLauncher(BaseLauncher):
         return output
 
 
-class WindowsHPCControllerLauncher(WindowsHPCLauncher, ClusterAppMixin):
+class WindowsHPCControllerLauncher(WindowsHPCLauncher):
 
     job_file_name = Unicode(
         u'ipcontroller_job.xml', config=True, help="WinHPC xml job file."
@@ -1109,7 +1107,7 @@ class WindowsHPCControllerLauncher(WindowsHPCLauncher, ClusterAppMixin):
         return super(WindowsHPCControllerLauncher, self).start(1)
 
 
-class WindowsHPCEngineSetLauncher(WindowsHPCLauncher, ClusterAppMixin):
+class WindowsHPCEngineSetLauncher(WindowsHPCLauncher):
 
     job_file_name = Unicode(
         u'ipengineset_job.xml', config=True, help="jobfile for ipengines job"
@@ -1147,8 +1145,21 @@ class WindowsHPCEngineSetLauncher(WindowsHPCLauncher, ClusterAppMixin):
 # -----------------------------------------------------------------------------
 
 
-class BatchClusterAppMixin(ClusterAppMixin):
-    """ClusterApp mixin that updates the self.context dict, rather than cl-args."""
+class BatchSystemLauncher(BaseLauncher):
+    """Launch an external process using a batch system.
+
+    This class is designed to work with UNIX batch systems like PBS, LSF,
+    GridEngine, etc.  The overall model is that there are different commands
+    like qsub, qdel, etc. that handle the starting and stopping of the process.
+
+    This class also has the notion of a batch script. The ``batch_template``
+    attribute can be set to a string that is a template for the batch script.
+    This template is instantiated using string formatting. Thus the template can
+    use {n} fot the number of instances. Subclasses can add additional variables
+    to the template dict.
+    """
+
+    # load cluster args into context instead of cli
 
     @observe('profile_dir')
     def _profile_dir_changed(self, change):
@@ -1165,21 +1176,6 @@ class BatchClusterAppMixin(ClusterAppMixin):
     def _cluster_id_default(self):
         self.context['cluster_id'] = ''
         return ''
-
-
-class BatchSystemLauncher(BaseLauncher):
-    """Launch an external process using a batch system.
-
-    This class is designed to work with UNIX batch systems like PBS, LSF,
-    GridEngine, etc.  The overall model is that there are different commands
-    like qsub, qdel, etc. that handle the starting and stopping of the process.
-
-    This class also has the notion of a batch script. The ``batch_template``
-    attribute can be set to a string that is a template for the batch script.
-    This template is instantiated using string formatting. Thus the template can
-    use {n} fot the number of instances. Subclasses can add additional variables
-    to the template dict.
-    """
 
     # Subclasses must fill these in.  See PBSEngineSet
     submit_command = List(
@@ -1377,7 +1373,7 @@ class PBSLauncher(BatchSystemLauncher):
     queue_template = Unicode('#PBS -q {queue}')
 
 
-class PBSControllerLauncher(PBSLauncher, BatchClusterAppMixin):
+class PBSControllerLauncher(PBSLauncher):
     """Launch a controller using PBS."""
 
     batch_file_name = Unicode(
@@ -1397,7 +1393,7 @@ class PBSControllerLauncher(PBSLauncher, BatchClusterAppMixin):
         return super(PBSControllerLauncher, self).start(1)
 
 
-class PBSEngineSetLauncher(PBSLauncher, BatchClusterAppMixin):
+class PBSEngineSetLauncher(PBSLauncher):
     """Launch Engines using PBS"""
 
     batch_file_name = Unicode(
@@ -1499,7 +1495,7 @@ class SlurmLauncher(BatchSystemLauncher):
             self.batch_template = u'\n'.join([firstline, self.timelimit_template, rest])
 
 
-class SlurmControllerLauncher(SlurmLauncher, BatchClusterAppMixin):
+class SlurmControllerLauncher(SlurmLauncher):
     """Launch a controller using Slurm."""
 
     batch_file_name = Unicode(
@@ -1521,7 +1517,7 @@ class SlurmControllerLauncher(SlurmLauncher, BatchClusterAppMixin):
         return super(SlurmControllerLauncher, self).start(1)
 
 
-class SlurmEngineSetLauncher(SlurmLauncher, BatchClusterAppMixin):
+class SlurmEngineSetLauncher(SlurmLauncher):
     """Launch Engines using Slurm"""
 
     batch_file_name = Unicode(
@@ -1550,7 +1546,7 @@ class SGELauncher(PBSLauncher):
     queue_template = Unicode('#$ -q {queue}')
 
 
-class SGEControllerLauncher(SGELauncher, BatchClusterAppMixin):
+class SGEControllerLauncher(SGELauncher):
     """Launch a controller using SGE."""
 
     batch_file_name = Unicode(
@@ -1570,7 +1566,7 @@ class SGEControllerLauncher(SGELauncher, BatchClusterAppMixin):
         return super(SGEControllerLauncher, self).start(1)
 
 
-class SGEEngineSetLauncher(SGELauncher, BatchClusterAppMixin):
+class SGEEngineSetLauncher(SGELauncher):
     """Launch Engines with SGE"""
 
     batch_file_name = Unicode(
@@ -1627,7 +1623,7 @@ class LSFLauncher(BatchSystemLauncher):
         return job_id
 
 
-class LSFControllerLauncher(LSFLauncher, BatchClusterAppMixin):
+class LSFControllerLauncher(LSFLauncher):
     """Launch a controller using LSF."""
 
     batch_file_name = Unicode(
@@ -1648,7 +1644,7 @@ class LSFControllerLauncher(LSFLauncher, BatchClusterAppMixin):
         return super(LSFControllerLauncher, self).start(1)
 
 
-class LSFEngineSetLauncher(LSFLauncher, BatchClusterAppMixin):
+class LSFEngineSetLauncher(LSFLauncher):
     """Launch Engines using LSF"""
 
     batch_file_name = Unicode(
@@ -1722,7 +1718,7 @@ class HTCondorLauncher(BatchSystemLauncher):
         pass
 
 
-class HTCondorControllerLauncher(HTCondorLauncher, BatchClusterAppMixin):
+class HTCondorControllerLauncher(HTCondorLauncher):
     """Launch a controller using HTCondor."""
 
     batch_file_name = Unicode(
@@ -1745,7 +1741,7 @@ arguments       = '--profile-dir={profile_dir}' --cluster-id='{cluster_id}'
         return super(HTCondorControllerLauncher, self).start(1)
 
 
-class HTCondorEngineSetLauncher(HTCondorLauncher, BatchClusterAppMixin):
+class HTCondorEngineSetLauncher(HTCondorLauncher):
     """Launch Engines using HTCondor"""
 
     batch_file_name = Unicode(
@@ -1760,38 +1756,6 @@ transfer_executable = False
 arguments       = " '--profile-dir={profile_dir}' '--cluster-id={cluster_id}'"
 """
     )
-
-
-# -----------------------------------------------------------------------------
-# A launcher for ipcluster itself!
-# -----------------------------------------------------------------------------
-
-
-class IPClusterLauncher(LocalProcessLauncher):
-    """Launch the ipcluster program in an external process."""
-
-    ipcluster_cmd = List(
-        ipcluster_cmd_argv, config=True, help="Popen command for ipcluster"
-    )
-    ipcluster_args = List(
-        ['--clean-logs=True', '--log-level=%i' % logging.INFO],
-        config=True,
-        help="Command line arguments to pass to ipcluster.",
-    )
-    ipcluster_subcommand = Unicode('start')
-    profile = Unicode('default')
-    n = Integer(2)
-
-    def find_args(self):
-        return (
-            self.ipcluster_cmd
-            + [self.ipcluster_subcommand]
-            + ['--n=%i' % self.n, '--profile=%s' % self.profile]
-            + self.ipcluster_args
-        )
-
-    def start(self):
-        return super(IPClusterLauncher, self).start()
 
 
 # -----------------------------------------------------------------------------
