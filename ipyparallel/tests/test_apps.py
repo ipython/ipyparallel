@@ -6,15 +6,15 @@ from unittest.mock import create_autospec
 from unittest.mock import MagicMock
 from unittest.mock import patch
 
+import pytest
 import zmq
 from ipykernel import iostream
 from ipykernel import kernelapp
 from ipykernel.ipkernel import IPythonKernel
+from tornado import ioloop
 from zmq.eventloop import zmqstream
 
-import ipyparallel
-from ipyparallel.apps import ipengineapp
-from ipyparallel.util import ioloop
+import ipyparallel.engine.app
 
 
 def _get_output(cmd):
@@ -24,12 +24,17 @@ def _get_output(cmd):
     return out
 
 
-def test_version():
-    for submod in ['cluster', 'engine', 'controller']:
-        out = _get_output(
-            [sys.executable, '-m', 'ipyparallel.%s' % submod, '--version']
-        )
-        assert out.strip() == ipyparallel.__version__
+@pytest.mark.parametrize(
+    "submod",
+    [
+        "cluster",
+        "engine",
+        "controller",
+    ],
+)
+def test_version(submod):
+    out = _get_output([sys.executable, '-m', 'ipyparallel.%s' % submod, '--version'])
+    assert out.strip() == ipyparallel.__version__
 
 
 @pytest.mark.parametrize(
@@ -46,7 +51,9 @@ def test_help_all(submod):
 
 def bind_kernel(engineapp):
     app = MagicMock(spec=kernelapp.IPKernelApp)
-    with patch.object(ipengineapp, 'IPKernelApp', autospec=True) as MockKernelApp:
+    with patch.object(
+        ipyparallel.engine.app, 'IPKernelApp', autospec=True
+    ) as MockKernelApp:
         MockKernelApp.return_value = app
         app.shell_port = app.iopub_port = app.stdin_port = 0
         app._bind_socket = types.MethodType(kernelapp.IPKernelApp._bind_socket, app)
@@ -56,15 +63,18 @@ def bind_kernel(engineapp):
                 app,
             )
         app.transport = 'tcp'
-        app.ip = 'localhost'
+        app.ip = '127.0.0.1'
         app.init_heartbeat.return_value = None
         engineapp.bind_kernel()
 
 
-def test_bind_kernel():
-    class MockIPEngineApp(ipengineapp.IPEngineApp):
+def test_bind_kernel(request):
+    ctx = zmq.Context.instance()
+    request.addfinalizer(ctx.destroy)
+
+    class MockIPEngineApp(ipyparallel.engine.app.IPEngine):
         kernel = None
-        engine = MagicMock(spec=ipengineapp.EngineFactory)
+        context = ctx
 
     app = MockIPEngineApp()
     app.kernel_app = None

@@ -3,59 +3,65 @@
 # Distributed under the terms of the Modified BSD License.
 from __future__ import print_function
 
-try:
-    from collections.abc import Iterable
-except ImportError:  # py2
-    from collections import Iterable
-import socket
-from concurrent.futures import Future
-from getpass import getpass
 import json
 import os
-from pprint import pprint
+import socket
 import sys
-from threading import Thread, Event, current_thread
 import time
 import types
 import warnings
+from collections.abc import Iterable
+from concurrent.futures import Future
+from getpass import getpass
+from pprint import pprint
+from threading import current_thread
+from threading import Event
+from threading import Thread
 
-pjoin = os.path.join
-
+import jupyter_client.session
 import zmq
-from zmq.eventloop.zmqstream import ZMQStream
-
-from traitlets.config.configurable import MultipleInstanceError
-from IPython.core.application import BaseIPythonApplication
-from IPython.core.profiledir import ProfileDir, ProfileDirError
-
+from decorator import decorator
 from IPython import get_ipython
+from IPython.core.application import BaseIPythonApplication
+from IPython.core.profiledir import ProfileDir
+from IPython.core.profiledir import ProfileDirError
+from IPython.paths import get_ipython_dir
 from IPython.utils.capture import RichOutput
 from IPython.utils.coloransi import TermColors
-from jupyter_client.localinterfaces import localhost, is_local_ip
-from IPython.paths import get_ipython_dir
 from IPython.utils.path import compress_user
-from ipython_genutils.py3compat import cast_bytes, string_types, xrange, iteritems
-from traitlets import HasTraits, Instance, Unicode, Dict, List, Bool, Set, Any
-from decorator import decorator
-
-from ipyparallel.serialize import Reference
-from ipyparallel import error
-from ipyparallel import util
-
+from ipython_genutils.py3compat import cast_bytes
+from ipython_genutils.py3compat import iteritems
+from ipython_genutils.py3compat import string_types
+from ipython_genutils.py3compat import xrange
+from jupyter_client.localinterfaces import is_local_ip
+from jupyter_client.localinterfaces import localhost
 from jupyter_client.session import Session
+from tornado import ioloop
+from traitlets import Any
+from traitlets import Bool
+from traitlets import Dict
+from traitlets import HasTraits
+from traitlets import Instance
+from traitlets import List
+from traitlets import Set
+from traitlets import Unicode
+from traitlets.config.configurable import MultipleInstanceError
+from zmq.eventloop.zmqstream import ZMQStream
+
+from .asyncresult import AsyncHubResult
+from .asyncresult import AsyncResult
+from .futures import MessageFuture
+from .futures import multi_future
+from .view import BroadcastView
+from .view import DirectView
+from .view import LoadBalancedView
+from ipyparallel import error
 from ipyparallel import serialize
+from ipyparallel import util
 from ipyparallel.serialize import PrePickled
+from ipyparallel.serialize import Reference
 
-from ..util import ioloop
-from .asyncresult import AsyncResult, AsyncHubResult
-from .futures import MessageFuture, multi_future
-from .view import (
-    DirectView,
-    LoadBalancedView,
-    BroadcastView,
-)
-import jupyter_client.session
-
+pjoin = os.path.join
 jupyter_client.session.extract_dates = lambda obj: obj
 # --------------------------------------------------------------------------
 # Decorators for Client methods

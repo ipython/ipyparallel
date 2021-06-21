@@ -23,10 +23,10 @@ or in your :file:`ipcontroller_config.py`:
 
 .. sourcecode:: python
 
-    c.HubFactory.db_class = "NoDB"
-    c.HubFactory.db_class = "DictDB" # default
-    c.HubFactory.db_class = "MongoDB"
-    c.HubFactory.db_class = "SQLiteDB"
+    c.IPController.db_class = "NoDB"
+    c.IPController.db_class = "DictDB" # default
+    c.IPController.db_class = "MongoDB"
+    c.IPController.db_class = "SQLiteDB"
 
 
 Using the Task Database

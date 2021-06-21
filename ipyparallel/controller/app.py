@@ -12,6 +12,7 @@ import os
 import socket
 import stat
 import sys
+import time
 from multiprocessing import Process
 from signal import SIGABRT
 from signal import SIGINT
@@ -20,28 +21,37 @@ from signal import SIGTERM
 
 import zmq
 from IPython.core.profiledir import ProfileDir
-from ipython_genutils.importstring import import_item
+from jupyter_client.localinterfaces import localhost
 from jupyter_client.session import Session
 from jupyter_client.session import session_aliases
 from jupyter_client.session import session_flags
 from traitlets import Bool
+from traitlets import default
 from traitlets import Dict
+from traitlets import import_item
+from traitlets import Instance
+from traitlets import Integer
 from traitlets import List
 from traitlets import observe
-from traitlets import TraitError
+from traitlets import Tuple
+from traitlets import Type
 from traitlets import Unicode
+from traitlets import Union
+from traitlets import validate
 from zmq.devices import ProcessMonitoredQueue
+from zmq.eventloop.zmqstream import ZMQStream
 from zmq.log.handlers import PUBHandler
 
+from .broadcast_scheduler import BroadcastScheduler
+from ipyparallel import util
 from ipyparallel.apps.baseapp import base_aliases
 from ipyparallel.apps.baseapp import base_flags
 from ipyparallel.apps.baseapp import BaseParallelApplication
 from ipyparallel.apps.baseapp import catch_config_error
-from ipyparallel.controller.broadcast_scheduler import BroadcastScheduler
 from ipyparallel.controller.broadcast_scheduler import launch_broadcast_scheduler
 from ipyparallel.controller.dictdb import DictDB
 from ipyparallel.controller.heartmonitor import HeartMonitor
-from ipyparallel.controller.hub import HubFactory
+from ipyparallel.controller.hub import Hub
 from ipyparallel.controller.scheduler import launch_scheduler
 from ipyparallel.controller.task_scheduler import TaskScheduler
 from ipyparallel.util import disambiguate_url
@@ -93,23 +103,23 @@ flags.update(base_flags)
 flags.update(
     {
         'usethreads': (
-            {'IPControllerApp': {'use_threads': True}},
+            {'IPController': {'use_threads': True}},
             'Use threads instead of processes for the schedulers',
         ),
         'sqlitedb': (
-            {'HubFactory': {'db_class': 'ipyparallel.controller.sqlitedb.SQLiteDB'}},
+            {'IPController': {'db_class': 'ipyparallel.controller.sqlitedb.SQLiteDB'}},
             'use the SQLiteDB backend',
         ),
         'mongodb': (
-            {'HubFactory': {'db_class': 'ipyparallel.controller.mongodb.MongoDB'}},
+            {'IPController': {'db_class': 'ipyparallel.controller.mongodb.MongoDB'}},
             'use the MongoDB backend',
         ),
         'dictdb': (
-            {'HubFactory': {'db_class': 'ipyparallel.controller.dictdb.DictDB'}},
+            {'IPController': {'db_class': 'ipyparallel.controller.dictdb.DictDB'}},
             'use the in-memory DictDB backend',
         ),
         'nodb': (
-            {'HubFactory': {'db_class': 'ipyparallel.controller.dictdb.NoDB'}},
+            {'IPController': {'db_class': 'ipyparallel.controller.dictdb.NoDB'}},
             """use dummy DB backend, which doesn't store any information.
 
                     This is the default as of IPython 0.13.
@@ -119,11 +129,11 @@ flags.update(
                     """,
         ),
         'reuse': (
-            {'IPControllerApp': {'reuse_files': True}},
+            {'IPController': {'reuse_files': True}},
             'reuse existing json connection files',
         ),
         'restore': (
-            {'IPControllerApp': {'restore_engines': True, 'reuse_files': True}},
+            {'IPController': {'restore_engines': True, 'reuse_files': True}},
             'Attempt to restore engines from a JSON file.  '
             'For use when resuming a crashed controller',
         ),
@@ -133,13 +143,12 @@ flags.update(
 flags.update(session_flags)
 
 aliases = dict(
-    ssh='IPControllerApp.ssh_server',
-    enginessh='IPControllerApp.engine_ssh_server',
-    location='IPControllerApp.location',
-    url='HubFactory.url',
-    ip='HubFactory.ip',
-    transport='HubFactory.transport',
-    port='HubFactory.regport',
+    ssh='IPController.ssh_server',
+    enginessh='IPController.engine_ssh_server',
+    location='IPController.location',
+    ip='IPController.ip',
+    transport='IPController.transport',
+    port='IPController.regport',
     ping='HeartMonitor.period',
     scheme='TaskScheduler.scheme_name',
     hwm='TaskScheduler.hwm',
@@ -147,8 +156,15 @@ aliases = dict(
 aliases.update(base_aliases)
 aliases.update(session_aliases)
 
+_db_shortcuts = {
+    'sqlitedb': 'ipyparallel.controller.sqlitedb.SQLiteDB',
+    'mongodb': 'ipyparallel.controller.mongodb.MongoDB',
+    'dictdb': 'ipyparallel.controller.dictdb.DictDB',
+    'nodb': 'ipyparallel.controller.dictdb.NoDB',
+}
 
-class IPControllerApp(BaseParallelApplication):
+
+class IPController(BaseParallelApplication):
 
     name = u'ipcontroller'
     description = _description
@@ -156,11 +172,12 @@ class IPControllerApp(BaseParallelApplication):
     classes = [
         ProfileDir,
         Session,
-        HubFactory,
+        Hub,
         TaskScheduler,
         HeartMonitor,
         DictDB,
     ] + real_dbs
+    _deprecated_classes = ("HubFactory", "IPControllerApp")
 
     # change default to True
     auto_create = Bool(
@@ -200,11 +217,6 @@ class IPControllerApp(BaseParallelApplication):
         help="""The external IP or domain name of the Controller, used for disambiguating
         engine and client connections.""",
     )
-    import_statements = List(
-        [],
-        config=True,
-        help="import statements to be run at startup.  Necessary in some environments",
-    )
 
     use_threads = Bool(
         False, config=True, help='Use threads instead of processes for the schedulers'
@@ -223,7 +235,7 @@ class IPControllerApp(BaseParallelApplication):
 
     @observe('cluster_id')
     def _cluster_id_changed(self, change):
-        super(IPControllerApp, self)._cluster_id_changed(change)
+        super()._cluster_id_changed(change)
         self.engine_json_file = "%s-engine.json" % self.name
         self.client_json_file = "%s-client.json" % self.name
 
@@ -246,6 +258,239 @@ class IPControllerApp(BaseParallelApplication):
 
     aliases = Dict(aliases)
     flags = Dict(flags)
+
+    # port-pairs for schedulers:
+    hb = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""PUB/ROUTER Port pair for Engine heartbeats""",
+    )
+
+    def _hb_default(self):
+        return tuple(util.select_random_ports(2))
+
+    mux = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""Client/Engine Port pair for MUX queue""",
+    )
+
+    def _mux_default(self):
+        return tuple(util.select_random_ports(2))
+
+    task = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""Client/Engine Port pair for Task queue""",
+    )
+
+    def _task_default(self):
+        return tuple(util.select_random_ports(2))
+
+    broadcast_scheduler_depth = Integer(
+        1,
+        config=True,
+        help="Depth of spanning tree schedulers",
+    )
+    number_of_leaf_schedulers = Integer()
+    number_of_broadcast_schedulers = Integer()
+    number_of_non_leaf_schedulers = Integer()
+
+    @default('number_of_leaf_schedulers')
+    def get_number_of_leaf_schedulers(self):
+        return 2 ** self.broadcast_scheduler_depth
+
+    @default('number_of_broadcast_schedulers')
+    def get_number_of_broadcast_schedulers(self):
+        return 2 * self.number_of_leaf_schedulers - 1
+
+    @default('number_of_non_leaf_schedulers')
+    def get_number_of_non_leaf_schedulers(self):
+        return self.number_of_broadcast_schedulers - self.number_of_leaf_schedulers
+
+    broadcast = List(
+        Integer(), config=True, help="List of available ports for broadcast"
+    )
+
+    def _broadcast_default(self):
+        return util.select_random_ports(
+            self.number_of_leaf_schedulers + self.number_of_broadcast_schedulers
+        )
+
+    regport = Integer(config=True, help="Port for engine registration")
+
+    @default("regport")
+    def _regport_default(self):
+        return util.select_random_ports(1)[0]
+
+    control = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""Client/Engine Port pair for Control queue""",
+    )
+
+    def _control_default(self):
+        return tuple(util.select_random_ports(2))
+
+    iopub = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""Client/Engine Port pair for IOPub relay""",
+    )
+
+    def _iopub_default(self):
+        return tuple(util.select_random_ports(2))
+
+    # single ports:
+    mon_port = Integer(config=True, help="""Monitor (SUB) port for queue traffic""")
+
+    def _mon_port_default(self):
+        return util.select_random_ports(1)[0]
+
+    notifier_port = Integer(
+        config=True, help="""PUB port for sending engine status notifications"""
+    )
+
+    def _notifier_port_default(self):
+        return util.select_random_ports(1)[0]
+
+    engine_ip = Unicode(
+        config=True,
+        help="IP on which to listen for engine connections. [default: loopback]",
+    )
+
+    def _engine_ip_default(self):
+        return localhost()
+
+    engine_transport = Unicode(
+        'tcp', config=True, help="0MQ transport for engine connections. [default: tcp]"
+    )
+
+    client_ip = Unicode(
+        config=True,
+        help="IP on which to listen for client connections. [default: loopback]",
+    )
+    client_transport = Unicode(
+        'tcp', config=True, help="0MQ transport for client connections. [default : tcp]"
+    )
+
+    monitor_ip = Unicode(
+        config=True,
+        help="IP on which to listen for monitor messages. [default: loopback]",
+    )
+    monitor_transport = Unicode(
+        'tcp', config=True, help="0MQ transport for monitor messages. [default : tcp]"
+    )
+
+    _client_ip_default = _monitor_ip_default = _engine_ip_default
+
+    monitor_url = Unicode('')
+
+    @default("monitor_url")
+    def _default_monitor_url(self):
+        return f"{self.monitor_transport}://{self.monitor_ip}:{self.mon_port}"
+
+    db_class = Union(
+        [Unicode(), Type()],
+        default_value=DictDB,
+        config=True,
+        help="""The class to use for the DB backend
+
+        Options include:
+
+        SQLiteDB: SQLite
+        MongoDB : use MongoDB
+        DictDB  : in-memory storage (fastest, but be mindful of memory growth of the Hub)
+        NoDB    : disable database altogether (default)
+
+        """,
+    )
+
+    @validate("db_class")
+    def _validate_db_class(self, proposal):
+        value = proposal.value
+        if isinstance(value, str):
+            # if it's a string, import it
+            value = _db_shortcuts.get(value.lower(), value)
+            return import_item(value)
+        return value
+
+    registration_timeout = Integer(
+        0,
+        config=True,
+        help="Engine registration timeout in seconds [default: max(30,"
+        "10*heartmonitor.period)]",
+    )
+
+    def _registration_timeout_default(self):
+        if self.heartmonitor is None:
+            # early initialization, this value will be ignored
+            return 0
+            # heartmonitor period is in milliseconds, so 10x in seconds is .01
+        return max(30, int(0.01 * self.heartmonitor.period))
+
+    # not configurable
+    db = Instance('ipyparallel.controller.dictdb.BaseDB', allow_none=True)
+    heartmonitor = Instance(
+        'ipyparallel.controller.heartmonitor.HeartMonitor', allow_none=True
+    )
+
+    ip = Unicode(
+        "127.0.0.1", config=True, help="""Set the controller ip for all connections."""
+    )
+    transport = Unicode(
+        "tcp", config=True, help="""Set the zmq transport for all connections."""
+    )
+
+    @observe('ip')
+    def _ip_changed(self, change):
+        new = change['new']
+        self.engine_ip = new
+        self.client_ip = new
+        self.monitor_ip = new
+        self._update_monitor_url()
+
+    def _update_monitor_url(self):
+        self.monitor_url = self._default_monitor_url()
+
+    @observe('transport')
+    def _transport_changed(self, change):
+        new = change['new']
+        self.engine_transport = new
+        self.client_transport = new
+        self.monitor_transport = new
+        self._update_monitor_url()
+
+    context = Instance(zmq.Context)
+
+    @default("context")
+    def _defaut_context(self):
+        return zmq.Context.instance()
+
+    def client_url(self, channel, index=None):
+        """return full zmq url for a named client channel"""
+        return "%s://%s:%i" % (
+            self.client_transport,
+            self.client_ip,
+            self.client_info[channel]
+            if index is None
+            else self.client_info[channel][index],
+        )
+
+    def engine_url(self, channel, index=None):
+        """return full zmq url for a named engine channel"""
+        return "%s://%s:%i" % (
+            self.engine_transport,
+            self.engine_ip,
+            self.engine_info[channel]
+            if index is None
+            else self.engine_info[channel][index],
+        )
 
     def save_connection_dict(self, fname, cdict):
         """save a connection dict to json file."""
@@ -272,8 +517,8 @@ class IPControllerApp(BaseParallelApplication):
 
         xport, ip = ecfg['interface'].split('://')
 
-        c.HubFactory.engine_ip = ip
-        c.HubFactory.engine_transport = xport
+        c.IPController.engine_ip = ip
+        c.IPController.engine_transport = xport
 
         self.location = ecfg['location']
         if not self.engine_ssh_server:
@@ -293,19 +538,19 @@ class IPControllerApp(BaseParallelApplication):
 
         xport, ip = ccfg['interface'].split('://')
 
-        c.HubFactory.client_transport = xport
-        c.HubFactory.client_ip = ip
+        c.IPController.client_transport = xport
+        c.IPController.client_ip = ip
         if not self.ssh_server:
             self.ssh_server = ccfg['ssh']
 
         # load port config:
-        c.HubFactory.regport = ecfg['registration']
-        c.HubFactory.hb = (ecfg['hb_ping'], ecfg['hb_pong'])
-        c.HubFactory.control = (ccfg['control'], ecfg['control'])
-        c.HubFactory.mux = (ccfg['mux'], ecfg['mux'])
-        c.HubFactory.task = (ccfg['task'], ecfg['task'])
-        c.HubFactory.iopub = (ccfg['iopub'], ecfg['iopub'])
-        c.HubFactory.notifier_port = ccfg['notification']
+        c.IPController.regport = ecfg['registration']
+        c.IPController.hb = (ecfg['hb_ping'], ecfg['hb_pong'])
+        c.IPController.control = (ccfg['control'], ecfg['control'])
+        c.IPController.mux = (ccfg['mux'], ecfg['mux'])
+        c.IPController.task = (ccfg['task'], ecfg['task'])
+        c.IPController.iopub = (ccfg['iopub'], ecfg['iopub'])
+        c.IPController.notifier_port = ccfg['notification']
 
     def cleanup_connection_files(self):
         if self.reuse_files:
@@ -339,51 +584,142 @@ class IPControllerApp(BaseParallelApplication):
     def init_hub(self):
         c = self.config
 
-        self.do_import_statements()
+        ctx = self.context
+        loop = self.loop
+        if 'TaskScheduler.scheme_name' in self.config:
+            scheme = self.config.TaskScheduler.scheme_name
+        else:
+            from .task_scheduler import TaskScheduler
 
-        try:
-            self.factory = HubFactory(
-                config=c,
-                log=self.log,
+            scheme = TaskScheduler.scheme_name.default_value
+
+        # build connection dicts
+        engine = self.engine_info = {
+            'interface': "%s://%s" % (self.engine_transport, self.engine_ip),
+            'registration': self.regport,
+            'control': self.control[1],
+            'mux': self.mux[1],
+            'hb_ping': self.hb[0],
+            'hb_pong': self.hb[1],
+            'task': self.task[1],
+            'iopub': self.iopub[1],
+            BroadcastScheduler.port_name: self.broadcast[
+                -self.number_of_leaf_schedulers :
+            ],
+        }
+
+        client = self.client_info = {
+            'interface': "%s://%s" % (self.client_transport, self.client_ip),
+            'registration': self.regport,
+            'control': self.control[0],
+            'mux': self.mux[0],
+            'task': self.task[0],
+            'task_scheme': scheme,
+            'iopub': self.iopub[0],
+            'notification': self.notifier_port,
+            BroadcastScheduler.port_name: self.broadcast[
+                : self.number_of_broadcast_schedulers
+            ],
+        }
+
+        self.log.debug("Hub engine addrs: %s", self.engine_info)
+        self.log.debug("Hub client addrs: %s", self.client_info)
+
+        # Registrar socket
+        q = ZMQStream(ctx.socket(zmq.ROUTER), loop)
+        util.set_hwm(q, 0)
+        q.bind(self.client_url('registration'))
+        self.log.info(
+            "Hub listening on %s for registration.", self.client_url('registration')
+        )
+        if self.client_ip != self.engine_ip:
+            q.bind(self.engine_url('registration'))
+            self.log.info(
+                "Hub listening on %s for registration.", self.engine_url('registration')
             )
-            # self.start_logging()
-            self.factory.init_hub()
-        except TraitError:
-            raise
-        except Exception:
-            self.log.error("Couldn't construct the Controller", exc_info=True)
-            self.exit(1)
+
+        ### Engine connections ###
+
+        # heartbeat
+        hpub = ctx.socket(zmq.PUB)
+        hpub.bind(self.engine_url('hb_ping'))
+        hrep = ctx.socket(zmq.ROUTER)
+        util.set_hwm(hrep, 0)
+        hrep.bind(self.engine_url('hb_pong'))
+        self.heartmonitor = HeartMonitor(
+            loop=loop,
+            parent=self,
+            log=self.log,
+            pingstream=ZMQStream(hpub, loop),
+            pongstream=ZMQStream(hrep, loop),
+        )
+
+        ### Client connections ###
+
+        # Notifier socket
+        n = ZMQStream(ctx.socket(zmq.PUB), loop)
+        n.bind(self.client_url('notification'))
+
+        ### build and launch the queues ###
+
+        # monitor socket
+        sub = ctx.socket(zmq.SUB)
+        sub.setsockopt(zmq.SUBSCRIBE, b"")
+        sub.bind(self.monitor_url)
+        sub.bind('inproc://monitor')
+        sub = ZMQStream(sub, loop)
+
+        # connect the db
+        db_class = self.db_class
+        self.log.info(f'Hub using DB backend: {self.db_class.__name__}')
+        self.db = self.db_class(session=self.session.session, parent=self, log=self.log)
+        time.sleep(0.25)
+
+        # resubmit stream
+        r = ZMQStream(ctx.socket(zmq.DEALER), loop)
+        url = util.disambiguate_url(self.client_url('task'))
+        r.connect(url)
+
+        self.hub = Hub(
+            loop=loop,
+            session=self.session,
+            monitor=sub,
+            heartmonitor=self.heartmonitor,
+            query=q,
+            notifier=n,
+            resubmit=r,
+            db=self.db,
+            engine_info=self.engine_info,
+            client_info=self.client_info,
+            log=self.log,
+            registration_timeout=self.registration_timeout,
+            parent=self,
+        )
 
         if self.write_connection_files:
             # save to new json config files
-            f = self.factory
             base = {
-                'key': f.session.key.decode('ascii'),
+                'key': self.session.key.decode('ascii'),
                 'location': self.location,
-                'pack': f.session.packer,
-                'unpack': f.session.unpacker,
-                'signature_scheme': f.session.signature_scheme,
+                'pack': self.session.packer,
+                'unpack': self.session.unpacker,
+                'signature_scheme': self.session.signature_scheme,
             }
 
             cdict = {'ssh': self.ssh_server}
-            cdict.update(f.client_info)
+            cdict.update(self.client_info)
             cdict.update(base)
             self.save_connection_dict(self.client_json_file, cdict)
 
             edict = {'ssh': self.engine_ssh_server}
-            edict.update(f.engine_info)
+            edict.update(self.engine_info)
             edict.update(base)
             self.save_connection_dict(self.engine_json_file, edict)
 
         fname = "engines%s.json" % self.cluster_id
-        self.factory.hub.engine_state_file = os.path.join(
-            self.profile_dir.log_dir, fname
-        )
+        self.hub.engine_state_file = os.path.join(self.profile_dir.log_dir, fname)
         if self.restore_engines:
-            self.factory.hub._load_engine_state()
-        # load key into config so other sessions in this process (TaskScheduler)
-        # have the same value
-        self.config.Session.key = self.factory.session.key
+            self.hub._load_engine_state()
 
     def launch_python_scheduler(self, scheduler_args, children):
         if 'Process' in self.mq_class:
@@ -396,20 +732,91 @@ class IPControllerApp(BaseParallelApplication):
             scheduler_args['in_thread'] = True
             launch_scheduler(**scheduler_args)
 
+    def get_python_scheduler_args(
+        self, scheduler_name, scheduler_class, monitor_url, identity=None
+    ):
+        return {
+            'scheduler_class': scheduler_class,
+            'in_addr': self.client_url(scheduler_name),
+            'out_addr': self.engine_url(scheduler_name),
+            'mon_addr': monitor_url,
+            'not_addr': disambiguate_url(self.client_url('notification')),
+            'reg_addr': disambiguate_url(self.client_url('registration')),
+            'identity': identity if identity else bytes(scheduler_name, 'utf8'),
+            'logname': 'scheduler',
+            'loglevel': self.log_level,
+            'log_url': self.log_url,
+            'config': dict(self.config),
+        }
+
+    def launch_broadcast_schedulers(self, monitor_url, children):
+        def launch_in_thread_or_process(scheduler_args):
+
+            if 'Process' in self.mq_class:
+                # run the Python scheduler in a Process
+                q = Process(target=launch_broadcast_scheduler, kwargs=scheduler_args)
+                q.daemon = True
+                children.append(q)
+            else:
+                # single-threaded Controller
+                scheduler_args['in_thread'] = True
+                launch_broadcast_scheduler(**scheduler_args)
+
+        def recursively_start_schedulers(identity, depth):
+            outgoing_id1 = identity * 2 + 1
+            outgoing_id2 = outgoing_id1 + 1
+            is_leaf = depth == self.broadcast_scheduler_depth
+
+            scheduler_args = dict(
+                in_addr=self.client_url(BroadcastScheduler.port_name, identity),
+                mon_addr=monitor_url,
+                not_addr=disambiguate_url(self.client_url('notification')),
+                reg_addr=disambiguate_url(self.client_url('registration')),
+                identity=identity,
+                config=dict(self.config),
+                loglevel=self.log_level,
+                log_url=self.log_url,
+                outgoing_ids=[outgoing_id1, outgoing_id2],
+                depth=depth,
+                is_leaf=is_leaf,
+            )
+            if is_leaf:
+                scheduler_args.update(
+                    out_addrs=[
+                        self.engine_url(
+                            BroadcastScheduler.port_name,
+                            identity - self.number_of_non_leaf_schedulers,
+                        )
+                    ],
+                )
+            else:
+                scheduler_args.update(
+                    out_addrs=[
+                        self.client_url(BroadcastScheduler.port_name, outgoing_id1),
+                        self.client_url(BroadcastScheduler.port_name, outgoing_id2),
+                    ]
+                )
+            launch_in_thread_or_process(scheduler_args)
+            if not is_leaf:
+                recursively_start_schedulers(outgoing_id1, depth + 1)
+                recursively_start_schedulers(outgoing_id2, depth + 1)
+
+        recursively_start_schedulers(0, 0)
+
     def init_schedulers(self):
         children = self.children
         mq = import_item(str(self.mq_class))
-
-        f = self.factory
-        ident = f.session.bsession
+        # ensure session key is shared across sessions
+        self.config.Session.key = self.session.key
+        ident = self.session.bsession
         # disambiguate url, in case of *
-        monitor_url = disambiguate_url(f.monitor_url)
+        monitor_url = disambiguate_url(self.monitor_url)
         # maybe_inproc = 'inproc://monitor' if self.use_threads else monitor_url
         # IOPub relay (in a Process)
         q = mq(zmq.PUB, zmq.SUB, zmq.PUB, b'N/A', b'iopub')
-        q.bind_in(f.client_url('iopub'))
+        q.bind_in(self.client_url('iopub'))
         q.setsockopt_in(zmq.IDENTITY, ident + b"_iopub")
-        q.bind_out(f.engine_url('iopub'))
+        q.bind_out(self.engine_url('iopub'))
         q.setsockopt_out(zmq.SUBSCRIBE, b'')
         q.connect_mon(monitor_url)
         q.daemon = True
@@ -418,9 +825,9 @@ class IPControllerApp(BaseParallelApplication):
         # Multiplexer Queue (in a Process)
         q = mq(zmq.ROUTER, zmq.ROUTER, zmq.PUB, b'in', b'out')
 
-        q.bind_in(f.client_url('mux'))
+        q.bind_in(self.client_url('mux'))
         q.setsockopt_in(zmq.IDENTITY, b'mux_in')
-        q.bind_out(f.engine_url('mux'))
+        q.bind_out(self.engine_url('mux'))
         q.setsockopt_out(zmq.IDENTITY, b'mux_out')
         q.connect_mon(monitor_url)
         q.daemon = True
@@ -428,9 +835,9 @@ class IPControllerApp(BaseParallelApplication):
 
         # Control Queue (in a Process)
         q = mq(zmq.ROUTER, zmq.ROUTER, zmq.PUB, b'incontrol', b'outcontrol')
-        q.bind_in(f.client_url('control'))
+        q.bind_in(self.client_url('control'))
         q.setsockopt_in(zmq.IDENTITY, b'control_in')
-        q.bind_out(f.engine_url('control'))
+        q.bind_out(self.engine_url('control'))
         q.setsockopt_out(zmq.IDENTITY, b'control_out')
         q.connect_mon(monitor_url)
         q.daemon = True
@@ -444,9 +851,9 @@ class IPControllerApp(BaseParallelApplication):
             self.log.warn("task::using pure DEALER Task scheduler")
             q = mq(zmq.ROUTER, zmq.DEALER, zmq.PUB, b'intask', b'outtask')
             # q.setsockopt_out(zmq.HWM, hub.hwm)
-            q.bind_in(f.client_url('task'))
+            q.bind_in(self.client_url('task'))
             q.setsockopt_in(zmq.IDENTITY, b'task_in')
-            q.bind_out(f.engine_url('task'))
+            q.bind_out(self.engine_url('task'))
             q.setsockopt_out(zmq.IDENTITY, b'task_out')
             q.connect_mon(monitor_url)
             q.daemon = True
@@ -457,11 +864,11 @@ class IPControllerApp(BaseParallelApplication):
         else:
             self.log.info("task::using Python %s Task scheduler" % scheme)
             self.launch_python_scheduler(
-                self.get_python_scheduler_args('task', f, TaskScheduler, monitor_url),
+                self.get_python_scheduler_args('task', TaskScheduler, monitor_url),
                 children,
             )
 
-        self.launch_broadcast_schedulers(f, monitor_url, children)
+        self.launch_broadcast_schedulers(monitor_url, children)
 
         # set unlimited HWM for all relay devices
         if hasattr(zmq, 'SNDHWM'):
@@ -503,15 +910,6 @@ class IPControllerApp(BaseParallelApplication):
         for sig in (SIGINT, SIGABRT, SIGTERM):
             signal(sig, self.handle_signal)
 
-    def do_import_statements(self):
-        statements = self.import_statements
-        for s in statements:
-            try:
-                self.log.msg("Executing statement: '%s'" % s)
-                exec(s, globals(), locals())
-            except:
-                self.log.msg("Error running statement: %s" % s)
-
     def forward_logging(self):
         if self.log_url:
             self.log.info("Forwarding logging to %s" % self.log_url)
@@ -525,7 +923,7 @@ class IPControllerApp(BaseParallelApplication):
 
     @catch_config_error
     def initialize(self, argv=None):
-        super(IPControllerApp, self).initialize(argv)
+        super(IPController, self).initialize(argv)
         self.forward_logging()
         self.load_secondary_config()
         self.init_hub()
@@ -533,95 +931,27 @@ class IPControllerApp(BaseParallelApplication):
 
     def start(self):
         # Start the subprocesses:
-        self.factory.start()
         # children must be started before signals are setup,
         # otherwise signal-handling will fire multiple times
         for child in self.children:
             child.start()
+
         self.init_signal()
+
+        self.heartmonitor.start()
+        self.log.info("Heartmonitor started")
 
         self.write_pid_file(overwrite=True)
 
         try:
-            self.factory.loop.start()
+            self.loop.start()
         except KeyboardInterrupt:
             self.log.critical("Interrupted, Exiting...\n")
         finally:
             self.cleanup_connection_files()
 
-    def get_python_scheduler_args(
-        self, scheduler_name, factory, scheduler_class, monitor_url, identity=None
-    ):
-        return {
-            'scheduler_class': scheduler_class,
-            'in_addr': factory.client_url(scheduler_name),
-            'out_addr': factory.engine_url(scheduler_name),
-            'mon_addr': monitor_url,
-            'not_addr': disambiguate_url(factory.client_url('notification')),
-            'reg_addr': disambiguate_url(factory.client_url('registration')),
-            'identity': identity if identity else bytes(scheduler_name, 'utf8'),
-            'logname': 'scheduler',
-            'loglevel': self.log_level,
-            'log_url': self.log_url,
-            'config': dict(self.config),
-        }
 
-    def launch_broadcast_schedulers(self, factory, monitor_url, children):
-        def launch_in_thread_or_process(scheduler_args):
-
-            if 'Process' in self.mq_class:
-                # run the Python scheduler in a Process
-                q = Process(target=launch_broadcast_scheduler, kwargs=scheduler_args)
-                q.daemon = True
-                children.append(q)
-            else:
-                # single-threaded Controller
-                scheduler_args['in_thread'] = True
-                launch_broadcast_scheduler(**scheduler_args)
-
-        def recursively_start_schedulers(identity, depth):
-            outgoing_id1 = identity * 2 + 1
-            outgoing_id2 = outgoing_id1 + 1
-            is_leaf = depth == self.factory.broadcast_scheduler_depth
-
-            scheduler_args = dict(
-                in_addr=factory.client_url(BroadcastScheduler.port_name, identity),
-                mon_addr=monitor_url,
-                not_addr=disambiguate_url(factory.client_url('notification')),
-                reg_addr=disambiguate_url(factory.client_url('registration')),
-                identity=identity,
-                config=dict(self.config),
-                loglevel=self.log_level,
-                log_url=self.log_url,
-                outgoing_ids=[outgoing_id1, outgoing_id2],
-                depth=depth,
-                is_leaf=is_leaf,
-            )
-            if is_leaf:
-                scheduler_args.update(
-                    out_addrs=[
-                        factory.engine_url(
-                            BroadcastScheduler.port_name,
-                            identity - factory.number_of_non_leaf_schedulers,
-                        )
-                    ],
-                )
-            else:
-                scheduler_args.update(
-                    out_addrs=[
-                        factory.client_url(BroadcastScheduler.port_name, outgoing_id1),
-                        factory.client_url(BroadcastScheduler.port_name, outgoing_id2),
-                    ]
-                )
-            launch_in_thread_or_process(scheduler_args)
-            if not is_leaf:
-                recursively_start_schedulers(outgoing_id1, depth + 1)
-                recursively_start_schedulers(outgoing_id2, depth + 1)
-
-        recursively_start_schedulers(0, 0)
-
-
-def launch_new_instance(*args, **kwargs):
+def main(*args, **kwargs):
     """Create and run the IPython controller"""
     if sys.platform == 'win32':
         # make sure we don't get called from a multiprocessing subprocess
@@ -638,8 +968,8 @@ def launch_new_instance(*args, **kwargs):
         if p.name != 'MainProcess':
             # we are a subprocess, don't start another Controller!
             return
-    return IPControllerApp.launch_instance(*args, **kwargs)
+    return IPController.launch_instance(*args, **kwargs)
 
 
 if __name__ == '__main__':
-    launch_new_instance()
+    main()

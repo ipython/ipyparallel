@@ -1,4 +1,4 @@
 if __name__ == '__main__':
-    from ipyparallel.apps import ipclusterapp as app
+    from .app import main
 
-    app.launch_new_instance()
+    main()

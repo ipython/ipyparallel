@@ -9,26 +9,27 @@ Python Scheduler exists.
 import logging
 
 import jupyter_client.session
+import traitlets.log
 import zmq
 from decorator import decorator
 from ipython_genutils.py3compat import cast_bytes
-from traitlets import CBytes
+from tornado import ioloop
+from traitlets import Bytes
+from traitlets import default
 from traitlets import Instance
-from traitlets import observe
 from traitlets import Set
-from traitlets.config.application import Application
-from traitlets.config.loader import Config
+from traitlets.config import Config
+from traitlets.config import LoggingConfigurable
 from zmq.eventloop import zmqstream
 
 from ipyparallel import util
 from ipyparallel.util import connect_logger
-from ipyparallel.util import ioloop
 from ipyparallel.util import local_logger
 
 # local imports
 
+# performance optimization: skip unused date deserialization
 jupyter_client.session.extract_dates = lambda obj: obj
-from jupyter_client.session import SessionFactory
 
 
 @decorator
@@ -39,7 +40,20 @@ def logged(f, self, *args, **kwargs):
     return f(self, *args, **kwargs)
 
 
-class Scheduler(SessionFactory):
+class Scheduler(LoggingConfigurable):
+
+    loop = Instance(ioloop.IOLoop)
+
+    @default("loop")
+    def _default_loop(self):
+        return ioloop.IOLoop.current()
+
+    session = Instance(jupyter_client.session.Session)
+
+    @default("session")
+    def _default_session(self):
+        return jupyter_client.session.Session(parent=self)
+
     client_stream = Instance(
         zmqstream.ZMQStream, allow_none=True
     )  # client-facing stream
@@ -59,9 +73,10 @@ class Scheduler(SessionFactory):
     all_done = Set()  # set of all finished tasks=union(completed,failed)
     all_ids = Set()  # set of all submitted task IDs
 
-    ident = CBytes()  # ZMQ identity. This should just be self.session.session
+    ident = Bytes()  # ZMQ identity. This should just be self.session.session as bytes
 
     # but ensure Bytes
+    @default("ident")
     def _ident_default(self):
         return self.session.bsession
 
@@ -114,6 +129,7 @@ def get_common_scheduler_streams(
         # for safety with multiprocessing
         ctx = zmq.Context()
         loop = ioloop.IOLoop()
+        loop.make_current()
     mons = zmqstream.ZMQStream(ctx.socket(zmq.PUB), loop)
     mons.connect(mon_addr)
     nots = zmqstream.ZMQStream(ctx.socket(zmq.SUB), loop)
@@ -125,7 +141,7 @@ def get_common_scheduler_streams(
 
     # setup logging.
     if in_thread:
-        log = Application.instance().log
+        log = traitlets.log.get_logger()
     else:
         if log_url:
             log = connect_logger(

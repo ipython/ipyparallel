@@ -22,13 +22,13 @@ from traitlets import List
 from traitlets import observe
 from traitlets.config.application import catch_config_error
 
-from .._version import __version__
-from ..cluster import Cluster
-from .baseapp import base_aliases
-from .baseapp import base_flags
-from .baseapp import BaseParallelApplication
-from .baseapp import PIDFileError
-from .daemonize import daemonize
+from ipyparallel._version import __version__
+from ipyparallel.apps.baseapp import base_aliases
+from ipyparallel.apps.baseapp import base_flags
+from ipyparallel.apps.baseapp import BaseParallelApplication
+from ipyparallel.apps.baseapp import PIDFileError
+from ipyparallel.apps.daemonize import daemonize
+from ipyparallel.cluster import Cluster
 
 
 # -----------------------------------------------------------------------------
@@ -244,11 +244,11 @@ class IPClusterEngines(BaseParallelApplication):
     @catch_config_error
     def initialize(self, argv=None):
         super(IPClusterEngines, self).initialize(argv)
-        self.init_deprecated_config()
         self.init_signal()
         self.init_cluster()
 
     def init_deprecated_config(self):
+        super().init_deprecated_config()
         cluster_config = self.config.Cluster
         for clsname in ['IPClusterStart', 'IPClusterEngines']:
             if clsname not in self.config:
@@ -265,9 +265,10 @@ class IPClusterEngines(BaseParallelApplication):
                 if traitname in cls_config and traitname not in cluster_config:
                     value = cls_config[traitname]
                     self.log.warning(
-                        f"{clsname}.{traitname} = {value!r} configuration is deprecated in ipyparallel 7. Use Cluster.{traitname} = {value!r}"
+                        f"{clsname}.{traitname} = {value} configuration is deprecated in ipyparallel 7. Use Cluster.{traitname} = {value}"
                     )
                     cluster_config[traitname] = value
+                    cls_config.pop(traitname)
 
     def init_cluster(self):
         self.cluster = Cluster(
@@ -500,20 +501,19 @@ class IPClusterNBExtension(BaseIPythonApplication):
             self.exit("Must specify 'enable' or 'disable', not '%s'" % action)
 
 
-base = 'ipyparallel.apps.ipclusterapp.IPCluster'
-
-
-class IPClusterApp(BaseIPythonApplication):
+class IPCluster(BaseIPythonApplication):
     name = u'ipcluster'
     description = _description
     examples = _main_examples
     version = __version__
 
+    _deprecated_classes = ["IPClusterApp"]
+
     subcommands = {
-        'start': (base + 'Start', start_help),
-        'stop': (base + 'Stop', stop_help),
-        'engines': (base + 'Engines', engines_help),
-        'nbextension': (base + 'NBExtension', IPClusterNBExtension.description),
+        'start': (IPClusterStart, start_help),
+        'stop': (IPClusterStop, stop_help),
+        'engines': (IPClusterEngines, engines_help),
+        'nbextension': (IPClusterNBExtension, IPClusterNBExtension.description),
     }
 
     # no aliases or flags for parent App
@@ -532,7 +532,7 @@ class IPClusterApp(BaseIPythonApplication):
             return self.subapp.start()
 
 
-launch_new_instance = IPClusterApp.launch_instance
+main = IPCluster.launch_instance
 
 if __name__ == '__main__':
-    launch_new_instance()
+    main()

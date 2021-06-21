@@ -34,22 +34,22 @@ def bind_kernel(**kwargs):
     This function returns immediately.
     """
     from ipykernel.kernelapp import IPKernelApp
-    from ipyparallel.apps.ipengineapp import IPEngineApp
+    from ipyparallel.engine.app import IPEngine
 
     # first check for IPKernelApp, in which case this should be a no-op
     # because there is already a bound kernel
     if IPKernelApp.initialized() and isinstance(IPKernelApp._instance, IPKernelApp):
         return
 
-    if IPEngineApp.initialized():
+    if IPEngine.initialized():
         try:
-            app = IPEngineApp.instance()
+            app = IPEngine.instance()
         except MultipleInstanceError:
             pass
         else:
             return app.bind_kernel(**kwargs)
 
-    raise RuntimeError("bind_kernel be called from an IPEngineApp instance")
+    raise RuntimeError("bind_kernel be called from an IPEngine instance")
 
 
 def register_joblib_backend(name='ipyparallel', make_default=False):

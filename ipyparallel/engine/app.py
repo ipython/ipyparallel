@@ -10,30 +10,40 @@ import os
 import signal
 import sys
 import time
+from getpass import getpass
 
 import zmq
-from ipykernel.ipkernel import IPythonKernel as Kernel
 from ipykernel.kernelapp import IPKernelApp
 from ipykernel.zmqshell import ZMQInteractiveShell
 from IPython.core.profiledir import ProfileDir
 from ipython_genutils.py3compat import cast_bytes
+from jupyter_client.localinterfaces import localhost
 from jupyter_client.session import Session
 from jupyter_client.session import session_aliases
 from jupyter_client.session import session_flags
+from tornado import ioloop
+from traitlets import Bool
+from traitlets import Bytes
+from traitlets import default
 from traitlets import Dict
 from traitlets import Float
 from traitlets import Instance
+from traitlets import Integer
 from traitlets import List
 from traitlets import observe
+from traitlets import Type
 from traitlets import Unicode
+from zmq.eventloop import zmqstream
 
 from ipyparallel.apps.baseapp import base_aliases
 from ipyparallel.apps.baseapp import base_flags
 from ipyparallel.apps.baseapp import BaseParallelApplication
 from ipyparallel.apps.baseapp import catch_config_error
-from ipyparallel.engine.engine import EngineFactory
+from ipyparallel.controller.heartmonitor import Heart
+from ipyparallel.engine.kernel import IPythonParallelKernel as Kernel
 from ipyparallel.engine.log import EnginePUBHandler
 from ipyparallel.util import disambiguate_ip_address
+from ipyparallel.util import disambiguate_url
 
 # -----------------------------------------------------------------------------
 # Module level variables
@@ -50,33 +60,35 @@ See the `profile` and `profile-dir` options for details.
 """
 
 _examples = """
-ipengine --ip=192.168.0.1 --port=1000     # connect to hub at ip and port
+ipengine --url=tcp://192.168.0.1:1000     # connect to hub at specific url
 ipengine --log-to-file --log-level=DEBUG  # log to a file with DEBUG verbosity
 """
 
+DEFAULT_MPI_INIT = """
+from mpi4py import MPI
+mpi_rank = MPI.COMM_WORLD.Get_rank()
+mpi_size = MPI.COMM_WORLD.Get_size()
+"""
 
 # -----------------------------------------------------------------------------
 # Main application
 # -----------------------------------------------------------------------------
 aliases = dict(
-    file='IPEngineApp.url_file',
-    c='IPEngineApp.startup_command',
-    s='IPEngineApp.startup_script',
-    url='EngineFactory.url',
-    ssh='EngineFactory.sshserver',
-    sshkey='EngineFactory.sshkey',
-    ip='EngineFactory.ip',
-    transport='EngineFactory.transport',
-    port='EngineFactory.regport',
-    location='EngineFactory.location',
-    timeout='EngineFactory.timeout',
+    file='IPEngine.url_file',
+    c='IPEngine.startup_command',
+    s='IPEngine.startup_script',
+    url='IPEngine.registration_url',
+    ssh='IPEngine.sshserver',
+    sshkey='IPEngine.sshkey',
+    location='IPEngine.location',
+    timeout='IPEngine.timeout',
 )
 aliases.update(base_aliases)
 aliases.update(session_aliases)
 flags = {
     'mpi': (
         {
-            'EngineFactory': {'use_mpi': True},
+            'IPEngine': {'use_mpi': True},
         },
         "enable MPI integration",
     ),
@@ -85,12 +97,13 @@ flags.update(base_flags)
 flags.update(session_flags)
 
 
-class IPEngineApp(BaseParallelApplication):
+class IPEngine(BaseParallelApplication):
 
     name = 'ipengine'
     description = _description
     examples = _examples
-    classes = List([ZMQInteractiveShell, ProfileDir, Session, EngineFactory, Kernel])
+    classes = List([ZMQInteractiveShell, ProfileDir, Session, Kernel])
+    _deprecated_classes = ["EngineFactory", "IPEngineApp"]
 
     startup_script = Unicode(
         u'', config=True, help='specify a script to be run at startup'
@@ -133,16 +146,135 @@ class IPEngineApp(BaseParallelApplication):
         logging to a central location.""",
     )
 
+    registration_url = Unicode(
+        config=True,
+        help="""Override the registration URL""",
+    )
+    out_stream_factory = Type(
+        'ipykernel.iostream.OutStream',
+        config=True,
+        help="""The OutStream for handling stdout/err.
+        Typically 'ipykernel.iostream.OutStream'""",
+    )
+    display_hook_factory = Type(
+        'ipykernel.displayhook.ZMQDisplayHook',
+        config=True,
+        help="""The class for handling displayhook.
+        Typically 'ipykernel.displayhook.ZMQDisplayHook'""",
+    )
+    location = Unicode(
+        config=True,
+        help="""The location (an IP address) of the controller.  This is
+        used for disambiguating URLs, to determine whether
+        loopback should be used to connect or the public address.""",
+    )
+    timeout = Float(
+        5.0,
+        config=True,
+        help="""The time (in seconds) to wait for the Controller to respond
+        to registration requests before giving up.""",
+    )
+    max_heartbeat_misses = Integer(
+        50,
+        config=True,
+        help="""The maximum number of times a check for the heartbeat ping of a
+        controller can be missed before shutting down the engine.
+
+        If set to 0, the check is disabled.""",
+    )
+    sshserver = Unicode(
+        config=True,
+        help="""The SSH server to use for tunneling connections to the Controller.""",
+    )
+    sshkey = Unicode(
+        config=True,
+        help="""The SSH private key file to use when tunneling connections to the Controller.""",
+    )
+    paramiko = Bool(
+        sys.platform == 'win32',
+        config=True,
+        help="""Whether to use paramiko instead of openssh for tunnels.""",
+    )
+
+    use_mpi = Bool(
+        False,
+        config=True,
+        help="""Enable MPI integration.
+
+        If set, MPI rank will be requested for my rank,
+        and additionally `mpi_init` will be executed in the interactive shell.
+        """,
+    )
+    init_mpi = Unicode(
+        DEFAULT_MPI_INIT,
+        config=True,
+        help="""Code to execute in the user namespace when initializing MPI""",
+    )
+
+    # not configurable:
+    user_ns = Dict()
+    id = Integer(
+        None,
+        allow_none=True,
+        config=True,
+        help="""Request this engine ID.
+
+        If run in MPI, will use the MPI rank.
+        Otherwise, let the Hub decide what our rank should be.
+        """,
+    )
+
+    @default('id')
+    def _id_default(self):
+        if not self.use_mpi:
+            return None
+        from mpi4py import MPI
+
+        if MPI.COMM_WORLD.size > 1:
+            self.log.debug("MPI rank = %i", MPI.COMM_WORLD.rank)
+            return MPI.COMM_WORLD.rank
+
+    registrar = Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
+    kernel = Instance(Kernel, allow_none=True)
+    hb_check_period = Integer()
+
+    # States for the heartbeat monitoring
+    # Initial values for monitored and pinged must satisfy "monitored > pinged == False" so that
+    # during the first check no "missed" ping is reported. Must be floats for Python 3 compatibility.
+    _hb_last_pinged = 0.0
+    _hb_last_monitored = 0.0
+    _hb_missed_beats = 0
+    # The zmq Stream which receives the pings from the Heart
+    _hb_listener = None
+
+    bident = Bytes()
+    ident = Unicode()
+
+    @default("ident")
+    def _default_ident(self):
+        return self.session.session
+
+    @default("bident")
+    def _default_bident(self):
+        return self.ident.encode("utf8")
+
+    @observe("ident")
+    def _ident_changed(self, change):
+        self.bident = self._default_bident()
+
+    using_ssh = Bool(False)
+
+    context = Instance(zmq.Context)
+
+    @default("context")
+    def _default_context(self):
+        return zmq.Context.instance()
+
     # an IPKernelApp instance, used to setup listening for shell frontends
     kernel_app = Instance(IPKernelApp, allow_none=True)
 
     aliases = Dict(aliases)
     flags = Dict(flags)
-
-    @property
-    def kernel(self):
-        """allow access to the Kernel object, so I look like IPKernelApp"""
-        return self.engine.kernel
 
     def find_url_file(self):
         """Set the url file.
@@ -161,33 +293,21 @@ class IPEngineApp(BaseParallelApplication):
         at a *lower* priority than command-line/config files.
         """
 
-        self.log.info("Loading url_file %r", self.url_file)
+        self.log.info("Loading connection file %r", self.url_file)
         config = self.config
 
         with open(self.url_file) as f:
-            num_tries = 0
-            max_tries = 5
-            d = ""
-            while not d:
-                try:
-                    d = json.loads(f.read())
-                except ValueError:
-                    if num_tries > max_tries:
-                        raise
-                    num_tries += 1
-                    time.sleep(0.5)
+            d = json.load(f)
 
         # allow hand-override of location for disambiguation
         # and ssh-server
-        if 'EngineFactory.location' not in config:
-            config.EngineFactory.location = d['location']
-        if 'EngineFactory.sshserver' not in config:
-            config.EngineFactory.sshserver = d.get('ssh')
-
-        location = config.EngineFactory.location
+        if 'IPEngine.location' not in self.cli_config:
+            self.loction = d['location']
+        if 'ssh' in d and not self.sshserver:
+            self.sshserver = d.get("ssh")
 
         proto, ip = d['interface'].split('://')
-        ip = disambiguate_ip_address(ip, location)
+        ip = disambiguate_ip_address(ip, self.location)
         d['interface'] = '%s://%s' % (proto, ip)
 
         # DO NOT allow override of basic URLs, serialization, or key
@@ -195,10 +315,11 @@ class IPEngineApp(BaseParallelApplication):
         config.Session.key = cast_bytes(d['key'])
         config.Session.signature_scheme = d['signature_scheme']
 
-        config.EngineFactory.url = d['interface'] + ':%i' % d['registration']
+        self.registration_url = d['interface'] + ':%i' % d['registration']
 
         config.Session.packer = d['pack']
         config.Session.unpacker = d['unpack']
+        self.session = Session(parent=self)
 
         self.log.debug("Config changed:")
         self.log.debug("%r", config)
@@ -216,7 +337,7 @@ class IPEngineApp(BaseParallelApplication):
         kwargs.setdefault('config', self.config)
         kwargs.setdefault('log', self.log)
         kwargs.setdefault('profile_dir', self.profile_dir)
-        kwargs.setdefault('session', self.engine.session)
+        kwargs.setdefault('session', self.session)
 
         app = self.kernel_app = IPKernelApp(**kwargs)
 
@@ -237,7 +358,7 @@ class IPEngineApp(BaseParallelApplication):
         app.iopub_port = app._bind_socket(iopub_socket, app.iopub_port)
         app.log.debug("iopub PUB Channel on port: %i", app.iopub_port)
 
-        kernel.stdin_socket = self.engine.context.socket(zmq.ROUTER)
+        kernel.stdin_socket = self.context.socket(zmq.ROUTER)
         app.stdin_port = app._bind_socket(kernel.stdin_socket, app.stdin_port)
         app.log.debug("stdin ROUTER Channel on port: %i", app.stdin_port)
 
@@ -249,16 +370,294 @@ class IPEngineApp(BaseParallelApplication):
         app.connection_dir = self.profile_dir.security_dir
         app.write_connection_file()
 
+    @property
+    def tunnel_mod(self):
+        from zmq.ssh import tunnel
+
+        return tunnel
+
+    def init_connector(self):
+        """construct connection function, which handles tunnels."""
+        self.using_ssh = bool(self.sshkey or self.sshserver)
+
+        if self.sshkey and not self.sshserver:
+            # We are using ssh directly to the controller, tunneling localhost to localhost
+            self.sshserver = self.registration_url.split('://')[1].split(':')[0]
+
+        if self.using_ssh:
+            if self.tunnel_mod.try_passwordless_ssh(
+                self.sshserver, self.sshkey, self.paramiko
+            ):
+                password = False
+            else:
+                password = getpass("SSH Password for %s: " % self.sshserver)
+        else:
+            password = False
+
+        def connect(s, url):
+            url = disambiguate_url(url, self.location)
+            if self.using_ssh:
+                self.log.debug("Tunneling connection to %s via %s", url, self.sshserver)
+                return self.tunnel_mod.tunnel_connection(
+                    s,
+                    url,
+                    self.sshserver,
+                    keyfile=self.sshkey,
+                    paramiko=self.paramiko,
+                    password=password,
+                )
+            else:
+                return s.connect(url)
+
+        def maybe_tunnel(url):
+            """like connect, but don't complete the connection (for use by heartbeat)"""
+            url = disambiguate_url(url, self.location)
+            if self.using_ssh:
+                self.log.debug("Tunneling connection to %s via %s", url, self.sshserver)
+                url, tunnelobj = self.tunnel_mod.open_tunnel(
+                    url,
+                    self.sshserver,
+                    keyfile=self.sshkey,
+                    paramiko=self.paramiko,
+                    password=password,
+                )
+            return str(url)
+
+        return connect, maybe_tunnel
+
+    def register(self):
+        """send the registration_request"""
+
+        self.log.info("Registering with controller at %s" % self.registration_url)
+        ctx = self.context
+        connect, maybe_tunnel = self.init_connector()
+        reg = ctx.socket(zmq.DEALER)
+        reg.setsockopt(zmq.IDENTITY, self.bident)
+        connect(reg, self.registration_url)
+        self.registrar = zmqstream.ZMQStream(reg, self.loop)
+
+        content = dict(uuid=self.ident)
+        if self.id is not None:
+            self.log.info("Requesting id: %i", self.id)
+            content['id'] = self.id
+        self.registrar.on_recv(
+            lambda msg: self.complete_registration(msg, connect, maybe_tunnel)
+        )
+        # print (self.session.key)
+
+        self.session.send(self.registrar, "registration_request", content=content)
+
+    def _report_ping(self, msg):
+        """Callback for when the heartmonitor.Heart receives a ping"""
+        # self.log.debug("Received a ping: %s", msg)
+        self._hb_last_pinged = time.time()
+
+    def complete_registration(self, msg, connect, maybe_tunnel):
+        # print msg
+        self.loop.remove_timeout(self._abort_timeout)
+        ctx = self.context
+        loop = self.loop
+        identity = self.bident
+        idents, msg = self.session.feed_identities(msg)
+        msg = self.session.deserialize(msg)
+        content = msg['content']
+        info = self.connection_info
+
+        def url(key):
+            """get zmq url for given channel"""
+            return str(info["interface"] + ":%i" % info[key])
+
+        def urls(key):
+            return [f'{info["interface"]}:{port}' for port in info[key]]
+
+        if content['status'] == 'ok':
+            if self.id is not None and content['id'] != self.id:
+                self.log.warning(
+                    "Did not get the requested id: %i != %i", content['id'], self.id
+                )
+            self.id = content['id']
+            self.log.name += f".{self.id}"
+
+            # create Shell Connections (MUX, Task, etc.):
+            shell_addrs = [url('mux'), url('task')] + urls('broadcast')
+
+            self.log.info(f'ENGINE: shell_addrs: {shell_addrs}')
+
+            # Use only one shell stream for mux and tasks
+            stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
+            stream.setsockopt(zmq.IDENTITY, identity)
+            # TODO: enable PROBE_ROUTER when schedulers can handle the empty message
+            # stream.setsockopt(zmq.PROBE_ROUTER, 1)
+            self.log.debug("Setting shell identity %r", identity)
+
+            shell_streams = [stream]
+            for addr in shell_addrs:
+                self.log.info("Connecting shell to %s", addr)
+                connect(stream, addr)
+
+            # control stream:
+            control_addr = url('control')
+            control_stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
+            control_stream.setsockopt(zmq.IDENTITY, identity)
+            connect(control_stream, control_addr)
+
+            # create iopub stream:
+            iopub_addr = url('iopub')
+            iopub_socket = ctx.socket(zmq.PUB)
+            iopub_socket.setsockopt(zmq.IDENTITY, identity)
+            connect(iopub_socket, iopub_addr)
+            try:
+                from ipykernel.iostream import IOPubThread
+            except ImportError:
+                pass
+            else:
+                iopub_socket = IOPubThread(iopub_socket)
+                iopub_socket.start()
+
+            # disable history:
+            self.config.HistoryManager.hist_file = ':memory:'
+
+            # Redirect input streams and set a display hook.
+            if self.out_stream_factory:
+                sys.stdout = self.out_stream_factory(
+                    self.session, iopub_socket, u'stdout'
+                )
+                sys.stdout.topic = cast_bytes('engine.%i.stdout' % self.id)
+                sys.stderr = self.out_stream_factory(
+                    self.session, iopub_socket, u'stderr'
+                )
+                sys.stderr.topic = cast_bytes('engine.%i.stderr' % self.id)
+            if self.display_hook_factory:
+                sys.displayhook = self.display_hook_factory(self.session, iopub_socket)
+                sys.displayhook.topic = cast_bytes('engine.%i.execute_result' % self.id)
+
+            self.kernel = Kernel(
+                parent=self,
+                engine_id=self.id,
+                ident=self.ident,
+                session=self.session,
+                control_stream=control_stream,
+                shell_streams=shell_streams,
+                iopub_socket=iopub_socket,
+                loop=loop,
+                user_ns=self.user_ns,
+                log=self.log,
+            )
+
+            self.kernel.shell.display_pub.topic = cast_bytes(
+                'engine.%i.displaypub' % self.id
+            )
+
+            # FIXME: This is a hack until IPKernelApp and IPEngineApp can be fully merged
+            app = IPKernelApp(
+                parent=self, shell=self.kernel.shell, kernel=self.kernel, log=self.log
+            )
+            if self.use_mpi and self.init_mpi:
+                app.exec_lines.insert(0, self.init_mpi)
+            app.init_profile_dir()
+            app.init_code()
+
+            self.kernel.start()
+        else:
+            self.log.fatal("Registration Failed: %s" % msg)
+            raise Exception("Registration Failed: %s" % msg)
+
+        self.start_heartbeat(
+            maybe_tunnel(url('hb_ping')),
+            maybe_tunnel(url('hb_pong')),
+            content['hb_period'],
+            identity,
+        )
+        self.log.info("Completed registration with id %i" % self.id)
+
+    def start_heartbeat(self, hb_ping, hb_pong, hb_period, identity):
+        """Start our heart beating"""
+        self.log.info("Starting heartbeat")
+
+        hb_monitor = None
+        if self.max_heartbeat_misses > 0:
+            # Add a monitor socket which will record the last time a ping was seen
+            mon = self.context.socket(zmq.SUB)
+            mport = mon.bind_to_random_port('tcp://%s' % localhost())
+            mon.setsockopt(zmq.SUBSCRIBE, b"")
+            self._hb_listener = zmqstream.ZMQStream(mon, self.loop)
+            self._hb_listener.on_recv(self._report_ping)
+
+            hb_monitor = "tcp://%s:%i" % (localhost(), mport)
+
+        heart = Heart(hb_ping, hb_pong, hb_monitor, heart_id=identity)
+        heart.start()
+
+        # periodically check the heartbeat pings of the controller
+        # Should be started here and not in "start()" so that the right period can be taken
+        # from the hubs HeartBeatMonitor.period
+        if self.max_heartbeat_misses > 0:
+            # Use a slightly bigger check period than the hub signal period to not warn unnecessary
+            self.hb_check_period = hb_period + 500
+            self.log.info(
+                "Starting to monitor the heartbeat signal from the hub every %i ms.",
+                self.hb_check_period,
+            )
+            self._hb_reporter = ioloop.PeriodicCallback(
+                self._hb_monitor, self.hb_check_period
+            )
+            self._hb_reporter.start()
+        else:
+            self.log.info(
+                "Monitoring of the heartbeat signal from the hub is not enabled."
+            )
+
+    def abort(self):
+        self.log.fatal("Registration timed out after %.1f seconds" % self.timeout)
+        if "127." in self.registration_url:
+            self.log.fatal(
+                """
+            If the controller and engines are not on the same machine,
+            you will have to instruct the controller to listen on an external IP (in ipcontroller_config.py):
+                c.IPController.ip = '0.0.0.0' # for all interfaces, internal and external
+                c.IPController.ip = '192.168.1.101' # or any interface that the engines can see
+            or tunnel connections via ssh.
+            """
+            )
+        self.session.send(
+            self.registrar, "unregistration_request", content=dict(id=self.id)
+        )
+        time.sleep(1)
+        sys.exit(255)
+
+    def _hb_monitor(self):
+        """Callback to monitor the heartbeat from the controller"""
+        self._hb_listener.flush()
+        if self._hb_last_monitored > self._hb_last_pinged:
+            self._hb_missed_beats += 1
+            self.log.warn(
+                "No heartbeat in the last %s ms (%s time(s) in a row).",
+                self.hb_check_period,
+                self._hb_missed_beats,
+            )
+        else:
+            # self.log.debug("Heartbeat received (after missing %s beats).", self._hb_missed_beats)
+            self._hb_missed_beats = 0
+
+        if self._hb_missed_beats >= self.max_heartbeat_misses:
+            self.log.fatal(
+                "Maximum number of heartbeats misses reached (%s times %s ms), shutting down.",
+                self.max_heartbeat_misses,
+                self.hb_check_period,
+            )
+            self.session.send(
+                self.registrar, "unregistration_request", content=dict(id=self.id)
+            )
+            self.loop.stop()
+
+        self._hb_last_monitored = time.time()
+
     def init_engine(self):
         # This is the working dir by now.
         sys.path.insert(0, '')
         config = self.config
         # print config
         self.find_url_file()
-
-        # was the url manually specified?
-        keys = set(self.config.EngineFactory.keys())
-        keys = keys.union(set(self.config.RegistrationFactory.keys()))
 
         if self.wait_for_url_file and not os.path.exists(self.url_file):
             self.log.warn("url_file %r not found", self.url_file)
@@ -298,23 +697,10 @@ class IPEngineApp(BaseParallelApplication):
         if self.startup_command:
             exec_lines.append(self.startup_command)
 
-        # Create the underlying shell class and Engine
-        # shell_class = import_item(self.master_config.Global.shell_class)
-        # print self.config
-        try:
-            self.engine = EngineFactory(
-                config=config,
-                log=self.log,
-                connection_info=self.connection_info,
-            )
-        except:
-            self.log.error("Couldn't start the Engine", exc_info=True)
-            self.exit(1)
-
     def forward_logging(self):
         if self.log_url:
             self.log.info("Forwarding logging to %s", self.log_url)
-            context = self.engine.context
+            context = self.context
             lsock = context.socket(zmq.PUB)
             lsock.connect(self.log_url)
             handler = EnginePUBHandler(self.engine, lsock)
@@ -323,7 +709,7 @@ class IPEngineApp(BaseParallelApplication):
 
     @catch_config_error
     def initialize(self, argv=None):
-        super(IPEngineApp, self).initialize(argv)
+        super().initialize(argv)
         self.init_engine()
         self.forward_logging()
         self.init_signal()
@@ -340,15 +726,23 @@ class IPEngineApp(BaseParallelApplication):
         self.loop.add_callback_from_signal(self.loop.stop)
 
     def start(self):
-        self.engine.start()
+        loop = self.loop
+
+        def _start():
+            self.register()
+            self._abort_timeout = loop.add_timeout(
+                loop.time() + self.timeout, self.abort
+            )
+
+        self.loop.add_callback(_start)
         try:
-            self.engine.loop.start()
+            self.loop.start()
         except KeyboardInterrupt:
             self.log.critical("Engine Interrupted, shutting down...\n")
 
 
-launch_new_instance = IPEngineApp.launch_instance
+main = launch_new_instance = IPEngine.launch_instance
 
 
 if __name__ == '__main__':
-    launch_new_instance()
+    main()

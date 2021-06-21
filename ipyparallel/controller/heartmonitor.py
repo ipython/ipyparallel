@@ -12,6 +12,7 @@ import uuid
 
 import zmq
 from ipython_genutils.py3compat import str_to_bytes
+from tornado import ioloop
 from traitlets import Bool
 from traitlets import Dict
 from traitlets import Float
@@ -22,7 +23,6 @@ from traitlets.config.configurable import LoggingConfigurable
 from zmq.devices import ThreadDevice
 from zmq.devices import ThreadMonitoredQueue
 
-from ipyparallel.util import ioloop
 from ipyparallel.util import log_errors
 
 

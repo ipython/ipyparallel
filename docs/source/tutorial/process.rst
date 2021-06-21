@@ -29,7 +29,7 @@ matter which method you use to start your IPython cluster.
 
 If you are running engines on multiple machines, you will likely need to instruct the
 controller to listen for connections on an external interface. This can be done by specifying
-the ``ip`` argument on the command-line, or the ``HubFactory.ip`` configurable in
+the ``ip`` argument on the command-line, or the ``IPController.ip`` configurable in
 :file:`ipcontroller_config.py`.
 
 If your machines are on a trusted network, you can safely instruct the controller to listen
@@ -42,8 +42,8 @@ Or you can set the same behavior as the default by adding the following line to 
 
 .. sourcecode:: python
 
-    c.HubFactory.ip = '*'
-    # c.HubFactory.location = 'controllerhost.tld'
+    c.IPController.ip = '*'
+    # c.IPController.location = 'controllerhost.tld'
 
 
 .. note::
@@ -78,7 +78,7 @@ hosts ``host1``-``hostn``. The following steps are then required:
 
 1. Start the controller on ``host0`` by running :command:`ipcontroller` on
    ``host0``.  The controller must be instructed to listen on an interface visible
-   to the engine machines, via the ``ip`` command-line argument or ``HubFactory.ip``
+   to the engine machines, via the ``ip`` command-line argument or ``IPController.ip``
    in :file:`ipcontroller_config.py`.
 2. Move the JSON file (:file:`ipcontroller-engine.json`) created by the
    controller from ``host0`` to hosts ``host1``-``hostn``.
@@ -364,7 +364,7 @@ connections on all its interfaces, by adding in :file:`ipcontroller_config`:
 
 .. sourcecode:: python
 
-    c.HubFactory.ip = '*'
+    c.IPController.ip = '*'
 
 You can now run the cluster with::
 
@@ -532,14 +532,14 @@ slightly more complicated, but the underlying ideas are the same:
 
 1. Start the controller on a host using :command:`ipcontroller`. The controller must be
    instructed to listen on an interface visible to the engine machines, via the ``ip``
-   command-line argument or ``HubFactory.ip`` in :file:`ipcontroller_config.py`::
+   command-line argument or ``IPController.ip`` in :file:`ipcontroller_config.py`::
 
         $ ipcontroller --ip=192.168.1.16
 
    .. sourcecode:: python
 
         # in ipcontroller_config.py
-        HubFactory.ip = '192.168.1.16'
+        IPController.ip = '192.168.1.16'
 
 2. Copy :file:`ipcontroller-engine.json` from :file:`IPYTHONDIR/profile_<name>/security` on
    the controller's host to the host where the engines will run.
@@ -618,15 +618,15 @@ the engines.
 
     [controller.host] $ ipcontroller --ip=192.168.1.16
 
-    [IPControllerApp] Using existing profile dir: u'/Users/me/.ipython/profile_default'
-    [IPControllerApp] Hub listening on tcp://192.168.1.16:63320 for registration.
-    [IPControllerApp] Hub using DB backend: 'ipyparallel.controller.dictdb.DictDB'
-    [IPControllerApp] hub::created hub
-    [IPControllerApp] writing connection info to /Users/me/.ipython/profile_default/security/ipcontroller-client.json
-    [IPControllerApp] writing connection info to /Users/me/.ipython/profile_default/security/ipcontroller-engine.json
-    [IPControllerApp] task::using Python leastload Task scheduler
-    [IPControllerApp] Heartmonitor started
-    [IPControllerApp] Creating pid file: /Users/me/.ipython/profile_default/pid/ipcontroller.pid
+    [IPController] Using existing profile dir: u'/Users/me/.ipython/profile_default'
+    [IPController] Hub listening on tcp://192.168.1.16:63320 for registration.
+    [IPController] Hub using DB backend: 'ipyparallel.controller.dictdb.DictDB'
+    [IPController] hub::created hub
+    [IPController] writing connection info to /Users/me/.ipython/profile_default/security/ipcontroller-client.json
+    [IPController] writing connection info to /Users/me/.ipython/profile_default/security/ipcontroller-engine.json
+    [IPController] task::using Python leastload Task scheduler
+    [IPController] Heartmonitor started
+    [IPController] Creating pid file: /Users/me/.ipython/profile_default/pid/ipcontroller.pid
     Scheduler started [leastload]
 
 2. on each engine, fetch the connection file with scp::
@@ -711,15 +711,15 @@ Ports and addresses
 In many cases, you will want to configure the Controller's network identity.  By default,
 the Controller listens only on loopback, which is the most secure but often impractical.
 To instruct the controller to listen on a specific interface, you can set the
-:attr:`HubFactory.ip` trait.  To listen on all interfaces, specify:
+:attr:`IPController.ip` trait.  To listen on all interfaces, specify:
 
 .. sourcecode:: python
 
-    c.HubFactory.ip = '*'
+    c.IPController.ip = '*'
 
 When connecting to a Controller that is listening on loopback or behind a firewall, it may
 be necessary to specify an SSH server to use for tunnels, and the external IP of the
-Controller. If you specified that the HubFactory listen on loopback, or all interfaces,
+Controller. If you specified that the IPController listen on loopback, or all interfaces,
 then IPython will try to guess the external IP. If you are on a system with VM network
 devices, or many interfaces, this guess may be incorrect. In these cases, you will want
 to specify the 'location' of the Controller. This is the IP of the machine the Controller
@@ -733,11 +733,11 @@ through the login node, an example :file:`ipcontroller_config.py` might contain:
     # allow connections on all interfaces from engines
     # engines on the same node will use loopback, while engines
     # from other nodes will use an external IP
-    c.HubFactory.ip = '*'
+    c.IPController.ip = '*'
 
     # you typically only need to specify the location when there are extra
     # interfaces that may not be visible to peer nodes (e.g. VM interfaces)
-    c.HubFactory.location = '10.0.1.5'
+    c.IPController.location = '10.0.1.5'
     # or to get an automatic value, try this:
     import socket
     hostname = socket.gethostname()
@@ -745,10 +745,10 @@ through the login node, an example :file:`ipcontroller_config.py` might contain:
     # or `socket.gethostname() + '.local'`
 
     ex_ip = socket.gethostbyname_ex(hostname)[-1][-1]
-    c.HubFactory.location = ex_ip
+    c.IPController.location = ex_ip
 
     # now instruct clients to use the login node for SSH tunnels:
-    c.HubFactory.ssh_server = 'login.mycluster.net'
+    c.IPController.ssh_server = 'login.mycluster.net'
 
 After doing this, your :file:`ipcontroller-client.json` file will look something like this:
 
@@ -781,23 +781,23 @@ data types.
 
     MongoDB `BSON doc <http://bsonspec.org/>`_
 
-To use one of these backends, you must set the :attr:`HubFactory.db_class` trait:
+To use one of these backends, you must set the :attr:`IPController.db_class` trait:
 
 .. sourcecode:: python
 
     # for a simple dict-based in-memory implementation, use dictdb
     # This is the default and the fastest, since it doesn't involve the filesystem
-    c.HubFactory.db_class = 'ipyparallel.controller.dictdb.DictDB'
+    c.IPController.db_class = 'ipyparallel.controller.dictdb.DictDB'
 
     # To use MongoDB:
-    c.HubFactory.db_class = 'ipyparallel.controller.mongodb.MongoDB'
+    c.IPController.db_class = 'ipyparallel.controller.mongodb.MongoDB'
 
     # and SQLite:
-    c.HubFactory.db_class = 'ipyparallel.controller.sqlitedb.SQLiteDB'
+    c.IPController.db_class = 'ipyparallel.controller.sqlitedb.SQLiteDB'
 
     # You can use NoDB to disable the database altogether, in case you don't need
     # to reuse tasks or results, and want to keep memory consumption under control.
-    c.HubFactory.db_class = 'ipyparallel.controller.dictdb.NoDB'
+    c.IPController.db_class = 'ipyparallel.controller.dictdb.NoDB'
 
 When using the proper databases, you can allow for tasks to persist from
 one session to the next by specifying the MongoDB database or SQLite table in
@@ -868,9 +868,9 @@ Engine:
 
 .. sourcecode:: python
 
-    c.IPEngineApp.startup_script = u'/path/to/my/startup.py'
+    c.IPEngine.startup_script = u'/path/to/my/startup.py'
 
-    c.IPEngineApp.startup_command = 'import numpy, scipy, mpi4py'
+    c.IPEngine.startup_command = 'import numpy, scipy, mpi4py'
 
 These commands/files will be run again, after each
 
@@ -879,7 +879,7 @@ in some scratch directory.  This can be set with:
 
 .. sourcecode:: python
 
-    c.IPEngineApp.work_dir = u'/path/to/scratch/'
+    c.IPEngine.work_dir = u'/path/to/scratch/'
 
 
 

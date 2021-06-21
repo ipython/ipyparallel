@@ -196,7 +196,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         help="delay (in s) between starting the controller and the engines",
     )
 
-    n = Integer(None, allow_none=True, help="The number of engines to start")
+    n = Integer(
+        None, allow_none=True, config=True, help="The number of engines to start"
+    )
 
     @default("parent")
     def _default_parent(self):
