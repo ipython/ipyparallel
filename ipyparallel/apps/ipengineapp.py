@@ -7,6 +7,7 @@ The IPython engine application
 # Distributed under the terms of the Modified BSD License.
 import json
 import os
+import signal
 import sys
 import time
 
@@ -325,6 +326,18 @@ class IPEngineApp(BaseParallelApplication):
         super(IPEngineApp, self).initialize(argv)
         self.init_engine()
         self.forward_logging()
+        self.init_signal()
+
+    def init_signal(self):
+        signal.signal(signal.SIGINT, self._signal_sigint)
+        signal.signal(signal.SIGTERM, self._signal_stop)
+
+    def _signal_sigint(self, sig, frame):
+        self.log.warning("Ignoring SIGINT. Terminate with SIGTERM.")
+
+    def _signal_stop(self, sig, frame):
+        self.log.critical(f"received signal {sig}, stopping")
+        self.loop.add_callback_from_signal(self.loop.stop)
 
     def start(self):
         self.engine.start()

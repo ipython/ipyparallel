@@ -46,15 +46,36 @@ jobs:
           - python: "3.6"
           - python: "3.7"
           - python: "3.8"
+            mpi: true
           - python: "3.9"
 
     steps:
       - uses: actions/checkout@v2
 
+      - name: Cache conda environment
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/conda
+          key: conda
+
+      - name: Install Python (conda) ${{ matrix.python }}
+        if: matrix.mpi
+        run: |
+          export MAMBA_ROOT_PREFIX=$HOME/conda
+          test -d $MAMBA_ROOT_PREFIX || mkdir $MAMBA_ROOT_PREFIX
+          wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
+          eval "$(./bin/micromamba shell hook -s posix)"
+          micromamba activate
+          micromamba install -y -c conda-forge mpich mpi4py python=${{ matrix.python }}
+          echo "PATH=$MAMBA_ROOT_PREFIX/bin:$PATH" >> $GITHUB_ENV
+
       - name: Install Python ${{ matrix.python }}
+        if: ${{ ! matrix.mpi }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
+
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
@@ -67,11 +88,18 @@ jobs:
       - name: Show environment
         run: pip freeze
 
+      - name: Run mpi tests
+        if: ${{ matrix.mpi }}
+        run: |
+          pytest -vx --color=yes --cov=ipyparallel ipyparallel/tests/test_cluster.py
+
       - name: Run tests
+        if: ${{ ! matrix.mpi }}
         # FIXME: --color=yes explicitly set because:
         #        https://github.com/actions/runner/issues/241
         run: |
           pytest -v --maxfail=3 --color=yes --cov=ipyparallel ipyparallel/tests
+
       - name: Submit codecov report
         run: |
           codecov

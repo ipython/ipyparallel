@@ -70,9 +70,9 @@ class EngineFactory(RegistrationFactory):
     max_heartbeat_misses = Integer(
         50,
         config=True,
-        help="""The maximum number of times a check for the heartbeat ping of a 
+        help="""The maximum number of times a check for the heartbeat ping of a
         controller can be missed before shutting down the engine.
-        
+
         If set to 0, the check is disabled.""",
     )
     sshserver = Unicode(
@@ -93,7 +93,7 @@ class EngineFactory(RegistrationFactory):
         False,
         config=True,
         help="""Enable MPI integration.
-        
+
         If set, MPI rank will be requested for my rank,
         and additionally `mpi_init` will be executed in the interactive shell.
         """,
@@ -118,7 +118,7 @@ class EngineFactory(RegistrationFactory):
         allow_none=True,
         config=True,
         help="""Request this engine ID.
-        
+
         If run in MPI, will use the MPI rank.
         Otherwise, let the Hub decide what our rank should be.
         """,
@@ -260,25 +260,7 @@ class EngineFactory(RegistrationFactory):
                     "Did not get the requested id: %i != %i", content['id'], self.id
                 )
             self.id = content['id']
-
-            # launch heartbeat
-            # possibly forward hb ports with tunnels
-            hb_ping = maybe_tunnel(url('hb_ping'))
-            hb_pong = maybe_tunnel(url('hb_pong'))
-
-            hb_monitor = None
-            if self.max_heartbeat_misses > 0:
-                # Add a monitor socket which will record the last time a ping was seen
-                mon = self.context.socket(zmq.SUB)
-                mport = mon.bind_to_random_port('tcp://%s' % localhost())
-                mon.setsockopt(zmq.SUBSCRIBE, b"")
-                self._hb_listener = zmqstream.ZMQStream(mon, self.loop)
-                self._hb_listener.on_recv(self._report_ping)
-
-                hb_monitor = "tcp://%s:%i" % (localhost(), mport)
-
-            heart = Heart(hb_ping, hb_pong, hb_monitor, heart_id=identity)
-            heart.start()
+            self.log.name += f".{self.id}"
 
             # create Shell Connections (MUX, Task, etc.):
             shell_addrs = [url('mux'), url('task')] + urls('broadcast')
@@ -288,6 +270,8 @@ class EngineFactory(RegistrationFactory):
             # Use only one shell stream for mux and tasks
             stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
             stream.setsockopt(zmq.IDENTITY, identity)
+            # TODO: enable PROBE_ROUTER when schedulers can handle the empty message
+            # stream.setsockopt(zmq.PROBE_ROUTER, 1)
             self.log.debug("Setting shell identity %r", identity)
 
             shell_streams = [stream]
@@ -348,25 +332,6 @@ class EngineFactory(RegistrationFactory):
                 'engine.%i.displaypub' % self.id
             )
 
-            # periodically check the heartbeat pings of the controller
-            # Should be started here and not in "start()" so that the right period can be taken
-            # from the hubs HeartBeatMonitor.period
-            if self.max_heartbeat_misses > 0:
-                # Use a slightly bigger check period than the hub signal period to not warn unnecessary
-                self.hb_check_period = int(content['hb_period']) + 10
-                self.log.info(
-                    "Starting to monitor the heartbeat signal from the hub every %i ms.",
-                    self.hb_check_period,
-                )
-                self._hb_reporter = ioloop.PeriodicCallback(
-                    self._hb_monitor, self.hb_check_period
-                )
-                self._hb_reporter.start()
-            else:
-                self.log.info(
-                    "Monitoring of the heartbeat signal from the hub is not enabled."
-                )
-
             # FIXME: This is a hack until IPKernelApp and IPEngineApp can be fully merged
             app = IPKernelApp(
                 parent=self, shell=self.kernel.shell, kernel=self.kernel, log=self.log
@@ -381,7 +346,50 @@ class EngineFactory(RegistrationFactory):
             self.log.fatal("Registration Failed: %s" % msg)
             raise Exception("Registration Failed: %s" % msg)
 
+        self.start_heartbeat(
+            maybe_tunnel(url('hb_ping')),
+            maybe_tunnel(url('hb_pong')),
+            content['hb_period'],
+            identity,
+        )
         self.log.info("Completed registration with id %i" % self.id)
+
+    def start_heartbeat(self, hb_ping, hb_pong, hb_period, identity):
+        """Start our heart beating"""
+        self.log.info("Starting heartbeat")
+
+        hb_monitor = None
+        if self.max_heartbeat_misses > 0:
+            # Add a monitor socket which will record the last time a ping was seen
+            mon = self.context.socket(zmq.SUB)
+            mport = mon.bind_to_random_port('tcp://%s' % localhost())
+            mon.setsockopt(zmq.SUBSCRIBE, b"")
+            self._hb_listener = zmqstream.ZMQStream(mon, self.loop)
+            self._hb_listener.on_recv(self._report_ping)
+
+            hb_monitor = "tcp://%s:%i" % (localhost(), mport)
+
+        heart = Heart(hb_ping, hb_pong, hb_monitor, heart_id=identity)
+        heart.start()
+
+        # periodically check the heartbeat pings of the controller
+        # Should be started here and not in "start()" so that the right period can be taken
+        # from the hubs HeartBeatMonitor.period
+        if self.max_heartbeat_misses > 0:
+            # Use a slightly bigger check period than the hub signal period to not warn unnecessary
+            self.hb_check_period = hb_period + 500
+            self.log.info(
+                "Starting to monitor the heartbeat signal from the hub every %i ms.",
+                self.hb_check_period,
+            )
+            self._hb_reporter = ioloop.PeriodicCallback(
+                self._hb_monitor, self.hb_check_period
+            )
+            self._hb_reporter.start()
+        else:
+            self.log.info(
+                "Monitoring of the heartbeat signal from the hub is not enabled."
+            )
 
     def abort(self):
         self.log.fatal("Registration timed out after %.1f seconds" % self.timeout)

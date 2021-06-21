@@ -1,12 +1,10 @@
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from unittest import mock
 
 import pytest
 
 import ipyparallel as ipp
-from .clienttest import ClusterTestCase, add_engines
+from .clienttest import add_engines
+from .clienttest import ClusterTestCase
 
 try:
     import joblib

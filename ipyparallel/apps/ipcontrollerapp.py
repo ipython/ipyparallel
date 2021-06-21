@@ -111,9 +111,9 @@ flags.update(
         'nodb': (
             {'HubFactory': {'db_class': 'ipyparallel.controller.dictdb.NoDB'}},
             """use dummy DB backend, which doesn't store any information.
-                    
+
                     This is the default as of IPython 0.13.
-                    
+
                     To enable delayed or repeated retrieval of results from the Hub,
                     select one of the true db backends.
                     """,

@@ -11,6 +11,8 @@ API Reference
 Classes
 -------
 
+.. autoclass:: Cluster
+
 .. autoclass:: Client
 
 .. autoclass:: DirectView

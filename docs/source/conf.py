@@ -60,13 +60,13 @@ extensions = [
 # You can specify multiple suffix as a list of string:
 source_suffix = ['.rst', '.md']
 
-from traitlets.config import HasTraits
+from traitlets.config import LoggingConfigurable
 
 # exclude members inherited from HasTraits by default
 autodoc_default_options = {
     'members': None,
     "inherited-members": None,
-    "exclude-members": ','.join(dir(HasTraits)),
+    "exclude-members": ','.join(dir(LoggingConfigurable)),
 }
 
 # Add dev disclaimer.

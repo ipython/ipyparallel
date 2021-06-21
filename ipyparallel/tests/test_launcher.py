@@ -14,7 +14,7 @@ import pytest
 from ipython_genutils.py3compat import string_types
 from traitlets.config import Config
 
-from ipyparallel.apps import launcher
+from ipyparallel.cluster import launcher
 
 
 # -------------------------------------------------------------------------------

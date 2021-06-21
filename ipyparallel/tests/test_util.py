@@ -1,11 +1,10 @@
 import socket
+from unittest import mock
 
-try:
-    from unittest import mock
-except ImportError:
-    import mock
+from jupyter_client.localinterfaces import localhost
+from jupyter_client.localinterfaces import public_ips
+
 from ipyparallel import util
-from jupyter_client.localinterfaces import localhost, public_ips
 
 
 @mock.patch('warnings.warn')

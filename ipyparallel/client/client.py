@@ -330,6 +330,7 @@ class Client(HasTraits):
     outstanding = Set()
     results = Instance('collections.defaultdict', (dict,))
     metadata = Instance('collections.defaultdict', (Metadata,))
+    cluster = Instance('ipyparallel.cluster.Cluster', allow_none=True)
     history = List()
     debug = Bool(False)
     _futures = Dict()
@@ -388,12 +389,14 @@ class Client(HasTraits):
         paramiko=None,
         timeout=10,
         cluster_id=None,
+        cluster=None,
         **extra_args,
     ):
+
+        super_kwargs = {'debug': debug, 'cluster': cluster}
         if profile:
-            super(Client, self).__init__(debug=debug, profile=profile)
-        else:
-            super(Client, self).__init__(debug=debug)
+            super_kwargs['profile'] = profile
+        super(Client, self).__init__(**super_kwargs)
         if context is None:
             context = zmq.Context.instance()
         self._context = context
@@ -601,6 +604,19 @@ class Client(HasTraits):
             except ProfileDirError:
                 pass
         self._cd = None
+
+    def __enter__(self):
+        """A client can be used as a context manager
+
+        which will close the client on exit
+
+        .. versionadded: 7.0
+        """
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """Exiting a client context closes the client"""
+        self.close()
 
     def _update_engines(self, engines):
         """Update our engines dict and _ids from a dict of the form: {id:uuid}."""
@@ -1318,7 +1334,12 @@ class Client(HasTraits):
         TimeoutError : if timeout is reached.
         """
         if len(self.ids) >= n:
-            return
+            if block:
+                return
+            else:
+                f = Future()
+                f.set_result(None)
+                return f
         tic = now = time.perf_counter()
         if timeout >= 0:
             deadline = tic + timeout
@@ -1347,7 +1368,7 @@ class Client(HasTraits):
             else:
                 future.set_exception(
                     TimeoutError(
-                        "{n} engines not ready in {timeout} seconds. Currently ready: {len(self.ids)}"
+                        f"{n} engines not ready in {timeout} seconds. Currently ready: {len(self.ids)}"
                     )
                 )
 
