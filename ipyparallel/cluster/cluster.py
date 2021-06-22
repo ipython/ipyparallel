@@ -257,8 +257,11 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """Serialize a Cluster object for later reconstruction"""
         raise NotImplementedError()
 
-    async def start_controller(self):
-        """Start the controller"""
+    async def start_controller(self, **kwargs):
+        """Start the controller
+
+        Keyword arguments are passed to the controller launcher constructor
+        """
         # start controller
         # retrieve connection info
         # webhook?
@@ -266,12 +269,14 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             raise RuntimeError(
                 "controller is already running. Call stop_controller() first."
             )
+
         self._controller = controller = self.controller_launcher_class(
             work_dir=u'.',
             parent=self,
             log=self.log,
             profile_dir=self.profile_dir,
             cluster_id=self.cluster_id,
+            **kwargs,
         )
 
         controller_args = getattr(controller, 'controller_args', None)
@@ -305,7 +310,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """Callback when a controller stops"""
         self.log.info(f"Controller stopped: {stop_data}")
 
-    async def start_engines(self, n=None, engine_set_id=None):
+    async def start_engines(self, n=None, engine_set_id=None, **kwargs):
         """Start an engine set
 
         Returns an engine set id which can be used in stop_engines
@@ -319,6 +324,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             log=self.log,
             profile_dir=self.profile_dir,
             cluster_id=self.cluster_id,
+            **kwargs,
         )
         if n is None:
             n = self.n
