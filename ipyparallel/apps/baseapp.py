@@ -7,16 +7,17 @@ import os
 import re
 import sys
 
-from IPython.core import release
 from IPython.core.application import base_aliases as base_ip_aliases
 from IPython.core.application import base_flags as base_ip_flags
 from IPython.core.application import BaseIPythonApplication
-from IPython.core.crashhandler import CrashHandler
 from IPython.utils.path import expand_path
 from IPython.utils.process import check_pid
 from ipython_genutils import py3compat
 from ipython_genutils.py3compat import unicode_type
+from jupyter_client.session import Session
+from tornado.ioloop import IOLoop
 from traitlets import Bool
+from traitlets import default
 from traitlets import Dict
 from traitlets import Instance
 from traitlets import observe
@@ -33,23 +34,6 @@ from .._version import __version__
 
 class PIDFileError(Exception):
     pass
-
-
-# -----------------------------------------------------------------------------
-# Crash handler for this application
-# -----------------------------------------------------------------------------
-
-
-class ParallelCrashHandler(CrashHandler):
-    """sys.excepthook for IPython itself, leaves a detailed report on disk."""
-
-    def __init__(self, app):
-        contact_name = release.authors['Min'][0]
-        contact_email = release.author_email
-        bug_tracker = 'https://github.com/ipython/ipython/issues'
-        super(ParallelCrashHandler, self).__init__(
-            app, contact_name, contact_email, bug_tracker
-        )
 
 
 # -----------------------------------------------------------------------------
@@ -88,7 +72,11 @@ class BaseParallelApplication(BaseIPythonApplication):
 
     version = __version__
 
-    crash_handler_class = ParallelCrashHandler
+    _deprecated_classes = None
+
+    def init_crash_handler(self):
+        # disable crash handler from IPython
+        pass
 
     def _log_level_default(self):
         # temporarily override default_log_level to INFO
@@ -140,12 +128,16 @@ class BaseParallelApplication(BaseIPythonApplication):
     def _config_files_default(self):
         return ['ipcontroller_config.py', 'ipengine_config.py', 'ipcluster_config.py']
 
-    loop = Instance('tornado.ioloop.IOLoop')
+    loop = Instance(IOLoop)
 
     def _loop_default(self):
-        from ipyparallel.util import ioloop
+        return IOLoop.current()
 
-        return ioloop.IOLoop.current()
+    session = Instance(Session)
+
+    @default("session")
+    def _default_session(self):
+        return Session(parent=self)
 
     aliases = Dict(base_aliases)
     flags = Dict(base_flags)
@@ -154,8 +146,37 @@ class BaseParallelApplication(BaseIPythonApplication):
     def initialize(self, argv=None):
         """initialize the app"""
         super(BaseParallelApplication, self).initialize(argv)
+        self.init_deprecated_config()
         self.to_work_dir()
         self.reinit_logging()
+
+    def init_deprecated_config(self):
+        if not self._deprecated_classes:
+            return
+        deprecated_config_found = False
+        new_classname = self.__class__.__name__
+        for deprecated_classname in self._deprecated_classes:
+            if deprecated_classname in self.config:
+                cfg = self.config[deprecated_classname]
+                new_config = self.config[new_classname]
+                for key, deprecated_value in list(cfg.items()):
+                    if key in new_config:
+                        new_value = new_config[key]
+                        if new_value != deprecated_value:
+                            self.log.warning(
+                                f"Ignoring c.{deprecated_classname}.{key} = {deprecated_value}, overridden by c.{new_classname}.{key} = {new_value}"
+                            )
+                    else:
+                        self.log.warning(
+                            f"c.{deprecated_classname}.{key} is deprecated in ipyparallel 7, use c.{new_classname}.{key} = {deprecated_value}"
+                        )
+                        new_config[key] = deprecated_value
+                        cfg.pop(key)
+                        deprecated_config_found = True
+
+        if deprecated_config_found:
+            # reload config
+            self.update_config(self.config)
 
     def to_work_dir(self):
         wd = self.work_dir

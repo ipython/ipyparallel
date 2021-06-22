@@ -32,6 +32,7 @@ from subprocess import Popen, PIPE, STDOUT
 from subprocess import check_output
 
 
+from tornado import ioloop
 from traitlets import import_item
 from traitlets.config.configurable import LoggingConfigurable
 from IPython.utils.text import EvalFormatter
@@ -51,7 +52,6 @@ from IPython.utils.path import get_home_dir, ensure_dir_exists
 from IPython.utils.process import find_cmd, FindCmdError
 from ipython_genutils.py3compat import iteritems, itervalues
 
-from ..util import ioloop
 from ._win32support import forward_read_events
 from ._winhpcjob import IPControllerTask, IPEngineTask, IPControllerJob, IPEngineSetJob
 

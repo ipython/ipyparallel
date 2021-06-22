@@ -24,7 +24,7 @@ class ClusterManager(LoggingConfigurable):
     loop = Instance('tornado.ioloop.IOLoop')
 
     def _loop_default(self):
-        from ipyparallel.util import ioloop
+        from tornado import ioloop
 
         return ioloop.IOLoop.current()
 

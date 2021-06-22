@@ -13,37 +13,29 @@ import sys
 import time
 from datetime import datetime
 
-import zmq
-from ipython_genutils.importstring import import_item
 from ipython_genutils.py3compat import buffer_to_bytes_py2
 from ipython_genutils.py3compat import cast_bytes
 from ipython_genutils.py3compat import iteritems
 from ipython_genutils.py3compat import unicode_type
 from jupyter_client.jsonutil import parse_date
-from jupyter_client.localinterfaces import localhost
-from jupyter_client.session import SessionFactory
+from jupyter_client.session import Session
+from tornado import ioloop
 from tornado.gen import coroutine
 from tornado.gen import maybe_future
 from traitlets import Any
-from traitlets import default
 from traitlets import Dict
-from traitlets import DottedObjectName
 from traitlets import HasTraits
 from traitlets import Instance
 from traitlets import Integer
-from traitlets import List
-from traitlets import observe
 from traitlets import Set
-from traitlets import Tuple
 from traitlets import Unicode
+from traitlets.config import LoggingConfigurable
 from zmq.eventloop.zmqstream import ZMQStream
 
 from ..util import extract_dates
-from .broadcast_scheduler import BroadcastScheduler
 from .heartmonitor import HeartMonitor
 from ipyparallel import error
 from ipyparallel import util
-from ipyparallel.factory import RegistrationFactory
 
 # internal:
 
@@ -136,351 +128,7 @@ class EngineConnector(HasTraits):
     stallback = Any()
 
 
-_db_shortcuts = {
-    'sqlitedb': 'ipyparallel.controller.sqlitedb.SQLiteDB',
-    'mongodb': 'ipyparallel.controller.mongodb.MongoDB',
-    'dictdb': 'ipyparallel.controller.dictdb.DictDB',
-    'nodb': 'ipyparallel.controller.dictdb.NoDB',
-}
-
-
-class HubFactory(RegistrationFactory):
-    """The Configurable for setting up a Hub."""
-
-    # port-pairs for monitoredqueues:
-    hb = Tuple(
-        Integer(),
-        Integer(),
-        config=True,
-        help="""PUB/ROUTER Port pair for Engine heartbeats""",
-    )
-
-    def _hb_default(self):
-        return tuple(util.select_random_ports(2))
-
-    mux = Tuple(
-        Integer(),
-        Integer(),
-        config=True,
-        help="""Client/Engine Port pair for MUX queue""",
-    )
-
-    def _mux_default(self):
-        return tuple(util.select_random_ports(2))
-
-    task = Tuple(
-        Integer(),
-        Integer(),
-        config=True,
-        help="""Client/Engine Port pair for Task queue""",
-    )
-
-    def _task_default(self):
-        return tuple(util.select_random_ports(2))
-
-    broadcast_scheduler_depth = Integer(
-        1,
-        config=True,
-        help="Depth of spanning tree schedulers",
-    )
-    number_of_leaf_schedulers = Integer()
-    number_of_broadcast_schedulers = Integer()
-    number_of_non_leaf_schedulers = Integer()
-
-    @default('number_of_leaf_schedulers')
-    def get_number_of_leaf_schedulers(self):
-        return 2 ** self.broadcast_scheduler_depth
-
-    @default('number_of_broadcast_schedulers')
-    def get_number_of_broadcast_schedulers(self):
-        return 2 * self.number_of_leaf_schedulers - 1
-
-    @default('number_of_non_leaf_schedulers')
-    def get_number_of_non_leaf_schedulers(self):
-        return self.number_of_broadcast_schedulers - self.number_of_leaf_schedulers
-
-    broadcast = List(
-        Integer(), config=True, help="List of available ports for broadcast"
-    )
-
-    def _broadcast_default(self):
-        return util.select_random_ports(
-            self.number_of_leaf_schedulers + self.number_of_broadcast_schedulers
-        )
-
-    control = Tuple(
-        Integer(),
-        Integer(),
-        config=True,
-        help="""Client/Engine Port pair for Control queue""",
-    )
-
-    def _control_default(self):
-        return tuple(util.select_random_ports(2))
-
-    iopub = Tuple(
-        Integer(),
-        Integer(),
-        config=True,
-        help="""Client/Engine Port pair for IOPub relay""",
-    )
-
-    def _iopub_default(self):
-        return tuple(util.select_random_ports(2))
-
-    # single ports:
-    mon_port = Integer(config=True, help="""Monitor (SUB) port for queue traffic""")
-
-    def _mon_port_default(self):
-        return util.select_random_ports(1)[0]
-
-    notifier_port = Integer(
-        config=True, help="""PUB port for sending engine status notifications"""
-    )
-
-    def _notifier_port_default(self):
-        return util.select_random_ports(1)[0]
-
-    engine_ip = Unicode(
-        config=True,
-        help="IP on which to listen for engine connections. [default: loopback]",
-    )
-
-    def _engine_ip_default(self):
-        return localhost()
-
-    engine_transport = Unicode(
-        'tcp', config=True, help="0MQ transport for engine connections. [default: tcp]"
-    )
-
-    client_ip = Unicode(
-        config=True,
-        help="IP on which to listen for client connections. [default: loopback]",
-    )
-    client_transport = Unicode(
-        'tcp', config=True, help="0MQ transport for client connections. [default : tcp]"
-    )
-
-    monitor_ip = Unicode(
-        config=True,
-        help="IP on which to listen for monitor messages. [default: loopback]",
-    )
-    monitor_transport = Unicode(
-        'tcp', config=True, help="0MQ transport for monitor messages. [default : tcp]"
-    )
-
-    _client_ip_default = _monitor_ip_default = _engine_ip_default
-
-    monitor_url = Unicode('')
-
-    db_class = DottedObjectName(
-        'DictDB',
-        config=True,
-        help="""The class to use for the DB backend
-
-        Options include:
-
-        SQLiteDB: SQLite
-        MongoDB : use MongoDB
-        DictDB  : in-memory storage (fastest, but be mindful of memory growth of the Hub)
-        NoDB    : disable database altogether (default)
-
-        """,
-    )
-
-    registration_timeout = Integer(
-        0,
-        config=True,
-        help="Engine registration timeout in seconds [default: max(30,"
-        "10*heartmonitor.period)]",
-    )
-
-    def _registration_timeout_default(self):
-        if self.heartmonitor is None:
-            # early initialization, this value will be ignored
-            return 0
-            # heartmonitor period is in milliseconds, so 10x in seconds is .01
-        return max(30, int(0.01 * self.heartmonitor.period))
-
-    # not configurable
-    db = Instance('ipyparallel.controller.dictdb.BaseDB', allow_none=True)
-    heartmonitor = Instance(
-        'ipyparallel.controller.heartmonitor.HeartMonitor', allow_none=True
-    )
-
-    @observe('ip')
-    def _ip_changed(self, change):
-        new = change['new']
-        self.engine_ip = new
-        self.client_ip = new
-        self.monitor_ip = new
-        self._update_monitor_url()
-
-    def _update_monitor_url(self):
-        self.monitor_url = "%s://%s:%i" % (
-            self.monitor_transport,
-            self.monitor_ip,
-            self.mon_port,
-        )
-
-    @observe('transport')
-    def _transport_changed(self, change):
-        new = change['new']
-        self.engine_transport = new
-        self.client_transport = new
-        self.monitor_transport = new
-        self._update_monitor_url()
-
-    def __init__(self, **kwargs):
-        super(HubFactory, self).__init__(**kwargs)
-        self._update_monitor_url()
-
-    def construct(self):
-        self.init_hub()
-
-    def start(self):
-        self.heartmonitor.start()
-        self.log.info("Heartmonitor started")
-
-    def client_url(self, channel, index=None):
-        """return full zmq url for a named client channel"""
-        return "%s://%s:%i" % (
-            self.client_transport,
-            self.client_ip,
-            self.client_info[channel]
-            if index is None
-            else self.client_info[channel][index],
-        )
-
-    def engine_url(self, channel, index=None):
-        """return full zmq url for a named engine channel"""
-        return "%s://%s:%i" % (
-            self.engine_transport,
-            self.engine_ip,
-            self.engine_info[channel]
-            if index is None
-            else self.engine_info[channel][index],
-        )
-
-    def init_hub(self):
-        """construct Hub object"""
-
-        ctx = self.context
-        loop = self.loop
-        if 'TaskScheduler.scheme_name' in self.config:
-            scheme = self.config.TaskScheduler.scheme_name
-        else:
-            from .task_scheduler import TaskScheduler
-
-            scheme = TaskScheduler.scheme_name.default_value
-
-        # build connection dicts
-        engine = self.engine_info = {
-            'interface': "%s://%s" % (self.engine_transport, self.engine_ip),
-            'registration': self.regport,
-            'control': self.control[1],
-            'mux': self.mux[1],
-            'hb_ping': self.hb[0],
-            'hb_pong': self.hb[1],
-            'task': self.task[1],
-            'iopub': self.iopub[1],
-            BroadcastScheduler.port_name: self.broadcast[
-                -self.number_of_leaf_schedulers :
-            ],
-        }
-
-        client = self.client_info = {
-            'interface': "%s://%s" % (self.client_transport, self.client_ip),
-            'registration': self.regport,
-            'control': self.control[0],
-            'mux': self.mux[0],
-            'task': self.task[0],
-            'task_scheme': scheme,
-            'iopub': self.iopub[0],
-            'notification': self.notifier_port,
-            BroadcastScheduler.port_name: self.broadcast[
-                : self.number_of_broadcast_schedulers
-            ],
-        }
-
-        self.log.debug("Hub engine addrs: %s", self.engine_info)
-        self.log.debug("Hub client addrs: %s", self.client_info)
-
-        # Registrar socket
-        q = ZMQStream(ctx.socket(zmq.ROUTER), loop)
-        util.set_hwm(q, 0)
-        q.bind(self.client_url('registration'))
-        self.log.info(
-            "Hub listening on %s for registration.", self.client_url('registration')
-        )
-        if self.client_ip != self.engine_ip:
-            q.bind(self.engine_url('registration'))
-            self.log.info(
-                "Hub listening on %s for registration.", self.engine_url('registration')
-            )
-
-        ### Engine connections ###
-
-        # heartbeat
-        hpub = ctx.socket(zmq.PUB)
-        hpub.bind(self.engine_url('hb_ping'))
-        hrep = ctx.socket(zmq.ROUTER)
-        util.set_hwm(hrep, 0)
-        hrep.bind(self.engine_url('hb_pong'))
-        self.heartmonitor = HeartMonitor(
-            loop=loop,
-            parent=self,
-            log=self.log,
-            pingstream=ZMQStream(hpub, loop),
-            pongstream=ZMQStream(hrep, loop),
-        )
-
-        ### Client connections ###
-
-        # Notifier socket
-        n = ZMQStream(ctx.socket(zmq.PUB), loop)
-        n.bind(self.client_url('notification'))
-
-        ### build and launch the queues ###
-
-        # monitor socket
-        sub = ctx.socket(zmq.SUB)
-        sub.setsockopt(zmq.SUBSCRIBE, b"")
-        sub.bind(self.monitor_url)
-        sub.bind('inproc://monitor')
-        sub = ZMQStream(sub, loop)
-
-        # connect the db
-        db_class = _db_shortcuts.get(self.db_class.lower(), self.db_class)
-        self.log.info('Hub using DB backend: %r', (db_class.split('.')[-1]))
-        self.db = import_item(str(db_class))(
-            session=self.session.session, parent=self, log=self.log
-        )
-        time.sleep(0.25)
-
-        # resubmit stream
-        r = ZMQStream(ctx.socket(zmq.DEALER), loop)
-        url = util.disambiguate_url(self.client_url('task'))
-        r.connect(url)
-
-        self.hub = Hub(
-            loop=loop,
-            session=self.session,
-            monitor=sub,
-            heartmonitor=self.heartmonitor,
-            query=q,
-            notifier=n,
-            resubmit=r,
-            db=self.db,
-            engine_info=self.engine_info,
-            client_info=self.client_info,
-            log=self.log,
-            registration_timeout=self.registration_timeout,
-            parent=self,
-        )
-
-
-class Hub(SessionFactory):
+class Hub(LoggingConfigurable):
     """The IPython Controller Hub with 0MQ connections
 
     Parameters
@@ -520,7 +168,13 @@ class Hub(SessionFactory):
     _idcounter = Integer(0)
     distributed_scheduler = Any()
 
+    loop = Instance(ioloop.IOLoop)
+
+    def _default_loop(self):
+        return ioloop.IOLoop.current()
+
     # objects from constructor:
+    session = Instance(Session)
     query = Instance(ZMQStream, allow_none=True)
     monitor = Instance(ZMQStream, allow_none=True)
     notifier = Instance(ZMQStream, allow_none=True)
@@ -1196,7 +850,12 @@ class Hub(SessionFactory):
 
         self.log.debug("registration::register_engine(%i, %r)", eid, uuid)
 
-        content = dict(id=eid, status='ok', hb_period=self.heartmonitor.period)
+        content = dict(
+            id=eid,
+            status='ok',
+            hb_period=self.heartmonitor.period,
+            connection_info=self.engine_info,
+        )
         # check if requesting available IDs:
         if cast_bytes(uuid) in self.by_ident:
             try:

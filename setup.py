@@ -139,9 +139,9 @@ setup_args = dict(
     },
     entry_points={
         "console_scripts": [
-            "ipcluster = ipyparallel.apps.ipclusterapp:launch_new_instance",
-            "ipcontroller = ipyparallel.apps.ipcontrollerapp:launch_new_instance",
-            "ipengine = ipyparallel.apps.ipengineapp:launch_new_instance",
+            "ipcluster = ipyparallel.cluster.app:main",
+            "ipcontroller = ipyparallel.controller.app:main",
+            "ipengine = ipyparallel.engine.app:main",
         ]
     },
 )

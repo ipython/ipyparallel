@@ -87,7 +87,7 @@ def _extract_buffers(obj, threshold=MAX_BYTES):
 
 
 def _restore_buffers(obj, buffers):
-    """restore buffers extracted by """
+    """restore buffers extracted by _extract_buffers"""
     if isinstance(obj, CannedObject) and obj.buffers:
         for i, buf in enumerate(obj.buffers):
             if buf is None:
