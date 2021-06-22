@@ -10,25 +10,23 @@ from concurrent.futures import Future
 from contextlib import contextmanager
 from datetime import datetime
 from functools import partial
+from queue import Queue
 from threading import Event
 
-try:
-    from queue import Queue
-except ImportError:  # py2
-    from Queue import Queue
-
-from decorator import decorator
-import tqdm
 import zmq
-from zmq import MessageTracker
-
+from decorator import decorator
 from IPython import get_ipython
-from IPython.core.display import display, display_pretty
-from ipyparallel import error
-from ipyparallel.util import utcnow, compare_datetimes, _parse_date
+from IPython.core.display import display
+from IPython.core.display import display_pretty
 from ipython_genutils.py3compat import string_types
 
-from .futures import MessageFuture, multi_future
+from .futures import MessageFuture
+from .futures import multi_future
+from ipyparallel import error
+from ipyparallel.util import _parse_date
+from ipyparallel.util import compare_datetimes
+from ipyparallel.util import progress
+from ipyparallel.util import utcnow
 
 
 def _raw_text(s):
@@ -38,7 +36,7 @@ def _raw_text(s):
 _default = object()
 
 # global empty tracker that's always done:
-finished_tracker = MessageTracker()
+finished_tracker = zmq.MessageTracker()
 
 
 @decorator
@@ -75,7 +73,6 @@ class AsyncResult(Future):
         fname='unknown',
         targets=None,
         owner=False,
-        progress_bar=tqdm.tqdm,
     ):
         super(AsyncResult, self).__init__()
         if not isinstance(children, list):
@@ -95,7 +92,6 @@ class AsyncResult(Future):
         self._fname = fname
         self._targets = targets
         self.owner = owner
-        self.progress_bar = progress_bar
 
         self._ready = False
         self._ready_event = Event()
@@ -381,7 +377,7 @@ class AsyncResult(Future):
         """Resolve sent Future, build MessageTracker"""
         trackers = f.result()
         trackers = [t for t in trackers if t is not None]
-        self._tracker = MessageTracker(*trackers)
+        self._tracker = zmq.MessageTracker(*trackers)
         self._sent_event.set()
 
     @property
@@ -569,13 +565,27 @@ class AsyncResult(Future):
         """
         return self.timedelta(self.submitted, self.received)
 
-    def wait_interactive(self, interval=1.0, timeout=-1):
-        """interactive wait, printing progress at regular intervals."""
+    def wait_interactive(self, interval=0.1, timeout=-1, widget=None):
+        """interactive wait, printing progress at regular intervals.
+
+        Parameters
+        ----------
+        interval : float
+            Interval on which to update progress display.
+        timeout : float
+            Time (in seconds) to wait before raising a TimeoutError.
+            -1 (default) means no timeout.
+        widget : bool
+            default: True if in an IPython kernel (notebook), False otherwise.
+            Override default context-detection behavior for whether a widget-based progress bar
+            should be used.
+        """
         if timeout is None:
             timeout = -1
         N = len(self)
         tic = time.perf_counter()
-        progress_bar = self.progress_bar(total=N, unit='tasks', desc=self._fname)
+        progress_bar = progress(widget=widget, total=N, unit='tasks', desc=self._fname)
+
         n_prev = 0
         while not self.ready() and (
             timeout < 0 or time.perf_counter() - tic <= timeout

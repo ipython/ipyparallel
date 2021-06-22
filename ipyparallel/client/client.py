@@ -1307,7 +1307,9 @@ class Client(HasTraits):
                 futures.append(f)
         return futures
 
-    def wait_for_engines(self, n, *, timeout=-1, block=True):
+    def wait_for_engines(
+        self, n, *, timeout=-1, block=True, interactive=None, widget=None
+    ):
         """Wait for `n` engines to become available.
 
         Returns when `n` engines are available,
@@ -1322,6 +1324,14 @@ class Client(HasTraits):
             Time (in seconds) to wait before raising a TimeoutError
         block : bool
             if False, return Future instead of waiting
+        interactive : bool
+            default: True if in IPython, False otherwise.
+            if True, show a progress bar while waiting for engines
+        widget : bool
+            default: True if in an IPython kernel (notebook), False otherwise.
+            Only has an effect if `interactive` is True.
+            if True, forces use of widget progress bar.
+            If False, forces use of terminal tqdm.
 
         Returns
         ------
@@ -1347,12 +1357,25 @@ class Client(HasTraits):
             deadline = None
             seconds_remaining = 1000
 
+        if interactive is None:
+            interactive = get_ipython() is not None
+
+        if interactive:
+            progress_bar = util.progress(
+                widget=widget, initial=len(self.ids), total=n, unit='engine'
+            )
+
         future = Future()
 
         def notify(_):
             if future.done():
                 return
+            if interactive:
+                progress_bar.update(len(self.ids) - progress_bar.n)
             if len(self.ids) >= n:
+                # ensure we refresh when we finish
+                if interactive:
+                    progress_bar.close()
                 future.set_result(None)
 
         future.add_done_callback(lambda f: self._registration_callbacks.remove(notify))

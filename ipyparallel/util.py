@@ -30,6 +30,7 @@ except ImportError:
     SIGKILL = None
 from types import FunctionType
 
+import tqdm
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzlocal
 
@@ -636,3 +637,29 @@ def _patch_jupyter_client_dates():
 
 # FIXME: remove patch when we require jupyter_client 5.0
 _patch_jupyter_client_dates()
+
+
+def progress(*args, widget=None, **kwargs):
+    """Create a tqdm progress bar
+
+    If `widget` is None, autodetects if IPython widgets should be used,
+    otherwise use basic tqdm.
+    """
+    if widget is None:
+        # auto widget if in a kernel
+        ip = get_ipython()
+        if ip is not None and getattr(ip, 'kernel', None) is not None:
+            try:
+                import ipywidgets  # noqa
+            except ImportError:
+                widget = False
+            else:
+                widget = True
+        else:
+            widget = False
+    if widget:
+        f = tqdm.tqdm_notebook
+    else:
+        kwargs.setdefault("file", sys.stdout)
+        f = tqdm.tqdm
+    return f(*args, **kwargs)
