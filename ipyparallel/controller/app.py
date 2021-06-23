@@ -766,9 +766,18 @@ class IPController(BaseParallelApplication):
             outgoing_id1 = identity * 2 + 1
             outgoing_id2 = outgoing_id1 + 1
             is_leaf = depth == self.broadcast_scheduler_depth
+            is_root = depth == 0
+
+            # FIXME: use localhost, not client ip for internal communication
+            # this will still be localhost anyway for the most common cases
+            # of localhost or */0.0.0.0
+            in_addr = self.client_url(BroadcastScheduler.port_name, identity)
+            if not is_root:
+                # non-root schedulers connect, so they need a disambiguated url
+                in_addr = disambiguate_url(in_addr)
 
             scheduler_args = dict(
-                in_addr=self.client_url(BroadcastScheduler.port_name, identity),
+                in_addr=in_addr,
                 mon_addr=monitor_url,
                 not_addr=disambiguate_url(self.client_url('notification')),
                 reg_addr=disambiguate_url(self.client_url('registration')),
