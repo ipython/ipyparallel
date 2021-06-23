@@ -68,6 +68,8 @@ def setup():
         '--ping=250',
         '--dictdb',
     ]
+    if os.environ.get("IPP_CONTROLLER_IP"):
+        cp.cmd_and_args.append(f"--ip={os.environ['IPP_CONTROLLER_IP']}")
     cp.start()
     launchers.append(cp)
     tic = time.time()
