@@ -302,7 +302,7 @@ class IPEngine(BaseParallelApplication):
         # allow hand-override of location for disambiguation
         # and ssh-server
         if 'IPEngine.location' not in self.cli_config:
-            self.loction = d['location']
+            self.location = d['location']
         if 'ssh' in d and not self.sshserver:
             self.sshserver = d.get("ssh")
 
