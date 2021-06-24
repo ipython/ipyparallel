@@ -396,6 +396,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
     def write_cluster_file(self):
         """Write cluster info to disk for later loading"""
+        os.makedirs(os.path.dirname(self.cluster_file), exist_ok=True)
         with open(self.cluster_file, "w") as f:
             json.dump(self.to_dict(), f)
 
