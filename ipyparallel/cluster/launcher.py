@@ -4,6 +4,8 @@
 # Distributed under the terms of the Modified BSD License.
 import asyncio
 import copy
+import inspect
+import json
 import logging
 import os
 import shlex
@@ -39,12 +41,13 @@ from IPython.utils.text import EvalFormatter
 from traitlets import (
     Any,
     Integer,
-    CFloat,
+    Float,
     List,
     Unicode,
     Dict,
     Instance,
     CRegExp,
+    default,
     observe,
 )
 from ipython_genutils.encoding import DEFAULT_ENCODING
@@ -101,7 +104,7 @@ class UnknownStatus(LauncherError):
 
 
 class BaseLauncher(LoggingConfigurable):
-    """An asbtraction for starting, stopping and signaling a process."""
+    """An abstraction for starting, stopping and signaling a process."""
 
     # In all of the launchers, the work_dir is where child processes will be
     # run. This will usually be the profile_dir, but may not be. any work_dir
@@ -221,6 +224,18 @@ class ClusterAppMixin(LoggingConfigurable):
     def cluster_args(self):
         return ['--profile-dir', self.profile_dir, '--cluster-id', self.cluster_id]
 
+    @property
+    def connection_files(self):
+        """Dict of connection file paths"""
+        security_dir = os.path.join(self.profile_dir, 'security')
+        name_prefix = "ipcontroller"
+        if self.cluster_id:
+            name_prefix = f"{name_prefix}-{self.cluster_id}"
+        return {
+            kind: os.path.join(security_dir, f"{name_prefix}-{kind}.json")
+            for kind in ("client", "engine")
+        }
+
 
 class ControllerLauncher(ClusterAppMixin):
     controller_cmd = List(
@@ -234,6 +249,30 @@ class ControllerLauncher(ClusterAppMixin):
         config=True,
         help="""command-line args to pass to ipcontroller""",
     )
+
+    async def get_connection_info(self):
+        """Retrieve connection info for the controller
+
+        Default implementation assumes profile_dir and cluster_id are local.
+        """
+        connection_files = self.connection_files
+        paths = list(connection_files.values())
+        self.log.debug(f"Waiting for {paths}")
+        while not all(os.path.isfile(f) for f in paths):
+            await asyncio.sleep(0.1)
+            status = self.poll()
+            if inspect.isawaitable(status):
+                status = await status
+            if status is not None:
+                raise RuntimeError(
+                    f"Controller stopped with {status} while waiting for {paths}"
+                )
+        self.log.debug(f"Loading {paths}")
+        connection_info = {}
+        for key, path in connection_files.items():
+            with open(path) as f:
+                connection_info[key] = json.load(f)
+        return connection_info
 
 
 class EngineLauncher(ClusterAppMixin):
@@ -382,7 +421,7 @@ class LocalEngineLauncher(LocalProcessLauncher, EngineLauncher):
 class LocalEngineSetLauncher(LocalEngineLauncher):
     """Launch a set of engines as regular external processes."""
 
-    delay = CFloat(
+    delay = Float(
         0.1,
         config=True,
         help="""delay (in seconds) between starting each engine after the first.
@@ -743,14 +782,22 @@ class SSHClusterLauncher(SSHLauncher, ClusterAppMixin):
     def _remote_profile_dir_default(self):
         return self._strip_home(self.profile_dir)
 
-    @observe('cluster_id')
-    def _cluster_id_changed(self, change):
-        if change['new']:
-            raise ValueError("cluster id not supported by SSH launchers")
-
     @property
     def cluster_args(self):
-        return ['--profile-dir', self.remote_profile_dir]
+        return [
+            '--profile-dir',
+            self.remote_profile_dir,
+            '--cluster-id',
+            self.cluster_id,
+        ]
+
+    @property
+    def remote_connection_files(self):
+        """Return remote paths for connection files"""
+        return {
+            key: self.remote_profile_dir + local_path[len(self.profile_dir) :]
+            for key, local_path in self.connection_files.items()
+        }
 
 
 class SSHControllerLauncher(SSHClusterLauncher, ControllerLauncher):
@@ -770,13 +817,12 @@ class SSHControllerLauncher(SSHClusterLauncher, ControllerLauncher):
     def program_args(self):
         return self.cluster_args + self.controller_args
 
+    @default("to_fetch")
     def _to_fetch_default(self):
+        to_fetch = []
         return [
-            (
-                os.path.join(self.remote_profile_dir, 'security', cf),
-                os.path.join(self.profile_dir, 'security', cf),
-            )
-            for cf in ('ipcontroller-client.json', 'ipcontroller-engine.json')
+            (self.remote_connection_files[key], local_path)
+            for key, local_path in self.connection_files.items()
         ]
 
 
@@ -797,13 +843,11 @@ class SSHEngineLauncher(SSHClusterLauncher, EngineLauncher):
     def program_args(self):
         return self.cluster_args + self.engine_args
 
+    @default("to_send")
     def _to_send_default(self):
         return [
-            (
-                os.path.join(self.profile_dir, 'security', cf),
-                os.path.join(self.remote_profile_dir, 'security', cf),
-            )
-            for cf in ('ipcontroller-client.json', 'ipcontroller-engine.json')
+            (local_path, self.remote_connection_files[key])
+            for key, local_path in self.connection_files.items()
         ]
 
 
@@ -908,15 +952,20 @@ class SSHProxyEngineSetLauncher(SSHClusterLauncher):
 
     @property
     def program_args(self):
-        return ['-n', str(self.n), '--profile-dir', self.remote_profile_dir]
+        return [
+            '-n',
+            str(self.n),
+            '--profile-dir',
+            self.remote_profile_dir,
+            '--cluster-id',
+            self.cluster_id,
+        ]
 
+    @default("to_send")
     def _to_send_default(self):
         return [
-            (
-                os.path.join(self.profile_dir, 'security', cf),
-                os.path.join(self.remote_profile_dir, 'security', cf),
-            )
-            for cf in ('ipcontroller-client.json', 'ipcontroller-engine.json')
+            (local_path, self.remote_connection_files[key])
+            for key, local_path in self.connection_files.items()
         ]
 
     def start(self, n):

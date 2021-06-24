@@ -435,13 +435,18 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         await self.stop_engines()
         await self.stop_controller()
 
-    def connect_client(self, **client_kwargs):
+    async def connect_client(self, **client_kwargs):
         """Return a client connected to the cluster"""
         # TODO: get connect info directly from controller
         # this assumes local files exist
         from ipyparallel import Client
 
+        connection_info = self._controller.get_connection_info()
+        if inspect.isawaitable(connection_info):
+            connection_info = await connection_info
+
         return Client(
+            connection_info['client'],
             cluster=self,
             profile_dir=self.profile_dir,
             cluster_id=self.cluster_id,
@@ -454,7 +459,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     async def __aenter__(self):
         await self.start_controller()
         await self.start_engines()
-        client = self._context_client = self.connect_client()
+        client = self._context_client = await self.connect_client()
         if self.n:
             # wait for engine registration
             await asyncio.wrap_future(
@@ -474,7 +479,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     def __enter__(self):
         self.start_controller_sync()
         self.start_engines_sync()
-        client = self._context_client = self.connect_client()
+        client = self._context_client = self.connect_client_sync()
         if self.n:
             # wait for engine registration
             client.wait_for_engines(self.n, block=True, timeout=self.engine_timeout)

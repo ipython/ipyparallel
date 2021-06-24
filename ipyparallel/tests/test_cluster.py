@@ -78,8 +78,7 @@ async def test_start_stop_controller(Cluster):
     assert cluster._controller is not None
     proc = cluster._controller.process
     assert proc.poll() is None
-    # TODO: wait for connection
-    with cluster.connect_client() as rc:
+    with await cluster.connect_client() as rc:
         assert rc.queue_status() == {'unassigned': 0}
 
     await cluster.stop_controller()
@@ -102,7 +101,7 @@ async def test_start_stop_engines(Cluster, engine_launcher_class):
     launcher_class = find_launcher_class(engine_launcher_class, "EngineSet")
     assert isinstance(engine_set, launcher_class)
 
-    with cluster.connect_client() as rc:
+    with await cluster.connect_client() as rc:
         rc.wait_for_engines(n, timeout=_timeout)
 
     await cluster.stop_engines(engine_set_id)
@@ -122,7 +121,7 @@ async def test_start_stop_cluster(Cluster, engine_launcher_class):
     assert controller is not None
     assert len(cluster._engine_sets) == 1
 
-    with cluster.connect_client() as rc:
+    with await cluster.connect_client() as rc:
         rc.wait_for_engines(n, timeout=_timeout)
     await cluster.stop_cluster()
     assert cluster._controller is None
@@ -134,7 +133,7 @@ async def test_signal_engines(request, Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class)
     await cluster.start_controller()
     engine_set_id = await cluster.start_engines(n=3)
-    rc = cluster.connect_client()
+    rc = await cluster.connect_client()
     request.addfinalizer(rc.close)
     while len(rc) < 3:
         await asyncio.sleep(0.1)

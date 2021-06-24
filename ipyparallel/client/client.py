@@ -263,14 +263,12 @@ class Client(HasTraits):
     Parameters
     ----------
 
-    url_file : str
-        The path to ipcontroller-client.json.
+    connection_info : str or dict
+        The path to ipcontroller-client.json, or a dict containing the same information.
         This JSON file should contain all the information needed to connect to a cluster,
-        and is likely the only argument needed.
-        Connection information for the Hub's registration.  If a json connector
-        file is given, then likely no further configuration is necessary.
+        and is usually the only argument needed.
         [Default: use profile]
-    profile : bytes
+    profile : str
         The name of the Cluster profile to be used to find connector information.
         If run from an IPython application, the default profile will be the same
         as the running application, otherwise it will be 'default'.
@@ -383,6 +381,8 @@ class Client(HasTraits):
 
     def __init__(
         self,
+        connection_info=None,
+        *,
         url_file=None,
         profile=None,
         profile_dir=None,
@@ -407,14 +407,19 @@ class Client(HasTraits):
             context = zmq.Context.instance()
         self._context = context
 
-        if 'url_or_file' in extra_args:
-            url_file = extra_args['url_or_file']
-            warnings.warn(
-                "url_or_file arg no longer supported, use url_file", DeprecationWarning
-            )
+        for argname in ('url_or_file', 'url_file'):
+            if argname in extra_args:
+                connection_info = extra_args[argname]
+                warnings.warn(
+                    f"{argname} arg no longer supported, use positional connection_info argument",
+                    DeprecationWarning,
+                    stacklevel=2,
+                )
 
-        if url_file and util.is_url(url_file):
-            raise ValueError("single urls cannot be specified, url-files must be used.")
+        if isinstance(connection_info, str) and util.is_url(connection_info):
+            raise ValueError(
+                f"single urls ({connection_info!r}) cannot be specified, url-files must be used."
+            )
 
         self._setup_profile_dir(self.profile, profile_dir, ipython_dir)
 
@@ -425,39 +430,45 @@ class Client(HasTraits):
             ]
         )
 
-        if self._cd is not None:
-            if url_file is None:
-                if not cluster_id:
-                    client_json = 'ipcontroller-client.json'
-                else:
-                    client_json = 'ipcontroller-%s-client.json' % cluster_id
-                url_file = pjoin(self._cd.security_dir, client_json)
-                short = compress_user(url_file)
-                if not os.path.exists(url_file):
-                    print("Waiting for connection file: %s" % short)
-                    waiting_time = 0.0
-                    while waiting_time < timeout:
-                        time.sleep(min(timeout - waiting_time, 1))
-                        waiting_time += 1
-                        if os.path.exists(url_file):
-                            break
-                if not os.path.exists(url_file):
-                    msg = '\n'.join(
-                        ["Connection file %r not found." % short, no_file_msg]
-                    )
-                    raise IOError(msg)
-        if url_file is None:
+        if connection_info is None and self._profile_dir is not None:
+            # default: find connection info from profile
+            if cluster_id:
+                client_json = f'ipcontroller-{cluster_id}-client.json'
+            else:
+                client_json = 'ipcontroller-client.json'
+            connection_file = pjoin(self._profile_dir.security_dir, client_json)
+            short = compress_user(connection_file)
+            if not os.path.exists(connection_file):
+                print(f"Waiting for connection file: {short}")
+                waiting_time = 0.0
+                while waiting_time < timeout:
+                    time.sleep(min(timeout - waiting_time, 1))
+                    waiting_time += 1
+                    if os.path.exists(connection_file):
+                        break
+            if not os.path.exists(connection_file):
+                msg = '\n'.join([f"Connection file {short!r} not found.", no_file_msg])
+                raise IOError(msg)
+
+            with open(connection_file) as f:
+                connection_info = json.load(f)
+
+        if connection_info is None:
             raise IOError(no_file_msg)
 
-        if not os.path.exists(url_file):
-            # Connection file explicitly specified, but not found
-            raise IOError(
-                "Connection file %r not found. Is a controller running?"
-                % compress_user(url_file)
-            )
+        if isinstance(connection_info, dict):
+            cfg = connection_info.copy()
+        else:
+            # connection_info given as path to connection file
+            connection_file = connection_info
+            if not os.path.exists(connection_file):
+                # Connection file explicitly specified, but not found
+                raise IOError(
+                    f"Connection file {compress_user(connection_file)} not found. Is a controller running?"
+                )
 
-        with open(url_file) as f:
-            cfg = json.load(f)
+            with open(connection_file) as f:
+                connection_info = cfg = json.load(f)
 
         self._task_scheme = cfg['task_scheme']
 
@@ -599,17 +610,19 @@ class Client(HasTraits):
             ipython_dir = get_ipython_dir()
         if profile_dir is not None:
             try:
-                self._cd = ProfileDir.find_profile_dir(profile_dir)
+                self._profile_dir = ProfileDir.find_profile_dir(profile_dir)
                 return
             except ProfileDirError:
                 pass
         elif profile is not None:
             try:
-                self._cd = ProfileDir.find_profile_dir_by_name(ipython_dir, profile)
+                self._profile_dir = ProfileDir.find_profile_dir_by_name(
+                    ipython_dir, profile
+                )
                 return
             except ProfileDirError:
                 pass
-        self._cd = None
+        self._profile_dir = None
 
     def __enter__(self):
         """A client can be used as a context manager
