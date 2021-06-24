@@ -344,7 +344,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
                 # dispatch to from_dict from that class
                 return specified_cls.from_dict(d, config=config, parent=parent)
 
-        self = cls(config=config, parent=parent)
+        self = cls(config=config, parent=parent, shutdown_atexit=False)
         for attr in self.traits(to_dict=True):
             cluster_info[attr] = getattr(self, attr)
 

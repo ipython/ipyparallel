@@ -248,6 +248,7 @@ async def test_to_from_dict(Cluster, engine_launcher_class):
     async with cluster:
         d = cluster.to_dict()
         cluster2 = ipp.Cluster.from_dict(d)
+        assert not cluster2.shutdown_atexit
         assert cluster2._controller is not None
         assert cluster2._controller.process.pid == cluster._controller.process.pid
         assert list(cluster2._engine_sets) == list(cluster._engine_sets)
