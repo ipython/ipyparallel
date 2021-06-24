@@ -6,7 +6,9 @@ starts/stops/polls controllers, engines, etc.
 """
 import asyncio
 import atexit
+import glob
 import inspect
+import json
 import logging
 import os
 import random
@@ -119,6 +121,16 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         help="""The profile name,
              a shortcut for specifying profile_dir within $IPYTHONDIR.""",
     )
+
+    cluster_file = Unicode(
+        help="The path to the cluster file for saving this cluster to disk"
+    )
+
+    @default("cluster_file")
+    def _default_cluster_file(self):
+        return os.path.join(
+            self.profile_dir, "security", f"cluster-{self.cluster_id}.json"
+        )
 
     engine_timeout = Integer(
         60,
@@ -356,6 +368,59 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         return self
 
+    @classmethod
+    def from_file(
+        cls, path=None, *, profile=None, profile_dir=None, cluster_id='', **kwargs
+    ):
+        """Load a Cluster object from a file
+
+        Can specify a full path,
+        or combination of profile, profile_dir, and/or cluster_id.
+
+        With no arguments given, it will connect to a cluster created
+        with `ipcluster start`.
+        """
+
+        if path is None:
+            # determine path from profile/profile_dir
+
+            kwargs['cluster_id'] = cluster_id
+            if profile is not None:
+                kwargs['profile'] = profile
+            if profile_dir is not None:
+                kwargs['profile_dir'] = profile_dir
+            path = Cluster(**kwargs).cluster_file
+
+        with open(path) as f:
+            return cls.from_dict(json.load(f), **kwargs)
+
+    def write_cluster_file(self):
+        """Write cluster info to disk for later loading"""
+        with open(self.cluster_file, "w") as f:
+            json.dump(self.to_dict(), f)
+
+    def remove_cluster_file(self):
+        """Remove my cluster file."""
+        try:
+            os.remove(self.cluster_file)
+        except FileNotFoundError:
+            pass
+
+    def update_cluster_file(self):
+        """Update my cluster file
+
+        If cluster_file is disabled, do nothing
+        If cluster is fully stopped, remove the file
+        """
+        if not self.cluster_file:
+            # setting cluster_file='' disables saving to disk
+            return
+
+        if not self._controller and not self._engine_sets:
+            self.remove_cluster_file()
+        else:
+            self.write_cluster_file()
+
     async def start_controller(self, **kwargs):
         """Start the controller
 
@@ -412,7 +477,8 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         r = self._controller.start()
         if inspect.isawaitable(r):
             await r
-        # TODO: retrieve connection info
+
+        self.update_cluster_file()
 
     def _controller_stopped(self, stop_data=None):
         """Callback when a controller stops"""
@@ -444,10 +510,12 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         engine_set.on_stop(partial(self._engines_stopped, engine_set_id))
         if inspect.isawaitable(r):
             await r
+        self.update_cluster_file()
         return engine_set_id
 
     def _engines_stopped(self, engine_set_id, stop_data=None):
         self.log.warning(f"engine set stopped {engine_set_id}: {stop_data}")
+        self.update_cluster_file()
 
     async def start_cluster(self, n=None):
         """Start a cluster
@@ -475,6 +543,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         if inspect.isawaitable(r):
             await r
         self._engine_sets.pop(engine_set_id)
+        self.update_cluster_file()
 
     async def stop_engine(self, engine_id):
         """Stop one engine
@@ -535,6 +604,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
                 await r
 
         self._controller = None
+        self.update_cluster_file()
 
     async def stop_cluster(self):
         """Stop the controller and all engines"""
@@ -606,6 +676,41 @@ class ClusterManager(LoggingConfigurable):
     """
 
     _clusters = Dict(help="My cluster objects")
+
+    @staticmethod
+    def all_profile_dirs():
+        """List all IPython profile directories"""
+        profile_dirs = []
+        with os.scandir(IPython.paths.get_ipython_dir()) as paths:
+            for path in paths:
+                if path.is_dir() and path.name.startswith('profile_'):
+                    profile_dirs.append(path)
+        return profile_dirs
+
+    @classmethod
+    def from_filesystem(cls, profile_dirs=None, **kwargs):
+        """Construct a ClusterManager from the filesystem
+
+        Load all cluster objects from the given profile directory(ies).
+        """
+        if profile_dirs is None:
+            profile_dirs = cls.all_profile_dirs()
+
+        clusters = {}
+        for profile_dir in profile_dirs:
+            for cluster_file in cls.find_cluster_files_in_profile_dir(profile_dir):
+                with open(cluster_file) as f:
+                    d = json.load(f)
+                clusters[(profile_dir, d['cluster_id'])] = Cluster.from_dict(d)
+        return cls(_clusters=clusters, **kwargs)
+
+    @classmethod
+    def find_cluster_files_in_profile_dir(cls, profile_dir):
+        """List clusters in a profile directory
+
+        Returns list of cluster *files*
+        """
+        return glob.glob(os.path.join(profile_dir, "security", "cluster-*.json"))
 
     def from_dict(self, serialized_state):
         """Load serialized cluster state"""

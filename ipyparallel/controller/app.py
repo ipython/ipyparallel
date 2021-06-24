@@ -950,8 +950,6 @@ class IPController(BaseParallelApplication):
         self.heartmonitor.start()
         self.log.info("Heartmonitor started")
 
-        self.write_pid_file(overwrite=True)
-
         try:
             self.loop.start()
         except KeyboardInterrupt:

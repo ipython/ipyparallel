@@ -4,18 +4,18 @@
 from __future__ import print_function
 
 import errno
+import json
 import logging
 import os
 import re
 import signal
-from subprocess import CalledProcessError
-from subprocess import check_call
-from subprocess import PIPE
+import sys
 
+import IPython
 import zmq
-from IPython.core.application import BaseIPythonApplication
 from IPython.core.profiledir import ProfileDir
 from traitlets import Bool
+from traitlets import CaselessStrEnum
 from traitlets import Dict
 from traitlets import Integer
 from traitlets import List
@@ -26,9 +26,8 @@ from ipyparallel._version import __version__
 from ipyparallel.apps.baseapp import base_aliases
 from ipyparallel.apps.baseapp import base_flags
 from ipyparallel.apps.baseapp import BaseParallelApplication
-from ipyparallel.apps.baseapp import PIDFileError
-from ipyparallel.apps.daemonize import daemonize
 from ipyparallel.cluster import Cluster
+from ipyparallel.cluster import ClusterManager
 
 
 # -----------------------------------------------------------------------------
@@ -145,44 +144,84 @@ class IPClusterStop(BaseParallelApplication):
     def start(self):
         """Start the app for the stop subcommand."""
         try:
-            pid = self.get_pid_from_file()
-        except PIDFileError:
-            self.log.critical(
-                'Could not read pid file, cluster is probably not running.'
+            cluster = Cluster.from_file(
+                profile_dir=self.profile_dir.location,
+                cluster_id=self.cluster_id,
+                parent=self,
             )
-            # Here I exit with a unusual exit status that other processes
-            # can watch for to learn how I existed.
-            self.remove_pid_file()
+        except FileNotFoundError as s:
+            self.log.critical(f"Could not find cluster file {s}")
             self.exit(ALREADY_STOPPED)
+        # TODO: implement check-if-running!
+        cluster.stop_cluster_sync()
+        cluster.remove_cluster_file()
 
-        if not self.check_pid(pid):
-            self.log.critical('Cluster [pid=%r] is not running.' % pid)
-            self.remove_pid_file()
-            # Here I exit with a unusual exit status that other processes
-            # can watch for to learn how I existed.
-            self.exit(ALREADY_STOPPED)
 
-        elif os.name == 'posix':
-            sig = self.signal
-            self.log.info("Stopping cluster [pid=%r] with [signal=%r]" % (pid, sig))
-            try:
-                os.kill(pid, sig)
-            except OSError:
-                self.log.error(
-                    "Stopping cluster failed, assuming already dead.", exc_info=True
+def abbreviate_profile_dir(profile_dir):
+    """Abbreviate profile directory if in $IPYTHONDIR"""
+    profile_prefix = os.path.join(IPython.paths.get_ipython_dir(), "profile_")
+    if profile_dir.startswith(profile_prefix):
+        return profile_dir[len(profile_prefix) :]
+    else:
+        return profile_dir
+
+
+list_aliases = {}
+list_aliases.update(base_aliases)
+list_aliases.update({"o": "IPClusterList.output_format"})
+
+
+class IPClusterList(BaseParallelApplication):
+    name = 'ipcluster'
+    description = "List available clusters"
+    aliases = list_aliases
+
+    output_format = CaselessStrEnum(
+        ["text", "json"], default_value="text", config=True, help="Output format"
+    )
+
+    def start(self):
+        clusters = []
+        for cluster_file in ClusterManager.find_cluster_files_in_profile_dir(
+            self.profile_dir.location
+        ):
+            with open(cluster_file) as f:
+                clusters.append(json.load(f))
+
+        clusters = sorted(
+            clusters,
+            key=lambda c: (
+                c.get("cluster", {}).get('profile_dir'),
+                c.get("cluster", {}).get('cluster_id'),
+            ),
+        )
+        if self.output_format == "text":
+            # TODO: measure needed profile/cluster id width
+            print(
+                f"{'PROFILE':16} {'CLUSTER ID':32} {'RUNNING':7} {'ENGINES':7} {'LAUNCHER'}"
+            )
+            for cluster in clusters:
+                profile = abbreviate_profile_dir(cluster['cluster']['profile_dir'])
+                cluster_id = cluster['cluster']['cluster_id']
+                running = bool(cluster['controller'])
+                # TODO: URL?
+                engines = 0
+                if cluster['engines']:
+                    engines = sum(
+                        engine_set.get('n', 0)
+                        for engine_set in cluster['engines']['sets'].values()
+                    )
+
+                launcher = cluster['engines']['class'].rsplit(".", 1)[-1]
+                if launcher.endswith("EngineSetLauncher"):
+                    launcher = launcher[: -len("EngineSetLauncher")]
+                print(
+                    f"{profile:16} {cluster_id or repr(''):32} {str(running):7} {engines:7} {launcher}"
                 )
-                self.remove_pid_file()
-        elif os.name == 'nt':
-            try:
-                # kill the whole tree
-                check_call(
-                    ['taskkill', '-pid', str(pid), '-t', '-f'], stdout=PIPE, stderr=PIPE
-                )
-            except (CalledProcessError, OSError):
-                self.log.error(
-                    "Stopping cluster failed, assuming already dead.", exc_info=True
-                )
-            self.remove_pid_file()
+        elif self.output_format == "json":
+            json.dump(clusters, sys.stdout)
+        else:
+            raise NotImplementedError(f"No such output format: {self.output_format}")
 
 
 engine_aliases = {}
@@ -294,6 +333,10 @@ class IPClusterEngines(BaseParallelApplication):
             self.log.exception("Engine start failed")
             raise
 
+        if self.daemonize:
+            self.loop.add_callback(self.loop.stop)
+            return
+
         # TODO: enable 'engines stopped early' with new cluster API
         # self.engine_launcher.on_stop(self.engines_stopped_early)
         if self.early_shutdown:
@@ -351,10 +394,6 @@ class IPClusterEngines(BaseParallelApplication):
 
         # Now log and daemonize
         self.log.info('Starting engines with [daemon=%r]' % self.daemonize)
-        # TODO: Get daemonize working on Windows or as a Windows Server.
-        if self.daemonize:
-            if os.name == 'posix':
-                daemonize()
 
         self.loop.add_callback(self.start_engines)
         # Now write the new pid file AFTER our new forked pid is active.
@@ -412,35 +451,29 @@ class IPClusterStart(IPClusterEngines):
         """prevent parent.engines_stopped from stopping everything on engine shutdown"""
         pass
 
+    async def start_cluster(self):
+        await self.cluster.start_cluster()
+        if self.daemonize:
+            self.log.info(f"Leaving cluster running: {self.cluster.cluster_file}")
+            self.loop.add_callback(self.loop.stop)
+
     def start(self):
         """Start the app for the start subcommand."""
         # First see if the cluster is already running
-        try:
-            pid = self.get_pid_from_file()
-        except PIDFileError:
-            pass
-        else:
-            if self.check_pid(pid):
-                self.log.critical(
-                    'Cluster is already running with [pid=%s]. '
-                    'use "ipcluster stop" to stop the cluster.' % pid
-                )
-                # Here I exit with a unusual exit status that other processes
-                # can watch for to learn how I existed.
-                self.exit(ALREADY_STARTED)
-            else:
-                self.remove_pid_file()
+        if os.path.isfile(self.cluster.cluster_file):
+            # TODO: check running
+            self.log.critical(
+                'Cluster is already running at {self.cluster.cluster_file}. '
+                'use "ipcluster stop" to stop the cluster.'
+            )
+            # Here I exit with a unusual exit status that other processes
+            # can watch for to learn how I existed.
+            self.exit(ALREADY_STARTED)
 
         # Now log and daemonize
         self.log.info('Starting ipcluster with [daemon=%r]' % self.daemonize)
-        # TODO: Get daemonize working on Windows or as a Windows Server.
-        if self.daemonize:
-            if os.name == 'posix':
-                daemonize()
 
-        self.loop.add_callback(self.cluster.start_cluster)
-        # Now write the new pid file AFTER our new forked pid is active.
-        self.write_pid_file()
+        self.loop.add_callback(self.start_cluster)
         try:
             self.loop.start()
         except KeyboardInterrupt:
@@ -451,10 +484,11 @@ class IPClusterStart(IPClusterEngines):
             else:
                 raise
         finally:
-            self.remove_pid_file()
+            if not self.daemonize:
+                self.cluster.stop_cluster_sync()
 
 
-class IPClusterNBExtension(BaseIPythonApplication):
+class IPClusterNBExtension(BaseParallelApplication):
     """Enable/disable ipcluster tab extension in Jupyter notebook"""
 
     name = 'ipcluster-nbextension'
@@ -501,7 +535,7 @@ class IPClusterNBExtension(BaseIPythonApplication):
             self.exit("Must specify 'enable' or 'disable', not '%s'" % action)
 
 
-class IPCluster(BaseIPythonApplication):
+class IPCluster(BaseParallelApplication):
     name = u'ipcluster'
     description = _description
     examples = _main_examples
@@ -513,6 +547,7 @@ class IPCluster(BaseIPythonApplication):
         'start': (IPClusterStart, start_help),
         'stop': (IPClusterStop, stop_help),
         'engines': (IPClusterEngines, engines_help),
+        'list': (IPClusterList, stop_help),
         'nbextension': (IPClusterNBExtension, IPClusterNBExtension.description),
     }
 

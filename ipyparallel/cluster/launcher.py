@@ -300,6 +300,8 @@ class EngineLauncher(BaseLauncher):
         help="command-line arguments to pass to ipengine",
     )
 
+    n = Integer(1).tag(to_dict=True)
+
 
 # -----------------------------------------------------------------------------
 # Local process launchers
@@ -564,7 +566,6 @@ class MPILauncher(LocalProcessLauncher):
     )
     program = List(['date'], help="The program to start via mpiexec.")
     program_args = List([], help="The command line argument to the program.")
-    n = Integer(1)
 
     def __init__(self, *args, **kwargs):
         # deprecation for old MPIExec names:
@@ -985,7 +986,7 @@ class SSHProxyEngineSetLauncher(SSHLauncher):
     Requires that remote profile is already configured.
     """
 
-    n = Integer()
+    n = Integer().tag(to_dict=True)
     ipcluster_cmd = List(['ipcluster'], config=True)
 
     @property
