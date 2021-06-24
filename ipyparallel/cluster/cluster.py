@@ -313,7 +313,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
                 d["controller"]["state"] = self._controller.to_dict()
 
         d["engines"] = {
-            "cls": _cls_str(self.engine_launcher_class),
+            "class": _cls_str(self.engine_launcher_class),
             "sets": {},
         }
         sets = d["engines"]["sets"]
@@ -326,7 +326,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """Construct a Cluster from serialized state"""
         cluster_info = d["cluster"]
         if cluster_info.get("class"):
-            specified_cls = import_item(cluster_info["cls"])
+            specified_cls = import_item(cluster_info["class"])
             if specified_cls is not cls:
                 # specified a custom Cluster class,
                 # dispatch to from_dict from that class
@@ -349,7 +349,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         engine_info = d.get("engines")
         if engine_info:
             cls = self.engine_launcher_class = import_item(engine_info["class"])
-            for engine_set_id, engine_state in engine_info.get("sets", {}):
+            for engine_set_id, engine_state in engine_info.get("sets", {}).items():
                 self._engine_sets[engine_set_id] = cls.from_dict(
                     engine_state, parent=self
                 )
@@ -406,7 +406,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         if controller_args is not None:
             # ensure we trigger trait observers after we are done
-            self.controller_launcher_class.controller_args = list(controller_args)
+            self._controller.controller_args = list(controller_args)
 
         self._controller.on_stop(self._controller_stopped)
         r = self._controller.start()

@@ -241,7 +241,14 @@ async def test_cluster_manager():
         m.remove_cluster("nosuchcluster")
 
 
-async def test_to_dict(self):
-    cluster = ipp.Cluster()
-    d = cluster.to_dict()
-    cluster2 = ipp.Cluster.from_dict(d)
+@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
+async def test_to_from_dict(Cluster, engine_launcher_class):
+    cluster = Cluster(engine_launcher_class=engine_launcher_class, n=2)
+    print(cluster.config, cluster.controller_args)
+    async with cluster:
+        d = cluster.to_dict()
+        cluster2 = ipp.Cluster.from_dict(d)
+        assert cluster2._controller is not None
+        assert cluster2._controller.process.pid == cluster._controller.process.pid
+        assert list(cluster2._engine_sets) == list(cluster._engine_sets)
+        assert cluster2.engine_launcher_class is cluster.engine_launcher_class

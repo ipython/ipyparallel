@@ -253,13 +253,13 @@ class BaseLauncher(LoggingConfigurable):
 
 class ControllerLauncher(BaseLauncher):
     controller_cmd = List(
-        ipcontroller_cmd_argv,
+        list(ipcontroller_cmd_argv),
         config=True,
         help="""Popen command to launch ipcontroller.""",
     )
     # Command line arguments to ipcontroller.
     controller_args = List(
-        ['--log-level=%i' % logging.INFO],
+        Unicode(),
         config=True,
         help="""command-line args to pass to ipcontroller""",
     )
@@ -568,7 +568,7 @@ class MPILauncher(LocalProcessLauncher):
 
     def __init__(self, *args, **kwargs):
         # deprecation for old MPIExec names:
-        config = kwargs.get('config', {})
+        config = kwargs.get('config') or {}
         for oldname in (
             'MPIExecLauncher',
             'MPIExecControllerLauncher',
