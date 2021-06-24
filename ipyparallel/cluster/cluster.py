@@ -232,9 +232,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         help="delay (in s) between starting the controller and the engines",
     ).tag(to_dict=True)
 
-    n = Integer(None, allow_none=True, config=True, help="The number of engines to start").tag(
-        to_dict=True
-    )
+    n = Integer(
+        None, allow_none=True, config=True, help="The number of engines to start"
+    ).tag(to_dict=True)
 
     @default("parent")
     def _default_parent(self):
@@ -403,6 +403,10 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             add_args(['--location=%s' % self.controller_location])
         if self.controller_args:
             add_args(self.controller_args)
+
+        if controller_args is not None:
+            # ensure we trigger trait observers after we are done
+            self.controller_launcher_class.controller_args = list(controller_args)
 
         self._controller.on_stop(self._controller_stopped)
         r = self._controller.start()
