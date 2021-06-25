@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 from unittest import mock
 
 import pytest
+import zmq
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
 from IPython.testing.tools import default_config
 
@@ -55,3 +56,12 @@ def ipython_interactive(request, ipython):
     """
     with ipython.builtin_trap:
         yield ipython
+
+
+@pytest.fixture(autouse=True)
+def Context():
+    ctx = zmq.Context.instance()
+    try:
+        yield ctx
+    finally:
+        ctx.destroy()

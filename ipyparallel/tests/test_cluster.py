@@ -99,12 +99,12 @@ async def test_start_stop_controller(Cluster):
     assert cluster._controller.config is cluster.config
     assert cluster._controller is not None
     proc = cluster._controller.process
-    assert proc.poll() is None
+    assert proc.is_running()
     with await cluster.connect_client() as rc:
         assert rc.queue_status() == {'unassigned': 0}
 
     await cluster.stop_controller()
-    assert not proc.poll() is not None
+    proc.wait(timeout=3)
     assert cluster._controller is None
     # stop is idempotent
     await cluster.stop_controller()
@@ -301,5 +301,5 @@ async def test_default_from_file(Cluster):
     cluster = Cluster(n=1, profile="default", cluster_id="")
     async with cluster:
         cluster2 = ipp.Cluster.from_file()
-        rc = await cluster2.connect_client()
-        assert len(rc) == 1
+        with await cluster.connect_client() as rc:
+            assert len(rc) == 1
