@@ -51,7 +51,13 @@ class EngineError(KernelError):
 
 
 class NoEnginesRegistered(KernelError):
-    pass
+    """Exception for operations that require some engines, but none exist"""
+
+    def __str__(self):
+        return (
+            "This operation requires engines."
+            " Try client.wait_for_engines(n) to wait for engines to register."
+        )
 
 
 class TaskAborted(KernelError):
