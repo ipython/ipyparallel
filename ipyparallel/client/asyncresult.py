@@ -16,8 +16,8 @@ from threading import Event
 import zmq
 from decorator import decorator
 from IPython import get_ipython
-from IPython.core.display import display
-from IPython.core.display import display_pretty
+from IPython.display import display
+from IPython.display import display_pretty
 from ipython_genutils.py3compat import string_types
 
 from .futures import MessageFuture
