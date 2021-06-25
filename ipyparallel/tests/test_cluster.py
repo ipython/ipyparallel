@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import shutil
 import signal
@@ -7,7 +6,6 @@ import sys
 import time
 
 import pytest
-from traitlets.config import Config
 
 import ipyparallel as ipp
 from .clienttest import raises_remote
@@ -40,37 +38,6 @@ try:
 except AttributeError:
     # Windows
     TEST_SIGNAL = signal.CTRL_C_EVENT
-
-
-@pytest.fixture
-def Cluster(request, io_loop):
-    """Fixture for instantiating Clusters"""
-
-    def ClusterConstructor(**kwargs):
-        log = logging.getLogger(__file__)
-        log.setLevel(logging.DEBUG)
-        log.handlers = [logging.StreamHandler(sys.stdout)]
-        kwargs['log'] = log
-        engine_launcher_class = kwargs.get("engine_launcher_class")
-
-        if (
-            isinstance(engine_launcher_class, str)
-            and "MPI" in engine_launcher_class
-            and shutil.which("mpiexec") is None
-        ):
-            pytest.skip("requires mpiexec")
-
-        cfg = kwargs.setdefault("config", Config())
-        cfg.EngineLauncher.engine_args = ['--log-level=10']
-        cfg.ControllerLauncher.controller_args = ['--log-level=10']
-        kwargs.setdefault("controller_args", ['--ping=250'])
-
-        c = cluster.Cluster(**kwargs)
-        assert c.config is cfg
-        request.addfinalizer(c.stop_cluster_sync)
-        return c
-
-    yield ClusterConstructor
 
 
 async def test_cluster_id(Cluster):

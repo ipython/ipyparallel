@@ -35,7 +35,6 @@ from ipyparallel.cluster import ClusterManager
 # Module level variables
 # -----------------------------------------------------------------------------
 
-
 _description = """Start an IPython cluster for parallel computing.
 
 An IPython cluster consists of 1 controller and 1 or more engines.
@@ -265,7 +264,6 @@ class IPClusterEngines(BaseParallelApplication):
         False,
         config=True,
         help="""Daemonize the ipcluster program. This implies --log-to-file.
-        Not available on Windows.
         """,
     )
 
@@ -319,6 +317,7 @@ class IPClusterEngines(BaseParallelApplication):
             profile_dir=self.profile_dir.location,
             cluster_id=self.cluster_id,
             controller_args=self.extra_args,
+            shutdown_atexit=not self.daemonize,
         )
 
     def init_signal(self):
@@ -486,7 +485,7 @@ class IPClusterStart(IPClusterEngines):
             self.exit(ALREADY_STARTED)
 
         # Now log and daemonize
-        self.log.info('Starting ipcluster with [daemon=%r]' % self.daemonize)
+        self.log.info('Starting ipcluster with [daemonize=%r]' % self.daemonize)
 
         self.loop.add_callback(self.start_cluster)
         try:
