@@ -334,7 +334,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         return d
 
     @classmethod
-    def from_dict(cls, d, config=None, parent=None):
+    def from_dict(cls, d, **kwargs):
         """Construct a Cluster from serialized state"""
         cluster_info = d["cluster"]
         if cluster_info.get("class"):
@@ -342,9 +342,10 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             if specified_cls is not cls:
                 # specified a custom Cluster class,
                 # dispatch to from_dict from that class
-                return specified_cls.from_dict(d, config=config, parent=parent)
+                return specified_cls.from_dict(d, **kwargs)
 
-        self = cls(config=config, parent=parent, shutdown_atexit=False)
+        kwargs.setdefault("shutdown_atexit", False)
+        self = cls(**kwargs)
         for attr in self.traits(to_dict=True):
             cluster_info[attr] = getattr(self, attr)
 
@@ -406,6 +407,8 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             os.remove(self.cluster_file)
         except FileNotFoundError:
             pass
+        else:
+            self.log.debug(f"Removed cluster file: {self.cluster_file}")
 
     def update_cluster_file(self):
         """Update my cluster file

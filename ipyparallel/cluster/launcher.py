@@ -9,57 +9,50 @@ import json
 import logging
 import os
 import shlex
+import signal
 import stat
 import sys
+import threading
 import time
 from signal import SIGINT
 from signal import SIGTERM
-
-# signal imports, handling various platforms, versions
-try:
-    from signal import SIGKILL
-except ImportError:
-    # Windows, just need a singleton.
-    # value is not relevant.
-    SIGKILL = -1
-
-try:
-    # Windows >= 2.7, 3.2
-    from signal import CTRL_C_EVENT as SIGINT
-except ImportError:
-    pass
-
-from subprocess import Popen, PIPE, STDOUT
-
 from subprocess import check_output
+from subprocess import PIPE
+from subprocess import Popen
+from subprocess import STDOUT
 
 import psutil
-from tornado import ioloop
-from traitlets import import_item
-from traitlets.config.configurable import LoggingConfigurable
+from IPython.utils.path import ensure_dir_exists
+from IPython.utils.path import get_home_dir
+from IPython.utils.process import find_cmd
+from IPython.utils.process import FindCmdError
 from IPython.utils.text import EvalFormatter
-from traitlets import (
-    Any,
-    Integer,
-    Float,
-    List,
-    Unicode,
-    Dict,
-    Instance,
-    CRegExp,
-    default,
-    observe,
-)
 from ipython_genutils.encoding import DEFAULT_ENCODING
-from IPython.utils.path import get_home_dir, ensure_dir_exists
-from IPython.utils.process import find_cmd, FindCmdError
-from ipython_genutils.py3compat import iteritems, itervalues
+from ipython_genutils.py3compat import iteritems
+from ipython_genutils.py3compat import itervalues
+from tornado import ioloop
+from traitlets import Any
+from traitlets import CRegExp
+from traitlets import default
+from traitlets import Dict
+from traitlets import Float
+from traitlets import import_item
+from traitlets import Instance
+from traitlets import Integer
+from traitlets import List
+from traitlets import observe
+from traitlets import Unicode
+from traitlets.config.configurable import LoggingConfigurable
 
 from ._win32support import forward_read_events
-from ._winhpcjob import IPControllerTask, IPEngineTask, IPControllerJob, IPEngineSetJob
+from ._winhpcjob import IPControllerJob
+from ._winhpcjob import IPControllerTask
+from ._winhpcjob import IPEngineSetJob
+from ._winhpcjob import IPEngineTask
 
 WINDOWS = os.name == 'nt'
 
+SIGKILL = getattr(signal, "SIGKILL", -1)
 # -----------------------------------------------------------------------------
 # Paths to the kernel apps
 # -----------------------------------------------------------------------------
@@ -221,7 +214,7 @@ class BaseLauncher(LoggingConfigurable):
         a pass-through so it can be used as a callback.
         """
 
-        self.log.debug('Process %r started: %r', self.args[0], data)
+        self.log.debug(f"{self.__class__.__name__} {self.args[0]} started: {data}")
         self.start_data = data
         self.state = 'running'
         return data
@@ -231,13 +224,14 @@ class BaseLauncher(LoggingConfigurable):
 
         This logs the process stopping and sets the state to 'after'. Call
         this to trigger callbacks registered via :meth:`on_stop`."""
-
-        self.log.debug('Process %r stopped: %r', self.args[0], data)
+        if self.state == 'after':
+            self.log.debug("Already notified stop (data)")
+            return data
+        self.log.debug(f"{self.__class__.__name__} {self.args[0]} stopped: {data}")
         self.stop_data = data
         self.state = 'after'
-        for i in range(len(self.stop_callbacks)):
-            d = self.stop_callbacks.pop()
-            d(data)
+        for f in self.stop_callbacks:
+            f(data)
         return data
 
     def signal(self, sig):
@@ -308,29 +302,6 @@ class EngineLauncher(BaseLauncher):
 # -----------------------------------------------------------------------------
 
 
-class ReattachedProcess:
-    """API for reattaching to a process when we are no longer the parent.
-
-    Implements the necessary APIs,
-
-    specifically:
-
-    .pid
-    .poll()
-    """
-
-    def __init__(self, pid):
-        self.pid = pid
-        # TODO: check for existence
-        self.process = psutil.Process(self.pid)
-
-    def __repr__(self):
-        return "self.__class__.__name__(pid={self.pid!r})"
-
-    def poll(self):
-        return self.process.poll()
-
-
 class LocalProcessLauncher(BaseLauncher):
     """Start and stop an external process in an asynchronous manner.
 
@@ -341,56 +312,101 @@ class LocalProcessLauncher(BaseLauncher):
     # This is used to to construct self.args, which is passed to
     # spawnProcess.
     cmd_and_args = List(Unicode())
-    poll_frequency = Integer(100)  # in ms
+    poll_seconds = Integer(
+        30,
+        config=True,
+        help="""Interval on which to poll processes (.
+
+        Note: process exit should be noticed immediately,
+        due to use of Process.wait(),
+        but this interval should ensure we aren't leaving threads running forever,
+        as other signals/events are checked on this interval
+        """,
+    )
+    pid = Integer(-1).tag(to_dict=True)
+
     stdout = None
     stderr = None
     process = None
-    poller = None
 
     def find_args(self):
         return self.cmd_and_args
 
-    def to_dict(self):
-        d = super().to_dict()
-        if self.process:
-            d['pid'] = self.process.pid
-        return d
-
     @classmethod
     def from_dict(cls, d, **kwargs):
         self = super().from_dict(d, **kwargs)
-        if 'pid' in d:
+        if 'pid' in d and d['pid'] > 0:
             self.process = psutil.Process(d['pid'])
-            self.poller = ioloop.PeriodicCallback(self.poll, self.poll_frequency)
-            self.poller.start()
+            self._start_waiting()
         return self
+
+    def _wait(self):
+        """Background thread waiting for a process to exit"""
+        exit_code = None
+        while (
+            not self._stop_waiting.is_set()
+            and self.process is not None
+            and self.state == 'running'
+        ):
+            try:
+                # use a timeout
+                exit_code = self.process.wait(timeout=self.poll_seconds)
+            except psutil.TimeoutExpired:
+                continue
+            else:
+                break
+        stop_data = dict(exit_code=exit_code, pid=self.process.pid)
+        self.loop.add_callback(lambda: self.notify_stop(stop_data))
+
+    def _start_waiting(self):
+        """Start background thread waiting on the process to exit"""
+        # ensure self.loop is accessed on the main thread before waiting
+        self.loop
+        self._stop_waiting = threading.Event()
+        self._wait_thread = threading.Thread(
+            target=self._wait, daemon=True, name=f"wait(pid={self.pid})"
+        )
+        self._wait_thread.start()
 
     def start(self):
         self.log.debug("Starting %s: %r", self.__class__.__name__, self.args)
-        if self.state == 'before':
-            self.process = Popen(
-                self.args,
-                stdout=PIPE,
-                stderr=PIPE,
-                stdin=PIPE,
-                env=os.environ,
-                cwd=self.work_dir,
-                start_new_session=True,  # don't forward signals
+        if self.state != 'before':
+            raise ProcessStateError(
+                'The process was already started and has state: {self.state}'
             )
-            if WINDOWS:
-                self.stdout = forward_read_events(self.process.stdout)
-                self.stderr = forward_read_events(self.process.stderr)
-            else:
-                self.stdout = self.process.stdout.fileno()
-                self.stderr = self.process.stderr.fileno()
-            self.loop.add_handler(self.stdout, self.handle_stdout, self.loop.READ)
-            self.loop.add_handler(self.stderr, self.handle_stderr, self.loop.READ)
-            self.poller = ioloop.PeriodicCallback(self.poll, self.poll_frequency)
-            self.poller.start()
-            self.notify_start(self.process.pid)
-        else:
-            s = 'The process was already started and has state: %r' % self.state
-            raise ProcessStateError(s)
+
+        proc = Popen(
+            self.args,
+            stdout=PIPE,
+            stderr=PIPE,
+            stdin=PIPE,
+            env=os.environ,
+            cwd=self.work_dir,
+            start_new_session=True,  # don't forward signals
+        )
+        self.pid = proc.pid
+        self.stdout = proc.stdout
+        self.stderr = proc.stderr
+        # use psutil API for self.process
+        self.process = psutil.Process(proc.pid)
+
+        if WINDOWS:
+            self.stdout = forward_read_events(self.stdout)
+            self.stderr = forward_read_events(self.stderr)
+        self.loop.add_handler(self.stdout, self.handle_stdout, self.loop.READ)
+        self.loop.add_handler(self.stderr, self.handle_stderr, self.loop.READ)
+        self.on_stop(self._stop_streams)
+        self.notify_start(self.process.pid)
+        self._start_waiting()
+
+    def _stop_streams(self, stop_data=None):
+        """Disconnect stream watchers"""
+        if self.stdout is not None:
+            self.loop.remove_handler(self.stdout)
+            self.stdout = None
+        if self.stderr is not None:
+            self.loop.remove_handler(self.stderr)
+            self.stderr = None
 
     def stop(self):
         return self.interrupt_then_kill()
@@ -410,8 +426,8 @@ class LocalProcessLauncher(BaseLauncher):
         """Send TERM, wait a delay and then send KILL."""
         try:
             self.signal(SIGTERM)
-        except Exception:
-            self.log.debug("interrupt failed")
+        except Exception as e:
+            self.log.debug(f"interrupt failed: {e!r}")
             pass
         self.killer = asyncio.get_event_loop().call_later(
             delay, lambda: self.signal(SIGKILL)
@@ -423,18 +439,16 @@ class LocalProcessLauncher(BaseLauncher):
         if WINDOWS:
             line = self.stdout.recv().decode('utf8', 'replace')
         else:
-            line = self.process.stdout.readline().decode('utf8', 'replace')
+            line = self.stdout.readline().decode('utf8', 'replace')
         # a stopped process will be readable but return empty strings
         if line:
             self.log.debug(line.rstrip())
-        else:
-            self.poll()
 
     def handle_stderr(self, fd, events):
         if WINDOWS:
             line = self.stderr.recv().decode('utf8', 'replace')
         else:
-            line = self.process.stderr.readline().decode('utf8', 'replace')
+            line = self.stderr.readline().decode('utf8', 'replace')
         # a stopped process will be readable but return empty strings
         if line:
             self.log.debug(line.rstrip())
@@ -442,12 +456,15 @@ class LocalProcessLauncher(BaseLauncher):
             self.poll()
 
     def poll(self):
-        status = self.process.poll()
-        if status is not None:
-            self.poller.stop()
-            self.loop.remove_handler(self.stdout)
-            self.loop.remove_handler(self.stderr)
-            self.notify_stop(dict(exit_code=status, pid=self.process.pid))
+        if self.process.is_running():
+            return None
+
+        status = self.process.wait(0)
+        if status is None:
+            # return code cannot always be retrieved.
+            # but we need to not return None if it's still running
+            status = 'unknown'
+        self.notify_stop(dict(exit_code=status, pid=self.process.pid))
         return status
 
 
@@ -490,6 +507,18 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
         super(LocalEngineSetLauncher, self).__init__(
             work_dir=work_dir, config=config, **kwargs
         )
+
+    def to_dict(self):
+        d = super().to_dict()
+        d['engines'] = {i: launcher.to_dict() for i, launcher in self.launchers.items()}
+        return d
+
+    @classmethod
+    def from_dict(cls, d, **kwargs):
+        self = super().from_dict(d, **kwargs)
+        for i, engine_dict in d['engines'].items():
+            self.launchers[i] = self.launcher_class.from_dict(engine_dict, parent=self)
+        return self
 
     def start(self, n):
         """Start n engines by profile or profile_dir."""
@@ -541,10 +570,9 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
         for idx, el in iteritems(self.launchers):
             if el.process.pid == pid:
                 break
-        if self.launchers:
-            self.launchers.pop(idx)
-            self.stop_data[idx] = data
-        else:
+        self.launchers.pop(idx)
+        self.stop_data[idx] = data
+        if not self.launchers:
             self.notify_stop(self.stop_data)
 
 
