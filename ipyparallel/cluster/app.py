@@ -3,6 +3,7 @@
 """The ipcluster application."""
 from __future__ import print_function
 
+import asyncio
 import errno
 import json
 import logging
@@ -154,7 +155,6 @@ class IPClusterStop(BaseParallelApplication):
             self.exit(ALREADY_STOPPED)
         # TODO: implement check-if-running!
         cluster.stop_cluster_sync()
-        cluster.remove_cluster_file()
 
 
 def abbreviate_profile_dir(profile_dir):
@@ -274,7 +274,11 @@ class IPClusterEngines(BaseParallelApplication):
         if change['new']:
             self.log_to_file = True
 
-    early_shutdown = Integer(30, config=True, help="The timeout (in seconds)")
+    early_shutdown = Integer(
+        30,
+        config=True,
+        help="If engines stop in this time frame, assume something is wrong and tear down the cluster.",
+    )
     _stopping = False
 
     aliases = Dict(engine_aliases)
@@ -322,9 +326,8 @@ class IPClusterEngines(BaseParallelApplication):
         signal.signal(signal.SIGINT, self.sigint_handler)
 
     def engines_started_ok(self):
-        if self.engine_launcher.running:
-            self.log.info("Engines appear to have started successfully")
-            self.early_shutdown = 0
+        self.log.info("Engines appear to have started successfully")
+        self.early_shutdown = 0
 
     async def start_engines(self):
         try:
@@ -337,8 +340,19 @@ class IPClusterEngines(BaseParallelApplication):
             self.loop.add_callback(self.loop.stop)
             return
 
+        self.watch_engines()
+
+    def watch_engines(self):
+        """Watch for early engine shutdown"""
+        # FIXME: public API to get launcher instances?
+        self.engine_launcher = next(iter(self.cluster._engine_sets.values()))
+
+        if not self.early_shutdown:
+            self.engine_launcher.on_stop(self.engines_stopped)
+            return
+
         # TODO: enable 'engines stopped early' with new cluster API
-        # self.engine_launcher.on_stop(self.engines_stopped_early)
+        self.engine_launcher.on_stop(self.engines_stopped_early)
         if self.early_shutdown:
             self.loop.add_timeout(
                 self.loop.time() + self.early_shutdown, self.engines_started_ok
@@ -355,13 +369,13 @@ class IPClusterEngines(BaseParallelApplication):
             If your controller and engines are not on the same machine, you probably
             have to instruct the controller to listen on an interface other than localhost.
 
-            You can set this by adding "--ip='*'" to your ControllerLauncher.controller_args.
+            You can set this by adding "--ip=*" to your ControllerLauncher.controller_args.
 
             Be sure to read our security docs before instructing your controller to listen on
             a public interface.
             """
             )
-            self.loop.add_callback(self.stop_cluster())
+            self.loop.add_callback(self.stop_cluster)
 
         return self.engines_stopped(stop_data)
 
@@ -456,6 +470,7 @@ class IPClusterStart(IPClusterEngines):
         if self.daemonize:
             self.log.info(f"Leaving cluster running: {self.cluster.cluster_file}")
             self.loop.add_callback(self.loop.stop)
+        self.watch_engines()
 
     def start(self):
         """Start the app for the start subcommand."""
@@ -463,8 +478,8 @@ class IPClusterStart(IPClusterEngines):
         if os.path.isfile(self.cluster.cluster_file):
             # TODO: check running
             self.log.critical(
-                'Cluster is already running at {self.cluster.cluster_file}. '
-                'use "ipcluster stop" to stop the cluster.'
+                f'Cluster is already running at {self.cluster.cluster_file}. '
+                'use `ipcluster stop` to stop the cluster.'
             )
             # Here I exit with a unusual exit status that other processes
             # can watch for to learn how I existed.
