@@ -1216,7 +1216,15 @@ class LoadBalancedView(View):
 
     @sync_results
     @save_ids
-    def map(self, f, *sequences, block=None, chunksize=1, ordered=True):
+    def map(
+        self,
+        f,
+        *sequences,
+        block=None,
+        chunksize=1,
+        ordered=True,
+        return_exceptions=False,
+    ):
         """Parallel version of builtin `map`, load-balanced by this View.
 
         `block`, and `chunksize` can be specified by keyword only.
@@ -1242,6 +1250,9 @@ class LoadBalancedView(View):
             Only applies when iterating through AsyncMapResult as results arrive.
             Has no effect when block=True.
 
+        return_exceptions: bool [default False]
+            Return Exceptions instead of raising on the first exception.
+
         Returns
         -------
         if block=False
@@ -1260,7 +1271,12 @@ class LoadBalancedView(View):
         assert len(sequences) > 0, "must have some sequences to map onto!"
 
         pf = ParallelFunction(
-            self, f, block=block, chunksize=chunksize, ordered=ordered
+            self,
+            f,
+            block=block,
+            chunksize=chunksize,
+            ordered=ordered,
+            return_exceptions=return_exceptions,
         )
         return pf.map(*sequences)
 
@@ -1270,6 +1286,7 @@ class LoadBalancedView(View):
         *sequences,
         ordered=True,
         max_outstanding='auto',
+        return_exceptions=False,
     ):
         """Parallel version of lazily-evaluated `imap`, load-balanced by this View.
 
@@ -1307,6 +1324,9 @@ class LoadBalancedView(View):
             as there will be no parallelism.
 
             Use this to tune how greedily input generator should be consumed.
+
+        return_exceptions : bool [default False]
+            Return Exceptions instead of raising them.
 
         Returns
         -------
@@ -1380,22 +1400,22 @@ class LoadBalancedView(View):
             # yielding immediately means
             if should_yield():
                 for ready_ar in wait_for_ready():
-                    yield ready_ar.get()
+                    yield ready_ar.get(return_exceptions=return_exceptions)
 
             # we've filled the buffer, wait for at least one result before continuing
             if len(outstanding) == max_outstanding:
                 for ready_ar in wait_for_ready():
-                    yield ready_ar.get()
+                    yield ready_ar.get(return_exceptions=return_exceptions)
 
         # yield any remaining results
         if ordered:
             for ar in outstanding:
-                yield ar.get()
+                yield ar.get(return_exceptions=return_exceptions)
         else:
             while outstanding:
                 done, outstanding = concurrent.futures.wait(outstanding)
                 for ar in done:
-                    yield ar.get()
+                    yield ar.get(return_exceptions=return_exceptions)
 
     def register_joblib_backend(self, name='ipyparallel', make_default=False):
         """Register this View as a joblib parallel backend

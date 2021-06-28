@@ -186,6 +186,7 @@ class ParallelFunction(RemoteFunction):
     ordered : bool [default: True]
         Whether the result should be kept in order. If False,
         results become available as they arrive, regardless of submission order.
+    return_exceptions : bool [default: False]
     **flags
         remaining kwargs are passed to View.temp_flags
     """
@@ -195,11 +196,20 @@ class ParallelFunction(RemoteFunction):
     mapObject = None
 
     def __init__(
-        self, view, f, dist='b', block=None, chunksize=None, ordered=True, **flags
+        self,
+        view,
+        f,
+        dist='b',
+        block=None,
+        chunksize=None,
+        ordered=True,
+        return_exceptions=False,
+        **flags,
     ):
         super(ParallelFunction, self).__init__(view, f, block=block, **flags)
         self.chunksize = chunksize
         self.ordered = ordered
+        self.return_exceptions = return_exceptions
 
         mapClass = Map.dists[dist]
         self.mapObject = mapClass()
@@ -296,6 +306,7 @@ class ParallelFunction(RemoteFunction):
             self.mapObject,
             fname=getname(self.func),
             ordered=self.ordered,
+            return_exceptions=self.return_exceptions,
         )
 
         if self.block:
