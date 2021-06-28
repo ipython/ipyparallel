@@ -170,45 +170,41 @@ class IPClusterList(BaseParallelApplication):
     )
 
     def start(self):
-        clusters = []
-        for cluster_file in ClusterManager.find_cluster_files_in_profile_dir(
-            self.profile_dir.location
-        ):
-            with open(cluster_file) as f:
-                clusters.append(json.load(f))
-
-        clusters = sorted(
-            clusters,
-            key=lambda c: (
-                c.get("cluster", {}).get('profile_dir'),
-                c.get("cluster", {}).get('cluster_id'),
-            ),
-        )
+        cluster_manager = ClusterManager(parent=self)
+        clusters = cluster_manager.load_clusters(profile_dir=self.profile_dir.location)
         if self.output_format == "text":
             # TODO: measure needed profile/cluster id width
             print(
                 f"{'PROFILE':16} {'CLUSTER ID':32} {'RUNNING':7} {'ENGINES':7} {'LAUNCHER'}"
             )
-            for cluster in clusters:
-                profile = abbreviate_profile_dir(cluster['cluster']['profile_dir'])
-                cluster_id = cluster['cluster']['cluster_id']
-                running = bool(cluster['controller'])
+            for cluster in sorted(
+                clusters.values(),
+                key=lambda c: (
+                    c.profile_dir,
+                    c.cluster_id,
+                ),
+            ):
+                profile = abbreviate_profile_dir(cluster.profile_dir)
+                cluster_id = cluster.cluster_id
+                running = bool(cluster._controller)
                 # TODO: URL?
                 engines = 0
-                if cluster['engines']:
+                if cluster._engine_sets:
                     engines = sum(
-                        engine_set.get('n', 0)
-                        for engine_set in cluster['engines']['sets'].values()
+                        engine_set.n for engine_set in cluster._engine_sets.values()
                     )
 
-                launcher = cluster['engines']['class'].rsplit(".", 1)[-1]
+                launcher = cluster.engine_launcher_class.__name__
                 if launcher.endswith("EngineSetLauncher"):
                     launcher = launcher[: -len("EngineSetLauncher")]
                 print(
                     f"{profile:16} {cluster_id or repr(''):32} {str(running):7} {engines:7} {launcher}"
                 )
         elif self.output_format == "json":
-            json.dump(clusters, sys.stdout)
+            json.dump(
+                [cluster.to_dict() for cluster in clusters.values()],
+                sys.stdout,
+            )
         else:
             raise NotImplementedError(f"No such output format: {self.output_format}")
 
