@@ -171,7 +171,7 @@ class IPClusterList(BaseParallelApplication):
 
     def start(self):
         cluster_manager = ClusterManager(parent=self)
-        clusters = cluster_manager.load_clusters(profile_dir=self.profile_dir.location)
+        clusters = cluster_manager.load_clusters()
         if self.output_format == "text":
             # TODO: measure needed profile/cluster id width
             print(
