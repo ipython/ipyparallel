@@ -455,20 +455,34 @@ class IPClusterStart(IPClusterEngines):
         if self.daemonize:
             self.log.info(f"Leaving cluster running: {self.cluster.cluster_file}")
             self.loop.add_callback(self.loop.stop)
+        self.cluster._controller.on_stop(self.controller_stopped)
         self.watch_engines()
+
+    def controller_stopped(self, stop_data):
+        if not self._stopping:
+            self.log.warning("Controller stopped. Shutting down.")
+            self.loop.add_callback(self.stop_cluster)
 
     def start(self):
         """Start the app for the start subcommand."""
         # First see if the cluster is already running
-        if os.path.isfile(self.cluster.cluster_file):
-            # TODO: check running
-            self.log.critical(
-                f'Cluster is already running at {self.cluster.cluster_file}. '
-                'use `ipcluster stop` to stop the cluster.'
-            )
-            # Here I exit with a unusual exit status that other processes
-            # can watch for to learn how I existed.
-            self.exit(ALREADY_STARTED)
+        cluster_file = self.cluster.cluster_file
+        if os.path.isfile(cluster_file):
+            try:
+                cluster = Cluster.from_file(cluster_file)
+            except Exception as e:
+                # TODO: define special ClusterNotRunning exception to handle here
+                self.log.error(
+                    f"Error loading cluster from file {cluster_file}: {e}. Assuming stopped cluster."
+                )
+            else:
+                self.log.critical(
+                    f'Cluster is already running at {self.cluster.cluster_file}. '
+                    'use `ipcluster stop` to stop the cluster.'
+                )
+                # Here I exit with a unusual exit status that other processes
+                # can watch for to learn how I existed.
+                self.exit(ALREADY_STARTED)
 
         # Now log and daemonize
         self.log.info('Starting ipcluster with [daemonize=%r]' % self.daemonize)
