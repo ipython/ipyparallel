@@ -22,8 +22,6 @@ from weakref import WeakSet
 
 import IPython
 import traitlets.log
-from IPython.core.profiledir import ProfileDir
-from IPython.core.profiledir import ProfileDirError
 from traitlets import Any
 from traitlets import Bool
 from traitlets import default
@@ -38,6 +36,10 @@ from traitlets.config import LoggingConfigurable
 from . import launcher
 from .._async import AsyncFirst
 from ..traitlets import Launcher
+from ..util import _all_profile_dirs
+from ..util import _default_profile_dir
+from ..util import _locate_profiles
+from ..util import abbreviate_profile_dir
 
 _suffix_chars = string.ascii_lowercase + string.digits
 
@@ -104,17 +106,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
     @default("profile_dir")
     def _default_profile_dir(self):
-        if not self.profile:
-            ip = IPython.get_ipython()
-            if ip is not None:
-                return ip.profile_dir.location
-        ipython_dir = IPython.paths.get_ipython_dir()
-        profile_name = self.profile or 'default'
-        try:
-            pd = ProfileDir.find_profile_dir_by_name(ipython_dir, name=profile_name)
-        except ProfileDirError:
-            pd = ProfileDir.create_profile_dir_by_name(ipython_dir, name=profile_name)
-        return pd.location
+        return _default_profile_dir(profile=self.profile)
 
     profile = Unicode(
         "",
@@ -253,7 +245,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """Default to inheriting config from current IPython session"""
         return IPython.get_ipython()
 
-    log_level = Integer(logging.INFO).tag(to_dict=True)
+    log_level = Integer(logging.INFO)
 
     @default("log")
     def _default_log(self):
@@ -347,7 +339,8 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         kwargs.setdefault("shutdown_atexit", False)
         self = cls(**kwargs)
         for attr in self.traits(to_dict=True):
-            cluster_info[attr] = getattr(self, attr)
+            if attr in cluster_info:
+                setattr(self, attr, cluster_info[attr])
 
         for attr in self.traits(to_dict=True):
             if attr in d:
@@ -371,7 +364,13 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
     @classmethod
     def from_file(
-        cls, path=None, *, profile=None, profile_dir=None, cluster_id='', **kwargs
+        cls,
+        cluster_file=None,
+        *,
+        profile=None,
+        profile_dir=None,
+        cluster_id='',
+        **kwargs,
     ):
         """Load a Cluster object from a file
 
@@ -382,17 +381,19 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         with `ipcluster start`.
         """
 
-        if path is None:
-            # determine path from profile/profile_dir
+        if cluster_file is None:
+            # determine cluster_file from profile/profile_dir
 
             kwargs['cluster_id'] = cluster_id
             if profile is not None:
                 kwargs['profile'] = profile
             if profile_dir is not None:
                 kwargs['profile_dir'] = profile_dir
-            path = Cluster(**kwargs).cluster_file
+            cluster_file = Cluster(**kwargs).cluster_file
 
-        with open(path) as f:
+        # ensure from_file preserves cluster_file, even if it moved
+        kwargs.setdefault("cluster_file", cluster_file)
+        with open(cluster_file) as f:
             return cls.from_dict(json.load(f), **kwargs)
 
     def write_cluster_file(self):
@@ -681,44 +682,72 @@ class ClusterManager(LoggingConfigurable):
 
     _clusters = Dict(help="My cluster objects")
 
-    @staticmethod
-    def all_profile_dirs():
-        """List all IPython profile directories"""
-        profile_dirs = []
-        with os.scandir(IPython.paths.get_ipython_dir()) as paths:
-            for path in paths:
-                if path.is_dir() and path.name.startswith('profile_'):
-                    profile_dirs.append(path)
-        return profile_dirs
+    def _cluster_key(self, cluster):
+        """Return a unique cluster key for a cluster
 
-    @classmethod
-    def from_filesystem(cls, profile_dirs=None, **kwargs):
-        """Construct a ClusterManager from the filesystem
-
-        Load all cluster objects from the given profile directory(ies).
+        Default is {profile}:{cluster_id}
         """
-        if profile_dirs is None:
-            profile_dirs = cls.all_profile_dirs()
+        return f"{abbreviate_profile_dir(cluster.profile_dir)}:{cluster.cluster_id}"
 
-        clusters = {}
-        for profile_dir in profile_dirs:
-            for cluster_file in cls.find_cluster_files_in_profile_dir(profile_dir):
-                with open(cluster_file) as f:
-                    d = json.load(f)
-                clusters[(profile_dir, d['cluster_id'])] = Cluster.from_dict(d)
-        return cls(_clusters=clusters, **kwargs)
-
-    @classmethod
-    def find_cluster_files_in_profile_dir(cls, profile_dir):
+    @staticmethod
+    def _cluster_files_in_profile_dir(profile_dir):
         """List clusters in a profile directory
 
         Returns list of cluster *files*
         """
         return glob.glob(os.path.join(profile_dir, "security", "cluster-*.json"))
 
-    def from_dict(self, serialized_state):
-        """Load serialized cluster state"""
-        raise NotImplementedError("Serializing clusters not implemented")
+    def load_clusters(
+        self,
+        *,
+        profile_dirs=None,
+        profile_dir=None,
+        profiles=None,
+        profile=None,
+        **kwargs,
+    ):
+        """Populate a ClusterManager from cluster files on disk
+
+        Load all cluster objects from the given profile directory(ies).
+
+        Default is to find clusters in all IPython profiles,
+        but profile directories or profile names can be specified explicitly.
+
+        Priority:
+
+        - profile_dirs list
+        - single profile_dir
+        - profiles list by name
+        - single profile by name
+        - all IPython profiles, if nothing else specified
+        """
+        if profile_dirs is None:
+            if profile_dir is not None:
+                profile_dirs = [profile_dir]
+            else:
+                if profiles is None:
+                    if profile is not None:
+                        profiles = [profile]
+
+                if profiles is not None:
+                    profile_dirs = _locate_profiles(profiles)
+
+            if profile_dirs is None:
+                # totally unspecified, default to all
+                profile_dirs = _all_profile_dirs()
+
+        for profile_dir in profile_dirs:
+            for cluster_file in self._cluster_files_in_profile_dir(profile_dir):
+                try:
+                    cluster = Cluster.from_file(cluster_file, parent=self)
+                except Exception as e:
+                    self.log.warning(f"Failed to load cluster from {cluster_file}: {e}")
+                    continue
+                else:
+                    cluster_key = self._cluster_key(cluster)
+                    self._clusters[cluster_key] = cluster
+
+        return self._clusters
 
     def list_clusters(self):
         """List current clusters"""

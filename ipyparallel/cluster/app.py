@@ -3,7 +3,6 @@
 """The ipcluster application."""
 from __future__ import print_function
 
-import asyncio
 import errno
 import json
 import logging
@@ -12,7 +11,6 @@ import re
 import signal
 import sys
 
-import IPython
 import zmq
 from IPython.core.profiledir import ProfileDir
 from traitlets import Bool
@@ -29,6 +27,7 @@ from ipyparallel.apps.baseapp import base_flags
 from ipyparallel.apps.baseapp import BaseParallelApplication
 from ipyparallel.cluster import Cluster
 from ipyparallel.cluster import ClusterManager
+from ipyparallel.util import abbreviate_profile_dir
 
 
 # -----------------------------------------------------------------------------
@@ -154,15 +153,6 @@ class IPClusterStop(BaseParallelApplication):
             self.exit(ALREADY_STOPPED)
         # TODO: implement check-if-running!
         cluster.stop_cluster_sync()
-
-
-def abbreviate_profile_dir(profile_dir):
-    """Abbreviate profile directory if in $IPYTHONDIR"""
-    profile_prefix = os.path.join(IPython.paths.get_ipython_dir(), "profile_")
-    if profile_dir.startswith(profile_prefix):
-        return profile_dir[len(profile_prefix) :]
-    else:
-        return profile_dir
 
 
 list_aliases = {}
