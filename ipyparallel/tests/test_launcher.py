@@ -81,6 +81,19 @@ def ssh_launcher(request, build_launcher):
     return build_launcher(Launcher=request.param)
 
 
+WINHPC_LAUNCHERS = [
+    l
+    for l in launcher_mod.all_launchers
+    if issubclass(l, launcher_mod.WindowsHPCLauncher)
+    and l is not launcher_mod.WindowsHPCLauncher
+]
+
+
+@pytest.fixture(params=WINHPC_LAUNCHERS)
+def winhpc_launcher(request, build_launcher):
+    return build_launcher(Launcher=request.param)
+
+
 def test_profile_dir_arg(launcher, profile_dir):
     assert "--profile-dir" in launcher.cluster_args
     arg_idx = launcher.cluster_args.index("--profile-dir")
@@ -101,6 +114,15 @@ def test_batch_template(batch_launcher, work_dir):
     assert launcher.batch_file == batch_file
     launcher.write_batch_script(1)
     assert os.path.isfile(batch_file)
+
+
+def test_winhpc_template(winhpc_launcher, work_dir):
+    launcher = winhpc_launcher
+    job_file = os.path.join(work_dir, launcher.job_file_name)
+    print(job_file)
+    assert launcher.job_file == job_file
+    launcher.write_job_file(1)
+    assert os.path.isfile(job_file)
 
 
 def test_ssh_remote_profile_dir(ssh_launcher, profile_dir):

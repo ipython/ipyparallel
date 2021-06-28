@@ -1171,10 +1171,6 @@ class WindowsHPCControllerLauncher(WindowsHPCLauncher):
         self.log.debug("Writing job description file: %s", self.job_file)
         job.write(self.job_file)
 
-    @property
-    def job_file(self):
-        return os.path.join(self.profile_dir, self.job_file_name)
-
 
 class WindowsHPCEngineSetLauncher(WindowsHPCLauncher):
 
@@ -1199,10 +1195,6 @@ class WindowsHPCEngineSetLauncher(WindowsHPCLauncher):
 
         self.log.debug("Writing job description file: %s", self.job_file)
         job.write(self.job_file)
-
-    @property
-    def job_file(self):
-        return os.path.join(self.profile_dir, self.job_file_name)
 
     def start(self, n):
         """Start the controller by profile_dir."""
