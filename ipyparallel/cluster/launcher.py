@@ -63,22 +63,6 @@ ipengine_cmd_argv = [sys.executable, "-m", "ipyparallel.engine"]
 
 ipcontroller_cmd_argv = [sys.executable, "-m", "ipyparallel.controller"]
 
-if WINDOWS and sys.version_info < (3,):
-    # `python -m package` doesn't work on Windows Python 2
-    # due to weird multiprocessing bugs
-    # and python -m module puts classes in the `__main__` module,
-    # so instance checks get confused
-    ipengine_cmd_argv = [
-        sys.executable,
-        "-c",
-        "from ipyparallel.engine.__main__ import main; main()",
-    ]
-    ipcontroller_cmd_argv = [
-        sys.executable,
-        "-c",
-        "from ipyparallel.controller.__main__ import main; main()",
-    ]
-
 # -----------------------------------------------------------------------------
 # Base launchers and errors
 # -----------------------------------------------------------------------------
