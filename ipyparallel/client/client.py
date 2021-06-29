@@ -1516,6 +1516,10 @@ class Client(HasTraits):
 
         This is a mechanism to prevent jobs that have already been submitted
         from executing.
+        To halt a running job,
+        you must interrupt the engine(s) by sending a signal.
+        This can be done via os.kill for local engines,
+        or :meth:`.Cluster.signal_engines` for multiple engines.
 
         Parameters
         ----------

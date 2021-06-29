@@ -369,7 +369,10 @@ class AsyncResult(Future):
         return self.get_dict(0)
 
     def abort(self):
-        """abort my tasks."""
+        """Abort my tasks, if possible.
+
+        Only tasks that have not started yet can be aborted.
+        """
         assert not self.ready(), "Can't abort, I am already done!"
         return self._client.abort(self.msg_ids, targets=self._targets, block=True)
 
