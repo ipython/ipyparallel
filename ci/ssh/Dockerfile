@@ -31,7 +31,6 @@ ENV PIP_CACHE_DIR=/tmp/pip-cache
 COPY . /src/ipyparallel
 RUN --mount=type=cache,target=${PIP_CACHE_DIR} python3 -m pip install -e 'file:///src/ipyparallel#egg=ipyparallel[test]'
 
-EXPOSE 22
 # needed for sshd to start
 RUN mkdir /run/sshd
 # run sshd in the foreground

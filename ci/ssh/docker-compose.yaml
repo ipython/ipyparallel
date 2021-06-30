@@ -5,4 +5,4 @@ services:
       context: ../..
       dockerfile: ci/ssh/Dockerfile
     ports:
-      - 2222:22
+      - "2222:22"
