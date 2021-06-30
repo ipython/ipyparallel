@@ -5,6 +5,7 @@
 import logging
 import os
 import re
+import shlex
 import socket
 import stat
 import sys
@@ -696,3 +697,8 @@ def _locate_profiles(profiles=None):
         ProfileDir.find_profile_dir_by_name(ipython_dir, name=profile).location
         for profile in profiles
     ]
+
+
+def shlex_join(cmd):
+    """Backport shlex.join to Python < 3.8"""
+    return ' '.join(shlex.quote(s) for s in cmd)

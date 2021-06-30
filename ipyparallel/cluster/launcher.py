@@ -47,6 +47,7 @@ from traitlets import observe
 from traitlets import Unicode
 from traitlets.config.configurable import LoggingConfigurable
 
+from ..util import shlex_join
 from ._win32support import forward_read_events
 from ._winhpcjob import IPControllerJob
 from ._winhpcjob import IPControllerTask
@@ -705,14 +706,14 @@ def sshx(ssh_cmd, cmd, remote_output_file, log=None):
 
     Uses nohup and pipes to put it in the background
     """
-    remote_cmd = shlex.join(cmd)
+    remote_cmd = shlex_join(cmd)
 
     full_remote_cmd = [
         f"nohup {remote_cmd} > {remote_output_file} 2>&1 </dev/null & echo __remote_pid=$!__"
     ]
     full_cmd = ssh_cmd + full_remote_cmd
     if log:
-        log.info(f"Running `{shlex.join(full_cmd)}`")
+        log.info(f"Running `{shlex_join(full_cmd)}`")
     out = check_output(full_cmd, input=None).decode("utf8", "replace")
     values = _ssh_outputs(out)
     if 'remote_pid' in values:
@@ -886,7 +887,7 @@ class SSHLauncher(LocalProcessLauncher):
                             + [
                                 self.location,
                                 "--",
-                                shlex.join(["rm", "-f", self.remote_output_file]),
+                                shlex_join(["rm", "-f", self.remote_output_file]),
                             ],
                             input=None,
                         )
@@ -1518,9 +1519,9 @@ class BatchSystemLauncher(BaseLauncher):
 
     @observe("program", "program_args")
     def _program_changed(self, change=None):
-        self.context['program'] = shlex.join(self.program)
-        self.context['program_args'] = shlex.join(self.program_args)
-        self.context['program_and_args'] = shlex.join(self.program + self.program_args)
+        self.context['program'] = shlex_join(self.program)
+        self.context['program_args'] = shlex_join(self.program_args)
+        self.context['program_and_args'] = shlex_join(self.program + self.program_args)
 
     @observe("n", "queue")
     def _update_context(self, change):
