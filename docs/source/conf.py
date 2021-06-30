@@ -65,7 +65,6 @@ from traitlets.config import LoggingConfigurable
 # exclude members inherited from HasTraits by default
 autodoc_default_options = {
     'members': None,
-    "inherited-members": None,
     "exclude-members": ','.join(dir(LoggingConfigurable)),
 }
 

@@ -12,34 +12,45 @@ Classes
 -------
 
 .. autoclass:: Cluster
+    :inherited-members:
 
 .. autoclass:: Client
+    :inherited-members:
 
 .. autoclass:: DirectView
+    :inherited-members:
 
 .. autoclass:: LoadBalancedView
+    :inherited-members:
 
 .. autoclass:: BroadcastView
+    :inherited-members:
+
+.. autoclass:: AsyncResult
+    :inherited-members:
 
 .. autoclass:: ViewExecutor
+    :inherited-members:
 
 Decorators
 ----------
 
 IPython parallel provides some decorators to assist in using your functions as tasks.
 
-.. autofunction:: interactive
-.. autofunction:: require
-.. autofunction:: depend
-.. autofunction:: remote
-.. autofunction:: parallel
+.. autodecorator:: interactive
+.. autodecorator:: require
+.. autodecorator:: depend
+.. autodecorator:: remote
+.. autodecorator:: parallel
 
 
 Exceptions
 ----------
 
 .. autoexception:: RemoteError
+    :no-members:
 .. autoexception:: CompositeError
+    :no-members:
 .. autoexception:: NoEnginesRegistered
 .. autoexception:: ImpossibleDependency
 .. autoexception:: InvalidDependency

@@ -269,6 +269,10 @@ class View(HasTraits):
     def abort(self, jobs=None, targets=None, block=None):
         """Abort jobs on my engines.
 
+        Note: only jobs that have not started yet can be aborted.
+        To halt a running job,
+        you must interrupt the engine(s) via the Cluster API.
+
         Parameters
         ----------
         jobs : None, str, list of strs, optional
