@@ -32,7 +32,7 @@ The following will fail:
 .. sourcecode:: ipython
 
     In [3]: A = numpy.zeros(2)
-    
+
     In [4]: def setter(a):
        ...:   a[0]=1
        ...:   return a
@@ -49,7 +49,7 @@ The :attr:`ndarray.flags.writeable` flag will tell you if you can write to an ar
 .. sourcecode:: ipython
 
     In [3]: A = numpy.zeros(2)
-    
+
     In [4]: def setter(a):
        ...:     """only copy read-only arrays"""
        ...:     if not a.flags.writeable:
@@ -59,7 +59,7 @@ The :attr:`ndarray.flags.writeable` flag will tell you if you can write to an ar
 
     In [5]: rc[0].apply_sync(setter, A)
     Out[5]: array([ 1.,  0.])
-    
+
     # note that results will also be read-only:
     In [6]: _.flags.writeable
     Out[6]: False
@@ -73,14 +73,14 @@ checking and waiting for 0MQ to finish with a buffer.
 .. sourcecode:: ipython
 
     In [5]: A = numpy.random.random((1024,1024))
-    
+
     In [6]: view.track=True
-    
+
     In [7]: ar = view.apply_async(lambda x: 2*x, A)
-    
+
     In [8]: ar.sent
     Out[8]: False
-    
+
     In [9]: ar.wait_on_send() # blocks until sent is True
 
 
@@ -114,7 +114,7 @@ An example of a function that uses a closure:
             # inner will have a closure
             return a
         return inner
-    
+
     f1 = f(1)
     f2 = f(2)
     f1() # returns 1
@@ -150,7 +150,7 @@ of the global namespace:
 .. sourcecode:: ipython
 
     In [10]: view.apply(lambda : a)
-    
+
     # is equivalent to
     In [11]: view.pull('a')
 
@@ -240,10 +240,11 @@ timeout : float/int or None
 execute and run
 ---------------
 
-For executing strings of Python code, :class:`DirectView`s also provide an :meth:`execute` and
-a :meth:`run` method, which rather than take functions and arguments, take Python strings.
+
+For executing strings of Python code, :class:`~.DirectView` s also provide an :meth:`~.DirectView.execute` and
+a :meth:`~.DirectView.run` method, which rather than take functions and arguments, take Python strings.
 `execute` takes a string of Python code to execute, and sends it to the Engine(s). `run`
-is the same as `execute`, but for a *file* rather than a string. It is a wrapper that
+is the same as `execute`, but for a *filename* rather than a string. It is a wrapper that
 does something very similar to ``execute(open(f).read())``.
 
 .. note::
@@ -292,7 +293,7 @@ the index directly to the client's :attr:`ids` list, so:
     # negative index
     In [2]: rc[-1]
     Out[2]: <DirectView 3>
-    
+
     # or slicing:
     In [3]: rc[::2]
     Out[3]: <DirectView [0,2]>
@@ -303,11 +304,11 @@ are always the same as:
 
     In [2]: rc[rc.ids[-1]]
     Out[2]: <DirectView 3>
-    
+
     In [3]: rc[rc.ids[::2]]
     Out[3]: <DirectView [0,2]>
 
-Also note that the slice is evaluated at the time of construction of the DirectView, so the 
+Also note that the slice is evaluated at the time of construction of the DirectView, so the
 targets will not change over time if engines are added/removed from the cluster.
 
 Execution via DirectView
@@ -320,7 +321,7 @@ For instance, to get the process ID of all your engines:
 .. sourcecode:: ipython
 
     In [5]: import os
-    
+
     In [6]: dview.apply_sync(os.getpid)
     Out[6]: [1354, 1356, 1358, 1360]
 
@@ -329,7 +330,7 @@ Or to see the hostname of the machine they are on:
 .. sourcecode:: ipython
 
     In [5]: import socket
-    
+
     In [6]: dview.apply_sync(socket.gethostname)
     Out[6]: ['tesla', 'tesla', 'edison', 'edison', 'edison']
 
@@ -407,23 +408,25 @@ AsyncResults
 ------------
 
 Our primary representation of the results of remote execution is the :class:`~.AsyncResult`
-object, based on the object of the same name in the built-in :mod:`multiprocessing.pool`
-module. Our version provides a superset of that interface.
+object, based on the object of the same name in the built-in :py:mod:`multiprocessing.pool`
+module.
+Our version provides a superset of that interface,
+and starting in 6.0 is a subclass of :class:`concurrent.futures.Future`.
 
-The basic principle of the AsyncResult is the encapsulation of one or more results not yet completed.  Execution methods (including data movement, such as push/pull) will all return
-AsyncResults when `block=False`.
+The basic principle of the AsyncResult is the encapsulation of one or more results not yet completed.
+Execution methods (including data movement, such as push/pull) will all return AsyncResults when `block=False`.
 
 The mp.pool.AsyncResult interface
 ---------------------------------
 
-The basic interface of the AsyncResult is exactly that of the AsyncResult in :mod:`multiprocessing.pool`, and consists of four methods:
+The basic interface of the AsyncResult is exactly that of the AsyncResult in :py:mod:`multiprocessing.pool`, and consists of four methods:
 
 .. AsyncResult spec directly from docs.python.org
 
 .. class:: AsyncResult
 
    The stdlib AsyncResult spec
-   
+
    .. method:: wait([timeout])
 
       Wait until the result is available or until *timeout* seconds pass. This
@@ -592,7 +595,7 @@ clear
 
 shutdown
 
-    You can also instruct engines (and the Controller) to terminate from a Client.  This 
+    You can also instruct engines (and the Controller) to terminate from a Client.  This
     can be useful when a job is finished, since you can shutdown all the processes with a
     single command.
 
@@ -632,15 +635,25 @@ and many parallel execution tools in Python, such as the built-in
 :py:class:`multiprocessing.Pool` object provide implementations of `map`. All View objects
 provide a :meth:`map` method as well, but the load-balanced and direct implementations differ.
 
-Views' map methods can be called on any number of sequences, but they can also take the `block`
-and `bound` keyword arguments, just like :meth:`~client.apply`, but *only as keywords*.
-
-.. sourcecode:: python
-
-    dview.map(*sequences, block=None)
+Views' map methods can be called on any number of sequences,
+but they can also take keyword arguments to influence how the work is distributed.
+What keyword arguments are available depends on the view being used.
 
 
-* iter, map_async, reduce
+
+.. class:: ipyparallel.DirectView
+   :noindex:
+
+   .. automethod:: map
+
+.. class:: ipyparallel.LoadBalancedView
+   :noindex:
+
+   .. automethod:: map
+
+   .. automethod:: imap
+
+
 
 Decorators and RemoteFunctions
 ==============================

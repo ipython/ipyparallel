@@ -600,15 +600,16 @@ class DirectView(View):
         return ar
 
     @sync_results
-    def map(self, f, *sequences, **kwargs):
-        """``view.map(f, *sequences, block=self.block)`` => list|AsyncMapResult
-
-        Parallel version of builtin `map`, using this View's `targets`.
+    def map(self, f, *sequences, block=None, track=False, return_exceptions=False):
+        """Parallel version of builtin `map`, using this View's `targets`.
 
         There will be one task per target, so work will be chunked
         if the sequences are longer than `targets`.
 
         Results can be iterated as they are ready, but will become available in chunks.
+
+        .. versionadded:: 7.0
+            `return_exceptions`
 
         Parameters
         ----------
@@ -616,10 +617,13 @@ class DirectView(View):
             function to be mapped
         *sequences : one or more sequences of matching length
             the sequences to be distributed and passed to `f`
-        block : bool
-            whether to wait for the result or not [default self.block]
-        track
-            See `ParallelFunction`
+        block : bool [default self.block]
+            whether to wait for the result or not
+        track : bool [default False]
+            Track underlying zmq send to indicate when it is safe to modify memory.
+            Only for zero-copy sends such as numpy arrays that are going to be modified in-place.
+        return_exceptions : bool [default False]
+            Return remote Exceptions in the result sequence instead of raising them.
 
         Returns
         -------
@@ -632,13 +636,13 @@ class DirectView(View):
             A list, the result of ``map(f,*sequences)``
         """
 
-        block = kwargs.pop('block', self.block)
-        for k in kwargs.keys():
-            if k not in ['block', 'track']:
-                raise TypeError("invalid keyword arg, %r" % k)
+        if block is None:
+            block = self.block
 
         assert len(sequences) > 0, "must have some sequences to map onto!"
-        pf = ParallelFunction(self, f, block=block, **kwargs)
+        pf = ParallelFunction(
+            self, f, block=block, track=track, return_exceptions=return_exceptions
+        )
         return pf.map(*sequences)
 
     @sync_results
@@ -1227,11 +1231,12 @@ class LoadBalancedView(View):
     ):
         """Parallel version of builtin `map`, load-balanced by this View.
 
-        `block`, and `chunksize` can be specified by keyword only.
-
         Each `chunksize` elements will be a separate task, and will be
         load-balanced. This lets individual elements be available for iteration
         as soon as they arrive.
+
+        .. versionadded:: 7.0
+            `return_exceptions`
 
         Parameters
         ----------
@@ -1302,7 +1307,7 @@ class LoadBalancedView(View):
         and avoid potentially expensive read-ahead for large streams of inputs
         that may not fit in memory all at once.
 
-        .. versionadded: 7.0
+        .. versionadded:: 7.0
 
         Parameters
         ----------
