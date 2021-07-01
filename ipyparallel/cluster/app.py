@@ -316,10 +316,10 @@ class IPClusterEngines(BaseParallelApplication):
 
     async def start_engines(self):
         try:
-            await self.cluster.start_engines(self.n)
+            await self.cluster.start_engines()
         except:
             self.log.exception("Engine start failed")
-            raise
+            self.exit(1)
 
         if self.daemonize:
             self.loop.add_callback(self.loop.stop)
