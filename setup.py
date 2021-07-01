@@ -122,6 +122,7 @@ setup_args = dict(
         "jupyter_client",
         "ipykernel>=4.4",
         "tornado>=5.1",
+        "psutil",
         "python-dateutil>=2.1",
         "tqdm",
     ],

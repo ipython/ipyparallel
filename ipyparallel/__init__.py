@@ -15,6 +15,7 @@ from .client.client import Client
 from .client.remotefunction import *
 from .client.view import *
 from .cluster import Cluster
+from .cluster import ClusterManager
 from .controller.dependency import *
 from .error import *
 from .serialize import *

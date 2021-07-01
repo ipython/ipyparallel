@@ -5,211 +5,130 @@ objects, which should test basic config.
 """
 import logging
 import os
-import shutil
-import sys
-import tempfile
-from unittest import TestCase
+import time
 
 import pytest
-from ipython_genutils.py3compat import string_types
 from traitlets.config import Config
 
-from ipyparallel.cluster import launcher
-
+from ipyparallel.cluster import launcher as launcher_mod
 
 # -------------------------------------------------------------------------------
 # TestCase Mixins
 # -------------------------------------------------------------------------------
 
 
-class LauncherTest:
-    """Mixin for generic launcher tests"""
+@pytest.fixture()
+def profile_dir(tmpdir):
+    return str(tmpdir.mkdir("profile_foo"))
 
-    def setUp(self):
-        self.profile_dir = tempfile.mkdtemp(prefix="profile_")
 
-    def tearDown(self):
-        shutil.rmtree(self.profile_dir)
+@pytest.fixture()
+def cluster_id():
+    return str(time.time())
 
-    @property
-    def config(self):
-        return Config()
 
-    def build_launcher(self, **kwargs):
-        kw = dict(
-            work_dir=self.profile_dir,
-            profile_dir=self.profile_dir,
-            config=self.config,
-            cluster_id='',
-            log=logging.getLogger(),
-        )
+@pytest.fixture()
+def work_dir(tmpdir):
+    return str(tmpdir.mkdir("work"))
+
+
+@pytest.fixture()
+def build_launcher(work_dir, profile_dir, cluster_id):
+    default_kwargs = dict(
+        work_dir=work_dir,
+        profile_dir=profile_dir,
+        cluster_id=cluster_id,
+        log=logging.getLogger(),
+    )
+
+    def build_launcher(Launcher, **kwargs):
+        kw = {}
+        kw.update(default_kwargs)
         kw.update(kwargs)
-        return self.launcher_class(**kw)
+        return Launcher(**kw)
 
-    def test_profile_dir_arg(self):
-        launcher = self.build_launcher()
-        self.assertTrue("--profile-dir" in launcher.cluster_args)
-        self.assertTrue(self.profile_dir in launcher.cluster_args)
+    return build_launcher
 
-    def test_cluster_id_arg(self):
-        launcher = self.build_launcher()
-        self.assertTrue("--cluster-id" in launcher.cluster_args)
-        idx = launcher.cluster_args.index("--cluster-id")
-        self.assertEqual(launcher.cluster_args[idx + 1], '')
-        launcher.cluster_id = 'foo'
-        self.assertEqual(launcher.cluster_args[idx + 1], 'foo')
 
-    def test_args(self):
-        launcher = self.build_launcher()
-        for arg in launcher.args:
-            self.assertTrue(isinstance(arg, string_types), str(arg))
+@pytest.fixture(params=launcher_mod.all_launchers)
+def launcher(request, build_launcher):
+    return build_launcher(Launcher=request.param)
 
 
-class BatchTest:
-    """Tests for batch-system launchers (LSF, SGE, PBS)"""
+BATCH_LAUNCHERS = [
+    cls
+    for cls in launcher_mod.all_launchers
+    if issubclass(
+        cls, (launcher_mod.BatchControllerLauncher, launcher_mod.BatchEngineSetLauncher)
+    )
+]
 
-    def test_batch_template(self):
-        launcher = self.build_launcher()
-        batch_file = os.path.join(self.profile_dir, launcher.batch_file_name)
-        self.assertEqual(launcher.batch_file, batch_file)
-        launcher.write_batch_script(1)
-        self.assertTrue(os.path.isfile(batch_file))
 
+@pytest.fixture(params=BATCH_LAUNCHERS)
+def batch_launcher(request, build_launcher):
+    return build_launcher(Launcher=request.param)
 
-class SSHTest:
-    """Tests for SSH launchers"""
 
-    def test_cluster_id_arg(self):
-        pytest.skip("SSH Launchers don't support cluster ID")
+SSH_LAUNCHERS = [
+    l
+    for l in launcher_mod.all_launchers
+    if issubclass(l, launcher_mod.SSHLauncher) and l is not launcher_mod.SSHLauncher
+]
 
-    def test_remote_profile_dir(self):
-        cfg = Config()
-        launcher_cfg = getattr(cfg, self.launcher_class.__name__)
-        launcher_cfg.remote_profile_dir = "foo"
-        launcher = self.build_launcher(config=cfg)
-        self.assertEqual(launcher.remote_profile_dir, "foo")
 
-    def test_remote_profile_dir_default(self):
-        launcher = self.build_launcher()
-        self.assertEqual(launcher.remote_profile_dir, self.profile_dir)
+@pytest.fixture(params=SSH_LAUNCHERS)
+def ssh_launcher(request, build_launcher):
+    return build_launcher(Launcher=request.param)
 
 
-# -------------------------------------------------------------------------------
-# Controller Launcher Tests
-# -------------------------------------------------------------------------------
+WINHPC_LAUNCHERS = [
+    l
+    for l in launcher_mod.all_launchers
+    if issubclass(l, launcher_mod.WindowsHPCLauncher)
+    and l is not launcher_mod.WindowsHPCLauncher
+]
 
 
-class ControllerLauncherTest(LauncherTest):
-    """Tests for Controller Launchers"""
+@pytest.fixture(params=WINHPC_LAUNCHERS)
+def winhpc_launcher(request, build_launcher):
+    return build_launcher(Launcher=request.param)
 
-    pass
 
+def test_profile_dir_arg(launcher, profile_dir):
+    assert "--profile-dir" in launcher.cluster_args
+    arg_idx = launcher.cluster_args.index("--profile-dir")
+    assert profile_dir in launcher.cluster_args
+    assert launcher.cluster_args[arg_idx + 1] == profile_dir
 
-class TestLocalControllerLauncher(ControllerLauncherTest, TestCase):
-    launcher_class = launcher.LocalControllerLauncher
 
+def test_cluster_id_arg(launcher, cluster_id):
+    assert "--cluster-id" in launcher.cluster_args
+    arg_idx = launcher.cluster_args.index("--cluster-id")
+    assert cluster_id in launcher.cluster_args
+    assert launcher.cluster_args[arg_idx + 1] == cluster_id
 
-class TestMPIControllerLauncher(ControllerLauncherTest, TestCase):
-    launcher_class = launcher.MPIControllerLauncher
 
+def test_batch_template(batch_launcher, work_dir):
+    launcher = batch_launcher
+    batch_file = os.path.join(work_dir, launcher.batch_file_name)
+    assert launcher.batch_file == batch_file
+    launcher.write_batch_script(1)
+    assert os.path.isfile(batch_file)
 
-class TestPBSControllerLauncher(BatchTest, ControllerLauncherTest, TestCase):
-    launcher_class = launcher.PBSControllerLauncher
 
+def test_winhpc_template(winhpc_launcher, work_dir):
+    launcher = winhpc_launcher
+    job_file = os.path.join(work_dir, launcher.job_file_name)
+    print(job_file)
+    assert launcher.job_file == job_file
+    launcher.write_job_file(1)
+    assert os.path.isfile(job_file)
 
-class TestSlurmControllerLauncher(BatchTest, ControllerLauncherTest, TestCase):
-    launcher_class = launcher.SlurmControllerLauncher
 
-
-class TestSGEControllerLauncher(BatchTest, ControllerLauncherTest, TestCase):
-    launcher_class = launcher.SGEControllerLauncher
-
-
-class TestLSFControllerLauncher(BatchTest, ControllerLauncherTest, TestCase):
-    launcher_class = launcher.LSFControllerLauncher
-
-
-class TestHTCondorControllerLauncher(BatchTest, ControllerLauncherTest, TestCase):
-    launcher_class = launcher.HTCondorControllerLauncher
-
-
-class TestSSHControllerLauncher(SSHTest, ControllerLauncherTest, TestCase):
-    launcher_class = launcher.SSHControllerLauncher
-
-
-# -------------------------------------------------------------------------------
-# Engine Set Launcher Tests
-# -------------------------------------------------------------------------------
-
-
-class EngineSetLauncherTest(LauncherTest):
-    """Tests for EngineSet launchers"""
-
-    pass
-
-
-class TestLocalEngineSetLauncher(EngineSetLauncherTest, TestCase):
-    launcher_class = launcher.LocalEngineSetLauncher
-
-
-class TestMPIEngineSetLauncher(EngineSetLauncherTest, TestCase):
-    launcher_class = launcher.MPIEngineSetLauncher
-
-
-class TestPBSEngineSetLauncher(BatchTest, EngineSetLauncherTest, TestCase):
-    launcher_class = launcher.PBSEngineSetLauncher
-
-
-class TestSlurmEngineSetLauncher(BatchTest, EngineSetLauncherTest, TestCase):
-    launcher_class = launcher.SlurmEngineSetLauncher
-
-
-class TestSGEEngineSetLauncher(BatchTest, EngineSetLauncherTest, TestCase):
-    launcher_class = launcher.SGEEngineSetLauncher
-
-
-class TestLSFEngineSetLauncher(BatchTest, EngineSetLauncherTest, TestCase):
-    launcher_class = launcher.LSFEngineSetLauncher
-
-
-class TestHTCondorEngineSetLauncher(BatchTest, EngineSetLauncherTest, TestCase):
-    launcher_class = launcher.HTCondorEngineSetLauncher
-
-
-class TestSSHEngineSetLauncher(EngineSetLauncherTest, TestCase):
-    launcher_class = launcher.SSHEngineSetLauncher
-
-    def test_cluster_id_arg(self):
-        pytest.skip("SSH Launchers don't support cluster ID")
-
-
-class TestSSHProxyEngineSetLauncher(SSHTest, LauncherTest, TestCase):
-    launcher_class = launcher.SSHProxyEngineSetLauncher
-
-
-class TestSSHEngineLauncher(SSHTest, LauncherTest, TestCase):
-    launcher_class = launcher.SSHEngineLauncher
-
-
-# -------------------------------------------------------------------------------
-# Windows Launcher Tests
-# -------------------------------------------------------------------------------
-
-
-class WinHPCTest:
-    """Tests for WinHPC Launchers"""
-
-    def test_batch_template(self):
-        launcher = self.build_launcher()
-        job_file = os.path.join(self.profile_dir, launcher.job_file_name)
-        self.assertEqual(launcher.job_file, job_file)
-        launcher.write_job_file(1)
-        self.assertTrue(os.path.isfile(job_file))
-
-
-class TestWinHPCControllerLauncher(WinHPCTest, ControllerLauncherTest, TestCase):
-    launcher_class = launcher.WindowsHPCControllerLauncher
-
-
-class TestWinHPCEngineSetLauncher(WinHPCTest, EngineSetLauncherTest, TestCase):
-    launcher_class = launcher.WindowsHPCEngineSetLauncher
+def test_ssh_remote_profile_dir(ssh_launcher, profile_dir):
+    launcher = ssh_launcher
+    assert launcher.remote_profile_dir == profile_dir
+    cfg = Config()
+    cfg[launcher.__class__.__name__].remote_profile_dir = "foo"
+    launcher.update_config(cfg)
+    assert launcher.remote_profile_dir == "foo"

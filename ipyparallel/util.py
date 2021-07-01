@@ -2,57 +2,42 @@
 """Some generic utilities for dealing with classes, urls, and serialization."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-
-try:
-    from functools import lru_cache
-except ImportError:
-    # py2 has no lru_cache decorator,
-    # use a no-op
-    def lru_cache(maxsize=0):
-        """no-op decorator when lru_cache is unavailable"""
-        return lambda f: f
-
-
 import logging
 import os
 import re
-import stat
 import socket
+import stat
 import sys
 import warnings
 from datetime import datetime
-from signal import signal, SIGINT, SIGABRT, SIGTERM
-
-try:
-    from signal import SIGKILL
-except ImportError:
-    SIGKILL = None
+from datetime import timezone
+from functools import lru_cache
+from signal import SIGABRT
+from signal import SIGINT
+from signal import signal
+from signal import SIGTERM
 from types import FunctionType
 
 import tqdm
+import zmq
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzlocal
-
-try:
-    import datetime.timezone
-
-    utc = datetime.timezone.utc
-except ImportError:
-    from dateutil.tz import tzutc
-
-    utc = tzutc()
-
 from decorator import decorator
+from IPython import get_ipython
+from IPython.core.profiledir import ProfileDir
+from IPython.core.profiledir import ProfileDirError
+from IPython.paths import get_ipython_dir
+from ipython_genutils.py3compat import iteritems
+from ipython_genutils.py3compat import itervalues
+from ipython_genutils.py3compat import string_types
+from jupyter_client.localinterfaces import is_public_ip
+from jupyter_client.localinterfaces import localhost
+from jupyter_client.localinterfaces import public_ips
 from tornado.ioloop import IOLoop
-import zmq
+from traitlets.log import get_logger
 from zmq.log import handlers
 
-from traitlets.log import get_logger
-
-
-from jupyter_client.localinterfaces import localhost, is_public_ip, public_ips
-from ipython_genutils.py3compat import string_types, iteritems, itervalues
-from IPython import get_ipython
+utc = timezone.utc
 
 
 # -----------------------------------------------------------------------------
@@ -657,3 +642,57 @@ def progress(*args, widget=None, **kwargs):
         kwargs.setdefault("file", sys.stdout)
         f = tqdm.tqdm
     return f(*args, **kwargs)
+
+
+def abbreviate_profile_dir(profile_dir):
+    """Abbreviate IPython profile directory if in $IPYTHONDIR"""
+    profile_prefix = os.path.join(get_ipython_dir(), "profile_")
+    if profile_dir.startswith(profile_prefix):
+        # use just the profile name if it's in $IPYTHONDIR
+        return profile_dir[len(profile_prefix) :]
+    else:
+        return profile_dir
+
+
+def _all_profile_dirs():
+    """List all IPython profile directories"""
+    profile_dirs = []
+    with os.scandir(get_ipython_dir()) as paths:
+        for path in paths:
+            if path.is_dir() and path.name.startswith('profile_'):
+                profile_dirs.append(path)
+    return profile_dirs
+
+
+def _default_profile_dir(profile=None):
+    """Locate the default IPython profile directory
+
+    Priorities:
+
+    - named profile, if specified
+    - current IPython profile, if run inside IPython
+    - $IPYTHONDIR/profile_default
+
+    Returns absolute profile directory path,
+    ensuring it exists
+    """
+    if not profile:
+        ip = get_ipython()
+        if ip is not None:
+            return ip.profile_dir.location
+    ipython_dir = get_ipython_dir()
+    profile = profile or 'default'
+    try:
+        pd = ProfileDir.find_profile_dir_by_name(ipython_dir, name=profile)
+    except ProfileDirError:
+        pd = ProfileDir.create_profile_dir_by_name(ipython_dir, name=profile)
+    return pd.location
+
+
+def _locate_profiles(profiles=None):
+    """Locate one or more IPython profiles by name"""
+    ipython_dir = get_ipython_dir()
+    return [
+        ProfileDir.find_profile_dir_by_name(ipython_dir, name=profile).location
+        for profile in profiles
+    ]

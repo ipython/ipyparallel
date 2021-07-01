@@ -1,5 +1,4 @@
 import asyncio
-import logging
 import os
 import shutil
 import signal
@@ -7,8 +6,8 @@ import sys
 import time
 
 import pytest
-from traitlets.config import Config
 
+import ipyparallel as ipp
 from .clienttest import raises_remote
 from ipyparallel import cluster
 from ipyparallel.cluster.launcher import find_launcher_class
@@ -20,35 +19,25 @@ if shutil.which("mpiexec"):
 _timeout = 30
 
 
-@pytest.fixture
-def Cluster(request, io_loop):
-    """Fixture for instantiating Clusters"""
+def _raise_interrupt(*frame_info):
+    raise KeyboardInterrupt()
 
-    def ClusterConstructor(**kwargs):
-        log = logging.getLogger(__file__)
-        log.setLevel(logging.DEBUG)
-        log.handlers = [logging.StreamHandler(sys.stdout)]
-        kwargs['log'] = log
-        engine_launcher_class = kwargs.get("engine_launcher_class")
 
-        if (
-            isinstance(engine_launcher_class, str)
-            and "MPI" in engine_launcher_class
-            and shutil.which("mpiexec") is None
-        ):
-            pytest.skip("requires mpiexec")
+def _prepare_signal():
+    """Register signal handler to test with
 
-        cfg = kwargs.setdefault("config", Config())
-        cfg.EngineLauncher.engine_args = ['--log-level=10']
-        cfg.ControllerLauncher.controller_args = ['--log-level=10']
-        kwargs.setdefault("controller_args", ['--ping=250'])
+    Registers SIGUSR1 to raise KeyboardInterrupt where available
+    """
+    if not hasattr(signal, 'SIGUSR1'):
+        return
+    signal.signal(signal.SIGUSR1, _raise_interrupt)
 
-        c = cluster.Cluster(**kwargs)
-        assert c.config is cfg
-        request.addfinalizer(c.stop_cluster_sync)
-        return c
 
-    yield ClusterConstructor
+try:
+    TEST_SIGNAL = signal.SIGUSR1
+except AttributeError:
+    # Windows
+    TEST_SIGNAL = signal.CTRL_C_EVENT
 
 
 async def test_cluster_id(Cluster):
@@ -77,12 +66,12 @@ async def test_start_stop_controller(Cluster):
     assert cluster._controller.config is cluster.config
     assert cluster._controller is not None
     proc = cluster._controller.process
-    assert proc.poll() is None
+    assert proc.is_running()
     with await cluster.connect_client() as rc:
         assert rc.queue_status() == {'unassigned': 0}
 
     await cluster.stop_controller()
-    assert not proc.poll() is not None
+    proc.wait(timeout=3)
     assert cluster._controller is None
     # stop is idempotent
     await cluster.stop_controller()
@@ -135,18 +124,19 @@ async def test_signal_engines(request, Cluster, engine_launcher_class):
     engine_set_id = await cluster.start_engines(n=3)
     rc = await cluster.connect_client()
     request.addfinalizer(rc.close)
-    while len(rc) < 3:
-        await asyncio.sleep(0.1)
+    rc.wait_for_engines(3)
     # seems to be a problem if we start too soon...
     await asyncio.sleep(1)
     # ensure responsive
     rc[:].apply_async(lambda: None).get(timeout=_timeout)
+    # register signal handler
+    rc[:].apply_async(_prepare_signal).get(timeout=_timeout)
     # submit request to be interrupted
     ar = rc[:].apply_async(time.sleep, 3)
     # wait for it to be running
     await asyncio.sleep(0.5)
     # send signal
-    await cluster.signal_engines(signal.SIGINT, engine_set_id)
+    await cluster.signal_engines(TEST_SIGNAL, engine_set_id)
 
     # wait for result, which should raise KeyboardInterrupt
     with raises_remote(KeyboardInterrupt) as e:
@@ -238,3 +228,45 @@ async def test_cluster_manager():
     assert m.list_clusters() == []
     with pytest.raises(KeyError):
         m.remove_cluster("nosuchcluster")
+
+
+@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
+async def test_to_from_dict(Cluster, engine_launcher_class):
+    cluster = Cluster(engine_launcher_class=engine_launcher_class, n=2)
+    print(cluster.config, cluster.controller_args)
+    async with cluster as rc:
+        d = cluster.to_dict()
+        cluster2 = ipp.Cluster.from_dict(d)
+        assert not cluster2.shutdown_atexit
+        assert cluster2._controller is not None
+        assert cluster2._controller.process.pid == cluster._controller.process.pid
+        assert list(cluster2._engine_sets) == list(cluster._engine_sets)
+
+        es1 = next(iter(cluster._engine_sets.values()))
+        es2 = next(iter(cluster2._engine_sets.values()))
+        # ensure responsive
+        rc[:].apply_async(lambda: None).get(timeout=_timeout)
+        # register signal handler
+        rc[:].apply_async(_prepare_signal).get(timeout=_timeout)
+        # submit request to be interrupted
+        ar = rc[:].apply_async(time.sleep, 3)
+        await asyncio.sleep(0.5)
+        # send signal
+        await cluster2.signal_engines(TEST_SIGNAL)
+
+        # wait for result, which should raise KeyboardInterrupt
+        with raises_remote(KeyboardInterrupt) as e:
+            ar.get(timeout=_timeout)
+        assert es1.n == es2.n
+        assert cluster2.engine_launcher_class is cluster.engine_launcher_class
+
+        # shutdown from cluster2, shouldn't raise in cluster1
+        await cluster2.stop_cluster()
+
+
+async def test_default_from_file(Cluster):
+    cluster = Cluster(n=1, profile="default", cluster_id="")
+    async with cluster:
+        cluster2 = ipp.Cluster.from_file()
+        with await cluster.connect_client() as rc:
+            assert len(rc) == 1

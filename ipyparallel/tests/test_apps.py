@@ -1,7 +1,12 @@
 """Test CLI application behavior"""
+import json
+import os
 import sys
+import time
 import types
+from subprocess import check_call
 from subprocess import check_output
+from subprocess import Popen
 from unittest.mock import create_autospec
 from unittest.mock import MagicMock
 from unittest.mock import patch
@@ -11,9 +16,11 @@ import zmq
 from ipykernel import iostream
 from ipykernel import kernelapp
 from ipykernel.ipkernel import IPythonKernel
+from IPython.core.profiledir import ProfileDir
 from tornado import ioloop
 from zmq.eventloop import zmqstream
 
+import ipyparallel as ipp
 import ipyparallel.engine.app
 
 
@@ -122,3 +129,84 @@ def test_bind_kernel(request):
         app.kernel.iopub_socket.socket.bind_to_random_port.called
         and app.kernel.iopub_socket.socket.bind_to_random_port.call_count == 1
     )
+
+
+def ipcluster_list(*args):
+    return check_output(
+        [sys.executable, "-m", "ipyparallel.cluster", "list"] + list(args)
+    ).decode("utf8", "replace")
+
+
+def test_ipcluster_list(Cluster):
+
+    # no clusters
+    out = ipcluster_list()
+    assert len(out.splitlines()) == 1
+    out = ipcluster_list("-o", "json")
+    assert json.loads(out) == []
+
+    with Cluster(n=2) as rc:
+        out = ipcluster_list()
+        head, *rest = out.strip().splitlines()
+        assert len(rest) == 1
+        assert rest[0].split() == [
+            "default",
+            rc.cluster.cluster_id,
+            "True",
+            "2",
+            "Local",
+        ]
+        cluster_list = json.loads(ipcluster_list("-o", "json"))
+        assert len(cluster_list) == 1
+        assert cluster_list[0]['cluster']['cluster_id'] == rc.cluster.cluster_id
+
+    # after exit, back to no clusters
+    out = ipcluster_list()
+    assert len(out.splitlines()) == 1
+    out = ipcluster_list("-o", "json")
+    assert json.loads(out) == []
+
+
+@pytest.mark.parametrize("daemonize", (False, True))
+def test_ipcluster_start_stop(request, ipython_dir, daemonize):
+    default_profile = ProfileDir.find_profile_dir_by_name(ipython_dir).location
+    n = 2
+    start_args = ["-n", str(n)]
+    if daemonize:
+        start_args.append("--daemonize")
+    start = Popen([sys.executable, "-m", "ipyparallel.cluster", "start"] + start_args)
+    request.addfinalizer(start.terminate)
+    if daemonize:
+        # if daemonize, should exit after starting
+        start.wait(30)
+    else:
+        # wait for file to appear
+        # only need this if not daemonize
+        cluster_file = ipp.Cluster(
+            profile_dir=default_profile, cluster_id=""
+        ).cluster_file
+        for i in range(100):
+            if os.path.isfile(cluster_file) or start.poll() is not None:
+                break
+            else:
+                time.sleep(0.1)
+        assert os.path.isfile(cluster_file)
+
+    # list should show a file
+    out = ipcluster_list()
+    assert len(out.splitlines()) == 2
+
+    # cluster running, try to connect with default args
+    cluster = ipp.Cluster.from_file()
+    with cluster.connect_client_sync() as rc:
+        rc.wait_for_engines(n=2)
+        rc[:].apply_sync(os.getpid)
+
+    # stop with ipcluster stop
+    check_call([sys.executable, "-m", "ipyparallel.cluster", "stop"])
+    # start should exit when this happens
+    start.wait(30)
+
+    # and ipcluster list should return empty
+    out = ipcluster_list()
+    assert len(out.splitlines()) == 1
