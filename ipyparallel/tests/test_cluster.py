@@ -28,9 +28,10 @@ def _prepare_signal():
 
     Registers SIGUSR1 to raise KeyboardInterrupt where available
     """
-    if not hasattr(signal, 'SIGUSR1'):
-        return
-    signal.signal(signal.SIGUSR1, _raise_interrupt)
+    if hasattr(signal, 'SIGUSR1'):
+        signal.signal(signal.SIGUSR1, _raise_interrupt)
+    # returns the remote value of the signal
+    return int(TEST_SIGNAL)
 
 
 try:
@@ -57,6 +58,11 @@ async def test_ipython_log(ipython):
     assert c.log.handlers[0].stream is sys.stdout
 
 
+@pytest.fixture(params=_engine_launcher_classes)
+def engine_launcher_class(request):
+    return request.param
+
+
 async def test_start_stop_controller(Cluster):
     cluster = Cluster()
     await cluster.start_controller()
@@ -78,7 +84,6 @@ async def test_start_stop_controller(Cluster):
     # TODO: test file cleanup
 
 
-@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
 async def test_start_stop_engines(Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class)
     await cluster.start_controller()
@@ -101,7 +106,6 @@ async def test_start_stop_engines(Cluster, engine_launcher_class):
     await cluster.stop_controller()
 
 
-@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
 async def test_start_stop_cluster(Cluster, engine_launcher_class):
     n = 2
     cluster = Cluster(engine_launcher_class=engine_launcher_class, n=n)
@@ -117,7 +121,6 @@ async def test_start_stop_cluster(Cluster, engine_launcher_class):
     assert cluster._engine_sets == {}
 
 
-@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
 async def test_signal_engines(request, Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class)
     await cluster.start_controller()
@@ -130,13 +133,16 @@ async def test_signal_engines(request, Cluster, engine_launcher_class):
     # ensure responsive
     rc[:].apply_async(lambda: None).get(timeout=_timeout)
     # register signal handler
-    rc[:].apply_async(_prepare_signal).get(timeout=_timeout)
+    signals = rc[:].apply_async(_prepare_signal).get(timeout=_timeout)
+    # get test signal from engines in case of cross-platform mismatch,
+    # e.g. SIGUSR1 on mac (30) -> linux (10)
+    test_signal = signals[0]
     # submit request to be interrupted
     ar = rc[:].apply_async(time.sleep, 3)
     # wait for it to be running
     await asyncio.sleep(0.5)
     # send signal
-    await cluster.signal_engines(TEST_SIGNAL, engine_set_id)
+    await cluster.signal_engines(test_signal, engine_set_id)
 
     # wait for result, which should raise KeyboardInterrupt
     with raises_remote(KeyboardInterrupt) as e:
@@ -147,14 +153,13 @@ async def test_signal_engines(request, Cluster, engine_launcher_class):
     await cluster.stop_controller()
 
 
-@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
 async def test_restart_engines(Cluster, engine_launcher_class):
     n = 3
     async with Cluster(engine_launcher_class=engine_launcher_class, n=n) as rc:
         cluster = rc.cluster
         engine_set_id = next(iter(cluster._engine_sets))
         engine_set = cluster._engine_sets[engine_set_id]
-        assert rc.ids == list(range(n))
+        assert rc.ids[:n] == list(range(n))
         before_pids = rc[:].apply_sync(os.getpid)
         await cluster.restart_engines()
         # wait for unregister
@@ -230,7 +235,6 @@ async def test_cluster_manager():
         m.remove_cluster("nosuchcluster")
 
 
-@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
 async def test_to_from_dict(Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class, n=2)
     print(cluster.config, cluster.controller_args)
@@ -247,12 +251,15 @@ async def test_to_from_dict(Cluster, engine_launcher_class):
         # ensure responsive
         rc[:].apply_async(lambda: None).get(timeout=_timeout)
         # register signal handler
-        rc[:].apply_async(_prepare_signal).get(timeout=_timeout)
+        signals = rc[:].apply_async(_prepare_signal).get(timeout=_timeout)
+        # get test signal from engines in case of cross-platform mismatch,
+        # e.g. SIGUSR1 on mac (30) -> linux (10)
+        test_signal = signals[0]
         # submit request to be interrupted
         ar = rc[:].apply_async(time.sleep, 3)
         await asyncio.sleep(0.5)
         # send signal
-        await cluster2.signal_engines(TEST_SIGNAL)
+        await cluster2.signal_engines(test_signal)
 
         # wait for result, which should raise KeyboardInterrupt
         with raises_remote(KeyboardInterrupt) as e:

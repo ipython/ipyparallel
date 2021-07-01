@@ -3,6 +3,8 @@ import inspect
 import logging
 import os
 import sys
+from subprocess import check_call
+from subprocess import check_output
 from tempfile import TemporaryDirectory
 from unittest import mock
 
@@ -100,3 +102,53 @@ def Cluster(request, io_loop):
         return c
 
     yield ClusterConstructor
+
+
+@pytest.fixture(scope="session")
+def ssh_dir(request):
+    """Start the ssh service with docker-compose
+
+    Fixture returns the directory
+    """
+    repo_root = os.path.abspath(os.path.join(ipp.__file__, os.pardir, os.pardir))
+    ci_directory = os.environ.get("CI_DIR", os.path.join(repo_root, 'ci'))
+    ssh_dir = os.path.join(ci_directory, "ssh")
+
+    # only run ssh test if service was started before
+    try:
+        out = check_output(['docker-compose', 'ps', '-q'], cwd=ssh_dir)
+    except Exception:
+        pytest.skip("Needs docker compose")
+    else:
+        if not out.strip():
+            pytest.skip("ssh service not running")
+
+    # below is necessary for building/starting service as part of fixture
+    # currently we use whether the service is already started to decide whether to run the tests
+    # # build image
+    # check_call(["docker-compose", "build"], cwd=ssh_dir)
+    # # launch service
+    # check_call(["docker-compose", "up", "-d"], cwd=ssh_dir)
+    # # shutdown service when we exit
+    # request.addfinalizer(lambda: check_call(["docker-compose", "down"], cwd=ssh_dir))
+    return ssh_dir
+
+
+@pytest.fixture
+def ssh_key(tmpdir, ssh_dir):
+    key_file = tmpdir.join("id_rsa")
+    check_call(
+        # this should be `docker compose cp sshd:...`
+        # but docker-compose 1.x doesn't support `cp` yet
+        [
+            'docker',
+            'cp',
+            'ssh_sshd_1:/home/ciuser/.ssh/id_rsa',
+            key_file,
+        ],
+        cwd=ssh_dir,
+    )
+    os.chmod(key_file, 0o600)
+    with key_file.open('r') as f:
+        assert 'PRIVATE KEY' in f.readline()
+    return str(key_file)

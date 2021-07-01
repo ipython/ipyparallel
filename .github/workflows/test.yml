@@ -18,13 +18,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - python: "3.9"
+            ssh: ssh
           - python: "3.6"
             tornado: "5.1.1"
           - python: "3.6"
           - python: "3.7"
             controller_ip: "*"
           - python: "3.8"
-            mpi: true
+            mpi: mpi
           - python: "3.9"
 
     steps:
@@ -41,6 +43,14 @@ jobs:
         if: matrix.controller_ip
         run: |
           echo "IPP_CONTROLLER_IP=${{ matrix.controller_ip }}" >> $GITHUB_ENV
+
+      - name: Set up docker-compose for ssh launcher
+        if: ${{ matrix.ssh }}
+        run: |
+          export DOCKER_BUILDKIT=1
+          export COMPOSE_DOCKER_CLI_BUILD=1
+          cd ci/ssh
+          docker-compose up -d --build
 
       - name: Install Python (conda) ${{ matrix.python }}
         if: matrix.mpi
@@ -76,8 +86,13 @@ jobs:
         run: |
           pytest -vx --color=yes --cov=ipyparallel ipyparallel/tests/test_cluster.py
 
+      - name: Run ssh tests
+        if: ${{ matrix.ssh }}
+        run: |
+          pytest -ra -v --maxfail=2 --color=yes --cov=ipyparallel ipyparallel/tests/test_ssh.py
+
       - name: Run tests
-        if: ${{ ! matrix.mpi }}
+        if: ${{ ! matrix.mpi && ! matrix.ssh }}
         # FIXME: --color=yes explicitly set because:
         #        https://github.com/actions/runner/issues/241
         run: |

@@ -8,7 +8,8 @@ import inspect
 import json
 import logging
 import os
-import shlex
+import re
+import shutil
 import signal
 import stat
 import sys
@@ -20,12 +21,11 @@ from subprocess import check_output
 from subprocess import PIPE
 from subprocess import Popen
 from subprocess import STDOUT
+from tempfile import TemporaryDirectory
 
 import psutil
 from IPython.utils.path import ensure_dir_exists
 from IPython.utils.path import get_home_dir
-from IPython.utils.process import find_cmd
-from IPython.utils.process import FindCmdError
 from IPython.utils.text import EvalFormatter
 from ipython_genutils.encoding import DEFAULT_ENCODING
 from ipython_genutils.py3compat import iteritems
@@ -44,6 +44,7 @@ from traitlets import observe
 from traitlets import Unicode
 from traitlets.config.configurable import LoggingConfigurable
 
+from ..util import shlex_join
 from ._win32support import forward_read_events
 from ._winhpcjob import IPControllerJob
 from ._winhpcjob import IPControllerTask
@@ -95,6 +96,9 @@ class BaseLauncher(LoggingConfigurable):
     start_data = Any()
     stop_data = Any()
 
+    identifier = Any(
+        help="Used for lookup in e.g. EngineSetLauncher during notify_stop"
+    )
     loop = Instance(ioloop.IOLoop, allow_none=True)
 
     def _loop_default(self):
@@ -249,8 +253,11 @@ class ControllerLauncher(BaseLauncher):
         """
         connection_files = self.connection_files
         paths = list(connection_files.values())
-        self.log.debug(f"Waiting for {paths}")
+        first_run = True
         while not all(os.path.isfile(f) for f in paths):
+            if first_run:
+                first_run = False
+                self.log.debug(f"Waiting for {paths}")
             await asyncio.sleep(0.1)
             status = self.poll()
             if inspect.isawaitable(status):
@@ -319,27 +326,27 @@ class LocalProcessLauncher(BaseLauncher):
     @classmethod
     def from_dict(cls, d, **kwargs):
         self = super().from_dict(d, **kwargs)
+        self._reconstruct_process(d)
+        return self
+
+    def _reconstruct_process(self, d):
+        """Reconstruct our process"""
         if 'pid' in d and d['pid'] > 0:
             self.process = psutil.Process(d['pid'])
             self._start_waiting()
-        return self
 
     def _wait(self):
         """Background thread waiting for a process to exit"""
         exit_code = None
-        while (
-            not self._stop_waiting.is_set()
-            and self.process is not None
-            and self.state == 'running'
-        ):
+        while not self._stop_waiting.is_set() and self.state == 'running':
             try:
-                # use a timeout
+                # use a timeout so we can check the _stop_waiting event
                 exit_code = self.process.wait(timeout=self.poll_seconds)
             except psutil.TimeoutExpired:
                 continue
             else:
                 break
-        stop_data = dict(exit_code=exit_code, pid=self.process.pid)
+        stop_data = dict(exit_code=exit_code, pid=self.pid, identifier=self.identifier)
         self.loop.add_callback(lambda: self.notify_stop(stop_data))
 
     def _start_waiting(self):
@@ -448,7 +455,9 @@ class LocalProcessLauncher(BaseLauncher):
             # return code cannot always be retrieved.
             # but we need to not return None if it's still running
             status = 'unknown'
-        self.notify_stop(dict(exit_code=status, pid=self.process.pid))
+        self.notify_stop(
+            dict(exit_code=status, pid=self.process.pid, identifier=self.identifier)
+        )
         return status
 
 
@@ -511,12 +520,13 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
         for i in range(n):
             if i > 0:
                 time.sleep(self.delay)
-            el = self.launcher_class(
+            el = self.launchers[i] = self.launcher_class(
                 work_dir=self.work_dir,
                 parent=self,
                 log=self.log,
                 profile_dir=self.profile_dir,
                 cluster_id=self.cluster_id,
+                identifier=i,
             )
 
             # Copy the engine args over to each engine launcher.
@@ -524,7 +534,6 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
             el.engine_args = copy.deepcopy(self.engine_args)
             el.on_stop(self._notice_engine_stopped)
             d = el.start()
-            self.launchers[i] = el
             dlist.append(d)
         self.notify_start(dlist)
         return dlist
@@ -550,12 +559,9 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
         return self.interrupt_then_kill()
 
     def _notice_engine_stopped(self, data):
-        pid = data['pid']
-        for idx, el in iteritems(self.launchers):
-            if el.process.pid == pid:
-                break
-        self.launchers.pop(idx)
-        self.stop_data[idx] = data
+        identifier = data['identifier']
+        self.launchers.pop(identifier)
+        self.stop_data[identifier] = data
         if not self.launchers:
             self.notify_stop(self.stop_data)
 
@@ -684,7 +690,48 @@ class MPIExecEngineSetLauncher(MPIEngineSetLauncher, DeprecatedMPILauncher):
 # SSH launchers
 # -----------------------------------------------------------------------------
 
-# TODO: Get SSH Launcher back to level of sshx in 0.10.2
+ssh_output_pattern = re.compile(r"__([a-z][a-z0-9_]+)=([a-z0-9\-\.]+)__", re.IGNORECASE)
+
+
+def _ssh_outputs(out):
+    """Extract ssh output variables from process output"""
+    return dict(ssh_output_pattern.findall(out))
+
+
+def sshx(ssh_cmd, cmd, remote_output_file, log=None):
+    """Launch a remote process, returning its remote pid
+
+    Uses nohup and pipes to put it in the background
+    """
+    remote_cmd = shlex_join(cmd)
+
+    full_remote_cmd = [
+        f"nohup {remote_cmd} > {remote_output_file} 2>&1 </dev/null & echo __remote_pid=$!__"
+    ]
+    full_cmd = ssh_cmd + full_remote_cmd
+    if log:
+        log.info(f"Running `{shlex_join(full_cmd)}`")
+    out = check_output(full_cmd, input=None).decode("utf8", "replace")
+    values = _ssh_outputs(out)
+    if 'remote_pid' in values:
+        return int(values['remote_pid'])
+    else:
+        raise RuntimeError("Failed to get pid for {full_cmd}: {out}")
+
+
+def ssh_waitpid(pid, timeout=None):
+    """To be called on a remote host, waiting on a pid"""
+    try:
+        p = psutil.Process(pid)
+        exit_code = p.wait(timeout)
+    except psutil.NoSuchProcess:
+        print("__process_running=0__")
+        print("__exit_code=-1__")
+    except psutil.TimeoutExpired:
+        print("__process_running=1__")
+    else:
+        print("__process_running=0__")
+        print("__exit_code=-1__")
 
 
 class SSHLauncher(LocalProcessLauncher):
@@ -695,14 +742,20 @@ class SSHLauncher(LocalProcessLauncher):
     as well.
     """
 
-    ssh_cmd = List(['ssh'], config=True, help="command for starting ssh")
-    ssh_args = List(['-tt'], config=True, help="args to pass to ssh")
-    scp_cmd = List(['scp'], config=True, help="command for sending files")
-    scp_args = List([], config=True, help="args to pass to scp")
-    program = List(['date'], help="Program to launch via ssh")
+    ssh_cmd = List(['ssh'], config=True, help="command for starting ssh").tag(
+        to_dict=True
+    )
+    ssh_args = List([], config=True, help="args to pass to ssh").tag(to_dict=True)
+    scp_cmd = List(['scp'], config=True, help="command for sending files").tag(
+        to_dict=True
+    )
+    scp_args = List([], config=True, help="args to pass to scp").tag(to_dict=True)
+    program = List([], help="Program to launch via ssh")
     program_args = List([], help="args to pass to remote program")
-    hostname = Unicode('', config=True, help="hostname on which to launch the program")
-    user = Unicode('', config=True, help="username for ssh")
+    hostname = Unicode(
+        '', config=True, help="hostname on which to launch the program"
+    ).tag(to_dict=True)
+    user = Unicode('', config=True, help="username for ssh").tag(to_dict=True)
     location = Unicode(
         '', config=True, help="user@hostname location for ssh in one setting"
     )
@@ -712,6 +765,11 @@ class SSHLauncher(LocalProcessLauncher):
     to_send = List(
         [], config=True, help="List of (local, remote) files to send before starting"
     )
+
+    @default("poll_seconds")
+    def _default_poll_seconds(self):
+        # slower poll for ssh
+        return 60
 
     @observe('hostname')
     def _hostname_changed(self, change):
@@ -725,11 +783,22 @@ class SSHLauncher(LocalProcessLauncher):
         self.location = u'%s@%s' % (change['new'], self.hostname)
 
     def find_args(self):
-        return (
-            self.ssh_cmd
-            + self.ssh_args
-            + [self.location]
-            + list(map(shlex.quote, self.program + self.program_args))
+        # not really used except in logging
+        return list(self.ssh_cmd)
+
+    remote_output_file = Unicode(
+        help="""The remote file to store output""",
+    ).tag(to_dict=True)
+
+    @default("remote_output_file")
+    def _default_remote_output_file(self):
+        if 'engine' in ' '.join(self.program):
+            name = 'ipengine'
+        else:
+            name = self.program[0]
+        return os.path.join(
+            self.remote_profile_dir,
+            os.path.basename(name) + f"-{time.time():.4f}.out",
         )
 
     remote_profile_dir = Unicode(
@@ -739,7 +808,7 @@ class SSHLauncher(LocalProcessLauncher):
 
         If not specified, use calling profile, stripping out possible leading homedir.
         """,
-    )
+    ).tag(to_dict=True)
 
     @observe('profile_dir')
     def _profile_dir_changed(self, change):
@@ -747,6 +816,10 @@ class SSHLauncher(LocalProcessLauncher):
             # trigger remote_profile_dir_default logic again,
             # in case it was already triggered before profile_dir was set
             self.remote_profile_dir = self._strip_home(change['new'])
+
+    remote_python = Unicode(
+        "python3", config=True, help="""Remote path to Python interpreter, if needed"""
+    ).tag(to_dict=True)
 
     @staticmethod
     def _strip_home(path):
@@ -760,6 +833,7 @@ class SSHLauncher(LocalProcessLauncher):
         else:
             return path
 
+    @default("remote_profile_dir")
     def _remote_profile_dir_default(self):
         return self._strip_home(self.profile_dir)
 
@@ -772,10 +846,63 @@ class SSHLauncher(LocalProcessLauncher):
             self.cluster_id,
         ]
 
-    def _send_file(self, local, remote):
+    _output = None
+
+    output_limit = Integer(
+        100, config=True, help="""Limit number of output lines to report"""
+    )
+
+    def _reconstruct_process(self, d):
+        # called in from_dict
+        # override from LocalProcessLauncher which invokes psutil.Process
+        if 'pid' in d and d['pid'] > 0:
+            self._start_waiting()
+
+    def get_output(self, remove=False):
+        """Retrieve engine output from the remote file"""
+        if self._output is None:
+            with TemporaryDirectory() as td:
+                output_file = os.path.join(
+                    td, os.path.basename(self.remote_output_file)
+                )
+                try:
+                    self._fetch_file(self.remote_output_file, output_file)
+                except Exception as e:
+                    self.log.error(
+                        f"Failed to get output file {self.remote_output_file}: {e}"
+                    )
+                    self._output = ''
+                else:
+                    if remove:
+                        # remove the file after we retrieve it
+                        self.log.info(
+                            f"Removing {self.location}:{self.remote_output_file}"
+                        )
+                        check_output(
+                            self.ssh_cmd
+                            + self.ssh_args
+                            + [
+                                self.location,
+                                "--",
+                                shlex_join(["rm", "-f", self.remote_output_file]),
+                            ],
+                            input=None,
+                        )
+                    with open(output_file) as f:
+                        self._output = f.read()
+        return self._output
+
+    def _log_output(self, stop_data=None):
+        output = self.get_output(remove=True)
+        if self.output_limit:
+            output = "".join(output.splitlines(True)[-self.output_limit :])
+        if output:
+            self.log.debug(f"Output for {self.identifier}:\n{output}")
+
+    def _send_file(self, local, remote, wait=True):
         """send a single file"""
         full_remote = "%s:%s" % (self.location, remote)
-        for i in range(10):
+        for i in range(10 if wait else 0):
             if not os.path.exists(local):
                 self.log.debug("waiting for %s" % local)
                 time.sleep(1)
@@ -786,10 +913,11 @@ class SSHLauncher(LocalProcessLauncher):
         check_output(
             self.ssh_cmd
             + self.ssh_args
-            + [self.location, 'mkdir', '-p', '--', remote_dir]
+            + [self.location, '--', 'mkdir', '-p', remote_dir],
+            input=None,
         )
         self.log.info("sending %s to %s", local, full_remote)
-        check_output(self.scp_cmd + self.scp_args + [local, full_remote])
+        check_output(self.scp_cmd + self.scp_args + [local, full_remote], input=None)
 
     def send_files(self):
         """send our files (called before start)"""
@@ -798,16 +926,17 @@ class SSHLauncher(LocalProcessLauncher):
         for local_file, remote_file in self.to_send:
             self._send_file(local_file, remote_file)
 
-    def _fetch_file(self, remote, local):
+    def _fetch_file(self, remote, local, wait=True):
         """fetch a single file"""
         full_remote = "%s:%s" % (self.location, remote)
         self.log.info("fetching %s from %s", local, full_remote)
-        for i in range(10):
+        for i in range(10 if wait else 0):
             # wait up to 10s for remote file to exist
             check = check_output(
                 self.ssh_cmd
                 + self.ssh_args
-                + [self.location, 'test -e', remote, "&& echo 'yes' || echo 'no'"]
+                + [self.location, 'test -e', remote, "&& echo 'yes' || echo 'no'"],
+                input=None,
             )
             check = check.decode(DEFAULT_ENCODING, 'replace').strip()
             if check == u'no':
@@ -815,8 +944,8 @@ class SSHLauncher(LocalProcessLauncher):
             elif check == u'yes':
                 break
         local_dir = os.path.dirname(local)
-        ensure_dir_exists(local_dir, 775)
-        check_output(self.scp_cmd + [full_remote, local])
+        ensure_dir_exists(local_dir, 700)
+        check_output(self.scp_cmd + self.scp_args + [full_remote, local])
 
     def fetch_files(self):
         """fetch remote files (called after start)"""
@@ -831,20 +960,84 @@ class SSHLauncher(LocalProcessLauncher):
         if user is not None:
             self.user = user
         if port is not None:
-            self.ssh_args.append('-p')
-            self.ssh_args.append(port)
-            self.scp_args.append('-P')
-            self.scp_args.append(port)
+            if '-p' not in self.ssh_args:
+                self.ssh_args.append('-p')
+                self.ssh_args.append(str(port))
+            if '-P' not in self.scp_args:
+                self.scp_args.append('-P')
+                self.scp_args.append(str(port))
 
         self.send_files()
-        super().start()
+        self.pid = sshx(
+            self.ssh_cmd + self.ssh_args + [self.location],
+            self.program + self.program_args,
+            self.remote_output_file,
+            log=self.log,
+        )
+        self.notify_start({'host': self.location, 'pid': self.pid})
+        self.on_stop(self._log_output)
+        self._start_waiting()
         self.fetch_files()
+
+    def _wait(self):
+        """Background thread waiting for a process to exit"""
+        exit_code = None
+        while not self._stop_waiting.is_set() and self.state == 'running':
+            try:
+                # use a timeout so we can check the _stop_waiting event
+                exit_code = self.wait_one(timeout=self.poll_seconds)
+            except TimeoutError:
+                continue
+            else:
+                break
+        stop_data = dict(exit_code=exit_code, pid=self.pid, identifier=self.identifier)
+        self.loop.add_callback(lambda: self.notify_stop(stop_data))
+
+    def _start_waiting(self):
+        """Start background thread waiting on the process to exit"""
+        # ensure self.loop is accessed on the main thread before waiting
+        self.loop
+        self._stop_waiting = threading.Event()
+        self._wait_thread = threading.Thread(
+            target=self._wait,
+            daemon=True,
+            name=f"wait(host={self.location}, pid={self.pid})",
+        )
+        self._wait_thread.start()
+
+    def wait_one(self, timeout):
+        python_code = f"from ipyparallel.cluster.launcher import ssh_waitpid; ssh_waitpid({self.pid}, timeout={timeout})"
+        full_cmd = (
+            self.ssh_cmd
+            + self.ssh_args
+            # double-quote for ssh
+            + [self.location, "--", self.remote_python, "-c", f"'{python_code}'"]
+        )
+        out = check_output(full_cmd, input=None, start_new_session=True).decode(
+            "utf8", "replace"
+        )
+        values = _ssh_outputs(out)
+        if 'process_running' not in values:
+            raise RuntimeError(out)
+        running = int(values.get("process_running", 0))
+        if running:
+            raise TimeoutError("still running")
+        return int(values.get("exit_code", -1))
 
     def signal(self, sig):
         if self.state == 'running':
-            # send escaped ssh connection-closer
-            self.process.stdin.write(b'~.')
-            self.process.stdin.flush()
+            check_output(
+                self.ssh_cmd
+                + self.ssh_args
+                + [
+                    self.location,
+                    '--',
+                    'kill',
+                    f'-{sig}',
+                    str(self.pid),
+                ],
+                input=None,
+            )
 
     @property
     def remote_connection_files(self):
@@ -862,7 +1055,7 @@ class SSHControllerLauncher(SSHLauncher, ControllerLauncher):
     # than *some* having `program_args` and others `controller_args`
 
     def _controller_cmd_default(self):
-        return ['ipcontroller']
+        return [self.remote_python, "-m", 'ipyparallel.controller']
 
     @property
     def program(self):
@@ -888,7 +1081,7 @@ class SSHEngineLauncher(SSHLauncher, EngineLauncher):
     # than *some* having `program_args` and others `controller_args`
 
     def _engine_cmd_default(self):
-        return ['ipengine']
+        return [self.remote_python, "-m", "ipyparallel.engine"]
 
     @property
     def program(self):
@@ -906,55 +1099,55 @@ class SSHEngineLauncher(SSHLauncher, EngineLauncher):
         ]
 
 
-class SSHEngineSetLauncher(LocalEngineSetLauncher):
+class SSHEngineSetLauncher(LocalEngineSetLauncher, SSHLauncher):
     launcher_class = SSHEngineLauncher
     engines = Dict(
         config=True,
         help="""dict of engines to launch.  This is a dict by hostname of ints,
         corresponding to the number of engines to start on that host.""",
-    )
+    ).tag(to_dict=True)
 
     def _engine_cmd_default(self):
-        return ['ipengine']
+        return [self.remote_python, "-m", "ipyparallel.engine"]
 
-    @property
-    def engine_count(self):
-        """determine engine count from `engines` dict"""
-        count = 0
-        for n in itervalues(self.engines):
-            if isinstance(n, (tuple, list)):
-                n, args = n
-            if isinstance(n, dict):
-                n = n['n']
-            count += n
-        return count
+    # unset some traits we inherit but don't use
+    remote_output_file = ""
+
+    def get_output(self, remove=True):
+        # no-op in EngineSet, EngineLaunchers take care of this
+        return ''
 
     def start(self, n):
         """Start engines by profile or profile_dir.
-        `n` is ignored, and the `engines` config property is used instead.
+        `n` is an *upper limit* of engines.
+        The `engines` config property is used to assign slots to hosts.
         """
 
         dlist = []
-        for host, n in iteritems(self.engines):
-            cmd = None
-            args = None
-            if isinstance(n, (tuple, list)):
-                n, args = n
-            if isinstance(n, dict):
-                cdict = n
-                if 'n' not in cdict:
-                    raise ValueError(
-                        "Need to specify 'n' in engine's config dictionary."
-                    )
-                n = cdict['n']
-                if 'engine_args' in cdict:
-                    args = cdict['engine_args']
-                if 'engine_cmd' in cdict:
-                    cmd = cdict['engine_cmd']
-            if args is None:
-                args = copy.deepcopy(self.engine_args)
-            if cmd is None:
-                cmd = copy.deepcopy(self.engine_cmd)
+        # traits to inherit:
+        # + all common config traits
+        # - traits set per-engine via engines dict
+        # + some non-configurable traits such as cluster_id
+        engine_traits = self.launcher_class.class_traits(config=True)
+        my_traits = self.traits(config=True)
+        shared_traits = set(my_traits).intersection(engine_traits)
+        # in addition to shared traits, pass some derived traits
+        # and exclude some composite traits
+        inherited_traits = shared_traits.difference(
+            {"location", "user", "hostname", "to_send", "to_fetch"}
+        ).union({"profile_dir", "cluster_id"})
+
+        requested_n = n
+        started_n = 0
+        for host, n_or_config in iteritems(self.engines):
+            if isinstance(n_or_config, dict):
+                overrides = n_or_config
+                n = overrides.pop("n", 1)
+            else:
+                overrides = {}
+                n = n_or_config
+
+            full_host = host
 
             if '@' in host:
                 user, host = host.split('@', 1)
@@ -965,29 +1158,29 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher):
             else:
                 port = None
 
-            for i in range(n):
+            for i in range(min(n, requested_n - started_n)):
                 if i > 0:
                     time.sleep(self.delay)
-                el = self.launcher_class(
-                    work_dir=self.work_dir,
-                    parent=self,
-                    log=self.log,
-                    profile_dir=self.profile_dir,
-                    cluster_id=self.cluster_id,
-                )
+                # pass all common traits to the launcher
+                kwargs = {attr: getattr(self, attr) for attr in inherited_traits}
+                # overrides from engine config
+                kwargs.update(overrides)
+                # explicit per-engine values
+                kwargs['parent'] = self
+                kwargs['identifier'] = key = f"{full_host}/{i}"
+                el = self.launchers[key] = self.launcher_class(**kwargs)
                 if i > 0:
                     # only send files for the first engine on each host
                     el.to_send = []
 
-                # Copy the engine args over to each engine launcher.
-                el.engine_cmd = cmd
-                el.engine_args = args
                 el.on_stop(self._notice_engine_stopped)
                 d = el.start(user=user, hostname=host, port=port)
-                self.launchers["%s/%i" % (host, i)] = el
-                dlist.append(d)
+                dlist.append(key)
+                started_n += 1
+                if started_n >= requested_n:
+                    break
         self.notify_start(dlist)
-        self.n = self.engine_count
+        self.n = started_n
         return dlist
 
 
@@ -1033,18 +1226,6 @@ class SSHProxyEngineSetLauncher(SSHLauncher):
 # -----------------------------------------------------------------------------
 
 
-# This is only used on Windows.
-def find_job_cmd():
-    if WINDOWS:
-        try:
-            return find_cmd('job')
-        except (FindCmdError, ImportError):
-            # ImportError will be raised if win32api is not installed
-            return 'job'
-    else:
-        return 'job'
-
-
 class WindowsHPCLauncher(BaseLauncher):
 
     job_id_regexp = CRegExp(
@@ -1064,14 +1245,11 @@ class WindowsHPCLauncher(BaseLauncher):
     scheduler = Unicode(
         '', config=True, help="The hostname of the scheduler to submit the job to."
     )
-    job_cmd = Unicode(
-        find_job_cmd(), config=True, help="The command for submitting jobs."
-    )
+    job_cmd = Unicode(config=True, help="The command for submitting jobs.")
 
-    def __init__(self, work_dir=u'.', config=None, **kwargs):
-        super(WindowsHPCLauncher, self).__init__(
-            work_dir=work_dir, config=config, **kwargs
-        )
+    @default("job_cmd")
+    def _default_job(self):
+        return shutil.which("job") or "job"
 
     @property
     def job_file(self):
@@ -1200,7 +1378,7 @@ class BatchSystemLauncher(BaseLauncher):
     This class also has the notion of a batch script. The ``batch_template``
     attribute can be set to a string that is a template for the batch script.
     This template is instantiated using string formatting. Thus the template can
-    use {n} fot the number of instances. Subclasses can add additional variables
+    use {n} for the number of instances. Subclasses can add additional variables
     to the template dict.
     """
 
@@ -1307,11 +1485,9 @@ class BatchSystemLauncher(BaseLauncher):
 
     @observe("program", "program_args")
     def _program_changed(self, change=None):
-        self.context['program'] = ' '.join(map(shlex.quote, self.program))
-        self.context['program_args'] = ' '.join(map(shlex.quote, self.program_args))
-        self.context['program_and_args'] = ' '.join(
-            map(shlex.quote, self.program + self.program_args)
-        )
+        self.context['program'] = shlex_join(self.program)
+        self.context['program_args'] = shlex_join(self.program_args)
+        self.context['program_and_args'] = shlex_join(self.program + self.program_args)
 
     @observe("n", "queue")
     def _update_context(self, change):

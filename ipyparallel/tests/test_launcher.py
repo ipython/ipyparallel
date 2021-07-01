@@ -5,7 +5,9 @@ objects, which should test basic config.
 """
 import logging
 import os
+import sys
 import time
+from subprocess import Popen
 
 import pytest
 from traitlets.config import Config
@@ -132,3 +134,20 @@ def test_ssh_remote_profile_dir(ssh_launcher, profile_dir):
     cfg[launcher.__class__.__name__].remote_profile_dir = "foo"
     launcher.update_config(cfg)
     assert launcher.remote_profile_dir == "foo"
+
+
+def test_ssh_waitpid(capsys):
+    proc = Popen([sys.executable, '-c', 'import time; time.sleep(1)'])
+    pid = proc.pid
+
+    def _wait_one(timeout):
+        launcher_mod.ssh_waitpid(pid, timeout=timeout)
+        captured = capsys.readouterr()
+        return launcher_mod._ssh_outputs(captured.out)
+
+    # first run, it's alive
+    assert _wait_one(timeout=0.1) == {"process_running": "1"}
+    # second run, process exits
+    assert _wait_one(timeout=5) == {"process_running": "0", "exit_code": "-1"}
+    # third run, process has already exited
+    assert _wait_one(timeout=5) == {"process_running": "0", "exit_code": "-1"}
