@@ -21,11 +21,11 @@ or::
 As of IPython Parallel 6.2, this will additionally install and enable the IPython Clusters tab
 in the Jupyter Notebook dashboard.
 
-You can also enable/install the clusters tab yourself after the fact with:
+You can also enable/install the clusters tab yourself after the fact with::
 
     ipcluster nbextension enable
 
-Or the individual Jupyter commands:
+Or the individual Jupyter commands::
 
     jupyter serverextension install [--sys-prefix] --py ipyparallel
     jupyter nbextension install [--sys-prefix] --py ipyparallel
@@ -42,12 +42,17 @@ Contents
    reference/index
 
 .. toctree::
+   :maxdepth: 2
+
+   examples/Index
+
+.. toctree::
    :maxdepth: 1
 
    changelog
 
-ipyparallel API
-===============
+IPython Parallel API
+====================
 
 .. toctree::
     :maxdepth: 2

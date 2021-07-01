@@ -1,4 +1,7 @@
+matplotlib
 myst-parser
+nbsphinx
+numpy
 pydata-sphinx-theme
 sphinx
 sphinx-copybutton
