@@ -9,7 +9,7 @@ import json
 import logging
 import os
 import re
-import shlex
+import shutil
 import signal
 import stat
 import sys
@@ -17,7 +17,6 @@ import threading
 import time
 from signal import SIGINT
 from signal import SIGTERM
-from subprocess import check_call
 from subprocess import check_output
 from subprocess import PIPE
 from subprocess import Popen
@@ -27,8 +26,6 @@ from tempfile import TemporaryDirectory
 import psutil
 from IPython.utils.path import ensure_dir_exists
 from IPython.utils.path import get_home_dir
-from IPython.utils.process import find_cmd
-from IPython.utils.process import FindCmdError
 from IPython.utils.text import EvalFormatter
 from ipython_genutils.encoding import DEFAULT_ENCODING
 from ipython_genutils.py3compat import iteritems
@@ -994,7 +991,6 @@ class SSHLauncher(LocalProcessLauncher):
             else:
                 break
         stop_data = dict(exit_code=exit_code, pid=self.pid, identifier=self.identifier)
-        output = self.get_output()
         self.loop.add_callback(lambda: self.notify_stop(stop_data))
 
     def _start_waiting(self):
@@ -1117,18 +1113,6 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher, SSHLauncher):
     # unset some traits we inherit but don't use
     remote_output_file = ""
 
-    @property
-    def engine_count(self):
-        """determine engine count from `engines` dict"""
-        count = 0
-        for n in itervalues(self.engines):
-            if isinstance(n, (tuple, list)):
-                n, args = n
-            if isinstance(n, dict):
-                n = n['n']
-            count += n
-        return count
-
     def get_output(self, remove=True):
         # no-op in EngineSet, EngineLaunchers take care of this
         return ''
@@ -1174,10 +1158,7 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher, SSHLauncher):
             else:
                 port = None
 
-            if started_n >= requested_n:
-                break
-
-            for i in range(n):
+            for i in range(min(n, requested_n - started_n)):
                 if i > 0:
                     time.sleep(self.delay)
                 # pass all common traits to the launcher
@@ -1245,18 +1226,6 @@ class SSHProxyEngineSetLauncher(SSHLauncher):
 # -----------------------------------------------------------------------------
 
 
-# This is only used on Windows.
-def find_job_cmd():
-    if WINDOWS:
-        try:
-            return find_cmd('job')
-        except (FindCmdError, ImportError):
-            # ImportError will be raised if win32api is not installed
-            return 'job'
-    else:
-        return 'job'
-
-
 class WindowsHPCLauncher(BaseLauncher):
 
     job_id_regexp = CRegExp(
@@ -1276,14 +1245,11 @@ class WindowsHPCLauncher(BaseLauncher):
     scheduler = Unicode(
         '', config=True, help="The hostname of the scheduler to submit the job to."
     )
-    job_cmd = Unicode(
-        find_job_cmd(), config=True, help="The command for submitting jobs."
-    )
+    job_cmd = Unicode(config=True, help="The command for submitting jobs.")
 
-    def __init__(self, work_dir=u'.', config=None, **kwargs):
-        super(WindowsHPCLauncher, self).__init__(
-            work_dir=work_dir, config=config, **kwargs
-        )
+    @default("job_cmd")
+    def _default_job(self):
+        return shutil.which("job") or "job"
 
     @property
     def job_file(self):
@@ -1412,7 +1378,7 @@ class BatchSystemLauncher(BaseLauncher):
     This class also has the notion of a batch script. The ``batch_template``
     attribute can be set to a string that is a template for the batch script.
     This template is instantiated using string formatting. Thus the template can
-    use {n} fot the number of instances. Subclasses can add additional variables
+    use {n} for the number of instances. Subclasses can add additional variables
     to the template dict.
     """
 

@@ -235,7 +235,6 @@ async def test_cluster_manager():
         m.remove_cluster("nosuchcluster")
 
 
-@pytest.mark.parametrize("engine_launcher_class", _engine_launcher_classes)
 async def test_to_from_dict(Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class, n=2)
     print(cluster.config, cluster.controller_args)

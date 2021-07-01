@@ -4,10 +4,10 @@ import pytest
 from traitlets.config import Config
 
 from .conftest import Cluster as BaseCluster  # noqa: F401
-from .test_cluster import test_restart_engines
-from .test_cluster import test_signal_engines
-from .test_cluster import test_start_stop_cluster
-from .test_cluster import test_to_from_dict
+from .test_cluster import test_restart_engines  # noqa: F401
+from .test_cluster import test_signal_engines  # noqa: F401
+from .test_cluster import test_start_stop_cluster  # noqa: F401
+from .test_cluster import test_to_from_dict  # noqa: F401
 
 # import tests that use engine_launcher_class fixture
 
