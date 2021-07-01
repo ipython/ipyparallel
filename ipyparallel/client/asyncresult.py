@@ -73,6 +73,7 @@ class AsyncResult(Future):
         fname='unknown',
         targets=None,
         owner=False,
+        return_exceptions=False,
     ):
         super(AsyncResult, self).__init__()
         if not isinstance(children, list):
@@ -80,6 +81,8 @@ class AsyncResult(Future):
             self._single_result = True
         else:
             self._single_result = False
+
+        self._return_exceptions = return_exceptions
 
         if isinstance(children[0], string_types):
             self.msg_ids = children
@@ -204,22 +207,35 @@ class AsyncResult(Future):
         else:
             return res
 
-    def get(self, timeout=-1):
+    def get(self, timeout=None, return_exceptions=None):
         """Return the result when it arrives.
 
-        If `timeout` is not ``None`` and the result does not arrive within
-        `timeout` seconds then ``TimeoutError`` is raised. If the
-        remote call raised an exception then that exception will be reraised
-        by get() inside a `RemoteError`.
+        Arguments:
+
+        timeout : int [default None]
+            If `timeout` is not ``None`` and the result does not arrive within
+            `timeout` seconds then ``TimeoutError`` is raised. If the
+            remote call raised an exception then that exception will be reraised
+            by get() inside a `RemoteError`.
+        return_exceptions : bool [default False]
+            If True, return Exceptions instead of raising them.
         """
         if not self.ready():
             self.wait(timeout)
+
+        if return_exceptions is None:
+            # default to attribute, if AsyncResult was created with return_exceptions=True
+            return_exceptions = self._return_exceptions
 
         if self._ready:
             if self._success:
                 return self.result()
             else:
-                raise self.exception()
+                e = self.exception()
+                if return_exceptions:
+                    return self._reconstruct_result(self._raw_results)
+                else:
+                    raise e
         else:
             raise error.TimeoutError("Result not ready.")
 
@@ -270,22 +286,37 @@ class AsyncResult(Future):
     def _resolve_result(self, f=None):
         if self.done():
             return
+        if f:
+            results = f.result()
+        else:
+            results = list(map(self._client.results.get, self.msg_ids))
+
+        # store raw results
+        self._raw_results = results
+
         try:
-            if f:
-                results = f.result()
-            else:
-                results = list(map(self._client.results.get, self.msg_ids))
             if self._single_result:
                 r = results[0]
                 if isinstance(r, Exception):
                     raise r
             else:
-                results = error.collect_exceptions(results, self._fname)
-            self._success = True
-            self.set_result(self._reconstruct_result(results))
+                results = self._collect_exceptions(results)
         except Exception as e:
             self._success = False
             self.set_exception(e)
+        else:
+            self._success = True
+            self.set_result(self._reconstruct_result(results))
+
+    def _collect_exceptions(self, results):
+        """Wrap Exceptions in a CompositeError
+
+        if self._return_exceptions is True, this is a no-op
+        """
+        if self._return_exceptions:
+            return results
+        else:
+            return error.collect_exceptions(results, self._fname)
 
     def _finalize_result(self, f):
         if self.owner:
@@ -424,10 +455,10 @@ class AsyncResult(Future):
         """getitem returns result value(s) if keyed by int/slice, or metadata if key is str."""
         if isinstance(key, int):
             self._check_ready()
-            return error.collect_exceptions([self.result()[key]], self._fname)[0]
+            return self._collect_exceptions([self.result()[key]])[0]
         elif isinstance(key, slice):
             self._check_ready()
-            return error.collect_exceptions(self.result()[key], self._fname)
+            return self._collect_exceptions(self.result()[key])
         elif isinstance(key, string_types):
             # metadata proxy *does not* require that results are done
             self.wait(0)
@@ -473,7 +504,7 @@ class AsyncResult(Future):
             for child in self._children:
                 self._wait_for_child(child, evt=evt)
                 result = child.result()
-                error.collect_exceptions([result], self._fname)
+                self._collect_exceptions([result])
                 yield result
         else:
             # already done
@@ -583,15 +614,15 @@ class AsyncResult(Future):
             Override default context-detection behavior for whether a widget-based progress bar
             should be used.
         """
-        if timeout is None:
-            timeout = -1
+        if timeout and timeout < 0:
+            timeout = None
         N = len(self)
         tic = time.perf_counter()
         progress_bar = progress(widget=widget, total=N, unit='tasks', desc=self._fname)
 
         n_prev = 0
         while not self.ready() and (
-            timeout < 0 or time.perf_counter() - tic <= timeout
+            timeout is None or time.perf_counter() - tic <= timeout
         ):
             self.wait(interval)
             progress_bar.update(self.progress - n_prev)
@@ -751,25 +782,50 @@ class AsyncResult(Future):
 
 
 class AsyncMapResult(AsyncResult):
-    """Class for representing results of non-blocking gathers.
+    """Class for representing results of non-blocking maps.
 
-    This will properly reconstruct the gather.
+    AsyncMapResult.get() will properly reconstruct gathers into single object.
 
-    This class is iterable at any time, and will wait on results as they come.
+    AsyncMapResult is iterable at any time, and will wait on results as they come.
 
     If ordered=False, then the first results to arrive will come first, otherwise
     results will be yielded in the order they were submitted.
-
     """
 
-    def __init__(self, client, children, mapObject, fname='', ordered=True):
+    def __init__(
+        self,
+        client,
+        children,
+        mapObject,
+        fname='',
+        ordered=True,
+        return_exceptions=False,
+    ):
         self._mapObject = mapObject
         self.ordered = ordered
-        AsyncResult.__init__(self, client, children, fname=fname)
+        AsyncResult.__init__(
+            self,
+            client,
+            children,
+            fname=fname,
+            return_exceptions=return_exceptions,
+        )
         self._single_result = False
 
     def _reconstruct_result(self, res):
         """Perform the gather on the actual results."""
+        if self._return_exceptions:
+            if any(isinstance(r, Exception) for r in res):
+                # running with _return_exceptions,
+                # cannot reconstruct original
+                # use simple chain iterable
+                flattened = []
+                for r in res:
+                    if isinstance(r, Exception):
+                        flattened.append(r)
+                    else:
+                        flattened.extend(r)
+                return flattened
         return self._mapObject.joinPartitions(res)
 
     # asynchronous iterator:
@@ -786,7 +842,7 @@ class AsyncMapResult(AsyncResult):
         rlist = child.result()
         if not isinstance(rlist, list):
             rlist = [rlist]
-        error.collect_exceptions(rlist, self._fname)
+        self._collect_exceptions(rlist)
         for r in rlist:
             yield r
 
@@ -841,6 +897,8 @@ class AsyncHubResult(AsyncResult):
     def wait(self, timeout=-1):
         """wait for result to complete."""
         start = time.time()
+        if timeout and timeout < 0:
+            timeout = None
         if self._ready:
             return
         local_ids = [m for m in self.msg_ids if m in self._client.outstanding]
@@ -852,7 +910,7 @@ class AsyncHubResult(AsyncResult):
             else:
                 rdict = self._client.result_status(remote_ids, status_only=False)
                 pending = rdict['pending']
-                while pending and (timeout < 0 or time.time() < start + timeout):
+                while pending and (timeout is None or time.time() < start + timeout):
                     rdict = self._client.result_status(remote_ids, status_only=False)
                     pending = rdict['pending']
                     if pending:
@@ -865,11 +923,10 @@ class AsyncHubResult(AsyncResult):
                 results = list(map(self._client.results.get, self.msg_ids))
                 if self._single_result:
                     r = results[0]
-                    if isinstance(r, Exception):
+                    if isinstance(r, Exception) and not self._return_exceptions:
                         raise r
-                        self.set_result(r)
                 else:
-                    results = error.collect_exceptions(results, self._fname)
+                    results = self._collect_exceptions(results)
                 self._success = True
                 self.set_result(self._reconstruct_result(results))
             except Exception as e:

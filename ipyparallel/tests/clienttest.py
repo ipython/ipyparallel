@@ -137,7 +137,7 @@ class ClusterTestCase(BaseZMQTestCase):
 
     def client_wait(self, client, jobs=None, timeout=-1):
         """my wait wrapper, sets a default finite timeout to avoid hangs"""
-        if timeout < 0:
+        if timeout is None or timeout < 0:
             timeout = self.timeout
         return Client.wait(client, jobs, timeout)
 

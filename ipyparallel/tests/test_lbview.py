@@ -204,6 +204,23 @@ class TestLoadBalancedView(ClusterTestCase):
         # verify that max_outstanding wasn't exceeded
         assert 4 <= len(self.view.history) <= 6
 
+    def test_imap_return_exceptions(self):
+        view = self.view
+
+        source = count()
+
+        def fail_on_even(n):
+            if n % 2 == 0:
+                raise ValueError("even!")
+            return n
+
+        gen = view.imap(fail_on_even, range(5), return_exceptions=True)
+        for i, r in enumerate(gen):
+            if i % 2 == 0:
+                assert isinstance(r, error.RemoteError)
+            else:
+                assert r == i
+
     def test_abort(self):
         view = self.view
         ar = self.client[:].apply_async(time.sleep, 0.5)

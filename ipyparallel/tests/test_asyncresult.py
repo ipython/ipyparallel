@@ -8,6 +8,7 @@ from IPython.utils.io import capture_output
 
 import ipyparallel as ipp
 from .clienttest import ClusterTestCase
+from .clienttest import raises_remote
 from ipyparallel import Client
 from ipyparallel import error
 from ipyparallel.error import TimeoutError
@@ -370,3 +371,40 @@ class AsyncResultTest(ClusterTestCase):
                 ar = view.apply_async(lambda x: x, data)
                 ar.wait_for_send(0)
         ar.wait_for_send(10)
+
+    def test_return_exceptions(self):
+        view = self.client.load_balanced_view()
+
+        def fail_on_2(n):
+            if n == 2:
+                raise ValueError("two!")
+            return n
+
+        amr = view.map(fail_on_2, range(4), return_exceptions=True)
+        assert amr._return_exceptions
+        rlist = list(amr)
+        error = rlist[2]
+        assert isinstance(error, ipp.RemoteError)
+        expected = [0, 1, error, 3]
+        assert list(amr) == expected
+        assert amr.get() == expected
+
+    def test_return_exceptions_postmortem(self):
+        self.minimum_engines(3)
+        dv = self.client[:]
+        bad_id = dv.targets[1]
+        dv.scatter("rank", dv.targets, flatten=True)
+
+        def fail_on_bad_id(rank, bad_id):
+            if rank == bad_id:
+                raise ValueError(f"{rank} is bad!")
+            return rank
+
+        ar = dv.apply_async(fail_on_bad_id, ipp.Reference('rank'), bad_id)
+        with raises_remote(ValueError):
+            ar.get()
+
+        result = ar.get(return_exceptions=True)
+        assert result[:1] == dv.targets[:1]
+        assert result[2:] == dv.targets[2:]
+        assert isinstance(result[1], ipp.RemoteError)

@@ -4,31 +4,36 @@
 The AsyncResult object
 ======================
 
-In non-blocking mode, :meth:`apply` submits the command to be executed and
-then returns a :class:`~.AsyncResult` object immediately. The
-AsyncResult object gives you a way of getting a result at a later
+In non-blocking mode, :meth:`~.View.apply`, :meth:`~.View.map`, and friends
+submit the command to be executed and then return an :class:`~.AsyncResult` object immediately.
+The AsyncResult object gives you a way of getting a result at a later
 time through its :meth:`get` method, but it also collects metadata
 on execution.
 
 
-Beyond multiprocessing's AsyncResult
+Beyond stdlib AsyncResult and Future
 ====================================
 
-.. Note::
+The :class:`AsyncResult` is a subclass of :py:class:`concurrent.futures.Future`.
+This means it can be integrated into existing async workflows,
+with e.g. :py:func:`asyncio.wrap_future`.
+It also extends the :py:class:`~.multiprocessing.AsyncResult` API.
 
-    The :class:`~.AsyncResult` object provides a superset of the interface in
-    :py:class:`multiprocessing.pool.AsyncResult`.  See the
-    `official Python documentation <https://docs.python.org/library/multiprocessing#multiprocessing.pool.AsyncResult>`_
-    for more on the basics of this interface.
 
-Our AsyncResult objects add a number of convenient features for working with
-parallel results, beyond what is provided by the original AsyncResult.
+.. seealso::
+
+    - :py:class:`multiprocessing.AsyncResult` API
+    - :py:class:`concurrent.futures.Future` API
+
+In addition to these common features,
+our AsyncResult objects add a number of convenient methods for working with parallel results,
+beyond what is provided by the standard library classes on which they are based.
 
 
 get_dict
 --------
 
-First, is :meth:`.AsyncResult.get_dict`, which pulls results as a dictionary
+:meth:`.AsyncResult.get_dict` pulls results as a dictionary,
 keyed by engine_id, rather than a flat list.  This is useful for quickly
 coordinating or distributing information about all of the engines.
 
@@ -48,7 +53,7 @@ as in IPython's :file:`examples/parallel/interengine` examples.
 Metadata
 ========
 
-ipyparallel tracks some metadata about the tasks, which is stored
+IPython Parallel tracks some metadata about the tasks, which is stored
 in the :attr:`.Client.metadata` dict.  The AsyncResult object gives you an
 interface for this information as well, including timestamps stdout/err,
 and engine IDs.
@@ -111,9 +116,9 @@ That is to say, if you treat an AsyncMapResult as if it were a list of your actu
 results, it should behave as you would expect, with the only difference being
 that you can start iterating through the results before they have even been computed.
 
-This lets you do a dumb version of map/reduce with the builtin Python functions,
+This lets you do a simple version of map/reduce with the builtin Python functions,
 and the only difference between doing this locally and doing it remotely in parallel
-is using the asynchronous view.map instead of the builtin map.
+is using the asynchronous ``view.map`` instead of the builtin ``map``.
 
 
 Here is a simple one-line RMS (root-mean-square) implemented with Python's builtin map/reduce.

@@ -20,7 +20,7 @@ controller and four IPython engines. The simplest way of doing this is to use
 the :command:`ipcluster` command::
 
     $ ipcluster start -n 4
-    
+
 For more detailed information about starting the controller and engines, see
 our :ref:`introduction <parallel_overview>` to using IPython for parallel computing.
 
@@ -46,7 +46,7 @@ file to the client machine, or enter its contents as arguments to the Client con
     In [2]: rc = ipp.Client('/path/to/ipcontroller-client.json')
     # or to connect with a specific profile you have set up:
     In [3]: rc = ipp.Client(profile='mpi')
-    
+
 
 To make sure there are engines connected to the controller, users can get a list
 of engine ids:
@@ -83,13 +83,13 @@ Parallel map
 Python's builtin :func:`map` functions allows a function to be applied to a
 sequence element-by-element. This type of code is typically trivial to
 parallelize. In fact, since IPython's interface is all about functions anyway,
-you can use the builtin :func:`map` with a :class:`RemoteFunction`, or a 
+you can use the builtin :func:`map` with a :class:`RemoteFunction`, or a
 DirectView's :meth:`map` method:
 
 .. sourcecode:: ipython
 
     In [62]: serial_result = list(map(lambda x:x**10, range(32)))
-    
+
     In [63]: parallel_result = dview.map_sync(lambda x: x**10, range(32))
 
     In [64]: serial_result == parallel_result
@@ -102,7 +102,7 @@ DirectView's :meth:`map` method:
     :class:`LoadBalancedView`.
 
 .. seealso::
-    
+
     :meth:`map` is implemented via :class:`ParallelFunction`.
 
 Calling Python functions
@@ -214,14 +214,14 @@ This allows you to quickly submit long running commands without blocking your
 local IPython session:
 
 .. sourcecode:: ipython
-    
+
     # define our function
     In [6]: def wait(t):
       ....:     import time
       ....:     tic = time.time()
       ....:     time.sleep(t)
       ....:     return time.time()-tic
-    
+
     # In non-blocking mode
     In [7]: ar = dview.apply_async(wait, 2)
 
@@ -235,7 +235,7 @@ local IPython session:
     # Poll to see if the result is ready
     In [10]: ar.ready()
     Out[10]: False
-    
+
     # ask for the result, but wait a maximum of 1 second:
     In [45]: ar.get(1)
     ---------------------------------------------------------------------------
@@ -247,7 +247,7 @@ local IPython session:
          62                 raise self._exception
          63         else:
     ---> 64             raise error.TimeoutError("Result not ready.")
-         65 
+         65
          66     def ready(self):
 
     TimeoutError: Result not ready.
@@ -256,7 +256,7 @@ local IPython session:
 
     Note the import inside the function. This is a common model, to ensure
     that the appropriate modules are imported where the task is run. You can
-    also manually import modules into the engine(s) namespace(s) via 
+    also manually import modules into the engine(s) namespace(s) via
     ``view.execute('import numpy')``.
 
 Often, it is desirable to wait until a set of :class:`AsyncResult` objects
@@ -292,13 +292,13 @@ arguments are not provided. Thus the following logic is used for :attr:`block` a
 * If no keyword argument is provided, the instance attributes are used.
 * The Keyword arguments, if provided overrides the instance attributes for
   the duration of a single call.
-  
+
 The following examples demonstrate how to use the instance attributes:
 
 .. sourcecode:: ipython
 
     In [16]: dview.targets = [0,2]
-    
+
     In [17]: dview.block = False
 
     In [18]: ar = dview.apply(lambda : 10)
@@ -307,7 +307,7 @@ The following examples demonstrate how to use the instance attributes:
     Out[19]: [10, 10]
 
     In [20]: dview.targets = rc.ids # all engines (4)
-    
+
     In [21]: dview.block = True
 
     In [22]: dview.apply(lambda : 42)
@@ -347,7 +347,7 @@ Here are some examples of how you use :meth:`push` and :meth:`pull`:
 
     In [41]: dview.pull(('a', 'b'))
     Out[41]: [ [1.03234, 3453], [1.03234, 3453], [1.03234, 3453], [1.03234, 3453] ]
-    
+
     In [42]: dview.push(dict(c='speed'))
     Out[42]: [None, None, None, None]
 
@@ -421,7 +421,7 @@ The first is ``@remote``, which calls the function on every engine of a view.
        ....: def getpid():
        ....:     import os
        ....:     return os.getpid()
-       ....: 
+       ....:
 
     In [11]: getpid()
     Out[11]: [12345, 12346, 12347, 12348]
@@ -432,17 +432,17 @@ operations and distribute them, reconstructing the result.
 .. sourcecode:: ipython
 
     In [12]: import numpy as np
-    
+
     In [13]: A = np.random.random((64,48))
-    
+
     In [14]: @dview.parallel(block=True)
        ....: def pmul(A,B):
        ....:     return A*B
-    
+
     In [15]: C_local = A*A
-    
+
     In [16]: C_remote = pmul(A,A)
-    
+
     In [17]: (C_local == C_remote).all()
     Out[17]: True
 
@@ -515,7 +515,7 @@ sync_imports also takes a `local` boolean flag that defaults to True, which spec
 whether the local imports should also be performed.  However, support for `local=False`
 has not been implemented, so only packages that can be imported locally will work
 this way. Note that the usual renaming of the import handle in the same line like in
-`import matplotlib.pyplot as plt` does not work on the remote engine, the `as plt` is 
+`import matplotlib.pyplot as plt` does not work on the remote engine, the `as plt` is
 ignored remotely, while it executes locally. One could rename the remote handle with
 `%px plt = pyplot` though after the import.
 
@@ -532,7 +532,7 @@ be collected and raise a CompositeError, as demonstrated in the next section.
        ....: def findall(pat, x):
        ....:     # re is guaranteed to be available
        ....:     return re.findall(pat, x)
-          
+
     # you can also pass modules themselves, that you already have locally:
     In [71]: @ipp.require(time)
        ....: def wait(t):
@@ -562,27 +562,27 @@ more other exceptions. Here is how it works:
 .. sourcecode:: ipython
 
     In [78]: dview.block = True
-    
+
     In [79]: dview.execute("1/0")
-    [0:execute]: 
+    [0:execute]:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
     ZeroDivisionError: integer division or modulo by zero
 
-    [1:execute]: 
+    [1:execute]:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
     ZeroDivisionError: integer division or modulo by zero
 
-    [2:execute]: 
+    [2:execute]:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
     ZeroDivisionError: integer division or modulo by zero
 
-    [3:execute]: 
+    [3:execute]:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
@@ -598,8 +598,8 @@ If you want, you can even raise one of these original exceptions:
        ....:     dview.execute('1/0', block=True)
        ....: except ipp.CompositeError as e:
        ....:     e.raise_exception()
-       ....: 
-       ....: 
+       ....:
+       ....:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
@@ -611,42 +611,42 @@ these :exc:`CompositeError` exceptions is raised and inspect the exception:
 .. sourcecode:: ipython
 
     In [81]: dview.execute('1/0')
-    [0:execute]: 
+    [0:execute]:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
     ZeroDivisionError: integer division or modulo by zero
 
-    [1:execute]: 
+    [1:execute]:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
     ZeroDivisionError: integer division or modulo by zero
 
-    [2:execute]: 
+    [2:execute]:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
     ZeroDivisionError: integer division or modulo by zero
 
-    [3:execute]: 
+    [3:execute]:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
     ZeroDivisionError: integer division or modulo by zero
-    
+
     In [82]: %debug
     > /.../site-packages/IPython/parallel/client/asyncresult.py(125)get()
         124             else:
     --> 125                 raise self._exception
         126         else:
-    
+
     # Here, self._exception is the CompositeError instance:
-    
+
     ipdb> e = self._exception
     ipdb> e
     CompositeError(4)
-    
+
     # we can tab-complete on e to see available methods:
     ipdb> e.<TAB>
     e.args               e.message            e.traceback
@@ -654,10 +654,10 @@ these :exc:`CompositeError` exceptions is raised and inspect the exception:
     e.ename              e.print_traceback
     e.engine_info        e.raise_exception
     e.evalue             e.render_traceback
-    
+
     # We can then display the individual tracebacks, if we want:
     ipdb> e.print_traceback(1)
-    [1:execute]: 
+    [1:execute]:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
@@ -674,7 +674,7 @@ You can change this limit to suit your needs with:
 
     In [21]: ipp.CompositeError.tb_limit = 1
     In [22]: %px x=z
-    [0:execute]: 
+    [0:execute]:
     ---------------------------------------------------------------------------
     NameError                                 Traceback (most recent call last)
     ----> 1 x=z
@@ -692,10 +692,30 @@ All of this same error handling magic works the same in non-blocking mode:
     In [84]: ar = dview.execute('1/0')
 
     In [85]: ar.get()
-    [0:execute]: 
+    [0:execute]:
     ---------------------------------------------------------------------------
     ZeroDivisionError                         Traceback (most recent call last)
     ----> 1 1/0
     ZeroDivisionError: integer division or modulo by zero
-    
+
     ... 3 more exceptions ...
+
+
+Sometimes you still want to get the successful subset, even when there was an error.
+Like :py:func:`asyncio.gather`, :meth:`.AsyncResult.get` and map functions accept a `return_exception` argument
+(new in IPython Parallel 7.0),
+to return the Exception objects among results instead of raising the first error encountered.
+
+.. sourcecode:: ipython
+
+    In [89]: ar = dview.apply_async(lambda: 1/0)
+    In [90]: ar.get(return_exceptions=True)
+    Out[90]:
+    [<Remote[0]:ZeroDivisionError(division by zero)>,
+     <Remote[1]:ZeroDivisionError(division by zero)>,
+     <Remote[2]:ZeroDivisionError(division by zero)>,
+     <Remote[3]:ZeroDivisionError(division by zero)>]
+
+
+.. versionadded:: 7.0
+  The `return_exceptions` feature
