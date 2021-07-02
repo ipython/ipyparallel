@@ -967,6 +967,26 @@ class SSHLauncher(LocalProcessLauncher):
                 self.scp_args.append('-P')
                 self.scp_args.append(str(port))
 
+        # create remote profile dir
+        check_output(
+            self.ssh_cmd
+            + self.ssh_args
+            + [
+                self.location,
+                shlex_join(
+                    [
+                        self.remote_python,
+                        "-m",
+                        "IPython",
+                        "profile",
+                        "create",
+                        "--profile-dir",
+                        self.remote_profile_dir,
+                    ]
+                ),
+            ],
+            input=None,
+        )
         self.send_files()
         self.pid = sshx(
             self.ssh_cmd + self.ssh_args + [self.location],
@@ -1192,7 +1212,17 @@ class SSHProxyEngineSetLauncher(SSHLauncher):
     """
 
     n = Integer().tag(to_dict=True)
-    ipcluster_cmd = List(['ipcluster'], config=True)
+    ipcluster_cmd = List(Unicode(), config=True)
+
+    @default("ipcluster_cmd")
+    def _default_ipcluster_cmd(self):
+        return [self.remote_python, "-m", "ipyparallel.cluster"]
+
+    ipcluster_args = List(
+        Unicode(),
+        config=True,
+        help="""Extra CLI arguments to pass to ipcluster engines""",
+    )
 
     @property
     def program(self):
@@ -1207,7 +1237,7 @@ class SSHProxyEngineSetLauncher(SSHLauncher):
             self.remote_profile_dir,
             '--cluster-id',
             self.cluster_id,
-        ]
+        ] + self.ipcluster_args
 
     @default("to_send")
     def _to_send_default(self):
