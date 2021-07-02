@@ -10,6 +10,7 @@ import os
 import re
 import signal
 import sys
+from functools import partial
 
 import zmq
 from IPython.core.profiledir import ProfileDir
@@ -308,7 +309,28 @@ class IPClusterEngines(BaseParallelApplication):
 
     def init_signal(self):
         # Setup signals
+        for signame in ("SIGUSR1", "SIGUSR2", "SIGINFO"):
+            try:
+                signum = getattr(signal, signame)
+            except AttributeError:
+                self.log.debug(f"Not forwarding {signame}")
+                pass
+            else:
+                self.log.debug(f"Forwarding {signame} to engines")
+                signal.signal(signum, self.relay_signal)
         signal.signal(signal.SIGINT, self.sigint_handler)
+        signal.signal(signal.SIGTERM, self.sigint_handler)
+
+    def relay_signal(self, signum, frame):
+        self.log.debug(f"Received signal {signum} received, relaying to engines...")
+        self.loop.add_callback_from_signal(partial(self.cluster.signal_engines, signum))
+
+    def sigint_handler(self, signum, frame):
+        return self.relay_signal(signum, frame)
+
+    def sigterm_handler(self, signum, frame):
+        self.log.debug(f"Received signal {signum} received, stopping launchers...")
+        self.loop.add_callback_from_signal(self.stop_cluster)
 
     def engines_started_ok(self):
         self.log.info("Engines appear to have started successfully")
@@ -316,10 +338,10 @@ class IPClusterEngines(BaseParallelApplication):
 
     async def start_engines(self):
         try:
-            await self.cluster.start_engines(self.n)
+            await self.cluster.start_engines()
         except:
             self.log.exception("Engine start failed")
-            raise
+            self.exit(1)
 
         if self.daemonize:
             self.loop.add_callback(self.loop.stop)
@@ -373,10 +395,6 @@ class IPClusterEngines(BaseParallelApplication):
             self.log.error("IPython cluster: stopping")
             await self.cluster.stop_cluster()
             self.loop.add_callback(self.loop.stop)
-
-    def sigint_handler(self, signum, frame):
-        self.log.debug("SIGINT received, stopping launchers...")
-        self.loop.add_callback_from_signal(self.stop_cluster)
 
     def start_logging(self):
         # Remove old log files of the controller and engine
@@ -462,6 +480,11 @@ class IPClusterStart(IPClusterEngines):
         if not self._stopping:
             self.log.warning("Controller stopped. Shutting down.")
             self.loop.add_callback(self.stop_cluster)
+
+    def sigint_handler(self, signum, frame):
+        """Unlike engines, SIGINT shuts down `ipcluster start`"""
+        self.log.debug(f"Received signal {signum} received, stopping launchers...")
+        self.loop.add_callback_from_signal(self.stop_cluster)
 
     def start(self):
         """Start the app for the start subcommand."""
