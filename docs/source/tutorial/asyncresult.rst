@@ -108,7 +108,7 @@ Map results are iterable!
 When an AsyncResult object has multiple results (e.g. the :class:`~AsyncMapResult`
 object), you can iterate through results themselves, and act on them as they arrive:
 
-.. literalinclude:: ../../../examples/itermapresult.py
+.. literalinclude:: ../examples/itermapresult.py
     :language: python
     :lines: 20-67
 

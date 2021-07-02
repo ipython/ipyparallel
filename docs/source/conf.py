@@ -50,6 +50,7 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     'myst_parser',
+    'nbsphinx',
     'IPython.sphinxext.ipython_console_highlighting',
 ]
 
@@ -357,3 +358,8 @@ intersphinx_mapping = {
     'distributed': ('https://distributed.readthedocs.io/en/stable/', None),
     'jupyterclient': ('https://jupyter-client.readthedocs.io/en/stable/', None),
 }
+
+
+# nbsphinx config
+# https://nbsphinx.readthedocs.io/en/latest/usage.html
+nbsphinx_execute = 'auto'
