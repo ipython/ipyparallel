@@ -52,12 +52,13 @@ class IPythonParallelKernel(IPythonKernel):
         if not super(IPythonParallelKernel, self).should_handle(stream, msg, idents):
             return False
         msg_id = msg['header']['msg_id']
+        msg_type = msg['header']['msg_type']
         if msg_id in self.aborted:
-            msg_type = msg['header']['msg_type']
             # is it safe to assume a msg_id will not be resubmitted?
             self.aborted.remove(msg_id)
             self._send_abort_reply(stream, msg, idents)
             return False
+        self.log.info(f"Handling {msg_type}: {msg_id}")
         return True
 
     def init_metadata(self, parent):
@@ -104,10 +105,9 @@ class IPythonParallelKernel(IPythonKernel):
         md = self.finish_metadata(parent, md, reply_content)
 
         # flush i/o
-        self.log.info(f'ENGINE apply request, ident: {ident}')
         sys.stdout.flush()
         sys.stderr.flush()
-        self.log.debug('engine: sending apply_reply')
+        self.log.debug(f'Sending apply_reply: {msg_id}')
         self.session.send(
             stream,
             u'apply_reply',

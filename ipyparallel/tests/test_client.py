@@ -4,6 +4,7 @@
 from __future__ import division
 
 import os
+import signal
 import socket
 import sys
 import time
@@ -16,8 +17,8 @@ import pytest
 import tornado
 from IPython import get_ipython
 
-from .clienttest import add_engines
 from .clienttest import ClusterTestCase
+from .clienttest import raises_remote
 from .clienttest import skip_without
 from .clienttest import wait
 from ipyparallel import AsyncHubResult
@@ -657,3 +658,17 @@ class TestClient(ClusterTestCase):
         f = self.client.wait_for_engines(n + 1, timeout=10, block=False)
         self.add_engines(1)
         assert f.result() is None
+
+    def test_signal_engines(self):
+        view = self.client[:]
+        for sig in (signal.SIGINT, 'SIGINT'):
+            ar = view.apply_async(time.sleep, 10)
+            # FIXME: use status:busy to wait for tasks to start
+            time.sleep(1)
+            self.client.send_signal(sig, block=True)
+            with raises_remote(KeyboardInterrupt):
+                ar.get()
+
+            # make sure they were all interrupted
+            for r in ar.get(return_exceptions=True):
+                assert isinstance(r, error.RemoteError)

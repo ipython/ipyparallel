@@ -266,16 +266,16 @@ and blocks until all of the associated results are ready:
 
 .. sourcecode:: ipython
 
-    In [72]: dview.block=False
+    In [72]: dview.block = False
 
     # A trivial list of AsyncResults objects
-    In [73]: pr_list = [dview.apply_async(wait, 3) for i in range(10)]
+    In [73]: ar_list = [dview.apply_async(wait, 3) for i in range(10)]
 
     # Wait until all of them are done
-    In [74]: dview.wait(pr_list)
+    In [74]: dview.wait(ar_list)
 
     # Then, their results are ready using get()
-    In [75]: pr_list[0].get()
+    In [75]: ar_list[0].get()
     Out[75]: [2.9982571601867676, 2.9982588291168213, 2.9987530708312988, 2.9990990161895752]
 
 
@@ -297,7 +297,7 @@ The following examples demonstrate how to use the instance attributes:
 
 .. sourcecode:: ipython
 
-    In [16]: dview.targets = [0,2]
+    In [16]: dview.targets = [0, 2]
 
     In [17]: dview.block = False
 
@@ -405,6 +405,56 @@ between engines, MPI, pyzmq, or some other direct interconnect should be used.
 
 Other things to look at
 =======================
+
+Signaling engines
+-----------------
+
+New in IPython Parallel 7.0 is the :meth:`Client.send_signal` method.
+This lets you directly interrupt engines, which might be running a blocking task
+that you want to cancel.
+
+This is also available via the Cluster API.
+Unlike the Cluster API, though,
+which only allows interrupting whole engine 'sets' (usally all engines in the cluster),
+the client API allows interrupting individual engines.
+
+.. sourcecode:: ipython
+
+    In [9]: ar = rc[:].apply_async(time.sleep, 5)
+
+    In [10]: rc.send_signal(signal.SIGINT)
+    Out[10]: <Future at 0x7f91a9489fd0 state=pending>
+
+    In [11]: ar.get()
+    [12:apply]:
+    ---------------------------------------------------------------------------
+    KeyboardInterrupt                         Traceback (most recent call last)
+    <string> in <module>
+
+    KeyboardInterrupt:
+
+    [13:apply]:
+    ---------------------------------------------------------------------------
+    KeyboardInterrupt                         Traceback (most recent call last)
+    <string> in <module>
+
+    KeyboardInterrupt:
+
+    [14:apply]:
+    ---------------------------------------------------------------------------
+    KeyboardInterrupt                         Traceback (most recent call last)
+    <string> in <module>
+
+    KeyboardInterrupt:
+
+    [15:apply]:
+    ---------------------------------------------------------------------------
+    KeyboardInterrupt                         Traceback (most recent call last)
+    <string> in <module>
+
+    KeyboardInterrupt:
+
+
 
 Remote function decorators
 --------------------------
