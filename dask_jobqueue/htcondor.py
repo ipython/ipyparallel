@@ -109,7 +109,7 @@ Queue
         return env_dict
 
     def job_script(self):
-        """ Construct a job submission script """
+        """Construct a job submission script"""
         quoted_arguments = quote_arguments(["-c", self._command_template])
         quoted_environment = quote_environment(self.env_dict)
         job_header_lines = "\n".join(

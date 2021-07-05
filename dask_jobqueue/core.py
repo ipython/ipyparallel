@@ -1,4 +1,4 @@
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 import logging
 import math
 import os
@@ -10,7 +10,6 @@ import weakref
 import abc
 
 import dask
-from dask.utils import ignoring
 
 from distributed.core import Status
 from distributed.deploy.spec import ProcessInterface, SpecCluster
@@ -277,7 +276,7 @@ class Job(ProcessInterface, abc.ABC):
         return config_name
 
     def job_script(self):
-        """ Construct a job submission script """
+        """Construct a job submission script"""
         header = "\n".join(
             [
                 line
@@ -295,7 +294,7 @@ class Job(ProcessInterface, abc.ABC):
 
     @contextmanager
     def job_file(self):
-        """ Write job submission script to temporary file """
+        """Write job submission script to temporary file"""
         with tmpfile(extension="sh") as fn:
             with open(fn, "w") as f:
                 logger.debug("writing job script: \n%s", self.job_script())
@@ -317,7 +316,7 @@ class Job(ProcessInterface, abc.ABC):
         return mem
 
     async def start(self):
-        """ Start workers and point them to our local scheduler """
+        """Start workers and point them to our local scheduler"""
         logger.debug("Starting worker: %s", self.name)
 
         with self.job_file() as fn:
@@ -357,7 +356,7 @@ class Job(ProcessInterface, abc.ABC):
     @classmethod
     def _close_job(cls, job_id):
         if job_id:
-            with ignoring(RuntimeError):  # deleting job when job already gone
+            with suppress(RuntimeError):  # deleting job when job already gone
                 cls._call(shlex.split(cls.cancel_command) + [job_id])
             logger.debug("Closed job %s", job_id)
 
