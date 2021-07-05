@@ -62,8 +62,8 @@ See the `profile` and `profile-dir` options for details.
 """
 
 _examples = """
-ipengine --url=tcp://192.168.0.1:1000     # connect to hub at specific url
-ipengine --log-to-file --log-level=DEBUG  # log to a file with DEBUG verbosity
+ipengine --file=path/to/ipcontroller-engine.json     # connect to hub using a specific url
+ipengine --log-level=DEBUG > engine.log 2>&1  # log to a file with DEBUG verbosity
 """
 
 DEFAULT_MPI_INIT = """

@@ -15,6 +15,7 @@ import stat
 import sys
 import threading
 import time
+from functools import partial
 from signal import SIGINT
 from signal import SIGTERM
 from subprocess import check_output
@@ -22,6 +23,7 @@ from subprocess import PIPE
 from subprocess import Popen
 from subprocess import STDOUT
 from tempfile import TemporaryDirectory
+from textwrap import indent
 
 import psutil
 from IPython.utils.path import ensure_dir_exists
@@ -45,7 +47,6 @@ from traitlets import Unicode
 from traitlets.config.configurable import LoggingConfigurable
 
 from ..util import shlex_join
-from ._win32support import forward_read_events
 from ._winhpcjob import IPControllerJob
 from ._winhpcjob import IPControllerTask
 from ._winhpcjob import IPEngineSetJob
@@ -93,12 +94,26 @@ class BaseLauncher(LoggingConfigurable):
     # the work_dir option.
     work_dir = Unicode(u'.')
 
+    # used in various places for labeling. often 'ipengine' or 'ipcontroller'
+    name = Unicode("process")
+
     start_data = Any()
     stop_data = Any()
 
     identifier = Any(
-        help="Used for lookup in e.g. EngineSetLauncher during notify_stop"
+        help="Used for lookup in e.g. EngineSetLauncher during notify_stop and default log files"
     )
+
+    @default("identifier")
+    def _default_identifier(self):
+        identifier = f"{self.name}"
+        if self.cluster_id:
+            identifier = f"{identifier}-{self.cluster_id}"
+        if getattr(self, 'engine_set_id', None):
+            identifier = f"{identifier}-{self.engine_set_id}"
+        identifier = f"{identifier}-{os.getpid()}"
+        return identifier
+
     loop = Instance(ioloop.IOLoop, allow_none=True)
 
     def _loop_default(self):
@@ -120,9 +135,9 @@ class BaseLauncher(LoggingConfigurable):
         return d
 
     @classmethod
-    def from_dict(cls, d, *, config=None, parent=None):
+    def from_dict(cls, d, *, config=None, parent=None, **kwargs):
         """Restore a Launcher from a dict"""
-        launcher = cls(config=config, parent=parent)
+        launcher = cls(config=config, parent=parent, **kwargs)
         for attr in launcher.traits(to_dict=True):
             if attr in d:
                 setattr(launcher, attr, d[attr])
@@ -216,8 +231,10 @@ class BaseLauncher(LoggingConfigurable):
             self.log.debug("Already notified stop (data)")
             return data
         self.log.debug(f"{self.__class__.__name__} {self.args[0]} stopped: {data}")
+
         self.stop_data = data
         self.state = 'after'
+        self._log_output(data)
         for f in self.stop_callbacks:
             f(data)
         return data
@@ -232,8 +249,35 @@ class BaseLauncher(LoggingConfigurable):
         """
         raise NotImplementedError('signal must be implemented in a subclass')
 
+    output_limit = Integer(
+        100,
+        config=True,
+        help="""
+    When a process exits, display up to this many lines of output
+    """,
+    )
+
+    def get_output(self, remove=False):
+        """Retrieve the output form the Launcher.
+
+        If remove: remove the file, if any, where it was being stored.
+        """
+        # override in subclasses to retrieve output
+        return ""
+
+    def _log_output(self, stop_data=None):
+        output = self.get_output(remove=True)
+        if self.output_limit:
+            output = "".join(output.splitlines(True)[-self.output_limit :])
+        if output:
+            self.log.debug(f"Output for {self.identifier}:\n{output}")
+
 
 class ControllerLauncher(BaseLauncher):
+    """Base class for launching ipcontroller"""
+
+    name = Unicode("ipcontroller")
+
     controller_cmd = List(
         list(ipcontroller_cmd_argv),
         config=True,
@@ -275,6 +319,10 @@ class ControllerLauncher(BaseLauncher):
 
 
 class EngineLauncher(BaseLauncher):
+    """Base class for launching one engine"""
+
+    name = Unicode("ipengine")
+
     engine_cmd = List(
         ipengine_cmd_argv, config=True, help="""command to launch the Engine."""
     )
@@ -286,6 +334,8 @@ class EngineLauncher(BaseLauncher):
     )
 
     n = Integer(1).tag(to_dict=True)
+
+    engine_set_id = Unicode()
 
 
 # -----------------------------------------------------------------------------
@@ -303,6 +353,7 @@ class LocalProcessLauncher(BaseLauncher):
     # This is used to to construct self.args, which is passed to
     # spawnProcess.
     cmd_and_args = List(Unicode())
+
     poll_seconds = Integer(
         30,
         config=True,
@@ -314,7 +365,16 @@ class LocalProcessLauncher(BaseLauncher):
         as other signals/events are checked on this interval
         """,
     )
+
     pid = Integer(-1).tag(to_dict=True)
+
+    output_file = Unicode().tag(to_dict=True)
+
+    @default("output_file")
+    def _default_output_file(self):
+        log_dir = os.path.join(self.profile_dir, "log")
+        os.makedirs(log_dir, exist_ok=True)
+        return os.path.join(log_dir, f'{self.identifier}.log')
 
     stdout = None
     stderr = None
@@ -365,39 +425,67 @@ class LocalProcessLauncher(BaseLauncher):
             raise ProcessStateError(
                 'The process was already started and has state: {self.state}'
             )
+        self.log.info(f"Sending output for {self.identifier} to {self.output_file}")
 
-        proc = Popen(
-            self.args,
-            stdout=PIPE,
-            stderr=PIPE,
-            stdin=PIPE,
-            env=os.environ,
-            cwd=self.work_dir,
-            start_new_session=True,  # don't forward signals
-        )
+        with open(self.output_file, "ab") as f:
+            proc = Popen(
+                self.args,
+                stdout=f.fileno(),
+                stderr=STDOUT,
+                stdin=PIPE,
+                env=os.environ,
+                cwd=self.work_dir,
+                start_new_session=True,  # don't forward signals
+            )
         self.pid = proc.pid
-        self.stdout = proc.stdout
-        self.stderr = proc.stderr
         # use psutil API for self.process
         self.process = psutil.Process(proc.pid)
 
-        if WINDOWS:
-            self.stdout = forward_read_events(self.stdout)
-            self.stderr = forward_read_events(self.stderr)
-        self.loop.add_handler(self.stdout, self.handle_stdout, self.loop.READ)
-        self.loop.add_handler(self.stderr, self.handle_stderr, self.loop.READ)
-        self.on_stop(self._stop_streams)
         self.notify_start(self.process.pid)
         self._start_waiting()
+        if self.log.level <= logging.DEBUG:
+            self._start_streaming()
 
-    def _stop_streams(self, stop_data=None):
-        """Disconnect stream watchers"""
-        if self.stdout is not None:
-            self.loop.remove_handler(self.stdout)
-            self.stdout = None
-        if self.stderr is not None:
-            self.loop.remove_handler(self.stderr)
-            self.stderr = None
+    def _stream_file(self, path):
+        """Stream one file"""
+        with open(path, 'r') as f:
+            while self.state == 'running' and not self._stop_waiting.is_set():
+                line = f.readline()
+                # log prefix?
+                # or stream directly to sys.stderr
+                if line:
+                    sys.stderr.write(line)
+                else:
+                    # pause while we are at the end of the file
+                    time.sleep(0.1)
+
+    def _start_streaming(self):
+        t = threading.Thread(
+            target=partial(self._stream_file, self.output_file),
+            name=f"Stream Output {self.identifier}",
+            daemon=True,
+        )
+        t.start()
+
+    _output = None
+
+    def get_output(self, remove=False):
+        if self._output is None:
+            if self.output_file:
+                try:
+                    with open(self.output_file) as f:
+                        self._output = f.read()
+                except FileNotFoundError:
+                    self.log.error(f"Missing output file: {self.output_file}")
+                    self._output = ""
+            else:
+                self._output = ""
+
+        if remove and os.path.isfile(self.output_file):
+            self.log.debug(f"Removing {self.output_file}")
+            os.remove(self.output_file)
+
+        return self._output
 
     def stop(self):
         return self.interrupt_then_kill()
@@ -495,6 +583,8 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
 
     launchers = Dict()
     stop_data = Dict()
+    outputs = Dict()
+    output_file = ""  # no output file for me
 
     def __init__(self, work_dir=u'.', config=None, **kwargs):
         super(LocalEngineSetLauncher, self).__init__(
@@ -527,6 +617,11 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
                 profile_dir=self.profile_dir,
                 cluster_id=self.cluster_id,
                 identifier=i,
+                output_file=os.path.join(
+                    self.profile_dir,
+                    "log",
+                    f"ipengine-{self.cluster_id}-{self.engine_set_id}-{i}.log",
+                ),
             )
 
             # Copy the engine args over to each engine launcher.
@@ -560,10 +655,29 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
 
     def _notice_engine_stopped(self, data):
         identifier = data['identifier']
-        self.launchers.pop(identifier)
+        launcher = self.launchers.pop(identifier)
+        if launcher is not None:
+            self.outputs[identifier] = launcher.get_output()
         self.stop_data[identifier] = data
         if not self.launchers:
             self.notify_stop(self.stop_data)
+
+    def get_output(self, remove=False):
+        """Get the output of all my child Launchers"""
+        for identifier, launcher in self.launchers.items():
+            # remaining launchers
+            self.outputs[identifier] = launcher.get_output(remove=remove)
+
+        joined_output = []
+        for identifier, engine_output in self.outputs.items():
+            if engine_output:
+                joined_output.append(f"Output for engine {identifier}")
+                if self.output_limit:
+                    engine_output = "".join(
+                        engine_output.splitlines(True)[-self.output_limit :]
+                    )
+                joined_output.append(indent(engine_output, '  '))
+        return '\n'.join(joined_output)
 
 
 # -----------------------------------------------------------------------------
@@ -848,10 +962,6 @@ class SSHLauncher(LocalProcessLauncher):
 
     _output = None
 
-    output_limit = Integer(
-        100, config=True, help="""Limit number of output lines to report"""
-    )
-
     def _reconstruct_process(self, d):
         # called in from_dict
         # override from LocalProcessLauncher which invokes psutil.Process
@@ -891,13 +1001,6 @@ class SSHLauncher(LocalProcessLauncher):
                     with open(output_file) as f:
                         self._output = f.read()
         return self._output
-
-    def _log_output(self, stop_data=None):
-        output = self.get_output(remove=True)
-        if self.output_limit:
-            output = "".join(output.splitlines(True)[-self.output_limit :])
-        if output:
-            self.log.debug(f"Output for {self.identifier}:\n{output}")
 
     def _send_file(self, local, remote, wait=True):
         """send a single file"""
@@ -995,7 +1098,6 @@ class SSHLauncher(LocalProcessLauncher):
             log=self.log,
         )
         self.notify_start({'host': self.location, 'pid': self.pid})
-        self.on_stop(self._log_output)
         self._start_waiting()
         self.fetch_files()
 

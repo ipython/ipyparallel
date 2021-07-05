@@ -250,14 +250,13 @@ class IPClusterEngines(BaseParallelApplication):
     daemonize = Bool(
         False,
         config=True,
-        help="""Daemonize the ipcluster program. This implies --log-to-file.
+        help="""Launch the cluster and immediately exit.
+
+        .. versionchanged:: 7.0
+            No longer leaves the ipcluster process itself running.
+            Prior to 7.0, --daemonize did not work on Windows.
         """,
     )
-
-    @observe('daemonize')
-    def _daemonize_changed(self, change):
-        if change['new']:
-            self.log_to_file = True
 
     early_shutdown = Integer(
         30,
@@ -382,6 +381,9 @@ class IPClusterEngines(BaseParallelApplication):
             a public interface.
             """
             )
+            engine_output = self.engine_launcher.get_output(remove=True)
+            if engine_output:
+                self.log.error(f"Engine output:\n{engine_output}")
             self.loop.add_callback(self.stop_cluster)
 
         return self.engines_stopped(stop_data)
@@ -471,7 +473,9 @@ class IPClusterStart(IPClusterEngines):
     async def start_cluster(self):
         await self.cluster.start_cluster()
         if self.daemonize:
-            self.log.info(f"Leaving cluster running: {self.cluster.cluster_file}")
+            print(
+                f"Leaving cluster running: {self.cluster.cluster_file}", file=sys.stderr
+            )
             self.loop.add_callback(self.loop.stop)
         self.cluster._controller.on_stop(self.controller_stopped)
         self.watch_engines()
