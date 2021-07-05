@@ -494,9 +494,7 @@ class LocalProcessLauncher(BaseLauncher):
         if self.state == 'running':
             if WINDOWS and sig != SIGINT:
                 # use Windows tree-kill for better child cleanup
-                cmd = ['taskkill', '-pid', str(self.process.pid), '-t']
-                if sig == SIGKILL:
-                    cmd.append("-f")
+                cmd = ['taskkill', '/pid', str(self.process.pid), '/t', '/F']
                 check_output(cmd)
             else:
                 self.process.send_signal(sig)
