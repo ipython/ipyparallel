@@ -12,10 +12,6 @@ from .clienttest import raises_remote
 from ipyparallel import cluster
 from ipyparallel.cluster.launcher import find_launcher_class
 
-_engine_launcher_classes = ["Local"]
-if shutil.which("mpiexec"):
-    _engine_launcher_classes.append("MPI")
-
 _timeout = 30
 
 
@@ -58,9 +54,9 @@ async def test_ipython_log(ipython):
     assert c.log.handlers[0].stream is sys.stdout
 
 
-@pytest.fixture(params=_engine_launcher_classes)
-def engine_launcher_class(request):
-    return request.param
+@pytest.fixture
+def engine_launcher_class():
+    return 'Local'
 
 
 async def test_start_stop_controller(Cluster):

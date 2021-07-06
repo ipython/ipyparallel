@@ -1586,6 +1586,12 @@ class BatchSystemLauncher(BaseLauncher):
         help="The name of the command line program used to delete jobs.",
     )
 
+    signal_command = List(
+        [''],
+        config=True,
+        help="The name of the command line program used to send signals to jobs.",
+    )
+
     job_id = Unicode().tag(to_dict=True)
 
     job_id_regexp = CRegExp(
@@ -1616,7 +1622,7 @@ class BatchSystemLauncher(BaseLauncher):
     def _queue_changed(self, change):
         self._update_context(change)
 
-    n = Integer(1)
+    n = Integer(1).tag(to_dict=True)
 
     @observe('n')
     def _n_changed(self, change):
@@ -1643,7 +1649,7 @@ class BatchSystemLauncher(BaseLauncher):
         This lets you parameterize additional options,
         such as wall_time with a custom template.
         """,
-    )
+    ).tag(to_dict=True)
 
     @default("context")
     def _context_default(self):
@@ -1748,25 +1754,32 @@ class BatchSystemLauncher(BaseLauncher):
 
     def stop(self):
         try:
-            p = Popen(
+            output = check_output(
                 self.delete_command + [self.job_id],
-                env=os.environ,
-                stdout=PIPE,
-                stderr=PIPE,
-            )
-            out, err = p.communicate()
-            output = out + err
-        except:
+                stdin=None,
+            ).decode(DEFAULT_ENCODING, 'replace')
+        except Exception:
             self.log.exception(
                 "Problem stopping cluster with command: %s"
                 % (self.delete_command + [self.job_id])
             )
             output = ""
-        output = output.decode(DEFAULT_ENCODING, 'replace')
+
         self.notify_stop(
             dict(job_id=self.job_id, output=output)
         )  # Pass the output of the kill cmd
         return output
+
+    def signal(self, sig):
+        cmd = self.signal_command + [str(sig), self.job_id]
+        try:
+            output = check_output(
+                cmd,
+                stdin=None,
+            ).decode(DEFAULT_ENCODING, 'replace')
+        except Exception:
+            self.log.exception("Problem sending signal with: {shlex_join(cmd)}")
+            output = ""
 
 
 class BatchControllerLauncher(BatchSystemLauncher, ControllerLauncher):
@@ -1813,6 +1826,9 @@ class PBSLauncher(BatchSystemLauncher):
 
     submit_command = List(['qsub'], config=True, help="The PBS submit command ['qsub']")
     delete_command = List(['qdel'], config=True, help="The PBS delete command ['qdel']")
+    signal_command = List(
+        ['qsig', '-s'], config=True, help="The PBS signal command ['qsig']"
+    )
     job_id_regexp = CRegExp(
         r'\d+',
         config=True,
@@ -1867,6 +1883,11 @@ class SlurmLauncher(BatchSystemLauncher):
     )
     delete_command = List(
         ['scancel'], config=True, help="The slurm delete command ['scancel']"
+    )
+    signal_command = List(
+        ['scancel', '-s'],
+        config=True,
+        help="The slurm signal command ['scancel', '-s']",
     )
     job_id_regexp = CRegExp(
         r'\d+',
@@ -2023,9 +2044,12 @@ class SGEEngineSetLauncher(SGELauncher, BatchEngineSetLauncher):
 class LSFLauncher(BatchSystemLauncher):
     """A BatchSystemLauncher subclass for LSF."""
 
-    submit_command = List(['bsub'], config=True, help="The PBS submit command ['bsub']")
+    submit_command = List(['bsub'], config=True, help="The LSF submit command ['bsub']")
     delete_command = List(
-        ['bkill'], config=True, help="The PBS delete command ['bkill']"
+        ['bkill'], config=True, help="The LSF delete command ['bkill']"
+    )
+    signal_command = List(
+        ['bkill', '-s'], config=True, help="The LSF signal command ['bkill', '-s']"
     )
     job_id_regexp = CRegExp(
         r'\d+',
