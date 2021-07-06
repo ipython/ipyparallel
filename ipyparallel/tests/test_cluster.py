@@ -121,6 +121,9 @@ async def test_start_stop_cluster(Cluster, engine_launcher_class):
     assert cluster._engine_sets == {}
 
 
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+)
 async def test_signal_engines(request, Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class)
     await cluster.start_controller()
@@ -250,20 +253,22 @@ async def test_to_from_dict(Cluster, engine_launcher_class):
         es2 = next(iter(cluster2._engine_sets.values()))
         # ensure responsive
         rc[:].apply_async(lambda: None).get(timeout=_timeout)
-        # register signal handler
-        signals = rc[:].apply_async(_prepare_signal).get(timeout=_timeout)
-        # get test signal from engines in case of cross-platform mismatch,
-        # e.g. SIGUSR1 on mac (30) -> linux (10)
-        test_signal = signals[0]
-        # submit request to be interrupted
-        ar = rc[:].apply_async(time.sleep, 3)
-        await asyncio.sleep(0.5)
-        # send signal
-        await cluster2.signal_engines(test_signal)
+        if not sys.platform.startswith("win"):
+            # signal tests doesn't work yet on Windows
+            # register signal handler
+            signals = rc[:].apply_async(_prepare_signal).get(timeout=_timeout)
+            # get test signal from engines in case of cross-platform mismatch,
+            # e.g. SIGUSR1 on mac (30) -> linux (10)
+            test_signal = signals[0]
+            # submit request to be interrupted
+            ar = rc[:].apply_async(time.sleep, 3)
+            await asyncio.sleep(0.5)
+            # send signal
+            await cluster2.signal_engines(test_signal)
 
-        # wait for result, which should raise KeyboardInterrupt
-        with raises_remote(KeyboardInterrupt) as e:
-            ar.get(timeout=_timeout)
+            # wait for result, which should raise KeyboardInterrupt
+            with raises_remote(KeyboardInterrupt) as e:
+                ar.get(timeout=_timeout)
         assert es1.n == es2.n
         assert cluster2.engine_launcher_class is cluster.engine_launcher_class
 
@@ -275,5 +280,6 @@ async def test_default_from_file(Cluster):
     cluster = Cluster(n=1, profile="default", cluster_id="")
     async with cluster:
         cluster2 = ipp.Cluster.from_file()
+        assert cluster2.cluster_file == cluster.cluster_file
         with await cluster.connect_client() as rc:
             assert len(rc) == 1

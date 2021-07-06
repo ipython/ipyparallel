@@ -659,7 +659,11 @@ class TestClient(ClusterTestCase):
         self.add_engines(1)
         assert f.result() is None
 
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
     def test_signal_engines(self):
+
         view = self.client[:]
         if sys.platform.startswith("win"):
             signame = 'CTRL_C_EVENT'
