@@ -47,14 +47,17 @@ def pytest_collection_modifyitems(items):
 
 
 @pytest.fixture(scope="session")
-def cluster(request):
+def cluster(request, ipython_dir):
     """Setup IPython parallel cluster"""
     setup()
-    request.addfinalizer(teardown)
+    try:
+        yield
+    finally:
+        teardown()
 
 
 @pytest.fixture(scope='session')
-def ipython():
+def ipython(ipython_dir):
     config = default_config()
     config.TerminalInteractiveShell.simple_prompt = True
     shell = TerminalInteractiveShell.instance(config=config)
@@ -81,7 +84,7 @@ def Context():
 
 
 @pytest.fixture
-def Cluster(request, io_loop):
+def Cluster(request, ipython_dir, io_loop):
     """Fixture for instantiating Clusters"""
 
     def ClusterConstructor(**kwargs):
