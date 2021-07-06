@@ -3,6 +3,7 @@ import inspect
 import logging
 import os
 import sys
+from contextlib import contextmanager
 from subprocess import check_call
 from subprocess import check_output
 from tempfile import TemporaryDirectory
@@ -21,16 +22,33 @@ from . import setup
 from . import teardown
 
 
-@pytest.fixture(autouse=True, scope="session")
-def ipython_dir():
-    with TemporaryDirectory(suffix="dotipython") as td:
-        with mock.patch.dict(os.environ, {"IPYTHONDIR": td}):
-            assert IPython.paths.get_ipython_dir() == td
-            pd = ProfileDir.create_profile_dir_by_name(td, name="default")
-            # configure fast heartbeats for quicker tests with small numbers of local engines
-            with open(os.path.join(pd.location, "ipcontroller_config.py"), "w") as f:
-                f.write("c.HeartMonitor.period = 200")
+@contextmanager
+def temporary_ipython_dir():
+    # FIXME: cleanup has issues on Windows
+    # this is *probably* a real bug of holding open files,
+    # but it is preventing feedback about test failures
+    td_obj = TemporaryDirectory(suffix=".ipython")
+    td = td_obj.name
+
+    with mock.patch.dict(os.environ, {"IPYTHONDIR": td}):
+        assert IPython.paths.get_ipython_dir() == td
+        pd = ProfileDir.create_profile_dir_by_name(td, name="default")
+        # configure fast heartbeats for quicker tests with small numbers of local engines
+        with open(os.path.join(pd.location, "ipcontroller_config.py"), "w") as f:
+            f.write("c.HeartMonitor.period = 200")
+        try:
             yield td
+        finally:
+            try:
+                td_obj.cleanup()
+            except Exception as e:
+                print(f"Failed to cleanup {td}: {e}", file=sys.stderr)
+
+
+@pytest.fixture(autouse=True, scope="module")
+def ipython_dir(request):
+    with temporary_ipython_dir() as ipython_dir:
+        yield ipython_dir
 
 
 def pytest_collection_modifyitems(items):
@@ -46,7 +64,7 @@ def pytest_collection_modifyitems(items):
         assert not inspect.isasyncgenfunction(item.obj)
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(scope="module")
 def cluster(request, ipython_dir):
     """Setup IPython parallel cluster"""
     setup()
@@ -56,12 +74,13 @@ def cluster(request, ipython_dir):
         teardown()
 
 
-@pytest.fixture(scope='session')
+@pytest.fixture(scope='module')
 def ipython(ipython_dir):
     config = default_config()
     config.TerminalInteractiveShell.simple_prompt = True
     shell = TerminalInteractiveShell.instance(config=config)
-    return shell
+    yield shell
+    TerminalInteractiveShell.clear_instance()
 
 
 @pytest.fixture()
