@@ -1720,7 +1720,7 @@ class BatchSystemLauncher(BaseLauncher):
         # from user config
         ns.update(self.namespace)
         script_as_string = self.formatter.format(self.batch_template, **ns)
-        self.log.debug('Writing batch script: %s', self.batch_file)
+        self.log.debug(f'Writing batch script: {self.batch_file}\n{script_as_string}')
         with open(self.batch_file, 'w') as f:
             f.write(script_as_string)
         os.chmod(self.batch_file, stat.S_IRUSR | stat.S_IWUSR | stat.S_IXUSR)
@@ -1745,8 +1745,10 @@ class BatchSystemLauncher(BaseLauncher):
         # Here we save profile_dir in the context so they
         # can be used in the batch script template as {profile_dir}
         self.write_batch_script(n)
+
         output = check_output(self.args, env=os.environ)
         output = output.decode(DEFAULT_ENCODING, 'replace')
+        self.log.debug(f"Submitted {shlex_join(self.args)}. Output: {output}")
 
         job_id = self.parse_job_id(output)
         self.notify_start(job_id)
