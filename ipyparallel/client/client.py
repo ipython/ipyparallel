@@ -1494,14 +1494,13 @@ class Client(HasTraits):
     # Control methods
     # --------------------------------------------------------------------------
 
-    def clear(self, targets=None, block=None):
-        """Clear the namespace in target(s)."""
-        block = self.block if block is None else block
-        targets = self._build_targets(targets)[0]
+    def _send_control_request(self, targets, msg_type, content, block):
+        """Send a request on the control channel"""
+        target_identities = self._build_targets(targets)[0]
         futures = []
-        for t in targets:
+        for ident in target_identities:
             futures.append(
-                self._send(self._control_stream, 'clear_request', content={}, ident=t)
+                self._send(self._control_stream, msg_type, content=content, ident=ident)
             )
         if not block:
             return multi_future(futures)
@@ -1510,6 +1509,34 @@ class Client(HasTraits):
             msg = future.result()
             if msg['content']['status'] != 'ok':
                 raise self._unwrap_exception(msg['content'])
+
+    def send_signal(self, sig, targets=None, block=None):
+        """Send a signal target(s).
+
+        Parameters
+        ----------
+
+        sig: int or str
+            The signal number or name to send.
+            If a str, will evaluate to getattr(signal, sig) on the engine,
+            which is useful for sending signals cross-platform.
+
+        .. versionadded:: 7.0
+        """
+        block = self.block if block is None else block
+        return self._send_control_request(
+            targets=targets,
+            msg_type='signal_request',
+            content={'sig': sig},
+            block=block,
+        )
+
+    def clear(self, targets=None, block=None):
+        """Clear the namespace in target(s)."""
+        block = self.block if block is None else block
+        return self._send_control_request(
+            targets=targets, msg_type='clear_request', content={}, block=block
+        )
 
     def abort(self, jobs=None, targets=None, block=None):
         """Abort specific jobs from the execution queues of target(s).
@@ -1531,7 +1558,6 @@ class Client(HasTraits):
         """
         block = self.block if block is None else block
         jobs = jobs if jobs is not None else list(self.outstanding)
-        targets = self._build_targets(targets)[0]
 
         msg_ids = []
         if isinstance(jobs, string_types + (AsyncResult,)):
@@ -1549,22 +1575,13 @@ class Client(HasTraits):
             else:
                 msg_ids.append(j)
         content = dict(msg_ids=msg_ids)
-        futures = []
-        for t in targets:
-            futures.append(
-                self._send(
-                    self._control_stream, 'abort_request', content=content, ident=t
-                )
-            )
 
-        if not block:
-            return multi_future(futures)
-        else:
-            for f in futures:
-                f.wait()
-                msg = f.result()
-                if msg['content']['status'] != 'ok':
-                    raise self._unwrap_exception(msg['content'])
+        return self._send_control_request(
+            targets,
+            msg_type='abort_request',
+            content=content,
+            block=block,
+        )
 
     def shutdown(self, targets='all', restart=False, hub=False, block=None):
         """Terminates one or more engine processes, optionally including the hub.

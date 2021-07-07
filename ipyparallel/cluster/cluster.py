@@ -357,7 +357,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             cls = self.engine_launcher_class = import_item(engine_info["class"])
             for engine_set_id, engine_state in engine_info.get("sets", {}).items():
                 self._engine_sets[engine_set_id] = cls.from_dict(
-                    engine_state, parent=self
+                    engine_state,
+                    engine_set_id=engine_set_id,
+                    parent=self,
                 )
 
         return self
@@ -503,6 +505,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             log=self.log,
             profile_dir=self.profile_dir,
             cluster_id=self.cluster_id,
+            engine_set_id=engine_set_id,
             **kwargs,
         )
         if n is None:
@@ -547,6 +550,8 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         r = engine_set.stop()
         if inspect.isawaitable(r):
             await r
+        # retrieve and cleanup output files
+        engine_set.get_output(remove=True)
         self._engine_sets.pop(engine_set_id)
         self.update_cluster_file()
 
@@ -607,6 +612,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             r = self._controller.stop()
             if inspect.isawaitable(r):
                 await r
+
+        if self._controller:
+            self._controller.get_output(remove=True)
 
         self._controller = None
         self.update_cluster_file()

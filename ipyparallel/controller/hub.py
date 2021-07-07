@@ -23,6 +23,7 @@ from tornado import ioloop
 from tornado.gen import coroutine
 from tornado.gen import maybe_future
 from traitlets import Any
+from traitlets import Bytes
 from traitlets import Dict
 from traitlets import HasTraits
 from traitlets import Instance
@@ -122,8 +123,9 @@ class EngineConnector(HasTraits):
     stallback: tornado timeout for stalled registration
     """
 
-    id = Integer(0)
+    id = Integer()
     uuid = Unicode()
+    ident = Bytes()
     pending = Set()
     stallback = Any()
 
@@ -152,17 +154,15 @@ class Hub(LoggingConfigurable):
 
     # internal data structures:
     ids = Set()  # engine IDs
-    keytable = Dict()
-    by_ident = Dict()
-    engines = Dict()
-    clients = Dict()
-    hearts = Dict()
+    by_ident = Dict()  # map bytes identities : int engine id
+    engines = Dict()  # map int engine id : EngineConnector
+    hearts = Dict()  # map bytes identities : int engine id, only for active heartbeats
     pending = Set()
     queues = Dict()  # pending msg_ids keyed by engine_id
     tasks = Dict()  # pending msg_ids submitted as tasks, keyed by client_id
     completed = Dict()  # completed msg_ids keyed by engine_id
     all_completed = Set()  # completed msg_ids keyed by engine_id
-    unassigned = Set()  # set of task msg_ds not yet assigned a destination
+    unassigned = Set()  # set of task msg_ids not yet assigned a destination
     incoming_registrations = Dict()
     registration_timeout = Integer()
     _idcounter = Integer(0)
@@ -830,8 +830,8 @@ class Hub(LoggingConfigurable):
         self.log.info("client::client %r connected", client_id)
         content = dict(status='ok')
         jsonable = {}
-        for k, v in iteritems(self.keytable):
-            jsonable[str(k)] = v
+        for eid, ec in self.engines.items():
+            jsonable[str(eid)] = ec.uuid
         content['engines'] = jsonable
         self.session.send(
             self.query, 'connection_reply', content, parent=msg, ident=client_id
@@ -889,7 +889,9 @@ class Hub(LoggingConfigurable):
         if content['status'] == 'ok':
             if heart in self.heartmonitor.hearts:
                 # already beating
-                self.incoming_registrations[heart] = EngineConnector(id=eid, uuid=uuid)
+                self.incoming_registrations[heart] = EngineConnector(
+                    id=eid, uuid=uuid, ident=heart
+                )
                 self.finish_registration(heart)
             else:
                 purge = lambda: self._purge_stalled_registration(heart)
@@ -898,7 +900,7 @@ class Hub(LoggingConfigurable):
                     purge,
                 )
                 self.incoming_registrations[heart] = EngineConnector(
-                    id=eid, uuid=uuid, stallback=t
+                    id=eid, uuid=uuid, ident=heart, stallback=t
                 )
         else:
             self.log.error(
@@ -920,23 +922,22 @@ class Hub(LoggingConfigurable):
             return
         self.log.info("registration::unregister_engine(%r)", eid)
 
-        uuid = self.keytable[eid]
-        content = dict(id=eid, uuid=uuid)
+        ec = self.engines[eid]
+        content = dict(id=eid, uuid=ec.uuid)
 
         # stop the heartbeats
-        self.hearts.pop(uuid, None)
-        self.heartmonitor.responses.discard(uuid)
-        self.heartmonitor.hearts.discard(uuid)
+        self.hearts.pop(ec.ident, None)
+        self.heartmonitor.responses.discard(ec.ident)
+        self.heartmonitor.hearts.discard(ec.ident)
 
         self.loop.add_timeout(
             self.loop.time() + self.registration_timeout,
-            lambda: self._handle_stranded_msgs(eid, uuid),
+            lambda: self._handle_stranded_msgs(eid, ec.uuid),
         )
 
         # cleanup mappings
-        self.by_ident.pop(uuid, None)
+        self.by_ident.pop(ec.ident, None)
         self.engines.pop(eid, None)
-        self.keytable.pop(eid, None)
 
         self._save_engine_state()
 
@@ -993,14 +994,13 @@ class Hub(LoggingConfigurable):
             self.loop.remove_timeout(ec.stallback)
         eid = ec.id
         self.ids.add(eid)
-        self.keytable[eid] = ec.uuid
         self.engines[eid] = ec
-        self.by_ident[cast_bytes(ec.uuid)] = ec.id
+        self.by_ident[ec.ident] = ec.id
         self.queues[eid] = list()
         self.tasks[eid] = list()
         self.completed[eid] = list()
         self.hearts[heart] = eid
-        content = dict(id=eid, uuid=self.engines[eid].uuid)
+        content = dict(id=eid, uuid=ec.uuid)
         if self.notifier:
             self.session.send(
                 self.notifier, "registration_notification", content=content
@@ -1067,7 +1067,9 @@ class Hub(LoggingConfigurable):
             self.heartmonitor.responses.add(heart)
             self.heartmonitor.hearts.add(heart)
 
-            self.incoming_registrations[heart] = EngineConnector(id=int(eid), uuid=uuid)
+            self.incoming_registrations[heart] = EngineConnector(
+                id=int(eid), uuid=uuid, ident=heart
+            )
             self.finish_registration(heart)
 
         self.notifier = save_notifier

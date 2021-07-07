@@ -33,15 +33,17 @@ from traitlets import List
 from traitlets import observe
 from traitlets import Type
 from traitlets import Unicode
+from traitlets.config import Config
 from zmq.eventloop import zmqstream
 
+from .kernel import IPythonParallelKernel as Kernel
+from .log import EnginePUBHandler
+from .nanny import start_nanny
 from ipyparallel.apps.baseapp import base_aliases
 from ipyparallel.apps.baseapp import base_flags
 from ipyparallel.apps.baseapp import BaseParallelApplication
 from ipyparallel.apps.baseapp import catch_config_error
 from ipyparallel.controller.heartmonitor import Heart
-from ipyparallel.engine.kernel import IPythonParallelKernel as Kernel
-from ipyparallel.engine.log import EnginePUBHandler
 from ipyparallel.util import disambiguate_ip_address
 from ipyparallel.util import disambiguate_url
 
@@ -60,8 +62,8 @@ See the `profile` and `profile-dir` options for details.
 """
 
 _examples = """
-ipengine --url=tcp://192.168.0.1:1000     # connect to hub at specific url
-ipengine --log-to-file --log-level=DEBUG  # log to a file with DEBUG verbosity
+ipengine --file=path/to/ipcontroller-engine.json     # connect to hub using a specific url
+ipengine --log-level=DEBUG > engine.log 2>&1  # log to a file with DEBUG verbosity
 """
 
 DEFAULT_MPI_INIT = """
@@ -104,6 +106,19 @@ class IPEngine(BaseParallelApplication):
     examples = _examples
     classes = List([ZMQInteractiveShell, ProfileDir, Session, Kernel])
     _deprecated_classes = ["EngineFactory", "IPEngineApp"]
+
+    enable_nanny = Bool(
+        True,
+        config=True,
+        help="""Enable the nanny process.
+
+    The nanny process enables remote signaling of single engines
+    and more responsive notification of engine shutdown.
+
+    .. versionadded:: 7.0
+
+    """,
+    )
 
     startup_script = Unicode(
         u'', config=True, help='specify a script to be run at startup'
@@ -434,16 +449,17 @@ class IPEngine(BaseParallelApplication):
         reg = ctx.socket(zmq.DEALER)
         reg.setsockopt(zmq.IDENTITY, self.bident)
         connect(reg, self.registration_url)
+
         self.registrar = zmqstream.ZMQStream(reg, self.loop)
 
         content = dict(uuid=self.ident)
         if self.id is not None:
             self.log.info("Requesting id: %i", self.id)
             content['id'] = self.id
+        self._registration_completed = False
         self.registrar.on_recv(
             lambda msg: self.complete_registration(msg, connect, maybe_tunnel)
         )
-        # print (self.session.key)
 
         self.session.send(self.registrar, "registration_request", content=content)
 
@@ -453,8 +469,13 @@ class IPEngine(BaseParallelApplication):
         self._hb_last_pinged = time.time()
 
     def complete_registration(self, msg, connect, maybe_tunnel):
-        # print msg
-        self.loop.remove_timeout(self._abort_timeout)
+        try:
+            self._complete_registration(msg, connect, maybe_tunnel)
+        except Exception as e:
+            self.log.critical(f"Error completing registration: {e}", exc_info=True)
+            self.exit(255)
+
+    def _complete_registration(self, msg, connect, maybe_tunnel):
         ctx = self.context
         loop = self.loop
         identity = self.bident
@@ -496,10 +517,15 @@ class IPEngine(BaseParallelApplication):
                 connect(stream, addr)
 
             # control stream:
-            control_addr = url('control')
+            control_url = url('control')
+            if self.enable_nanny:
+                nanny_url = self.start_nanny(
+                    control_url=control_url,
+                )
+                control_url = nanny_url
             control_stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
             control_stream.setsockopt(zmq.IDENTITY, identity)
-            connect(control_stream, control_addr)
+            connect(control_stream, control_url)
 
             # create iopub stream:
             iopub_addr = url('iopub')
@@ -549,6 +575,7 @@ class IPEngine(BaseParallelApplication):
             )
 
             # FIXME: This is a hack until IPKernelApp and IPEngineApp can be fully merged
+            self.init_signal()
             app = IPKernelApp(
                 parent=self, shell=self.kernel.shell, kernel=self.kernel, log=self.log
             )
@@ -569,6 +596,19 @@ class IPEngine(BaseParallelApplication):
             identity,
         )
         self.log.info("Completed registration with id %i" % self.id)
+        self.loop.remove_timeout(self._abort_timeout)
+
+    def start_nanny(self, control_url):
+        self.log.info("Starting nanny")
+        config = Config()
+        config.Session = self.config.Session
+        return start_nanny(
+            engine_id=self.id,
+            identity=self.bident,
+            control_url=control_url,
+            registration_url=self.registration_url,
+            config=config,
+        )
 
     def start_heartbeat(self, hb_ping, hb_pong, hb_period, identity):
         """Start our heart beating"""
@@ -712,7 +752,6 @@ class IPEngine(BaseParallelApplication):
         super().initialize(argv)
         self.init_engine()
         self.forward_logging()
-        self.init_signal()
 
     def init_signal(self):
         signal.signal(signal.SIGINT, self._signal_sigint)

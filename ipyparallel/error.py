@@ -266,7 +266,7 @@ def unwrap_exception(content):
     err = RemoteError(
         content['ename'],
         content['evalue'],
-        ''.join(content['traceback']),
+        '\n'.join(content['traceback']),
         content.get('engine_info', {}),
     )
     return err

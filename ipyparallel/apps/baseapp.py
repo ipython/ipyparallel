@@ -202,6 +202,8 @@ class BaseParallelApplication(BaseIPythonApplication):
             # Start logging to the new log file
             log_filename = self.name + u'-' + str(os.getpid()) + u'.log'
             logfile = os.path.join(log_dir, log_filename)
+            if sys.__stderr__:
+                print(f"Sending logs to {logfile}", file=sys.__stderr__)
             open_log_file = open(logfile, 'w')
         else:
             open_log_file = None
