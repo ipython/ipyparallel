@@ -1,12 +1,10 @@
 """toplevel setup/teardown for parallel tests."""
 from __future__ import print_function
 
+import asyncio
 import os
-import tempfile
 import time
-from subprocess import PIPE
 from subprocess import Popen
-from subprocess import STDOUT
 
 from IPython.paths import get_ipython_dir
 
@@ -125,7 +123,9 @@ def teardown():
         p = launchers.pop()
         if p.poll() is None:
             try:
-                p.stop()
+                f = p.stop()
+                if f:
+                    asyncio.run(f)
             except Exception as e:
                 print(e)
                 pass
