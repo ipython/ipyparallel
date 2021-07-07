@@ -43,17 +43,6 @@ def nullcontext():
 #  Distributed under the terms of the BSD License.  The full license is in
 #  the file COPYING, distributed as part of this software.
 # -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# Imports
-# -----------------------------------------------------------------------------
-
-try:
-    from asyncio import coroutine
-except ImportError:  # py2
-
-    def coroutine(f):
-        raise NotImplementedError()
-
 
 import inspect
 import re
@@ -77,6 +66,20 @@ def _iscoroutinefunction(f):
     if hasattr(inspect, 'iscoroutinefunction') and inspect.iscoroutinefunction(f):
         return True
     return False
+
+
+def _asyncify(f):
+    """Wrap a blocking call in a coroutine
+
+    Does not make the call non-blocking,
+    just conforms to the API assuming it is awaitable.
+    For use when patching-in replacement methods.
+    """
+
+    async def async_f(*args, **kwargs):
+        return f(*args, **kwargs)
+
+    return async_f
 
 
 NO_LAST_RESULT = "%pxresult recalls last %px result, which has not yet been used."
@@ -444,14 +447,14 @@ class ParallelMagics(Magics):
         if _iscoroutinefunction(self.shell.run_cell):
             # original is a coroutine,
             # wrap ours in a coroutine
-            pxrun_cell = coroutine(pxrun_cell)
+            pxrun_cell = _asyncify(pxrun_cell)
         self.shell.run_cell = pxrun_cell
 
         pxrun_nodes = self.pxrun_nodes
         if _iscoroutinefunction(self.shell.run_ast_nodes):
             # original is a coroutine,
             # wrap ours in a coroutine
-            pxrun_nodes = coroutine(pxrun_nodes)
+            pxrun_nodes = _asyncify(pxrun_nodes)
         self.shell.run_ast_nodes = pxrun_nodes
 
         self._autopx = True
