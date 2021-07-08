@@ -1,6 +1,5 @@
 import asyncio
 import os
-import shutil
 import signal
 import sys
 import time
@@ -84,7 +83,7 @@ async def test_start_stop_engines(Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class)
     await cluster.start_controller()
 
-    n = 3
+    n = 2
     engine_set_id = await cluster.start_engines(n)
     assert engine_set_id in cluster._engine_sets
     engine_set = cluster._engine_sets[engine_set_id]
@@ -123,10 +122,10 @@ async def test_start_stop_cluster(Cluster, engine_launcher_class):
 async def test_signal_engines(request, Cluster, engine_launcher_class):
     cluster = Cluster(engine_launcher_class=engine_launcher_class)
     await cluster.start_controller()
-    engine_set_id = await cluster.start_engines(n=3)
+    engine_set_id = await cluster.start_engines(n=2)
     rc = await cluster.connect_client()
     request.addfinalizer(rc.close)
-    rc.wait_for_engines(3)
+    rc.wait_for_engines(2)
     # seems to be a problem if we start too soon...
     await asyncio.sleep(1)
     # ensure responsive
@@ -153,7 +152,7 @@ async def test_signal_engines(request, Cluster, engine_launcher_class):
 
 
 async def test_restart_engines(Cluster, engine_launcher_class):
-    n = 3
+    n = 2
     async with Cluster(engine_launcher_class=engine_launcher_class, n=n) as rc:
         cluster = rc.cluster
         engine_set_id = next(iter(cluster._engine_sets))
