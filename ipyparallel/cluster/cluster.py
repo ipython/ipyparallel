@@ -264,6 +264,12 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     _controller = Any()
     _engine_sets = Dict()
 
+    def __init__(self, **kwargs):
+        """Construct a Cluster"""
+        if 'parent' not in kwargs and 'config' not in kwargs:
+            kwargs['parent'] = self._default_parent()
+        super().__init__(**kwargs)
+
     def __del__(self):
         if not self.shutdown_atexit:
             return
