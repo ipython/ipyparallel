@@ -1348,7 +1348,7 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher, SSHLauncher):
         return dlist
 
 
-class SSHProxyEngineSetLauncher(SSHLauncher):
+class SSHProxyEngineSetLauncher(SSHLauncher, EngineLauncher):
     """Launcher for calling
     `ipcluster engines` on a remote machine.
 
