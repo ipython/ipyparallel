@@ -7,6 +7,7 @@ and monitors traffic through the various queues.
 # Distributed under the terms of the Modified BSD License.
 from __future__ import print_function
 
+import inspect
 import json
 import os
 import sys
@@ -20,8 +21,6 @@ from ipython_genutils.py3compat import unicode_type
 from jupyter_client.jsonutil import parse_date
 from jupyter_client.session import Session
 from tornado import ioloop
-from tornado.gen import coroutine
-from tornado.gen import maybe_future
 from traitlets import Any
 from traitlets import Bytes
 from traitlets import Dict
@@ -319,8 +318,7 @@ class Hub(LoggingConfigurable):
             self.log.error("Unrecognized monitor topic: %r", switch)
 
     @util.log_errors
-    @coroutine
-    def dispatch_query(self, msg):
+    async def dispatch_query(self, msg):
         """Route registration requests and queries from clients."""
         try:
             idents, msg = self.session.feed_identities(msg)
@@ -357,8 +355,8 @@ class Hub(LoggingConfigurable):
 
         try:
             f = handler(idents, msg)
-            if f:
-                yield maybe_future(f)
+            if f and inspect.isawaitable(f):
+                await f
         except Exception:
             content = error.wrap_exception()
             self.log.error("Error handling request: %r", msg_type, exc_info=True)
@@ -1450,8 +1448,7 @@ class Hub(LoggingConfigurable):
             buffers=buffers,
         )
 
-    @coroutine
-    def become_dask(self, client_id, msg):
+    async def become_dask(self, client_id, msg):
         """Start a dask.distributed Scheduler."""
         if self.distributed_scheduler is None:
             kwargs = msg['content'].get('scheduler_args', {})
@@ -1459,7 +1456,7 @@ class Hub(LoggingConfigurable):
             from distributed import Scheduler
 
             self.distributed_scheduler = scheduler = Scheduler(**kwargs)
-            yield scheduler.start()
+            await scheduler.start()
         content = {
             'status': 'ok',
             'ip': self.distributed_scheduler.ip,

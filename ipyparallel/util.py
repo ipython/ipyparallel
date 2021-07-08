@@ -2,6 +2,9 @@
 """Some generic utilities for dealing with classes, urls, and serialization."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
+import functools
+import inspect
 import logging
 import os
 import re
@@ -23,7 +26,6 @@ import tqdm
 import zmq
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzlocal
-from decorator import decorator
 from IPython import get_ipython
 from IPython.core.profiledir import ProfileDir
 from IPython.core.profiledir import ProfileDirError
@@ -101,17 +103,32 @@ class ReverseDict(dict):
 # -----------------------------------------------------------------------------
 
 
-@decorator
-def log_errors(f, self, *args, **kwargs):
+def log_errors(f):
     """decorator to log unhandled exceptions raised in a method.
 
     For use wrapping on_recv callbacks, so that exceptions
     do not cause the stream to be closed.
     """
-    try:
-        return f(self, *args, **kwargs)
-    except Exception as e:
-        self.log.error("Uncaught exception in %r" % f, exc_info=True)
+
+    @functools.wraps(f)
+    def logs_errors(self, *args, **kwargs):
+        try:
+            result = f(self, *args, **kwargs)
+        except Exception:
+            self.log.error("Uncaught exception in {f}: {future.exception()}")
+            return
+
+        if inspect.isawaitable(result):
+            # if it's async, schedule logging for when the future resolves
+            future = asyncio.ensure_future(result)
+
+            def _log_error(future):
+                if future.exception():
+                    self.log.error("Uncaught exception in {f}: {future.exception()}")
+
+            future.add_done_callback(_log_error)
+
+    return logs_errors
 
 
 def is_url(url):
