@@ -23,6 +23,7 @@ from signal import SIGTERM
 from types import FunctionType
 
 import tqdm
+import traitlets
 import zmq
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzlocal
@@ -720,3 +721,63 @@ def _locate_profiles(profiles=None):
 def shlex_join(cmd):
     """Backport shlex.join to Python < 3.8"""
     return ' '.join(shlex.quote(s) for s in cmd)
+
+
+_traitlet_annotations = {
+    traitlets.Bool: bool,
+    traitlets.Integer: int,
+    traitlets.Float: float,
+    traitlets.List: list,
+    traitlets.Dict: dict,
+    traitlets.Set: set,
+    traitlets.Unicode: str,
+    traitlets.Tuple: tuple,
+}
+
+
+class _TraitAnnotation:
+    """Trait annotation for a trait type"""
+
+    def __init__(self, trait_type):
+        self.trait_type = trait_type
+
+    def __repr__(self):
+        return self.trait_type.__name__
+
+
+def _trait_annotation(trait_type):
+    """Return an annotation for a trait"""
+    if trait_type in _traitlet_annotations:
+        return _traitlet_annotations[trait_type]
+    else:
+        annotation = _traitlet_annotations[trait_type] = _TraitAnnotation(trait_type)
+        return annotation
+
+
+def _traitlet_signature(cls):
+    """Add traitlet-based signature to a class"""
+    parameters = []
+    for name, trait in cls.class_traits().items():
+        if name.startswith("_"):
+            # omit private traits
+            continue
+        if hasattr(trait, 'default'):
+            # traitlets 5
+            default = trait.default()
+        else:
+            default = trait.default_value
+        if default is traitlets.Undefined:
+            default = None
+
+        annotation = _trait_annotation(trait.__class__)
+
+        parameters.append(
+            inspect.Parameter(
+                name=name,
+                kind=inspect.Parameter.KEYWORD_ONLY,
+                annotation=annotation,
+                default=default,
+            )
+        )
+    cls.__signature__ = inspect.Signature(parameters)
+    return cls

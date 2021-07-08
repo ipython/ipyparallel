@@ -39,6 +39,7 @@ from ..traitlets import Launcher
 from ..util import _all_profile_dirs
 from ..util import _default_profile_dir
 from ..util import _locate_profiles
+from ..util import _traitlet_signature
 from ..util import abbreviate_profile_dir
 
 _suffix_chars = string.ascii_lowercase + string.digits
@@ -61,6 +62,7 @@ def _atexit_cleanup_clusters(*args):
 _atexit_cleanup_clusters.registered = False
 
 
+@_traitlet_signature
 class Cluster(AsyncFirst, LoggingConfigurable):
     """Class representing an IPP cluster
 
