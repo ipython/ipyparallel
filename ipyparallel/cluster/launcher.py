@@ -15,8 +15,8 @@ import stat
 import sys
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
-from signal import SIGINT
 from signal import SIGTERM
 from subprocess import check_output
 from subprocess import PIPE
@@ -84,6 +84,12 @@ class UnknownStatus(LauncherError):
 
 class BaseLauncher(LoggingConfigurable):
     """An abstraction for starting, stopping and signaling a process."""
+
+    stop_timeout = Integer(
+        60,
+        config=True,
+        help="The number of seconds to wait for a process to exit before raising a TimeoutError in stop",
+    )
 
     # In all of the launchers, the work_dir is where child processes will be
     # run. This will usually be the profile_dir, but may not be. any work_dir
@@ -249,6 +255,10 @@ class BaseLauncher(LoggingConfigurable):
         """
         raise NotImplementedError('signal must be implemented in a subclass')
 
+    def join(self, timeout=None):
+        """Wait for the process to finish"""
+        raise NotImplementedError('join must be implemented in a subclass')
+
     output_limit = Integer(
         100,
         config=True,
@@ -376,6 +386,12 @@ class LocalProcessLauncher(BaseLauncher):
         os.makedirs(log_dir, exist_ok=True)
         return os.path.join(log_dir, f'{self.identifier}.log')
 
+    stop_seconds_until_kill = Integer(
+        5,
+        config=True,
+        help="""The number of seconds to wait for a process to exit after sending SIGTERM before sending SIGKILL""",
+    )
+
     stdout = None
     stderr = None
     process = None
@@ -446,6 +462,18 @@ class LocalProcessLauncher(BaseLauncher):
         if self.log.level <= logging.DEBUG:
             self._start_streaming()
 
+    async def join(self, timeout=None):
+        """Wait for the process to exit"""
+        with ThreadPoolExecutor(1) as pool:
+            try:
+                await asyncio.wrap_future(
+                    pool.submit(partial(self.process.wait, timeout))
+                )
+            except psutil.TimeoutExpired:
+                raise TimeoutError(
+                    f"Process {self.pid} did not complete in {timeout} seconds."
+                )
+
     def _stream_file(self, path):
         """Stream one file"""
         with open(path, 'r') as f:
@@ -460,7 +488,7 @@ class LocalProcessLauncher(BaseLauncher):
                     time.sleep(0.1)
 
     def _start_streaming(self):
-        t = threading.Thread(
+        self._stream_thread = t = threading.Thread(
             target=partial(self._stream_file, self.output_file),
             name=f"Stream Output {self.identifier}",
             daemon=True,
@@ -483,34 +511,45 @@ class LocalProcessLauncher(BaseLauncher):
 
         if remove and os.path.isfile(self.output_file):
             self.log.debug(f"Removing {self.output_file}")
-            os.remove(self.output_file)
+            try:
+                os.remove(self.output_file)
+            except Exception as e:
+                # don't crash on failure to remove a file,
+                # e.g. due to another processing having it open
+                self.log.error(f"Failed to remove {self.output_file}: {e}")
 
         return self._output
 
-    def stop(self):
-        return self.interrupt_then_kill()
-
-    def signal(self, sig):
-        if self.state == 'running':
-            if WINDOWS and sig != SIGINT:
-                # use Windows tree-kill for better child cleanup
-                cmd = ['taskkill', '-pid', str(self.process.pid), '-t']
-                if sig == SIGKILL:
-                    cmd.append("-f")
-                check_output(cmd)
-            else:
-                self.process.send_signal(sig)
-
-    def interrupt_then_kill(self, delay=2.0):
-        """Send TERM, wait a delay and then send KILL."""
+    async def stop(self):
         try:
             self.signal(SIGTERM)
         except Exception as e:
-            self.log.debug(f"interrupt failed: {e!r}")
-            pass
-        self.killer = asyncio.get_event_loop().call_later(
-            delay, lambda: self.signal(SIGKILL)
-        )
+            self.log.debug(f"TERM failed: {e!r}")
+
+        try:
+            await self.join(timeout=self.stop_seconds_until_kill)
+        except TimeoutError:
+            self.log.warning(
+                f"Process {self.pid} did not exit in {self.stop_seconds_until_kill} seconds after TERM"
+            )
+        else:
+            return
+
+        try:
+            self.signal(SIGKILL)
+        except Exception as e:
+            self.log.debug(f"KILL failed: {e!r}")
+
+        await self.join(timeout=self.stop_timeout)
+
+    def signal(self, sig):
+        if self.state == 'running':
+            if WINDOWS and sig == SIGKILL:
+                # use Windows tree-kill for better child cleanup
+                cmd = ['taskkill', '/pid', str(self.process.pid), '/t', '/F']
+                check_output(cmd)
+            else:
+                self.process.send_signal(sig)
 
     # callbacks, etc:
 
@@ -637,21 +676,18 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
         return ['engine set']
 
     def signal(self, sig):
-        dlist = []
-        for el in itervalues(self.launchers):
-            d = el.signal(sig)
-            dlist.append(d)
-        return dlist
+        for el in list(self.launchers.values()):
+            el.signal(sig)
 
-    def interrupt_then_kill(self, delay=1.0):
-        dlist = []
-        for el in itervalues(self.launchers):
-            d = el.interrupt_then_kill(delay)
-            dlist.append(d)
-        return dlist
+    async def stop(self):
+        futures = []
+        for el in list(self.launchers.values()):
+            f = el.stop()
+            if inspect.isawaitable(f):
+                futures.append(asyncio.ensure_future(f))
 
-    def stop(self):
-        return self.interrupt_then_kill()
+        if futures:
+            await asyncio.gather(*futures)
 
     def _notice_engine_stopped(self, data):
         identifier = data['identifier']
@@ -1146,6 +1182,12 @@ class SSHLauncher(LocalProcessLauncher):
             raise TimeoutError("still running")
         return int(values.get("exit_code", -1))
 
+    async def join(self, timeout=None):
+        with ThreadPoolExecutor(1) as pool:
+            await asyncio.wrap_future(
+                pool.submit(partial(self.wait_one, timeout=timeout))
+            )
+
     def signal(self, sig):
         if self.state == 'running':
             check_output(
@@ -1306,7 +1348,7 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher, SSHLauncher):
         return dlist
 
 
-class SSHProxyEngineSetLauncher(SSHLauncher):
+class SSHProxyEngineSetLauncher(SSHLauncher, EngineLauncher):
     """Launcher for calling
     `ipcluster engines` on a remote machine.
 
