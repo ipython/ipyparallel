@@ -19,15 +19,17 @@ jobs:
       matrix:
         include:
           - python: "3.9"
-            ssh: ssh
+            cluster_type: ssh
+          - python: "3.8"
+            cluster_type: mpi
+          - python: "3.7"
+            cluster_type: slurm
           - python: "3.6"
             tornado: "5.1.1"
           - python: "3.7"
             controller_ip: "*"
           - python: "3.8"
             runs_on: windows-2019
-          - python: "3.8"
-            mpi: mpi
           - python: "3.9"
             runs_on: macos-10.15
 
@@ -47,15 +49,27 @@ jobs:
           echo "IPP_CONTROLLER_IP=${{ matrix.controller_ip }}" >> $GITHUB_ENV
 
       - name: Set up docker-compose for ssh launcher
-        if: ${{ matrix.ssh }}
+        if: ${{ matrix.cluster_type == 'ssh' }}
         run: |
           export DOCKER_BUILDKIT=1
           export COMPOSE_DOCKER_CLI_BUILD=1
           cd ci/ssh
           docker-compose up -d --build
 
+      - name: Set up slurm
+        if: ${{ matrix.cluster_type == 'slurm' }}
+        run: |
+          sudo rm -rf /var/lib/apt/lists
+          sudo apt-get update && sudo apt-get -f -y install && sudo apt-get -y install slurm-wlm
+          sudo cp ci/slurm/slurm.conf /etc/slurm-llnl/
+          sudo mkdir /var/spool/slurmctl
+          sudo mkdir /var/spool/slurmd
+          sudo service munge start
+          sudo service slurmd start
+          sudo service slurmctld start
+
       - name: Install Python (conda) ${{ matrix.python }}
-        if: matrix.mpi
+        if: ${{ matrix.cluster_type == 'mpi' }}
         run: |
           export MAMBA_ROOT_PREFIX=$HOME/conda
           test -d $MAMBA_ROOT_PREFIX || mkdir $MAMBA_ROOT_PREFIX
@@ -66,7 +80,7 @@ jobs:
           echo "PATH=$MAMBA_ROOT_PREFIX/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install Python ${{ matrix.python }}
-        if: ${{ ! matrix.mpi }}
+        if: ${{ matrix.cluster_type != 'mpi' }}
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python }}
@@ -85,23 +99,29 @@ jobs:
       - name: Show environment
         run: pip freeze
 
-      - name: Run mpi tests
-        if: ${{ matrix.mpi }}
+      - name: Run ${{ matrix.cluster_type }} tests
+        if: ${{ matrix.cluster_type }}
         run: |
-          pytest -vx --color=yes --cov=ipyparallel ipyparallel/tests/test_cluster.py
-
-      - name: Run ssh tests
-        if: ${{ matrix.ssh }}
-        run: |
-          pytest -ra -v --maxfail=2 --color=yes --cov=ipyparallel ipyparallel/tests/test_ssh.py
+          pytest -ra -v --maxfail=2 --color=yes --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
 
       - name: Run tests
-        if: ${{ ! matrix.mpi && ! matrix.ssh }}
+        if: ${{ ! matrix.cluster_type }}
         # FIXME: --color=yes explicitly set because:
         #        https://github.com/actions/runner/issues/241
         run: |
-          pytest -v --maxfail=3 --color=yes --cov=ipyparallel ipyparallel/tests
+          pytest -ra -v --maxfail=3 --color=yes --cov=ipyparallel ipyparallel/tests
 
       - name: Submit codecov report
         run: |
           codecov
+
+      - name: Report on slurm
+        if: ${{ matrix.cluster_type == 'slurm' && failure() }}
+        run: |
+          set -x
+          slurmd -C
+          ls -l
+          squeue
+          sinfo
+          scontrol show node=localhost
+          sudo cat /var/log/slurm-llnl/*
