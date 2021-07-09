@@ -15,16 +15,18 @@ but has key differences, justifying both existing:
 """
 import asyncio
 import logging
+import multiprocessing
 import os
 import signal
+import sys
 from multiprocessing import Pipe
-from multiprocessing import Process
+from multiprocessing.connection import Connection
 from threading import Thread
 
 import psutil
-import tornado.ioloop
 import zmq
 from jupyter_client.session import Session
+from tornado.ioloop import IOLoop
 from traitlets.config import Config
 from zmq.eventloop.zmqstream import ZMQStream
 
@@ -35,7 +37,10 @@ from ipyparallel.util import local_logger
 class KernelNanny:
     """Object for monitoring
 
-    Must be  handling signal messages"""
+    Must be child of engine
+
+    Handles signal messages and watches Engine process for exiting
+    """
 
     def __init__(
         self,
@@ -65,6 +70,7 @@ class KernelNanny:
         self.control_handlers = {
             "signal_request": self.signal_request,
         }
+        self._finish_called = False
 
     def wait_for_parent_thread(self):
         """Wait for my parent to exit, then I'll notify the controller and shut down"""
@@ -79,6 +85,20 @@ class KernelNanny:
         self.log.critical(f"Parent {self.pid} exited with status {exit_code}.")
         self.loop.add_callback(self.finish)
 
+    def pipe_handler(self, fd, events):
+        self.log.debug(f"Pipe event {events}")
+        self.loop.remove_handler(fd)
+        try:
+            status = self.parent_process.wait(0)
+        except psutil.TimeoutExpired:
+            try:
+                status = self.parent_process.status()
+            except psutil.NoSuchProcessError:
+                status = "exited"
+
+        self.log.critical(f"Pipe closed, parent {self.pid} has status: {status}")
+        self.finish()
+
     def notify_exit(self):
         """Notify the Hub that our parent has exited"""
         self.log.info("Notifying Hub that our parent has shut down")
@@ -91,6 +111,9 @@ class KernelNanny:
 
     def finish(self):
         """Prepare to exit and stop our event loop."""
+        if self._finish_called:
+            return
+        self._finish_called = True
         self.notify_exit()
         self.loop.add_callback(self.loop.stop)
 
@@ -160,7 +183,7 @@ class KernelNanny:
         # ignore SIGINT sent to parent
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-        self.loop = tornado.ioloop.IOLoop.current()
+        self.loop = IOLoop.current()
         self.context = zmq.Context()
 
         # set up control socket (connection to Scheduler)
@@ -176,7 +199,15 @@ class KernelNanny:
 
         # now that we've bound, pass port to parent via AsyncResult
         self.start_pipe.send(f"tcp://127.0.0.1:{port}")
-        self.loop.add_timeout(self.loop.time() + 10, self.start_pipe.close)
+        if sys.platform.startswith("win"):
+            # close the pipe on Windows
+            self.loop.add_timeout(self.loop.time() + 10, self.start_pipe.close)
+        else:
+            # otherwise, watch for the pipe to close
+            # as a signal that our parent is shutting down
+            self.loop.add_handler(
+                self.start_pipe, self.pipe_handler, IOLoop.READ | IOLoop.ERROR
+            )
         self.parent_stream = ZMQStream(self.parent_socket)
         self.parent_stream.on_recv_stream(self.dispatch_parent)
         try:
@@ -197,7 +228,7 @@ class KernelNanny:
         """
         # start a new event loop for the forked process
         asyncio.set_event_loop(asyncio.new_event_loop())
-        tornado.ioloop.IOLoop().make_current()
+        IOLoop().make_current()
         self = cls(*args, **kwargs)
         self.start()
 
@@ -214,12 +245,22 @@ def start_nanny(**kwargs):
     """
 
     pipe_r, pipe_w = Pipe(duplex=False)
+
     kwargs['start_pipe'] = pipe_w
     kwargs['pid'] = os.getpid()
-    p = Process(target=KernelNanny.main, kwargs=kwargs, name="KernelNanny", daemon=True)
+    # make sure to not use fork, which can be an issue for MPI
+    p = multiprocessing.get_context("spawn").Process(
+        target=KernelNanny.main,
+        kwargs=kwargs,
+        name="KernelNanny",
+        daemon=True,
+    )
     p.start()
     # close our copy of the write pipe
     pipe_w.close()
     nanny_url = pipe_r.recv()
-    pipe_r.close()
-    return nanny_url
+    if sys.platform.startswith("win"):
+        pipe_r.close()
+    # return the handle on the read pipe
+    # need to keep this open for the nanny
+    return nanny_url, pipe_r
