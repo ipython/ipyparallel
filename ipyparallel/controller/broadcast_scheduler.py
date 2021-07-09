@@ -21,10 +21,6 @@ class BroadcastScheduler(Scheduler):
     outgoing_streams = List()
 
     def start(self):
-        self.log.info(
-            'Broadcast Scheduler started with pid=%s',
-            os.getpid(),
-        )
         self.client_stream.on_recv(self.dispatch_submission, copy=False)
         if self.is_leaf:
             super().start()
