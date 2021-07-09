@@ -913,14 +913,17 @@ class Hub(LoggingConfigurable):
             eid = msg['content']['id']
         except:
             self.log.error(
-                "registration::bad engine id for unregistration: %r",
-                ident,
-                exc_info=True,
+                f"registration::bad request for engine for unregistration: {msg['content']}",
             )
             return
-        self.log.info("registration::unregister_engine(%r)", eid)
-
+        if eid not in self.engines:
+            self.log.info(
+                f"registration::unregister_engine({eid}) already unregistered"
+            )
+            return
+        self.log.info(f"registration::unregister_engine({eid})")
         ec = self.engines[eid]
+
         content = dict(id=eid, uuid=ec.uuid)
 
         # stop the heartbeats
