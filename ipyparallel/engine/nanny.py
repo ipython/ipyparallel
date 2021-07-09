@@ -15,12 +15,12 @@ but has key differences, justifying both existing:
 """
 import asyncio
 import logging
-import multiprocessing
 import os
+import pickle
 import signal
 import sys
-from multiprocessing import Pipe
-from multiprocessing.connection import Connection
+from subprocess import PIPE
+from subprocess import Popen
 from threading import Thread
 
 import psutil
@@ -51,7 +51,7 @@ class KernelNanny:
         registration_url: str,
         identity: bytes,
         config: Config,
-        start_pipe: Pipe,
+        pipe,
         log_level: int = logging.INFO,
     ):
         self.pid = pid
@@ -60,9 +60,10 @@ class KernelNanny:
         self.control_url = control_url
         self.registration_url = registration_url
         self.identity = identity
-        self.start_pipe = start_pipe
         self.config = config
+        self.pipe = pipe
         self.session = Session(config=self.config)
+        log_level = 10
 
         self.log = local_logger(f"{self.__class__.__name__}.{engine_id}", log_level)
         self.log.propagate = False
@@ -88,6 +89,10 @@ class KernelNanny:
     def pipe_handler(self, fd, events):
         self.log.debug(f"Pipe event {events}")
         self.loop.remove_handler(fd)
+        try:
+            fd.close()
+        except BrokenPipeError:
+            pass
         try:
             status = self.parent_process.wait(0)
         except psutil.TimeoutExpired:
@@ -198,15 +203,12 @@ class KernelNanny:
         port = self.parent_socket.bind_to_random_port("tcp://127.0.0.1")
 
         # now that we've bound, pass port to parent via AsyncResult
-        self.start_pipe.send(f"tcp://127.0.0.1:{port}")
-        if sys.platform.startswith("win"):
-            # close the pipe on Windows
-            self.loop.add_timeout(self.loop.time() + 10, self.start_pipe.close)
-        else:
-            # otherwise, watch for the pipe to close
+        self.pipe.write(f"tcp://127.0.0.1:{port}\n")
+        if not sys.platform.startswith("win"):
+            # watch for the stdout pipe to close
             # as a signal that our parent is shutting down
             self.loop.add_handler(
-                self.start_pipe, self.pipe_handler, IOLoop.READ | IOLoop.ERROR
+                self.pipe, self.pipe_handler, IOLoop.READ | IOLoop.ERROR
             )
         self.parent_stream = ZMQStream(self.parent_socket)
         self.parent_stream.on_recv_stream(self.dispatch_parent)
@@ -215,6 +217,11 @@ class KernelNanny:
         finally:
             self.loop.close(all_fds=True)
             self.context.term()
+            try:
+                self.pipe.close()
+            except BrokenPipeError:
+                pass
+            self.log.debug("exiting")
 
     @classmethod
     def main(cls, *args, **kwargs):
@@ -244,23 +251,39 @@ def start_nanny(**kwargs):
       instead of connecting directly to the control Scheduler.
     """
 
-    pipe_r, pipe_w = Pipe(duplex=False)
-
-    kwargs['start_pipe'] = pipe_w
     kwargs['pid'] = os.getpid()
-    # make sure to not use fork, which can be an issue for MPI
-    p = multiprocessing.get_context("spawn").Process(
-        target=KernelNanny.main,
-        kwargs=kwargs,
-        name="KernelNanny",
-        daemon=True,
+
+    env = os.environ.copy()
+    env['PYTHONUNBUFFERED'] = '1'
+    p = Popen(
+        [sys.executable, '-m', __name__],
+        stdin=PIPE,
+        stdout=PIPE,
+        env=env,
+        start_new_session=True,  # don't inherit signals
     )
-    p.start()
-    # close our copy of the write pipe
-    pipe_w.close()
-    nanny_url = pipe_r.recv()
-    if sys.platform.startswith("win"):
-        pipe_r.close()
-    # return the handle on the read pipe
-    # need to keep this open for the nanny
-    return nanny_url, pipe_r
+    p.stdin.write(pickle.dumps(kwargs))
+    p.stdin.close()
+    out = p.stdout.readline()
+    nanny_url = out.decode("utf8").strip()
+    if not nanny_url:
+        p.terminate()
+        raise RuntimeError("nanny failed")
+    # return the handle on the process
+    # need to keep the pipe open for the nanny
+    return nanny_url, p
+
+
+def main():
+    """Entrypoint from the command-line
+
+    Loads kwargs from stdin,
+    sets pipe to stdout
+    """
+    kwargs = pickle.load(os.fdopen(sys.stdin.fileno(), mode='rb'))
+    kwargs['pipe'] = sys.stdout
+    KernelNanny.main(**kwargs)
+
+
+if __name__ == "__main__":
+    main()
