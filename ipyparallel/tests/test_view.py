@@ -15,16 +15,15 @@ from IPython import get_ipython
 from IPython.utils.io import capture_output
 from ipython_genutils.py3compat import unicode_type
 
-import ipyparallel as pmod
+import ipyparallel as ipp
 from .clienttest import ClusterTestCase
-from .clienttest import crash
+from .clienttest import conditional_crash
 from .clienttest import skip_without
 from .clienttest import wait
 from ipyparallel import AsyncHubResult
 from ipyparallel import AsyncMapResult
 from ipyparallel import AsyncResult
 from ipyparallel import error
-from ipyparallel.tests import add_engines
 from ipyparallel.util import interactive
 
 point = namedtuple("point", "x y")
@@ -42,13 +41,15 @@ class TestView(ClusterTestCase):
     def test_z_crash_mux(self):
         """test graceful handling of engine death (direct)"""
         self.add_engines(1)
+        self.minimum_engines(2)
         eid = self.client.ids[-1]
-        ar = self.client[eid].apply_async(crash)
+        view = self.client[-2:]
+        view.scatter('should_crash', [False, True], flatten=True)
+        ar = view.apply_async(conditional_crash, ipp.Reference("should_crash"))
         self.assertRaisesRemote(error.EngineError, ar.get, 10)
-        eid = ar.engine_id
-        tic = time.time()
-        while eid in self.client.ids and time.time() - tic < 5:
-            time.sleep(0.01)
+        tic = time.perf_counter()
+        while eid in self.client.ids and time.perf_counter() - tic < 5:
+            time.sleep(0.05)
         assert eid not in self.client.ids
 
     def test_push_pull(self):
@@ -135,7 +136,7 @@ class TestView(ClusterTestCase):
 
     def test_get_result(self):
         """test getting results from the Hub."""
-        c = pmod.Client(profile='iptest')
+        c = ipp.Client(profile='iptest')
         # self.add_engines(1)
         t = c.ids[-1]
         v = c[t]
@@ -161,7 +162,7 @@ class TestView(ClusterTestCase):
             )
         v = self.client[-1]
         v.run(f.name, block=True)
-        self.assertEqual(v.apply_sync(lambda f: f(), pmod.Reference('g')), 5)
+        self.assertEqual(v.apply_sync(lambda f: f(), ipp.Reference('g')), 5)
 
     def test_apply_tracked(self):
         """test tracking for apply"""
@@ -215,7 +216,7 @@ class TestView(ClusterTestCase):
     def test_remote_reference(self):
         v = self.client[-1]
         v['a'] = 123
-        ra = pmod.Reference('a')
+        ra = ipp.Reference('a')
         b = v.apply_sync(lambda x: x, ra)
         self.assertEqual(b, 123)
 
@@ -472,7 +473,7 @@ class TestView(ClusterTestCase):
         v = self.client[:]
         v.scatter('n', self.client.ids, flatten=True)
         v.execute("f = lambda x,y: x*y")
-        rf = pmod.Reference('f')
+        rf = ipp.Reference('f')
         nlist = list(range(10))
         mlist = nlist[::-1]
         expected = [m * n for m, n in zip(mlist, nlist)]
@@ -484,7 +485,7 @@ class TestView(ClusterTestCase):
         v = self.client[:]
         v.scatter('n', self.client.ids, flatten=True)
         v.execute("f = lambda x: n*x")
-        rf = pmod.Reference('f')
+        rf = ipp.Reference('f')
         result = v.apply_sync(rf, 5)
         expected = [5 * id for id in self.client.ids]
         self.assertEqual(result, expected)
@@ -492,13 +493,13 @@ class TestView(ClusterTestCase):
     def test_eval_reference(self):
         v = self.client[self.client.ids[0]]
         v['g'] = list(range(5))
-        rg = pmod.Reference('g[0]')
+        rg = ipp.Reference('g[0]')
         echo = lambda x: x
         self.assertEqual(v.apply_sync(echo, rg), 0)
 
     def test_reference_nameerror(self):
         v = self.client[self.client.ids[0]]
-        r = pmod.Reference('elvis_has_left')
+        r = ipp.Reference('elvis_has_left')
         echo = lambda x: x
         self.assertRaisesRemote(NameError, v.apply_sync, echo, r)
 
@@ -745,7 +746,7 @@ class TestView(ClusterTestCase):
         """args in lists are canned"""
         view = self.client[-1]
         view['a'] = 128
-        rA = pmod.Reference('a')
+        rA = ipp.Reference('a')
         ar = view.apply_async(lambda x: x, [rA])
         r = ar.get(5)
         self.assertEqual(r, [128])
@@ -754,7 +755,7 @@ class TestView(ClusterTestCase):
         """args in dicts are canned"""
         view = self.client[-1]
         view['a'] = 128
-        rA = pmod.Reference('a')
+        rA = ipp.Reference('a')
         ar = view.apply_async(lambda x: x, dict(foo=rA))
         r = ar.get(5)
         self.assertEqual(r, dict(foo=128))
@@ -763,7 +764,7 @@ class TestView(ClusterTestCase):
         """kwargs in lists are canned"""
         view = self.client[-1]
         view['a'] = 128
-        rA = pmod.Reference('a')
+        rA = ipp.Reference('a')
         ar = view.apply_async(lambda x=5: x, x=[rA])
         r = ar.get(5)
         self.assertEqual(r, [128])
@@ -772,7 +773,7 @@ class TestView(ClusterTestCase):
         """kwargs in dicts are canned"""
         view = self.client[-1]
         view['a'] = 128
-        rA = pmod.Reference('a')
+        rA = ipp.Reference('a')
         ar = view.apply_async(lambda x=5: x, dict(foo=rA))
         r = ar.get(5)
         self.assertEqual(r, dict(foo=128))
@@ -782,7 +783,7 @@ class TestView(ClusterTestCase):
         view = self.client[:]
         ranks = sorted(self.client.ids)
         view.scatter('rank', ranks, flatten=True)
-        rrank = pmod.Reference('rank')
+        rrank = ipp.Reference('rank')
 
         amr = view.map_async(lambda x: x * 2, [rrank] * len(view))
         drank = amr.get(5)
@@ -801,7 +802,7 @@ class TestView(ClusterTestCase):
             ),
             block=True,
         )
-        ra = pmod.Reference('a')
+        ra = ipp.Reference('a')
 
         r = view.apply_sync(lambda x: x.b, ra)
         self.assertEqual(r, 128)

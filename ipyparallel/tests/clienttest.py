@@ -32,6 +32,12 @@ def crash():
     os._exit(1)
 
 
+def conditional_crash(condition):
+    """Ungracefully exit the process"""
+    if condition:
+        crash()
+
+
 def wait(n):
     """sleep for a time"""
     import time
