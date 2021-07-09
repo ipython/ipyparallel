@@ -53,7 +53,7 @@ def _atexit_cleanup_clusters(*args):
         if not cluster.shutdown_atexit:
             # overridden after register
             continue
-        if cluster._controller or cluster._engine_sets:
+        if cluster.controller or cluster.engines:
             print(f"Stopping cluster {cluster}", file=sys.stderr)
             cluster.stop_cluster_sync()
 
@@ -261,8 +261,8 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             return traitlets.log.get_logger()
 
     # private state
-    _controller = Any()
-    _engine_sets = Dict()
+    controller = Any()
+    engines = Dict()
 
     def __init__(self, **kwargs):
         """Construct a Cluster"""
@@ -273,7 +273,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     def __del__(self):
         if not self.shutdown_atexit:
             return
-        if self._controller or self._engine_sets:
+        if self.controller or self.engines:
             self.stop_cluster_sync()
 
     def __repr__(self):
@@ -293,10 +293,10 @@ class Cluster(AsyncFirst, LoggingConfigurable):
                 profile_dir = "~" + profile_dir[len(home_dir) :]
             fields["profile_dir"] = repr(profile_dir)
 
-        if self._controller:
+        if self.controller:
             fields["controller"] = "<running>"
-        if self._engine_sets:
-            fields["engine_sets"] = list(self._engine_sets)
+        if self.engines:
+            fields["engine_sets"] = list(self.engines)
 
         fields_str = ', '.join(f"{key}={value}" for key, value in fields.items())
 
@@ -314,20 +314,20 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         cluster_info["class"] = _cls_str(self.__class__)
 
-        if self._controller:
+        if self.controller:
             d["controller"] = {
                 "class": _cls_str(self.controller_launcher_class),
                 "state": None,
             }
-            if self._controller:
-                d["controller"]["state"] = self._controller.to_dict()
+            if self.controller:
+                d["controller"]["state"] = self.controller.to_dict()
 
         d["engines"] = {
             "class": _cls_str(self.engine_launcher_class),
             "sets": {},
         }
         sets = d["engines"]["sets"]
-        for engine_set_id, engine_launcher in self._engine_sets.items():
+        for engine_set_id, engine_launcher in self.engines.items():
             sets[engine_set_id] = engine_launcher.to_dict()
         return d
 
@@ -356,13 +356,13 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             controller_info = d["controller"]
             cls = self.controller_launcher_class = import_item(controller_info["class"])
             if controller_info["state"]:
-                self._controller = cls.from_dict(controller_info["state"], parent=self)
+                self.controller = cls.from_dict(controller_info["state"], parent=self)
 
         engine_info = d.get("engines")
         if engine_info:
             cls = self.engine_launcher_class = import_item(engine_info["class"])
             for engine_set_id, engine_state in engine_info.get("sets", {}).items():
-                self._engine_sets[engine_set_id] = cls.from_dict(
+                self.engines[engine_set_id] = cls.from_dict(
                     engine_state,
                     engine_set_id=engine_set_id,
                     parent=self,
@@ -429,7 +429,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             # setting cluster_file='' disables saving to disk
             return
 
-        if not self._controller and not self._engine_sets:
+        if not self.controller and not self.engines:
             self.remove_cluster_file()
         else:
             self.write_cluster_file()
@@ -442,9 +442,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         # start controller
         # retrieve connection info
         # webhook?
-        if self._controller is not None:
+        if self.controller is not None:
             raise RuntimeError(
-                "controller is already running. Call stop_controller() first."
+                "controller is already running. Call stopcontroller() first."
             )
 
         if self.shutdown_atexit:
@@ -452,7 +452,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             if not _atexit_cleanup_clusters.registered:
                 atexit.register(_atexit_cleanup_clusters)
 
-        self._controller = controller = self.controller_launcher_class(
+        self.controller = controller = self.controller_launcher_class(
             work_dir=u'.',
             parent=self,
             log=self.log,
@@ -484,10 +484,10 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         if controller_args is not None:
             # ensure we trigger trait observers after we are done
-            self._controller.controller_args = list(controller_args)
+            self.controller.controller_args = list(controller_args)
 
-        self._controller.on_stop(self._controller_stopped)
-        r = self._controller.start()
+        self.controller.on_stop(self._controller_stopped)
+        r = self.controller.start()
         if inspect.isawaitable(r):
             await r
 
@@ -505,7 +505,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         # TODO: send engines connection info
         if engine_set_id is None:
             engine_set_id = f"{int(time.time())}-{''.join(random.choice(_suffix_chars) for i in range(4))}"
-        engine_set = self._engine_sets[engine_set_id] = self.engine_launcher_class(
+        engine_set = self.engines[engine_set_id] = self.engine_launcher_class(
             work_dir=u'.',
             parent=self,
             log=self.log,
@@ -548,17 +548,17 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         all engines are stopped.
         """
         if engine_set_id is None:
-            for engine_set_id in list(self._engine_sets):
+            for engine_set_id in list(self.engines):
                 await self.stop_engines(engine_set_id)
             return
         self.log.info(f"Stopping engine(s): {engine_set_id}")
-        engine_set = self._engine_sets[engine_set_id]
+        engine_set = self.engines[engine_set_id]
         r = engine_set.stop()
         if inspect.isawaitable(r):
             await r
         # retrieve and cleanup output files
         engine_set.get_output(remove=True)
-        self._engine_sets.pop(engine_set_id)
+        self.engines.pop(engine_set_id)
         self.update_cluster_file()
 
     async def stop_engine(self, engine_id):
@@ -572,10 +572,10 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     async def restart_engines(self, engine_set_id=None):
         """Restart an engine set"""
         if engine_set_id is None:
-            for engine_set_id in list(self._engine_sets):
+            for engine_set_id in list(self.engines):
                 await self.restart_engines(engine_set_id)
             return
-        engine_set = self._engine_sets[engine_set_id]
+        engine_set = self.engines[engine_set_id]
         n = engine_set.n
         await self.stop_engines(engine_set_id)
         await self.start_engines(n, engine_set_id)
@@ -602,27 +602,27 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         If no engine set is specified, signal all engine sets.
         """
         if engine_set_id is None:
-            for engine_set_id in list(self._engine_sets):
+            for engine_set_id in list(self.engines):
                 await self.signal_engines(signum, engine_set_id)
             return
         self.log.info(f"Sending signal {signum} to engine(s) {engine_set_id}")
-        engine_set = self._engine_sets[engine_set_id]
+        engine_set = self.engines[engine_set_id]
         r = engine_set.signal(signum)
         if inspect.isawaitable(r):
             await r
 
     async def stop_controller(self):
         """Stop the controller"""
-        if self._controller and self._controller.running:
+        if self.controller and self.controller.running:
             self.log.info("Stopping controller")
-            r = self._controller.stop()
+            r = self.controller.stop()
             if inspect.isawaitable(r):
                 await r
 
-        if self._controller:
-            self._controller.get_output(remove=True)
+        if self.controller:
+            self.controller.get_output(remove=True)
 
-        self._controller = None
+        self.controller = None
         self.update_cluster_file()
 
     async def stop_cluster(self):
@@ -636,7 +636,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         # this assumes local files exist
         from ipyparallel import Client
 
-        connection_info = self._controller.get_connection_info()
+        connection_info = self.controller.get_connection_info()
         if inspect.isawaitable(connection_info):
             connection_info = await connection_info
 

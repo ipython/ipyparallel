@@ -64,16 +64,16 @@ async def test_start_stop_controller(Cluster):
     with pytest.raises(RuntimeError):
         await cluster.start_controller()
     assert cluster.config is not None
-    assert cluster._controller.config is cluster.config
-    assert cluster._controller is not None
-    proc = cluster._controller.process
+    assert cluster.controller.config is cluster.config
+    assert cluster.controller is not None
+    proc = cluster.controller.process
     assert proc.is_running()
     with await cluster.connect_client() as rc:
         assert rc.queue_status() == {'unassigned': 0}
 
     await cluster.stop_controller()
     proc.wait(timeout=3)
-    assert cluster._controller is None
+    assert cluster.controller is None
     # stop is idempotent
     await cluster.stop_controller()
     # TODO: test file cleanup
@@ -85,8 +85,8 @@ async def test_start_stop_engines(Cluster, engine_launcher_class):
 
     n = 2
     engine_set_id = await cluster.start_engines(n)
-    assert engine_set_id in cluster._engine_sets
-    engine_set = cluster._engine_sets[engine_set_id]
+    assert engine_set_id in cluster.engines
+    engine_set = cluster.engines[engine_set_id]
     launcher_class = find_launcher_class(engine_launcher_class, "EngineSet")
     assert isinstance(engine_set, launcher_class)
 
@@ -94,7 +94,7 @@ async def test_start_stop_engines(Cluster, engine_launcher_class):
         rc.wait_for_engines(n, timeout=_timeout)
 
     await cluster.stop_engines(engine_set_id)
-    assert cluster._engine_sets == {}
+    assert cluster.engines == {}
     with pytest.raises(KeyError):
         await cluster.stop_engines(engine_set_id)
 
@@ -105,15 +105,15 @@ async def test_start_stop_cluster(Cluster, engine_launcher_class):
     n = 2
     cluster = Cluster(engine_launcher_class=engine_launcher_class, n=n)
     await cluster.start_cluster()
-    controller = cluster._controller
+    controller = cluster.controller
     assert controller is not None
-    assert len(cluster._engine_sets) == 1
+    assert len(cluster.engines) == 1
 
     with await cluster.connect_client() as rc:
         rc.wait_for_engines(n, timeout=_timeout)
     await cluster.stop_cluster()
-    assert cluster._controller is None
-    assert cluster._engine_sets == {}
+    assert cluster.controller is None
+    assert cluster.engines == {}
 
 
 @pytest.mark.skipif(
@@ -155,8 +155,8 @@ async def test_restart_engines(Cluster, engine_launcher_class):
     n = 2
     async with Cluster(engine_launcher_class=engine_launcher_class, n=n) as rc:
         cluster = rc.cluster
-        engine_set_id = next(iter(cluster._engine_sets))
-        engine_set = cluster._engine_sets[engine_set_id]
+        engine_set_id = next(iter(cluster.engines))
+        engine_set = cluster.engines[engine_set_id]
         assert rc.ids[:n] == list(range(n))
         before_pids = rc[:].apply_sync(os.getpid)
         await cluster.restart_engines()
@@ -240,12 +240,12 @@ async def test_to_from_dict(Cluster, engine_launcher_class):
         d = cluster.to_dict()
         cluster2 = ipp.Cluster.from_dict(d)
         assert not cluster2.shutdown_atexit
-        assert cluster2._controller is not None
-        assert cluster2._controller.process.pid == cluster._controller.process.pid
-        assert list(cluster2._engine_sets) == list(cluster._engine_sets)
+        assert cluster2.controller is not None
+        assert cluster2.controller.process.pid == cluster.controller.process.pid
+        assert list(cluster2.engines) == list(cluster.engines)
 
-        es1 = next(iter(cluster._engine_sets.values()))
-        es2 = next(iter(cluster2._engine_sets.values()))
+        es1 = next(iter(cluster.engines.values()))
+        es2 = next(iter(cluster2.engines.values()))
         # ensure responsive
         rc[:].apply_async(lambda: None).get(timeout=_timeout)
         if not sys.platform.startswith("win"):
