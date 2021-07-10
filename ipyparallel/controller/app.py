@@ -721,11 +721,15 @@ class IPController(BaseParallelApplication):
         if self.restore_engines:
             self.hub._load_engine_state()
 
-    def launch_python_scheduler(self, scheduler_args, children):
+    def launch_python_scheduler(self, name, scheduler_args, children):
         if 'Process' in self.mq_class:
             # run the Python scheduler in a Process
-            q = Process(target=launch_scheduler, kwargs=scheduler_args)
-            q.daemon = True
+            q = Process(
+                target=launch_scheduler,
+                kwargs=scheduler_args,
+                name=name,
+                daemon=True,
+            )
             children.append(q)
         else:
             # single-threaded Controller
@@ -750,12 +754,16 @@ class IPController(BaseParallelApplication):
         }
 
     def launch_broadcast_schedulers(self, monitor_url, children):
-        def launch_in_thread_or_process(scheduler_args):
+        def launch_in_thread_or_process(scheduler_args, depth, identity):
 
             if 'Process' in self.mq_class:
                 # run the Python scheduler in a Process
-                q = Process(target=launch_broadcast_scheduler, kwargs=scheduler_args)
-                q.daemon = True
+                q = Process(
+                    target=launch_broadcast_scheduler,
+                    kwargs=scheduler_args,
+                    name=f"BroadcastScheduler(depth={depth}, id={identity})",
+                    daemon=True,
+                )
                 children.append(q)
             else:
                 # single-threaded Controller
@@ -805,7 +813,7 @@ class IPController(BaseParallelApplication):
                         self.client_url(BroadcastScheduler.port_name, outgoing_id2),
                     ]
                 )
-            launch_in_thread_or_process(scheduler_args)
+            launch_in_thread_or_process(scheduler_args, depth=depth, identity=identity)
             if not is_leaf:
                 recursively_start_schedulers(outgoing_id1, depth + 1)
                 recursively_start_schedulers(outgoing_id2, depth + 1)
@@ -823,6 +831,7 @@ class IPController(BaseParallelApplication):
         # maybe_inproc = 'inproc://monitor' if self.use_threads else monitor_url
         # IOPub relay (in a Process)
         q = mq(zmq.PUB, zmq.SUB, zmq.PUB, b'N/A', b'iopub')
+        q.name = "IOPubScheduler"
         q.bind_in(self.client_url('iopub'))
         q.setsockopt_in(zmq.IDENTITY, ident + b"_iopub")
         q.bind_out(self.engine_url('iopub'))
@@ -833,6 +842,7 @@ class IPController(BaseParallelApplication):
 
         # Multiplexer Queue (in a Process)
         q = mq(zmq.ROUTER, zmq.ROUTER, zmq.PUB, b'in', b'out')
+        q.name = "DirectScheduler"
 
         q.bind_in(self.client_url('mux'))
         q.setsockopt_in(zmq.IDENTITY, b'mux_in')
@@ -844,6 +854,7 @@ class IPController(BaseParallelApplication):
 
         # Control Queue (in a Process)
         q = mq(zmq.ROUTER, zmq.ROUTER, zmq.PUB, b'incontrol', b'outcontrol')
+        q.name = "ControlScheduler"
         q.bind_in(self.client_url('control'))
         q.setsockopt_in(zmq.IDENTITY, b'control_in')
         q.bind_out(self.engine_url('control'))
@@ -859,6 +870,7 @@ class IPController(BaseParallelApplication):
         if scheme == 'pure':
             self.log.warn("task::using pure DEALER Task scheduler")
             q = mq(zmq.ROUTER, zmq.DEALER, zmq.PUB, b'intask', b'outtask')
+            q.name = "TaskScheduler(pure)"
             # q.setsockopt_out(zmq.HWM, hub.hwm)
             q.bind_in(self.client_url('task'))
             q.setsockopt_in(zmq.IDENTITY, b'task_in')
@@ -868,11 +880,12 @@ class IPController(BaseParallelApplication):
             q.daemon = True
             children.append(q)
         elif scheme == 'none':
-            self.log.warn("task::using no Task scheduler")
+            self.log.warning("task::using no Task scheduler")
 
         else:
             self.log.info("task::using Python %s Task scheduler" % scheme)
             self.launch_python_scheduler(
+                'TaskScheduler',
                 self.get_python_scheduler_args('task', TaskScheduler, monitor_url),
                 children,
             )
@@ -944,6 +957,14 @@ class IPController(BaseParallelApplication):
         # otherwise signal-handling will fire multiple times
         for child in self.children:
             child.start()
+            if hasattr(child, 'launcher'):
+                # apply name to actual process/thread for logging
+                setattr(child.launcher, 'name', child.name)
+            if not self.use_threads:
+                process = getattr(child, 'launcher', child)
+                self.log.debug(f"Started process {child.name}: {process.pid}")
+            else:
+                self.log.debug(f"Started thread {child.name}")
 
         self.init_signal()
 
