@@ -14,6 +14,9 @@ Changes in IPython Parallel
 - Fix compatibility issues with ipykernel 6, jupyter-client 7
 - New :class:`.Cluster` API for managing clusters from Python,
   including support for signaling and restarting engines.
+- New :meth:`.Client.signal_engines` for sending signals to single engines.
+- New KernelNanny process for signaling and monitoring engines
+  for improved responsiveness of handing engine crashes.
 - New prototype :class:`.BroadcastScheduler` with vastly improved scaling in 'do-on-all' operations
   on large numbers of engines,
   c/o Tom-Olav Bøyum's Master's thesis at University of Oslo.
