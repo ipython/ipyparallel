@@ -519,7 +519,7 @@ class IPEngine(BaseParallelApplication):
             # control stream:
             control_url = url('control')
             if self.enable_nanny:
-                nanny_url = self.start_nanny(
+                nanny_url, self.nanny_pipe = self.start_nanny(
                     control_url=control_url,
                 )
                 control_url = nanny_url

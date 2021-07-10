@@ -16,15 +16,17 @@ but has key differences, justifying both existing:
 import asyncio
 import logging
 import os
+import pickle
 import signal
-from multiprocessing import Pipe
-from multiprocessing import Process
+import sys
+from subprocess import PIPE
+from subprocess import Popen
 from threading import Thread
 
 import psutil
-import tornado.ioloop
 import zmq
 from jupyter_client.session import Session
+from tornado.ioloop import IOLoop
 from traitlets.config import Config
 from zmq.eventloop.zmqstream import ZMQStream
 
@@ -35,7 +37,10 @@ from ipyparallel.util import local_logger
 class KernelNanny:
     """Object for monitoring
 
-    Must be  handling signal messages"""
+    Must be child of engine
+
+    Handles signal messages and watches Engine process for exiting
+    """
 
     def __init__(
         self,
@@ -46,7 +51,7 @@ class KernelNanny:
         registration_url: str,
         identity: bytes,
         config: Config,
-        start_pipe: Pipe,
+        pipe,
         log_level: int = logging.INFO,
     ):
         self.pid = pid
@@ -55,9 +60,10 @@ class KernelNanny:
         self.control_url = control_url
         self.registration_url = registration_url
         self.identity = identity
-        self.start_pipe = start_pipe
         self.config = config
+        self.pipe = pipe
         self.session = Session(config=self.config)
+        log_level = 10
 
         self.log = local_logger(f"{self.__class__.__name__}.{engine_id}", log_level)
         self.log.propagate = False
@@ -65,6 +71,7 @@ class KernelNanny:
         self.control_handlers = {
             "signal_request": self.signal_request,
         }
+        self._finish_called = False
 
     def wait_for_parent_thread(self):
         """Wait for my parent to exit, then I'll notify the controller and shut down"""
@@ -79,6 +86,24 @@ class KernelNanny:
         self.log.critical(f"Parent {self.pid} exited with status {exit_code}.")
         self.loop.add_callback(self.finish)
 
+    def pipe_handler(self, fd, events):
+        self.log.debug(f"Pipe event {events}")
+        self.loop.remove_handler(fd)
+        try:
+            fd.close()
+        except BrokenPipeError:
+            pass
+        try:
+            status = self.parent_process.wait(0)
+        except psutil.TimeoutExpired:
+            try:
+                status = self.parent_process.status()
+            except psutil.NoSuchProcessError:
+                status = "exited"
+
+        self.log.critical(f"Pipe closed, parent {self.pid} has status: {status}")
+        self.finish()
+
     def notify_exit(self):
         """Notify the Hub that our parent has exited"""
         self.log.info("Notifying Hub that our parent has shut down")
@@ -91,6 +116,9 @@ class KernelNanny:
 
     def finish(self):
         """Prepare to exit and stop our event loop."""
+        if self._finish_called:
+            return
+        self._finish_called = True
         self.notify_exit()
         self.loop.add_callback(self.loop.stop)
 
@@ -160,7 +188,7 @@ class KernelNanny:
         # ignore SIGINT sent to parent
         signal.signal(signal.SIGINT, signal.SIG_IGN)
 
-        self.loop = tornado.ioloop.IOLoop.current()
+        self.loop = IOLoop.current()
         self.context = zmq.Context()
 
         # set up control socket (connection to Scheduler)
@@ -175,8 +203,13 @@ class KernelNanny:
         port = self.parent_socket.bind_to_random_port("tcp://127.0.0.1")
 
         # now that we've bound, pass port to parent via AsyncResult
-        self.start_pipe.send(f"tcp://127.0.0.1:{port}")
-        self.loop.add_timeout(self.loop.time() + 10, self.start_pipe.close)
+        self.pipe.write(f"tcp://127.0.0.1:{port}\n")
+        if not sys.platform.startswith("win"):
+            # watch for the stdout pipe to close
+            # as a signal that our parent is shutting down
+            self.loop.add_handler(
+                self.pipe, self.pipe_handler, IOLoop.READ | IOLoop.ERROR
+            )
         self.parent_stream = ZMQStream(self.parent_socket)
         self.parent_stream.on_recv_stream(self.dispatch_parent)
         try:
@@ -184,6 +217,11 @@ class KernelNanny:
         finally:
             self.loop.close(all_fds=True)
             self.context.term()
+            try:
+                self.pipe.close()
+            except BrokenPipeError:
+                pass
+            self.log.debug("exiting")
 
     @classmethod
     def main(cls, *args, **kwargs):
@@ -197,7 +235,7 @@ class KernelNanny:
         """
         # start a new event loop for the forked process
         asyncio.set_event_loop(asyncio.new_event_loop())
-        tornado.ioloop.IOLoop().make_current()
+        IOLoop().make_current()
         self = cls(*args, **kwargs)
         self.start()
 
@@ -213,13 +251,39 @@ def start_nanny(**kwargs):
       instead of connecting directly to the control Scheduler.
     """
 
-    pipe_r, pipe_w = Pipe(duplex=False)
-    kwargs['start_pipe'] = pipe_w
     kwargs['pid'] = os.getpid()
-    p = Process(target=KernelNanny.main, kwargs=kwargs, name="KernelNanny", daemon=True)
-    p.start()
-    # close our copy of the write pipe
-    pipe_w.close()
-    nanny_url = pipe_r.recv()
-    pipe_r.close()
-    return nanny_url
+
+    env = os.environ.copy()
+    env['PYTHONUNBUFFERED'] = '1'
+    p = Popen(
+        [sys.executable, '-m', __name__],
+        stdin=PIPE,
+        stdout=PIPE,
+        env=env,
+        start_new_session=True,  # don't inherit signals
+    )
+    p.stdin.write(pickle.dumps(kwargs))
+    p.stdin.close()
+    out = p.stdout.readline()
+    nanny_url = out.decode("utf8").strip()
+    if not nanny_url:
+        p.terminate()
+        raise RuntimeError("nanny failed")
+    # return the handle on the process
+    # need to keep the pipe open for the nanny
+    return nanny_url, p
+
+
+def main():
+    """Entrypoint from the command-line
+
+    Loads kwargs from stdin,
+    sets pipe to stdout
+    """
+    kwargs = pickle.load(os.fdopen(sys.stdin.fileno(), mode='rb'))
+    kwargs['pipe'] = sys.stdout
+    KernelNanny.main(**kwargs)
+
+
+if __name__ == "__main__":
+    main()

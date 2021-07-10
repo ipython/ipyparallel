@@ -891,15 +891,29 @@ class BroadcastView(DirectView):
                     msg_and_target_id, async_result=True, track=True
                 )
                 self.client.outstanding.add(msg_and_target_id)
+                self.client._outstanding_dict[ident].add(msg_and_target_id)
                 self.outstanding.add(msg_and_target_id)
                 futures.append(future[0])
             if original_msg_id in self.outstanding:
                 self.outstanding.remove(original_msg_id)
         else:
             self.client.outstanding.add(original_msg_id)
+            for ident in s_idents:
+                self.client._outstanding_dict[ident].add(original_msg_id)
             futures = message_future
 
-        return AsyncResult(self.client, futures, owner=True, **kwargs)
+        ar = AsyncResult(self.client, futures, owner=True, **kwargs)
+
+        if self.is_coalescing:
+            # if coalescing, discard outstanding-tracking when we are done
+            def _rm_outstanding(_):
+                for ident in s_idents:
+                    if ident in self.client._outstanding_dict:
+                        self.client._outstanding_dict[ident].discard(original_msg_id)
+
+            ar.add_done_callback(_rm_outstanding)
+
+        return ar
 
     @sync_results
     @save_ids
