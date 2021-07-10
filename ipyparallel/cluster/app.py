@@ -187,12 +187,12 @@ class IPClusterList(BaseParallelApplication):
             ):
                 profile = abbreviate_profile_dir(cluster.profile_dir)
                 cluster_id = cluster.cluster_id
-                running = bool(cluster._controller)
+                running = bool(cluster.controller)
                 # TODO: URL?
                 engines = 0
-                if cluster._engine_sets:
+                if cluster.engines:
                     engines = sum(
-                        engine_set.n for engine_set in cluster._engine_sets.values()
+                        engine_set.n for engine_set in cluster.engines.values()
                     )
 
                 launcher = cluster.engine_launcher_class.__name__
@@ -351,7 +351,7 @@ class IPClusterEngines(BaseParallelApplication):
     def watch_engines(self):
         """Watch for early engine shutdown"""
         # FIXME: public API to get launcher instances?
-        self.engine_launcher = next(iter(self.cluster._engine_sets.values()))
+        self.engine_launcher = next(iter(self.cluster.engines.values()))
 
         if not self.early_shutdown:
             self.engine_launcher.on_stop(self.engines_stopped)
@@ -477,7 +477,7 @@ class IPClusterStart(IPClusterEngines):
                 f"Leaving cluster running: {self.cluster.cluster_file}", file=sys.stderr
             )
             self.loop.add_callback(self.loop.stop)
-        self.cluster._controller.on_stop(self.controller_stopped)
+        self.cluster.controller.on_stop(self.controller_stopped)
         self.watch_engines()
 
     def controller_stopped(self, stop_data):
