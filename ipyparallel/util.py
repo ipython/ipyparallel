@@ -22,7 +22,6 @@ from signal import signal
 from signal import SIGTERM
 from types import FunctionType
 
-import tqdm
 import traitlets
 import zmq
 from dateutil.parser import parse as dateutil_parse
@@ -657,8 +656,12 @@ def progress(*args, widget=None, **kwargs):
         else:
             widget = False
     if widget:
-        f = tqdm.tqdm_notebook
+        import tqdm.notebook
+
+        f = tqdm.notebook.tqdm_notebook
     else:
+        import tqdm
+
         kwargs.setdefault("file", sys.stdout)
         f = tqdm.tqdm
     return f(*args, **kwargs)

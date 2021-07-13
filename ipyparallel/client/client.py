@@ -1381,7 +1381,10 @@ class Client(HasTraits):
 
         if interactive:
             progress_bar = util.progress(
-                widget=widget, initial=len(self.ids), total=n, unit='engine'
+                widget=widget,
+                initial=len(self.ids),
+                total=n,
+                unit='engine',
             )
 
         future = Future()
@@ -1389,9 +1392,10 @@ class Client(HasTraits):
         def notify(_):
             if future.done():
                 return
+            current_n = len(self.ids)
             if interactive:
-                progress_bar.update(len(self.ids) - progress_bar.n)
-            if len(self.ids) >= n:
+                progress_bar.update(current_n - progress_bar.n)
+            if current_n >= n:
                 # ensure we refresh when we finish
                 if interactive:
                     progress_bar.close()
@@ -1405,12 +1409,13 @@ class Client(HasTraits):
             if future.done():
                 return
 
-            if len(self.ids) >= n:
+            current_n = len(self.ids)
+            if current_n >= n:
                 future.set_result(None)
             else:
                 future.set_exception(
                     TimeoutError(
-                        f"{n} engines not ready in {timeout} seconds. Currently ready: {len(self.ids)}"
+                        f"{n} engines not ready in {timeout} seconds. Currently ready: {current_n}"
                     )
                 )
 

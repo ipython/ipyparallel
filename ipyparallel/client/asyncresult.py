@@ -620,14 +620,13 @@ class AsyncResult(Future):
         tic = time.perf_counter()
         progress_bar = progress(widget=widget, total=N, unit='tasks', desc=self._fname)
 
-        n_prev = 0
         while not self.ready() and (
             timeout is None or time.perf_counter() - tic <= timeout
         ):
             self.wait(interval)
-            progress_bar.update(self.progress - n_prev)
-            n_prev = self.progress
+            progress_bar.update(self.progress - progress_bar.n)
 
+        progress_bar.update(self.progress - progress_bar.n)
         progress_bar.close()
 
     def _republish_displaypub(self, content, eid):
