@@ -3,7 +3,7 @@ import re
 import shlex
 
 import dask
-from distributed.utils import parse_bytes
+from dask.utils import parse_bytes
 
 from .core import JobQueueCluster, Job, job_parameters, cluster_parameters
 
