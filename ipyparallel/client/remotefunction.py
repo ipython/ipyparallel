@@ -244,7 +244,17 @@ class ParallelFunction(RemoteFunction):
 
         if maxlen == 0:
             # nothing to iterate over
-            return []
+            if self.block:
+                return []
+            else:
+                return AsyncMapResult(
+                    self.view.client,
+                    [],
+                    self.mapObject,
+                    fname=getname(self.func),
+                    ordered=self.ordered,
+                    return_exceptions=self.return_exceptions,
+                )
 
         # check that the length of sequences match
         if not _mapping and minlen != maxlen:

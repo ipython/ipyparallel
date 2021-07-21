@@ -66,6 +66,8 @@ class Map(object):
         return self.concatenate(listOfPartitions)
 
     def concatenate(self, listOfPartitions):
+        if len(listOfPartitions) == 0:
+            return listOfPartitions
         testObject = listOfPartitions[0]
         # First see if we have a known array type
         if is_array(testObject):
@@ -88,6 +90,8 @@ class RoundRobinMap(Map):
         return seq[p:n:q]
 
     def joinPartitions(self, listOfPartitions):
+        if len(listOfPartitions) == 0:
+            return listOfPartitions
         testObject = listOfPartitions[0]
         # First see if we have a known array type
         if is_array(testObject):
