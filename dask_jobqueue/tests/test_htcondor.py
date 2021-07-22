@@ -5,6 +5,7 @@ import pytest
 from distributed import Client
 
 import dask
+from dask.utils import format_bytes, parse_bytes
 
 from dask_jobqueue import HTCondorCluster
 
@@ -44,7 +45,8 @@ def test_job_script():
             "{} -m distributed.cli.dask_worker tcp://".format(sys.executable)
             in job_script
         )
-        assert "--memory-limit 50.00MB" in job_script
+        formatted_bytes = format_bytes(parse_bytes("50MB")).replace(" ", "")
+        assert f"--memory-limit {formatted_bytes}" in job_script
         assert "--nthreads 2" in job_script
         assert "--nprocs 2" in job_script
 

@@ -5,6 +5,7 @@ from distributed import Client
 
 from dask_jobqueue import SGECluster
 import dask
+from dask.utils import format_bytes, parse_bytes
 
 from . import QUEUE_WAIT
 
@@ -83,10 +84,12 @@ def test_job_script(tmpdir):
         resource_spec="h_vmem=12G,mem_req=12G",
     ) as cluster:
         job_script = cluster.job_script()
+        formatted_bytes = format_bytes(parse_bytes("6GB")).replace(" ", "")
+
         for each in [
             "--nprocs 2",
             "--nthreads 3",
-            "--memory-limit 6.00GB",
+            f"--memory-limit {formatted_bytes}",
             "-q my-queue",
             "-P my-project",
             "-l h_rt=02:00:00",

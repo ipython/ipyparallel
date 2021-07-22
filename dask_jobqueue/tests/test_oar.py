@@ -1,7 +1,9 @@
 import sys
 
-from dask_jobqueue import OARCluster
 import dask
+from dask.utils import format_bytes, parse_bytes
+
+from dask_jobqueue import OARCluster
 
 
 def test_header():
@@ -40,7 +42,8 @@ def test_job_script():
         job_script = cluster.job_script()
         assert "#OAR" in job_script
         assert "#OAR -n dask-worker" in job_script
-        assert "--memory-limit 7.00GB " in job_script
+        formatted_bytes = format_bytes(parse_bytes("7GB")).replace(" ", "")
+        assert f"--memory-limit {formatted_bytes}" in job_script
         assert "#OAR -l /nodes=1/core=8,walltime=00:02:00" in job_script
         assert "#OAR --project" not in job_script
         assert "#OAR -q" not in job_script
@@ -51,7 +54,8 @@ def test_job_script():
             "{} -m distributed.cli.dask_worker tcp://".format(sys.executable)
             in job_script
         )
-        assert "--nthreads 2 --nprocs 4 --memory-limit 7.00GB" in job_script
+        formatted_bytes = format_bytes(parse_bytes("7GB")).replace(" ", "")
+        assert f"--nthreads 2 --nprocs 4 --memory-limit {formatted_bytes}" in job_script
 
     with OARCluster(
         walltime="00:02:00",
@@ -67,7 +71,8 @@ def test_job_script():
         job_script = cluster.job_script()
         assert "#OAR" in job_script
         assert "#OAR -n dask-worker" in job_script
-        assert "--memory-limit 7.00GB " in job_script
+        formatted_bytes = format_bytes(parse_bytes("7GB")).replace(" ", "")
+        assert f"--memory-limit {formatted_bytes}" in job_script
         assert "#OAR -l /nodes=1/core=8,walltime=00:02:00" in job_script
         assert "#OAR --project" not in job_script
         assert "#OAR -q" not in job_script
@@ -80,7 +85,8 @@ def test_job_script():
             "{} -m distributed.cli.dask_worker tcp://".format(sys.executable)
             in job_script
         )
-        assert "--nthreads 2 --nprocs 4 --memory-limit 7.00GB" in job_script
+        formatted_bytes = format_bytes(parse_bytes("7GB")).replace(" ", "")
+        assert f"--nthreads 2 --nprocs 4 --memory-limit {formatted_bytes}" in job_script
 
 
 def test_config_name_oar_takes_custom_config():

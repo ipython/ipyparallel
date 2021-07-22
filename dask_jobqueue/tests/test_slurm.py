@@ -5,6 +5,7 @@ import pytest
 from distributed import Client
 
 import dask
+from dask.utils import format_bytes, parse_bytes
 
 from dask_jobqueue import SLURMCluster
 
@@ -60,7 +61,8 @@ def test_job_script():
         job_script = cluster.job_script()
         assert "#SBATCH" in job_script
         assert "#SBATCH -J dask-worker" in job_script
-        assert "--memory-limit 7.00GB " in job_script
+        formatted_bytes = format_bytes(parse_bytes("7GB")).replace(" ", "")
+        assert f"--memory-limit {formatted_bytes}" in job_script
         assert "#SBATCH -n 1" in job_script
         assert "#SBATCH --cpus-per-task=8" in job_script
         assert "#SBATCH --mem=27G" in job_script
@@ -74,7 +76,8 @@ def test_job_script():
             "{} -m distributed.cli.dask_worker tcp://".format(sys.executable)
             in job_script
         )
-        assert "--nthreads 2 --nprocs 4 --memory-limit 7.00GB" in job_script
+        formatted_bytes = format_bytes(parse_bytes("7GB")).replace(" ", "")
+        assert f"--nthreads 2 --nprocs 4 --memory-limit {formatted_bytes}" in job_script
 
     with SLURMCluster(
         walltime="00:02:00",
@@ -105,7 +108,8 @@ def test_job_script():
             "{} -m distributed.cli.dask_worker tcp://".format(sys.executable)
             in job_script
         )
-        assert "--nthreads 2 --nprocs 4 --memory-limit 7.00GB" in job_script
+        formatted_bytes = format_bytes(parse_bytes("7GB")).replace(" ", "")
+        assert f"--nthreads 2 --nprocs 4 --memory-limit {formatted_bytes}" in job_script
 
 
 @pytest.mark.env("slurm")

@@ -1,8 +1,11 @@
 import sys
 from time import sleep, time
 
-import dask
 import pytest
+
+import dask
+from dask.utils import format_bytes, parse_bytes
+
 from dask.distributed import Client
 
 from dask_jobqueue import MoabCluster, PBSCluster
@@ -72,7 +75,8 @@ def test_job_script(Cluster):
             "{} -m distributed.cli.dask_worker tcp://".format(sys.executable)
             in job_script
         )
-        assert "--nthreads 2 --nprocs 4 --memory-limit 7.00GB" in job_script
+        formatted_bytes = format_bytes(parse_bytes("7GB")).replace(" ", "")
+        assert f"--nthreads 2 --nprocs 4 --memory-limit {formatted_bytes}" in job_script
 
     with Cluster(
         queue="regular",
@@ -95,7 +99,8 @@ def test_job_script(Cluster):
             "{} -m distributed.cli.dask_worker tcp://".format(sys.executable)
             in job_script
         )
-        assert "--nthreads 2 --nprocs 4 --memory-limit 7.00GB" in job_script
+        formatted_bytes = format_bytes(parse_bytes("7GB")).replace(" ", "")
+        assert f"--nthreads 2 --nprocs 4 --memory-limit {formatted_bytes}" in job_script
 
 
 @pytest.mark.env("pbs")
