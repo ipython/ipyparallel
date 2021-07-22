@@ -5,48 +5,87 @@ import json
 import os
 import sys
 
-from notebook.base.handlers import IPythonHandler
-from notebook.nbextensions import install_nbextension
+from notebook.base.handlers import APIHandler
 from notebook.utils import url_path_join as ujoin
 from tornado import web
 
-from .clustermanager import ClusterManager
+from ..cluster import ClusterManager
+from ..util import abbreviate_profile_dir
 
 
 static = os.path.join(os.path.dirname(__file__), 'static')
 
 
-class ClusterHandler(IPythonHandler):
+class ClusterHandler(APIHandler):
     @property
     def cluster_manager(self):
         return self.settings['cluster_manager']
 
+    def cluster_model(self, cluster):
+        """Create a JSONable cluster model"""
+        d = cluster.to_dict()
+        profile_dir = d['cluster']['profile_dir']
+        # provide abbreviated profile info
+        d['cluster']['profile'] = abbreviate_profile_dir(profile_dir)
+        return d
 
-class MainClusterHandler(ClusterHandler):
+
+class ClusterListHandler(ClusterHandler):
+    """List and create new clusters
+
+    GET /clusters : list current clusters
+    POST / clusters (JSON body) : create a new cluster"""
+
     @web.authenticated
     def get(self):
-        self.finish(json.dumps(self.cluster_manager.list_profiles()))
+        # currently reloads everything from disk. Is that what we want?
+        clusters = self.cluster_manager.load_clusters()
+        self.finish(
+            {key: self.cluster_model(cluster) for key, cluster in clusters.items()}
+        )
 
-
-class ClusterProfileHandler(ClusterHandler):
     @web.authenticated
-    def get(self, profile):
-        self.finish(json.dumps(self.cluster_manager.profile_info(profile)))
+    def post(self):
+        body = self.get_json_body() or {}
+        # profile
+        # cluster_id
+        cluster_id, cluster = self.cluster_manager.new_cluster(**body)
+        self.write(json.dumps({}))
 
 
 class ClusterActionHandler(ClusterHandler):
+    """Actions on a single cluster
+
+    GET: read single cluster model
+    POST: start
+    PATCH: engines?
+    DELETE: stop
+    """
+
+    def get_cluster(self, cluster_key):
+        try:
+            return self.cluster_manager.get_cluster(cluster_key)
+        except KeyError:
+            raise web.HTTPError(404, f"No such cluster: {cluster_key}")
+
     @web.authenticated
-    def post(self, profile, action):
-        cm = self.cluster_manager
-        if action == 'start':
-            n = self.get_argument('n', default=None)
-            if not n:
-                data = cm.start_cluster(profile)
-            else:
-                data = cm.start_cluster(profile, int(n))
-        if action == 'stop':
-            data = cm.stop_cluster(profile)
-        self.finish(json.dumps(data))
+    async def post(self, cluster_key):
+        cluster = self.get_cluster(cluster_key)
+        n = self.get_argument('n', default=None)
+        await cluster.start_cluster(n=n)
+        self.write(json.dumps(self.cluster_model(cluster)))
+
+    @web.authenticated
+    async def get(self, cluster_key):
+        cluster = self.get_cluster(cluster_key)
+        self.write(json.dumps(self.cluster_model(cluster)))
+
+    @web.authenticated
+    async def delete(self, cluster_key):
+        cluster = self.get_cluster(cluster_key)
+        await cluster.stop_cluster()
+        self.cluster_manager.remove_cluster(cluster_key)
+        self.write(json.dumps(self.cluster_model(cluster)))
 
 
 # -----------------------------------------------------------------------------
@@ -54,42 +93,28 @@ class ClusterActionHandler(ClusterHandler):
 # -----------------------------------------------------------------------------
 
 
-_cluster_action_regex = r"(?P<action>start|stop)"
-_profile_regex = r"(?P<profile>[^\/]+)"  # there is almost no text that is invalid
+_cluster_action_regex = r"(?P<action>start|stop|create)"
+_cluster_key_regex = (
+    r"(?P<cluster_key>[^\/]+)"  # there is almost no text that is invalid
+)
 
 default_handlers = [
-    (r"/clusters", MainClusterHandler),
+    (r"/clusters", ClusterListHandler),
     (
-        r"/clusters/%s/%s" % (_profile_regex, _cluster_action_regex),
+        rf"/clusters/{_cluster_key_regex}",
         ClusterActionHandler,
     ),
-    (r"/clusters/%s" % _profile_regex, ClusterProfileHandler),
 ]
 
 
 def load_jupyter_server_extension(nbapp):
     """Load the nbserver extension"""
-    from distutils.version import LooseVersion as V
     import notebook
 
     nbapp.log.info("Loading IPython parallel extension")
     webapp = nbapp.web_app
     webapp.settings['cluster_manager'] = ClusterManager(parent=nbapp)
 
-    if V(notebook.__version__) < V('4.2'):
-        windows = sys.platform.startswith('win')
-        install_nbextension(
-            static, destination='ipyparallel', symlink=not windows, user=True
-        )
-        cfgm = nbapp.config_manager
-        cfgm.update(
-            'tree',
-            {
-                'load_extensions': {
-                    'ipyparallel/main': True,
-                }
-            },
-        )
     base_url = webapp.settings['base_url']
     webapp.add_handlers(
         ".*$", [(ujoin(base_url, pat), handler) for pat, handler in default_handlers]

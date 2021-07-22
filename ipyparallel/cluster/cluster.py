@@ -326,8 +326,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
                 "class": _cls_str(self.controller_launcher_class),
                 "state": None,
             }
-            if self.controller:
-                d["controller"]["state"] = self.controller.to_dict()
+            d["controller"]["state"] = self.controller.to_dict()
 
         d["engines"] = {
             "class": _cls_str(self.engine_launcher_class),
@@ -791,15 +790,16 @@ class ClusterManager(LoggingConfigurable):
         # TODO: what should we return?
         # just cluster ids or the full dict?
         # just cluster ids for now
-        return sorted(self._clusters)
+        return self._clusters.items()
 
     def new_cluster(self, **kwargs):
         """Create a new cluster"""
         cluster = Cluster(parent=self, **kwargs)
-        if cluster.cluster_id in self._clusters:
-            raise KeyError(f"Cluster {cluster.cluster_id} already exists!")
-        self._clusters[cluster.cluster_id] = cluster
-        return cluster
+        cluster_key = self._cluster_key(cluster)
+        if cluster_key in self._clusters:
+            raise KeyError(f"Cluster {cluster_key} already exists!")
+        self._clusters[cluster_key] = cluster
+        return cluster_key, cluster
 
     def get_cluster(self, cluster_id):
         """Get a Cluster object by id"""

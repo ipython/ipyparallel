@@ -21,7 +21,8 @@ define(function (require) {
       "  </div>",
       '  <div id="cluster_list">',
       '    <div id="cluster_list_header" class="row list_header">',
-      '      <div class="profile_col col-xs-4">profile</div>',
+      '      <div class="profile_col col-xs-2">profile</div>',
+      '      <div class="cluster_id_col col-xs-2">cluster id</div>',
       '      <div class="status_col col-xs-3">status</div>',
       '      <div class="engines_col col-xs-3" title="Enter the number of engines to start or empty for default"># of engines</div>',
       '      <div class="action_col col-xs-2">action</div>',
@@ -59,6 +60,11 @@ define(function (require) {
       notebook_path: IPython.notebook_list.notebook_path,
     });
     cluster_list.load_list();
+    if (document.location.hash === "#ipyclusters") {
+      // focus clusters tab once it exists
+      // since it won't have been created when the browser first handles the document hash
+      $("[href='#ipyclusters']").tab("show");
+    }
   }
   return {
     load_ipython_extension: load,
