@@ -25,3 +25,9 @@ __pycache__
 htmlcov
 id_*sa
 .vscode
+
+node_modules
+lib
+
+ipyparallel/labextension
+tsconfig.tsbuildinfo

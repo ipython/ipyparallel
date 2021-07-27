@@ -1,0 +1,15 @@
+{
+  "jupyter.lab.setting-icon-class": "ipp-Logo",
+  "jupyter.lab.setting-icon-label": "IPython Parallel",
+  "title": "IPython Parallel",
+  "description": "Settings for the IPython Parallel plugin.",
+  "properties": {
+    "autoStartClient": {
+      "type": "boolean",
+      "title": "Auto-Start Client",
+      "description": "If set to true, every notebook and console will automatically have an IPython Parallel Cluster and Client for the active cluster injected into the kernel under the names 'cluster' and 'rc'",
+      "default": false
+    }
+  },
+  "type": "object"
+}

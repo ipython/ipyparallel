@@ -74,3 +74,12 @@ def _jupyter_nbextension_paths():
             'require': 'ipyparallel/main',
         }
     ]
+
+
+def _jupyter_labextension_paths():
+    return [
+        {
+            "src": "labextension",
+            "dest": "ipyparallel-labextension",
+        }
+    ]
