@@ -50,6 +50,7 @@ const DRAG_THRESHOLD = 5;
  */
 const JUPYTER_CELL_MIME = "application/vnd.jupyter.cells";
 
+const CLUSTER_PREFIX = "ipyparallel/clusters";
 /**
  * A widget for IPython cluster management.
  */
@@ -432,7 +433,7 @@ export class ClusterManager extends Widget {
     this._isReady = false;
     this._registry.notifyCommandChanged(this._launchClusterId);
     const response = await ServerConnection.makeRequest(
-      `${this._serverSettings.baseUrl}clusters/${this._launchClusterId}`,
+      `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}/${this._launchClusterId}`,
       { method: "POST" },
       this._serverSettings
     );
@@ -455,7 +456,7 @@ export class ClusterManager extends Widget {
    */
   private async _updateClusterList(): Promise<void> {
     const response = await ServerConnection.makeRequest(
-      `${this._serverSettings.baseUrl}clusters`,
+      `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}`,
       {},
       this._serverSettings
     );
@@ -490,7 +491,7 @@ export class ClusterManager extends Widget {
    */
   private async _stopById(id: string): Promise<void> {
     const response = await ServerConnection.makeRequest(
-      `${this._serverSettings.baseUrl}clusters/${id}`,
+      `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}/${id}`,
       { method: "DELETE" },
       this._serverSettings
     );
@@ -517,7 +518,7 @@ export class ClusterManager extends Widget {
     }
 
     const response = await ServerConnection.makeRequest(
-      `${this._serverSettings.baseUrl}clusters/${id}`,
+      `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}/${id}`,
       {
         method: "PATCH",
         body: JSON.stringify(update),

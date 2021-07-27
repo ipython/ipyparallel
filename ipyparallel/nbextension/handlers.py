@@ -93,15 +93,14 @@ class ClusterActionHandler(ClusterHandler):
 # -----------------------------------------------------------------------------
 
 
-_cluster_action_regex = r"(?P<action>start|stop|create)"
 _cluster_key_regex = (
     r"(?P<cluster_key>[^\/]+)"  # there is almost no text that is invalid
 )
 
 default_handlers = [
-    (r"/clusters", ClusterListHandler),
+    (r"/ipyparallel/clusters", ClusterListHandler),
     (
-        rf"/clusters/{_cluster_key_regex}",
+        rf"/ipyparallel/clusters/{_cluster_key_regex}",
         ClusterActionHandler,
     ),
 ]

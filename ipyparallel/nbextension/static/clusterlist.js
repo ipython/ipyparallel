@@ -49,7 +49,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
       success: $.proxy(this.load_list_success, this),
       error: utils.log_ajax_error,
     };
-    var url = utils.url_join_encode(this.base_url, "clusters");
+    var url = utils.url_join_encode(this.base_url, "ipyparallel/clusters");
     ajax(url, settings);
   };
 
@@ -150,7 +150,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
         status_col.text("starting");
         var url = utils.url_join_encode(
           that.base_url,
-          "clusters",
+          "ipyparallel/clusters",
           that.cluster_key
         );
         ajax(url, settings);
@@ -214,7 +214,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
       status_col.text("stopping");
       var url = utils.url_join_encode(
         that.base_url,
-        "clusters",
+        "ipyparallel/clusters",
         that.cluster_key
       );
       ajax(url, settings);

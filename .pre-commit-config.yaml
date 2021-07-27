@@ -27,6 +27,7 @@ repos:
     hooks:
       - id: eslint
         files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
+        exclude: ipyparallel/nbextension/.*
         types: [file]
         additional_dependencies:
           - "@typescript-eslint/eslint-plugin@2.27.0"
