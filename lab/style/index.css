@@ -144,37 +144,37 @@ button.ipp-hidden {
  * Rules for the scaling dialog.
  */
 
-.ipp-ScalingHeader {
+.ipp-DialogHeader {
   font-size: var(--jp-ui-font-size2);
 }
 
-.ipp-ScalingSection {
+.ipp-DialogSection {
   margin-left: 24px;
 }
 
-.ipp-ScalingSection-item {
+.ipp-DialogSection-item {
   display: flex;
   align-items: center;
   justify-content: space-around;
   margin: 12px 0 12px 0;
 }
 
-.ipp-ScalingHeader input[type="checkbox"] {
+.ipp-DialogHeader input[type="checkbox"] {
   position: relative;
   top: 4px;
   left: 4px;
   margin: 0 0 0 8px;
 }
 
-.ipp-ScalingSection input[type="number"] {
+.ipp-DialogSection input[type="number"] {
   width: 72px;
 }
 
-.ipp-ScalingSection-label.ipp-mod-disabled {
+.ipp-DialogSection-label.ipp-mod-disabled {
   color: var(--jp-ui-font-color3);
 }
 
-.ipp-ScalingSection input[type="number"]:disabled {
+.ipp-DialogSection input[type="number"]:disabled {
   color: var(--jp-ui-font-color3);
 }
 

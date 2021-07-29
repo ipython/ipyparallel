@@ -92,6 +92,24 @@ class ClusterListHandler(ClusterHandler):
     @web.authenticated
     def post(self):
         body = self.get_json_body() or {}
+        self.log.info(f"Creating cluster with {body}")
+        # clear null values
+        for key in ('profile', 'cluster_id', 'n'):
+            if key in body and body[key] in {None, ''}:
+                body.pop(key)
+        if 'profile' in body and os.path.sep in body['profile']:
+            # if it looks like a path, use profile_dir
+            body['profile_dir'] = body.pop('profile')
+
+        if (
+            'profile' in body
+            and 'cluster_id' not in body
+            and f"{body['profile']}:" not in self.cluster_mananger._clusters
+        ):
+            # if no cluster exists for a profile,
+            # default for no cluster id instead of random
+            body["cluster_id"] = ""
+
         cluster_id, cluster = self.cluster_manager.new_cluster(**body)
         self.write(json.dumps(self.cluster_model(cluster_id, cluster)))
 

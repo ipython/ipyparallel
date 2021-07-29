@@ -29,7 +29,7 @@ import { ISignal, Signal } from "@lumino/signaling";
 
 import { Widget, PanelLayout } from "@lumino/widgets";
 
-import { showScalingDialog } from "./scaling";
+import { newClusterDialog, INewCluster } from "./dialog";
 
 import * as React from "react";
 import * as ReactDOM from "react-dom";
@@ -189,7 +189,11 @@ export class ClusterManager extends Widget {
    * Create a new cluster.
    */
   async create(): Promise<IClusterModel> {
-    const cluster = await this._newCluster();
+    const clusterRequest = await newClusterDialog({});
+    if (!clusterRequest) {
+      return;
+    }
+    const cluster = await this._newCluster(clusterRequest);
     return cluster;
   }
 
@@ -444,18 +448,20 @@ export class ClusterManager extends Widget {
   /**
    * Launch a new cluster on the server.
    */
-  private async _newCluster(): Promise<IClusterModel> {
+  private async _newCluster(
+    clusterRequest: INewCluster
+  ): Promise<IClusterModel> {
     this._isReady = false;
     this._registry.notifyCommandChanged(CommandIDs.newCluster);
     // TODO: allow requesting a profile, options
     const response = await ServerConnection.makeRequest(
       `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}`,
-      { method: "POST" },
+      { method: "POST", body: JSON.stringify(clusterRequest) },
       this._serverSettings
     );
     if (response.status !== 200) {
       const err = await response.json();
-      void showErrorMessage("Cluster Start Error", err);
+      void showErrorMessage("Cluster Create Error", err);
       this._isReady = true;
       this._registry.notifyCommandChanged(CommandIDs.newCluster);
       throw err;
@@ -544,7 +550,14 @@ export class ClusterManager extends Widget {
     if (!cluster) {
       throw Error(`Failed to find cluster ${id} to scale`);
     }
-    const update = await showScalingDialog(cluster);
+    // TODO: scale not implemented
+    // should add an engine set
+    void showErrorMessage("Scale not implemented", "");
+
+    // const update = await showScalingDialog(cluster);
+
+    const update = cluster;
+
     if (JSONExt.deepEqual(update, cluster)) {
       // If the user canceled, or the model is identical don't try to update.
       return Promise.resolve(cluster);
@@ -706,6 +719,9 @@ function ClusterListingItem(props: IClusterListingItemProps) {
     cluster_state = cluster.controller.state.state;
   }
 
+  // stop action is 'delete' for already-stopped clusters
+  let STOP = cluster_state === "Stopped" ? "DELETE" : "STOP";
+
   return (
     <li
       className={itemClass}
@@ -753,15 +769,17 @@ function ClusterListingItem(props: IClusterListingItemProps) {
         </button>
         <button
           className={`ipp-ClusterListingItem-button ipp-ClusterListingItem-stop jp-mod-styled ${
-            cluster_state == "Stopped" ? "ipp-hidden" : ""
+            cluster_state === "Stopped" && cluster.cluster.cluster_id === ""
+              ? "ipp-hidden"
+              : ""
           }`}
           onClick={async (evt) => {
             evt.stopPropagation();
             return stop();
           }}
-          title={`Stop ${cluster.id}`}
+          title={STOP}
         >
-          STOP
+          {STOP}
         </button>
       </div>
     </li>
@@ -807,30 +825,6 @@ export interface IClusterListingItemProps {
    */
   injectClientCode: () => void;
 }
-{
-  /* {'cluster': {'cluster_id': 'touchy-1627466540-zp7z',
-  'controller_args': [],
-  'controller_ip': '',
-  'controller_location': '',
-  'delay': 1.0,
-  'n': None,
-  'profile_dir': '/Users/minrk/.ipython/profile_default',
-  'class': 'ipyparallel.cluster.cluster.Cluster'},
- 'controller': {'class': 'ipyparallel.cluster.launcher.LocalControllerLauncher',
-  'state': {'cluster_id': 'touchy-1627466540-zp7z',
-   'output_file': '/Users/minrk/.ipython/profile_default/log/ipcontroller-touchy-1627466540-zp7z-6738.log',
-   'pid': 6835,
-   'profile_dir': '/Users/minrk/.ipython/profile_default',
-   'state': 'running'}},
- 'engines': {'class': 'ipyparallel.cluster.launcher.LocalEngineSetLauncher',
-  'sets': {'1627466817-2jkt': {'cluster_id': 'touchy-1627466540-zp7z',
-    'n': 4,
-    'pid': -1,
-    'profile_dir': '/Users/minrk/.ipython/profile_default',
-    'state': 'running',
-}}}}}
- */
-}
 
 /**
  * An interface for a JSON-serializable representation of a cluster.
@@ -860,6 +854,12 @@ export interface IClusterModel extends JSONObject {
      * The profile directory
      */
     profile_dir: string;
+
+    /**
+     * The profile, abbreviated
+     */
+    profle: string;
+
     /**
      * The class import string
      */
