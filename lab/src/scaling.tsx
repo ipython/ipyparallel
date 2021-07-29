@@ -70,7 +70,10 @@ export class ClusterScaling extends React.Component<
     this.setState({
       model: {
         ...this.state.model,
-        workers: parseInt((event.target as HTMLInputElement).value, 10),
+        cluster: {
+          ...this.state.model.cluster,
+          n: parseInt((event.target as HTMLInputElement).value, null),
+        },
       },
     });
   }
@@ -89,7 +92,7 @@ export class ClusterScaling extends React.Component<
             <span className={`ipp-ScalingSection-label`}>Engines</span>
             <input
               className="ipp-ScalingInput"
-              value={model.engines}
+              value={model.cluster.n}
               type="number"
               step="1"
               onChange={(evt) => {

@@ -35,6 +35,8 @@ import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { CommandRegistry } from "@lumino/commands";
 
+import { CommandIDs } from "./commands";
+
 /**
  * A refresh interval (in ms) for polling the backend cluster manager.
  */
@@ -67,7 +69,6 @@ export class ClusterManager extends Widget {
     this._injectClientCodeForCluster = options.injectClientCodeForCluster;
     this._getClientCodeForCluster = options.getClientCodeForCluster;
     this._registry = options.registry;
-    this._launchClusterId = options.launchClusterId;
 
     // A function to set the active cluster.
     this._setActiveById = (id: string) => {
@@ -117,10 +118,10 @@ export class ClusterManager extends Widget {
 
     // Make a new cluster button for the toolbar.
     toolbar.addItem(
-      this._launchClusterId,
+      CommandIDs.newCluster,
       new CommandToolbarButton({
         commands: this._registry,
-        id: this._launchClusterId,
+        id: CommandIDs.newCluster,
       })
     );
 
@@ -185,11 +186,22 @@ export class ClusterManager extends Widget {
   }
 
   /**
-   * Start a new cluster.
+   * Create a new cluster.
    */
-  async start(): Promise<IClusterModel> {
-    const cluster = await this._launchCluster();
+  async create(): Promise<IClusterModel> {
+    const cluster = await this._newCluster();
     return cluster;
+  }
+
+  /**
+   * Start a cluster by ID.
+   */
+  async start(id: string): Promise<void> {
+    const cluster = this._clusters.find((c) => c.id === id);
+    if (!cluster) {
+      throw Error(`Cannot find cluster ${id}`);
+    }
+    await this._startById(id);
   }
 
   /**
@@ -241,6 +253,9 @@ export class ClusterManager extends Widget {
         activeClusterId={(this._activeCluster && this._activeCluster.id) || ""}
         scaleById={(id: string) => {
           return this._scaleById(id);
+        }}
+        startById={(id: string) => {
+          return this._startById(id);
         }}
         stopById={(id: string) => {
           return this._stopById(id);
@@ -429,11 +444,12 @@ export class ClusterManager extends Widget {
   /**
    * Launch a new cluster on the server.
    */
-  private async _launchCluster(): Promise<IClusterModel> {
+  private async _newCluster(): Promise<IClusterModel> {
     this._isReady = false;
-    this._registry.notifyCommandChanged(this._launchClusterId);
+    this._registry.notifyCommandChanged(CommandIDs.newCluster);
+    // TODO: allow requesting a profile, options
     const response = await ServerConnection.makeRequest(
-      `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}/${this._launchClusterId}`,
+      `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}`,
       { method: "POST" },
       this._serverSettings
     );
@@ -441,13 +457,13 @@ export class ClusterManager extends Widget {
       const err = await response.json();
       void showErrorMessage("Cluster Start Error", err);
       this._isReady = true;
-      this._registry.notifyCommandChanged(this._launchClusterId);
+      this._registry.notifyCommandChanged(CommandIDs.newCluster);
       throw err;
     }
     const model = (await response.json()) as IClusterModel;
     await this._updateClusterList();
     this._isReady = true;
-    this._registry.notifyCommandChanged(this._launchClusterId);
+    this._registry.notifyCommandChanged(CommandIDs.newCluster);
     return model;
   }
 
@@ -484,6 +500,23 @@ export class ClusterManager extends Widget {
       this._setActiveById(id);
     }
     this.update();
+  }
+
+  /**
+   * Start a cluster by its id.
+   */
+  private async _startById(id: string): Promise<void> {
+    const response = await ServerConnection.makeRequest(
+      `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}/${id}`,
+      { method: "POST" },
+      this._serverSettings
+    );
+    if (response.status > 299) {
+      const err = await response.json();
+      void showErrorMessage("Failed to start cluster", err);
+      throw err;
+    }
+    await this._updateClusterList();
   }
 
   /**
@@ -565,7 +598,6 @@ export class ClusterManager extends Widget {
   private _serverErrorShown = false;
   private _isReady = true;
   private _registry: CommandRegistry;
-  private _launchClusterId: string;
 }
 
 /**
@@ -580,11 +612,6 @@ export namespace ClusterManager {
      * Registry of all commands
      */
     registry: CommandRegistry;
-
-    /**
-     * The launchCluster command ID.
-     */
-    launchClusterId: string;
 
     /**
      * A callback to inject client connection cdoe.
@@ -609,6 +636,7 @@ function ClusterListing(props: IClusterListingProps) {
         key={cluster.id}
         cluster={cluster}
         scale={() => props.scaleById(cluster.id)}
+        start={() => props.startById(cluster.id)}
         stop={() => props.stopById(cluster.id)}
         setActive={() => props.setActiveById(cluster.id)}
         injectClientCode={() => props.injectClientCodeForCluster(cluster)}
@@ -639,6 +667,11 @@ export interface IClusterListingProps {
   activeClusterId: string;
 
   /**
+   * A function for starting a cluster by ID.
+   */
+  startById: (id: string) => Promise<void>;
+
+  /**
    * A function for stopping a cluster by ID.
    */
   stopById: (id: string) => Promise<void>;
@@ -663,9 +696,15 @@ export interface IClusterListingProps {
  * A TSX functional component for rendering a single running cluster.
  */
 function ClusterListingItem(props: IClusterListingItemProps) {
-  const { cluster, isActive, setActive, scale, stop, injectClientCode } = props;
+  const { cluster, isActive, setActive, scale, start, stop, injectClientCode } =
+    props;
   let itemClass = "ipp-ClusterListingItem";
   itemClass = isActive ? `${itemClass} jp-mod-active` : itemClass;
+
+  let cluster_state = "Stopped";
+  if (cluster.controller) {
+    cluster_state = cluster.controller.state.state;
+  }
 
   return (
     <li
@@ -676,9 +715,10 @@ function ClusterListingItem(props: IClusterListingItemProps) {
         evt.stopPropagation();
       }}
     >
-      <div className="ipp-ClusterListingItem-title">{cluster.name}</div>
+      <div className="ipp-ClusterListingItem-title">{cluster.id}</div>
+      <div className="ipp-ClusterListingItem-stats">State: {cluster_state}</div>
       <div className="ipp-ClusterListingItem-stats">
-        Number of engines: {cluster.engines}
+        Number of engines: {cluster.engines.n || cluster.cluster.n || "auto"}
       </div>
       <div className="ipp-ClusterListingItem-button-panel">
         <button
@@ -687,27 +727,41 @@ function ClusterListingItem(props: IClusterListingItemProps) {
             injectClientCode();
             evt.stopPropagation();
           }}
-          title={`Inject client code for ${cluster.name}`}
+          title={`Inject client code for ${cluster.id}`}
         />
         <button
-          className="ipp-ClusterListingItem-button ipp-ClusterListingItem-scale jp-mod-styled"
+          className={`ipp-ClusterListingItem-button ipp-ClusterListingItem-start jp-mod-styled ${
+            cluster_state == "Stopped" ? "" : "ipp-hidden"
+          }`}
+          onClick={async (evt) => {
+            evt.stopPropagation();
+            return start();
+          }}
+          title={`Start ${cluster.id}`}
+        >
+          START
+        </button>
+        <button
+          className="ipp-ClusterListingItem-button ipp-ClusterListingItem-scale jp-mod-styled ipp-hidden"
           onClick={async (evt) => {
             evt.stopPropagation();
             return scale();
           }}
-          title={`Rescale ${cluster.name}`}
+          title={`Rescale ${cluster.id}`}
         >
           SCALE
         </button>
         <button
-          className="ipp-ClusterListingItem-button ipp-ClusterListingItem-stop jp-mod-styled"
+          className={`ipp-ClusterListingItem-button ipp-ClusterListingItem-stop jp-mod-styled ${
+            cluster_state == "Stopped" ? "ipp-hidden" : ""
+          }`}
           onClick={async (evt) => {
             evt.stopPropagation();
             return stop();
           }}
-          title={`Shutdown ${cluster.name}`}
+          title={`Stop ${cluster.id}`}
         >
-          SHUTDOWN
+          STOP
         </button>
       </div>
     </li>
@@ -729,6 +783,11 @@ export interface IClusterListingItemProps {
   isActive: boolean;
 
   /**
+   * A function for starting the cluster.
+   */
+  start: () => Promise<void>;
+
+  /**
    * A function for scaling the cluster.
    */
   scale: () => Promise<IClusterModel>;
@@ -748,6 +807,30 @@ export interface IClusterListingItemProps {
    */
   injectClientCode: () => void;
 }
+{
+  /* {'cluster': {'cluster_id': 'touchy-1627466540-zp7z',
+  'controller_args': [],
+  'controller_ip': '',
+  'controller_location': '',
+  'delay': 1.0,
+  'n': None,
+  'profile_dir': '/Users/minrk/.ipython/profile_default',
+  'class': 'ipyparallel.cluster.cluster.Cluster'},
+ 'controller': {'class': 'ipyparallel.cluster.launcher.LocalControllerLauncher',
+  'state': {'cluster_id': 'touchy-1627466540-zp7z',
+   'output_file': '/Users/minrk/.ipython/profile_default/log/ipcontroller-touchy-1627466540-zp7z-6738.log',
+   'pid': 6835,
+   'profile_dir': '/Users/minrk/.ipython/profile_default',
+   'state': 'running'}},
+ 'engines': {'class': 'ipyparallel.cluster.launcher.LocalEngineSetLauncher',
+  'sets': {'1627466817-2jkt': {'cluster_id': 'touchy-1627466540-zp7z',
+    'n': 4,
+    'pid': -1,
+    'profile_dir': '/Users/minrk/.ipython/profile_default',
+    'state': 'running',
+}}}}}
+ */
+}
 
 /**
  * An interface for a JSON-serializable representation of a cluster.
@@ -759,19 +842,47 @@ export interface IClusterModel extends JSONObject {
   id: string;
 
   /**
-   * A display name for the cluster.
+   * the cluster file for `Cluster.from_file`
    */
-  name: string;
+  cluster_file: string;
 
-  /**
-   * Client connection file path
-   */
-  client_connection_file: string;
+  cluster: {
+    /**
+     * The number of engines (null = auto)
+     */
+    n?: number;
+    /**
+     * The cluster id
+     */
+    cluster_id: string;
 
-  /**
-   * Total number of engines used by the cluster.
-   */
-  engines: number;
+    /**
+     * The profile directory
+     */
+    profile_dir: string;
+    /**
+     * The class import string
+     */
+    class: string;
+  };
+
+  controller?: {
+    class: string;
+    state?: {
+      state: string;
+    };
+  };
+
+  engines: {
+    n: number;
+    class: string;
+    sets: {
+      [key: string]: {
+        n: number;
+        state: string;
+      };
+    };
+  };
 }
 
 /**

@@ -125,6 +125,15 @@ button.ipp-ClusterListingItem-scale {
   font-weight: 600;
 }
 
+button.ipp-ClusterListingItem-start {
+  color: var(--jp-accent-color1);
+  font-weight: 600;
+}
+
+button.ipp-hidden {
+  display: none;
+}
+
 .ipp-ClusterListingItem button.ipp-ClusterListingItem-code.jp-mod-styled {
   margin: 0 4px 0 4px;
   background-repeat: no-repeat;

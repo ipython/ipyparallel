@@ -60,26 +60,21 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
   ClusterList.prototype.load_list_success = function (data, status, xhr) {
     this.clear_list();
     var len = data.length;
-    console.log("cluster list", data);
-    for (var cluster_key in data) {
-      if (!data.hasOwnProperty(cluster_key)) {
-        continue;
-      }
+    for (var cluster of data) {
       var element = $("<div/>");
-      var item = new ClusterItem(element, cluster_key, this.options);
-      item.update_state(data[cluster_key]);
+      var item = new ClusterItem(element, cluster, this, this.options);
       element.data("item", item);
       this.element.append(element);
     }
   };
 
-  var ClusterItem = function (element, cluster_key, options) {
+  var ClusterItem = function (element, cluster, cluster_list, options) {
     this.element = $(element);
-    this.cluster_key = cluster_key;
+    this.cluster_list = cluster_list;
     this.base_url = options.base_url || utils.get_body_data("baseUrl");
     this.notebook_path =
       options.notebook_path || utils.get_body_data("notebookPath");
-    this.data = null;
+    this.update_state(cluster);
     this.style();
   };
 
@@ -87,9 +82,9 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
     this.element.addClass("list_item").addClass("row");
   };
 
-  ClusterItem.prototype.update_state = function (data) {
-    this.data = data;
-    if (data.controller.state) {
+  ClusterItem.prototype.update_state = function (cluster) {
+    this.cluster = cluster;
+    if (cluster.controller && cluster.controller.state) {
       this.state_running();
     } else {
       this.state_stopped();
@@ -100,10 +95,10 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
     var that = this;
     var profile_col = $("<div/>")
       .addClass("profile_col col-xs-2")
-      .text(this.data.profile);
+      .text(this.cluster.cluster.profile);
     var cluster_id_col = $("<div/>")
       .addClass("cluster_id_col col-xs-2")
-      .text(this.data.cluster_id);
+      .text(this.cluster.cluster.cluster_id);
     var status_col = $("<div/>")
       .addClass("status_col col-xs-3")
       .text("stopped");
@@ -134,9 +129,12 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
       if (!/^\d+$/.test(n) && n.length > 0) {
         status_col.text("invalid engine #");
       } else {
+        if (n === "") {
+          n = null;
+        }
         var settings = {
           cache: false,
-          data: { n: n },
+          data: JSON.stringify({ n: n }),
           type: "POST",
           dataType: "json",
           success: function (data, status, xhr) {
@@ -151,7 +149,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
         var url = utils.url_join_encode(
           that.base_url,
           "ipyparallel/clusters",
-          that.cluster_key
+          that.cluster.id
         );
         ajax(url, settings);
       }
@@ -163,25 +161,17 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
 
     var profile_col = $("<div/>")
       .addClass("profile_col col-xs-2")
-      .text(this.data.cluster.profile);
+      .text(this.cluster.cluster.profile);
     var cluster_id_col = $("<div/>")
       .addClass("cluster_id_col col-xs-2")
-      .text(this.data.cluster.cluster_id);
+      .text(this.cluster.cluster.cluster_id);
     var status_col = $("<div/>")
       .addClass("status_col col-xs-3")
       .text("running");
 
-    // calculate n_engines
-    var n_engines = 0;
-    $.map(this.data.engines.sets, function (engine_set) {
-      if (engine_set.n) {
-        n_engines += engine_set.n;
-      }
-    });
-
     var engines_col = $("<div/>")
       .addClass("engines_col col-xs-3")
-      .text(n_engines);
+      .text(this.cluster.engines.n);
     var stop_button = $("<button/>")
       .addClass("btn btn-default btn-xs")
       .text("Stop");
@@ -204,7 +194,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
         type: "DELETE",
         dataType: "json",
         success: function (data, status, xhr) {
-          that.update_state(data);
+          that.cluster_list.load_list();
         },
         error: function (xhr, status, error) {
           utils.log_ajax_error(xhr, status, error),
@@ -215,7 +205,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
       var url = utils.url_join_encode(
         that.base_url,
         "ipyparallel/clusters",
-        that.cluster_key
+        that.cluster.id
       );
       ajax(url, settings);
     });

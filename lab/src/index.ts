@@ -43,32 +43,7 @@ import { Sidebar } from "./sidebar";
 import "../style/index.css";
 import logoSvgStr from "../style/logo.svg";
 
-namespace CommandIDs {
-  /**
-   * Inject client code into the active editor.
-   */
-  export const injectClientCode = "ipyparallel:inject-client-code";
-
-  /**
-   * Launch a new cluster.
-   */
-  export const launchCluster = "ipyparallel:launch-cluster";
-
-  /**
-   * Shutdown a cluster.
-   */
-  export const stopCluster = "ipyparallel:stop-cluster";
-
-  /**
-   * Scale a cluster.
-   */
-  export const scaleCluster = "ipyparallel:scale-cluster";
-
-  /**
-   * Toggle the auto-starting of clients.
-   */
-  export const toggleAutoStartClient = "ipyparallel:toggle-auto-start-client";
-}
+import { CommandIDs } from "./commands";
 
 const PLUGIN_ID = "ipyparallel-labextension:plugin";
 
@@ -129,7 +104,6 @@ async function activate(
     clientCodeInjector,
     clientCodeGetter: Private.getClientCode,
     registry: app.commands,
-    launchClusterId: CommandIDs.launchCluster,
   });
   sidebar.id = id;
   sidebar.title.icon = new LabIcon({
@@ -284,9 +258,9 @@ async function activate(
   });
 
   // Add a command to launch a new cluster.
-  app.commands.addCommand(CommandIDs.launchCluster, {
-    label: (args) => (args["isPalette"] ? "Launch New Cluster" : "NEW"),
-    execute: () => sidebar.clusterManager.start(),
+  app.commands.addCommand(CommandIDs.newCluster, {
+    label: (args) => (args["isPalette"] ? "Create New Cluster" : "NEW"),
+    execute: () => sidebar.clusterManager.create(),
     iconClass: (args) =>
       args["isPalette"] ? "" : "jp-AddIcon jp-Icon jp-Icon-16",
     isEnabled: () => sidebar.clusterManager.isReady,
@@ -299,6 +273,18 @@ async function activate(
   });
 
   // Add a command to launch a new cluster.
+  app.commands.addCommand(CommandIDs.startCluster, {
+    label: "Start Cluster",
+    execute: () => {
+      const cluster = Private.clusterFromClick(app, sidebar.clusterManager);
+      if (!cluster) {
+        return;
+      }
+      return sidebar.clusterManager.start(cluster.id);
+    },
+  });
+
+  // Add a command to stop a cluster.
   app.commands.addCommand(CommandIDs.stopCluster, {
     label: "Shutdown Cluster",
     execute: () => {
@@ -310,7 +296,7 @@ async function activate(
     },
   });
 
-  // Add a command to launch a new cluster.
+  // Add a command to resize a cluster.
   app.commands.addCommand(CommandIDs.scaleCluster, {
     label: "Scale Cluster…",
     execute: () => {
@@ -343,7 +329,7 @@ async function activate(
   mainMenu.settingsMenu.addGroup([
     { command: CommandIDs.toggleAutoStartClient },
   ]);
-  [CommandIDs.launchCluster, CommandIDs.toggleAutoStartClient].forEach(
+  [CommandIDs.newCluster, CommandIDs.toggleAutoStartClient].forEach(
     (command) => {
       commandPalette.addItem({
         category: "IPython Parallel",
@@ -370,7 +356,7 @@ async function activate(
     rank: 2,
   });
   app.contextMenu.addItem({
-    command: CommandIDs.launchCluster,
+    command: CommandIDs.startCluster,
     selector: ".ipp-ClusterListing-list",
     rank: 1,
   });
@@ -438,7 +424,7 @@ namespace Private {
   export function getClientCode(cluster: IClusterModel): string {
     return `import ipyparallel as ipp
 
-cluster = ipp.Cluster.from_file("${cluster.client_connection_file}")
+cluster = ipp.Cluster.from_file("${cluster.cluster_file}")
 rc = cluster.connect_client_sync()
 rc`;
   }

@@ -740,6 +740,7 @@ class ClusterManager(LoggingConfigurable):
         profile_dir=None,
         profiles=None,
         profile=None,
+        init_default_clusters=False,
         **kwargs,
     ):
         """Populate a ClusterManager from cluster files on disk
@@ -748,6 +749,10 @@ class ClusterManager(LoggingConfigurable):
 
         Default is to find clusters in all IPython profiles,
         but profile directories or profile names can be specified explicitly.
+
+        If `init_default_clusters` is True,
+        a stopped Cluster object is loaded for every profile dir
+        with cluster_id="" if no running cluster is found.
 
         Priority:
 
@@ -772,8 +777,24 @@ class ClusterManager(LoggingConfigurable):
                 # totally unspecified, default to all
                 profile_dirs = _all_profile_dirs()
 
+        by_cluster_file = {c.cluster_file: c for c in self._clusters.values()}
         for profile_dir in profile_dirs:
-            for cluster_file in self._cluster_files_in_profile_dir(profile_dir):
+            cluster_files = self._cluster_files_in_profile_dir(profile_dir)
+            # load default cluster for each profile
+            # TODO: only if it has any ipyparallel config files
+            # *or* it's the default profile
+            if init_default_clusters and not cluster_files:
+
+                cluster = Cluster(profile_dir=profile_dir, cluster_id="")
+                cluster_key = self._cluster_key(cluster)
+                if cluster_key not in self._clusters:
+                    self._clusters[cluster_key] = cluster
+
+            for cluster_file in cluster_files:
+                if cluster_file in by_cluster_file:
+                    # already loaded, skip it
+                    continue
+                self.log.debug(f"Loading cluster file {cluster_file}")
                 try:
                     cluster = Cluster.from_file(cluster_file, parent=self)
                 except Exception as e:

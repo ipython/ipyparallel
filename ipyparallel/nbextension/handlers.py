@@ -21,12 +21,24 @@ class ClusterHandler(APIHandler):
     def cluster_manager(self):
         return self.settings['cluster_manager']
 
-    def cluster_model(self, cluster):
-        """Create a JSONable cluster model"""
+    def cluster_model(self, key, cluster):
+        """Create a JSONable cluster model
+
+        Adds additional fields to make things easier on the client
+        """
         d = cluster.to_dict()
         profile_dir = d['cluster']['profile_dir']
         # provide abbreviated profile info
         d['cluster']['profile'] = abbreviate_profile_dir(profile_dir)
+
+        # top-level fields, added for easier client-side logic
+        # add 'id' key, since typescript is bad at key-value pairs
+        # so we return a list instead of a dict
+        d['id'] = key
+        # add total engine count
+        d['engines']['n'] = sum(es.get('n', 0) for es in d['engines']['sets'].values())
+        # add cluster file
+        d['cluster_file'] = cluster.cluster_file
         return d
 
 
@@ -39,18 +51,47 @@ class ClusterListHandler(ClusterHandler):
     @web.authenticated
     def get(self):
         # currently reloads everything from disk. Is that what we want?
-        clusters = self.cluster_manager.load_clusters()
-        self.finish(
-            {key: self.cluster_model(cluster) for key, cluster in clusters.items()}
+        clusters = self.cluster_manager.load_clusters(init_default_clusters=True)
+
+        def sort_key(model):
+            """Sort clusters
+
+            order:
+            - running
+            - default profile
+            - default cluster id
+            """
+            running = True if model.get("controller") else False
+            profile = model['cluster']['profile']
+            cluster_id = model['cluster']['cluster_id']
+            default_profile = profile == 'default'
+            default_cluster = cluster_id == ''
+
+            return (
+                not running,
+                not default_profile,
+                not default_cluster,
+                profile,
+                cluster_id,
+            )
+
+        self.write(
+            json.dumps(
+                sorted(
+                    [
+                        self.cluster_model(key, cluster)
+                        for key, cluster in clusters.items()
+                    ],
+                    key=sort_key,
+                )
+            )
         )
 
     @web.authenticated
     def post(self):
         body = self.get_json_body() or {}
-        # profile
-        # cluster_id
         cluster_id, cluster = self.cluster_manager.new_cluster(**body)
-        self.write(json.dumps({}))
+        self.write(json.dumps(self.cluster_model(cluster_id, cluster)))
 
 
 class ClusterActionHandler(ClusterHandler):
@@ -71,21 +112,24 @@ class ClusterActionHandler(ClusterHandler):
     @web.authenticated
     async def post(self, cluster_key):
         cluster = self.get_cluster(cluster_key)
-        n = self.get_argument('n', default=None)
+        body = self.get_json_body() or {}
+        n = body.get("n", None)
+        if n is not None and not isinstance(n, int):
+            raise web.HTTPError(400, f"n must be an integer, not {n!r}")
         await cluster.start_cluster(n=n)
-        self.write(json.dumps(self.cluster_model(cluster)))
+        self.write(json.dumps(self.cluster_model(cluster_key, cluster)))
 
     @web.authenticated
     async def get(self, cluster_key):
         cluster = self.get_cluster(cluster_key)
-        self.write(json.dumps(self.cluster_model(cluster)))
+        self.write(json.dumps(self.cluster_model(cluster_key, cluster)))
 
     @web.authenticated
     async def delete(self, cluster_key):
         cluster = self.get_cluster(cluster_key)
         await cluster.stop_cluster()
         self.cluster_manager.remove_cluster(cluster_key)
-        self.write(json.dumps(self.cluster_model(cluster)))
+        self.set_status(204)
 
 
 # -----------------------------------------------------------------------------

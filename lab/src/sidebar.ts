@@ -20,7 +20,6 @@ export class Sidebar extends Widget {
     // Add the cluster manager component.
     this._clusters = new ClusterManager({
       registry: options.registry,
-      launchClusterId: options.launchClusterId,
       injectClientCodeForCluster,
       getClientCodeForCluster,
     });
@@ -49,11 +48,6 @@ export namespace Sidebar {
      * Registry of all commands
      */
     registry: CommandRegistry;
-
-    /**
-     * The launchCluster command ID.
-     */
-    launchClusterId: string;
 
     /**
      * A function that injects client-connection code for a given cluster.
