@@ -5,15 +5,17 @@ import json
 import os
 import sys
 
-from notebook.base.handlers import APIHandler
-from notebook.utils import url_path_join as ujoin
+from jupyter_server.utils import url_path_join as ujoin
 from tornado import web
 
 from ..cluster import ClusterManager
 from ..util import abbreviate_profile_dir
+from .base import get_api_handler
 
 
 static = os.path.join(os.path.dirname(__file__), 'static')
+
+APIHandler = get_api_handler()
 
 
 class ClusterHandler(APIHandler):
@@ -132,9 +134,7 @@ class ClusterActionHandler(ClusterHandler):
         self.set_status(204)
 
 
-# -----------------------------------------------------------------------------
 # URL to handler mappings
-# -----------------------------------------------------------------------------
 
 
 _cluster_key_regex = (

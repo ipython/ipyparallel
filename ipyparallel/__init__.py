@@ -50,7 +50,7 @@ def bind_kernel(**kwargs):
         else:
             return app.bind_kernel(**kwargs)
 
-    raise RuntimeError("bind_kernel be called from an IPEngine instance")
+    raise RuntimeError("bind_kernel must be called from an IPEngine instance")
 
 
 def register_joblib_backend(name='ipyparallel', make_default=False):
@@ -62,7 +62,7 @@ def register_joblib_backend(name='ipyparallel', make_default=False):
 
 # nbextension installation (requires notebook ≥ 4.2)
 def _jupyter_server_extension_paths():
-    return [{'module': 'ipyparallel.nbextension'}]
+    return [{'module': 'ipyparallel'}]
 
 
 def _jupyter_nbextension_paths():
@@ -83,3 +83,19 @@ def _jupyter_labextension_paths():
             "dest": "ipyparallel-labextension",
         }
     ]
+
+
+def _load_jupyter_server_extension(app):
+    """Load the server extension"""
+    # localte the appropriate APIHandler base class before importing our handler classes
+    from .nbextension.base import get_api_handler
+
+    get_api_handler(app)
+
+    from .nbextension.handlers import load_jupyter_server_extension
+
+    return load_jupyter_server_extension(app)
+
+
+# backward-compat
+load_jupyter_server_extension = _load_jupyter_server_extension

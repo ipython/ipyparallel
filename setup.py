@@ -4,28 +4,11 @@
 # Distributed under the terms of the Modified BSD License.
 from __future__ import print_function
 
-# the name of the project
-name = 'ipyparallel'
-
-# -----------------------------------------------------------------------------
-# Minimal Python version sanity check
-# -----------------------------------------------------------------------------
-
+import os
 import sys
+from glob import glob
 
-v = sys.version_info
-if v[:2] < (2, 7) or (v[0] >= 3 and v[:2] < (3, 4)):
-    error = "ERROR: %s requires Python version 2.7 or 3.4 or above." % name
-    print(error, file=sys.stderr)
-    sys.exit(1)
-
-PY3 = sys.version_info[0] >= 3
-
-# -----------------------------------------------------------------------------
-# Add test command
-# -----------------------------------------------------------------------------
-
-
+import setuptools
 from setuptools.command.bdist_egg import bdist_egg
 
 
@@ -42,56 +25,70 @@ class bdist_egg_disabled(bdist_egg):
         )
 
 
-# -----------------------------------------------------------------------------
-# get on with it
-# -----------------------------------------------------------------------------
-
-import os
-from glob import glob
-
-from setuptools import setup
+# the name of the project
+name = 'ipyparallel'
 
 pjoin = os.path.join
 here = os.path.abspath(os.path.dirname(__file__))
 pkg_root = pjoin(here, name)
+lab_path = pjoin(pkg_root, 'labextension')
 
-packages = []
-for d, _, _ in os.walk(pjoin(here, name)):
-    if os.path.exists(pjoin(d, '__init__.py')):
-        packages.append(d[len(here) + 1 :].replace(os.path.sep, '.'))
+package_data_spec = {'ipyparallel.nbextension': [pjoin('static', '*')]}
 
-package_data = {'ipyparallel.nbextension': [pjoin('static', '*')]}
-
-data_files = [
+data_files_spec = [
+    # all extension-enabling config files
     (
-        'etc/jupyter/jupyter_notebook_config.d',
-        [pjoin('etc', 'ipyparallel-serverextension.json')],
+        'etc/jupyter',
+        'etc/jupyter',
+        '**',
     ),
-    (
-        'etc/jupyter/nbconfig/tree.d',
-        [pjoin('etc', 'ipyparallel-nbextension.json')],
-    ),
+    # nbclassic extension
     (
         'share/jupyter/nbextensions/ipyparallel',
-        glob(pjoin('ipyparallel', 'nbextension', 'static', '*')),
+        'ipyparallel/nbextension/static',
+        '*',
     ),
+    # lab extension
+    ('share/jupyter/labextensions/ipyparallel', here, 'install.json'),
+    ('share/jupyter/labextensions/ipyparallel', lab_path, '**'),
 ]
 
 version_ns = {}
 with open(pjoin(here, name, '_version.py')) as f:
     exec(f.read(), {}, version_ns)
 
+with open(pjoin(here, "README.md")) as f:
+    readme = f.read()
+
+try:
+    from jupyter_packaging import wrap_installers, npm_builder
+
+    builder = npm_builder()
+    cmdclass = wrap_installers(pre_develop=builder, pre_dist=builder)
+except ImportError:
+    from setuptools.command.build_py import build_py
+
+    class NeedsJupyterPackaging(build_py):
+        def run(self):
+            raise ImportError(
+                "Build requires jupyter-packaging. Make sure to build/install with pip or build."
+            )
+
+    cmdclass = {
+        'build_py': NeedsJupyterPackaging,
+    }
+
+
+if "bdist_egg" not in sys.argv:
+    cmdclass["bdist_egg"] = bdist_egg_disabled
 
 setup_args = dict(
     name=name,
     version=version_ns["__version__"],
-    packages=packages,
-    package_data=package_data,
+    packages=setuptools.find_packages(),
     description="Interactive Parallel Computing with IPython",
-    long_description="""Use multiple instances of IPython in parallel, interactively.
-
-    See https://ipyparallel.readthedocs.io for more info.
-    """,
+    long_description=readme,
+    long_description_content_type="text/markdown",
     author="IPython Development Team",
     author_email="ipython-dev@scipy.org",
     url="http://ipython.org",
@@ -109,10 +106,8 @@ setup_args = dict(
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
     ],
-    cmdclass={
-        "bdist_egg": bdist_egg if "bdist_egg" in sys.argv else bdist_egg_disabled,
-    },
-    data_files=data_files,
+    cmdclass=cmdclass,
+    include_package_data=True,
     install_requires=[
         "ipython_genutils",
         "decorator",
@@ -128,7 +123,9 @@ setup_args = dict(
     ],
     python_requires=">=3.6",
     extras_require={
-        "nbext": ["notebook"],
+        "nbext": ["notebook", "jupyter_server"],
+        "serverextension": ["jupyter_server"],
+        "labextension": ["jupyter_server", "jupyterlab>=3"],
         "test": [
             "pytest",
             "pytest-cov",
@@ -145,8 +142,9 @@ setup_args = dict(
             "ipengine = ipyparallel.engine.app:main",
         ]
     },
+    zip_safe=False,
 )
 
 
 if __name__ == "__main__":
-    setup(**setup_args)
+    setuptools.setup(**setup_args)
