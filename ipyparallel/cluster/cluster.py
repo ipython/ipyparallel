@@ -23,15 +23,19 @@ from weakref import WeakSet
 
 import IPython
 import traitlets.log
+from IPython.core.profiledir import ProfileDir
 from traitlets import Any
 from traitlets import Bool
 from traitlets import default
 from traitlets import Dict
 from traitlets import Float
 from traitlets import import_item
+from traitlets import Instance
 from traitlets import Integer
 from traitlets import List
 from traitlets import Unicode
+from traitlets import validate
+from traitlets.config import Config
 from traitlets.config import LoggingConfigurable
 
 from . import launcher
@@ -267,14 +271,71 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         else:
             return traitlets.log.get_logger()
 
+    load_profile = Bool(
+        True,
+        config=True,
+        help="""
+        If True (default) load ipcluster config from profile directory, if present.
+        """,
+    )
     # private state
     controller = Any()
     engines = Dict()
+
+    profile_config = Instance(Config, allow_none=False)
+
+    @default("profile_config")
+    def _profile_config_default(self):
+        """Load config from our profile"""
+        if not self.load_profile or not os.path.isdir(self.profile_dir):
+            # no profile dir, nothing to load
+            return Config()
+
+        from .app import BaseParallelApplication, IPClusterStart
+
+        if (
+            self.parent
+            and isinstance(self.parent, BaseParallelApplication)
+            and self.parent.name == 'ipcluster'
+            and self.parent.profile_dir.location == self.profile_dir
+        ):
+            # profile config already loaded by parent, nothing new to load
+            return Config()
+
+        self.log.debug(f"Loading profile {self.profile_dir}")
+        # set profile dir via config
+        self.config.ProfileDir.location = self.profile_dir
+
+        # load profile config via IPCluster
+        app = IPClusterStart(parent=self, log_level=10)
+        # adds profile dir to config_files_path
+        app.init_profile_dir()
+        # adds system to config_files_path
+        app.init_config_files()
+        # actually load the config
+        app.load_config_file(suppress_errors=False)
+        return app.config
+
+    @validate("config")
+    def _merge_profile_config(self, proposal):
+        direct_config = proposal.value
+        if not self.load_profile:
+            return direct_config
+        profile_config = self.profile_config
+        if not profile_config:
+            return direct_config
+        # priority ?! direct > profile
+        config = Config()
+        if profile_config:
+            config.merge(profile_config)
+        config.merge(direct_config)
+        return config
 
     def __init__(self, **kwargs):
         """Construct a Cluster"""
         if 'parent' not in kwargs and 'config' not in kwargs:
             kwargs['parent'] = self._default_parent()
+
         super().__init__(**kwargs)
 
     def __del__(self):

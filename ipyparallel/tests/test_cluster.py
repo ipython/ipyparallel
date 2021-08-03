@@ -1,10 +1,12 @@
 import asyncio
+import json
 import os
 import signal
 import sys
 import time
 
 import pytest
+from traitlets.config import Config
 
 import ipyparallel as ipp
 from .clienttest import raises_remote
@@ -181,6 +183,34 @@ def test_sync_with(Cluster):
         assert sorted(rc.ids) == list(range(5))
         rc[:]['a'] = 5
         assert rc[:]['a'] == [5] * 5
+
+
+def test_load_profile(tmpdir):
+    profile_dir = tmpdir.join("profile").mkdir()
+    # config cases:
+    # - only in profile config (used)
+    # - in profile config and direct config (direct used)
+    # - in profile config and kwargs (kwargs used)
+    with profile_dir.join("ipcluster_config.json").open("w") as f:
+        json.dump(
+            {
+                "Cluster": {
+                    "controller_args": ["--from-profile"],
+                    "n": 5,
+                    "engine_timeout": 10,
+                }
+            },
+            f,
+        )
+    print(profile_dir.listdir())
+    config = Config()
+    config.Cluster.engine_timeout = 20
+    c = cluster.Cluster(profile_dir=str(profile_dir), n=10, config=config)
+    print(c.config)
+    assert c.profile_dir == str(profile_dir)
+    assert c.controller_args == ['--from-profile']  # from profile
+    assert c.engine_timeout == 20  # from config
+    assert c.n == 10  # from kwarg
 
 
 @pytest.mark.parametrize(
