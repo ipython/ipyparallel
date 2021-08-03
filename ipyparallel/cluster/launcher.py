@@ -465,10 +465,18 @@ class LocalProcessLauncher(BaseLauncher):
     async def join(self, timeout=None):
         """Wait for the process to exit"""
         with ThreadPoolExecutor(1) as pool:
+            wait = partial(self.process.wait, timeout)
             try:
-                await asyncio.wrap_future(
-                    pool.submit(partial(self.process.wait, timeout))
-                )
+                try:
+                    future = pool.submit(wait)
+                except RuntimeError:
+                    # e.g. called during process shutdown,
+                    # which raises
+                    # RuntimeError: cannot schedule new futures after interpreter shutdown
+                    # Instead, do the blocking call
+                    wait()
+                else:
+                    await asyncio.wrap_future(future)
             except psutil.TimeoutExpired:
                 raise TimeoutError(
                     f"Process {self.pid} did not complete in {timeout} seconds."
@@ -1184,9 +1192,17 @@ class SSHLauncher(LocalProcessLauncher):
 
     async def join(self, timeout=None):
         with ThreadPoolExecutor(1) as pool:
-            await asyncio.wrap_future(
-                pool.submit(partial(self.wait_one, timeout=timeout))
-            )
+            wait = partial(self.wait_one, timeout=timeout)
+            try:
+                future = pool.submit(wait)
+            except RuntimeError:
+                # e.g. called during process shutdown,
+                # which raises
+                # RuntimeError: cannot schedule new futures after interpreter shutdown
+                # Instead, do the blocking call
+                wait()
+            else:
+                await asyncio.wrap_future(future)
 
     def signal(self, sig):
         if self.state == 'running':

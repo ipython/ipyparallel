@@ -16,6 +16,7 @@ import socket
 import string
 import sys
 import time
+import traceback
 from functools import partial
 from multiprocessing import cpu_count
 from weakref import WeakSet
@@ -56,7 +57,11 @@ def _atexit_cleanup_clusters(*args):
             continue
         if cluster.controller or cluster.engines:
             print(f"Stopping cluster {cluster}", file=sys.stderr)
-            cluster.stop_cluster_sync()
+            try:
+                cluster.stop_cluster_sync()
+            except Exception:
+                print(f"Error stopping cluster {cluster}", file=sys.stderr)
+                traceback.print_exception(*sys.exc_info())
 
 
 _atexit_cleanup_clusters.registered = False
