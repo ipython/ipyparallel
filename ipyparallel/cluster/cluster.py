@@ -359,22 +359,37 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             if attr in d:
                 setattr(self, attr, d[attr])
 
+        cluster_key = ClusterManager._cluster_key(self)
+
         if d.get("controller"):
             controller_info = d["controller"]
             cls = self.controller_launcher_class = import_item(controller_info["class"])
             if controller_info["state"]:
-                self.controller = cls.from_dict(controller_info["state"], parent=self)
+                try:
+                    self.controller = cls.from_dict(
+                        controller_info["state"], parent=self
+                    )
+                except launcher.NotRunning as e:
+                    self.log.error(f"Controller for {cluster_key} not running: {e}")
 
         engine_info = d.get("engines")
         if engine_info:
             cls = self.engine_launcher_class = import_item(engine_info["class"])
             for engine_set_id, engine_state in engine_info.get("sets", {}).items():
-                self.engines[engine_set_id] = cls.from_dict(
-                    engine_state,
-                    engine_set_id=engine_set_id,
-                    parent=self,
-                )
-
+                try:
+                    self.engines[engine_set_id] = cls.from_dict(
+                        engine_state,
+                        engine_set_id=engine_set_id,
+                        parent=self,
+                    )
+                except launcher.NotRunning as e:
+                    self.log.error(
+                        f"Engine set {cluster_key}{engine_set_id} not running: {e}"
+                    )
+        # check if state changed
+        if self.to_dict() != d:
+            # if so, update our cluster file
+            self.update_cluster_file()
         return self
 
     @classmethod
@@ -703,7 +718,8 @@ class ClusterManager(LoggingConfigurable):
 
     _clusters = Dict(help="My cluster objects")
 
-    def _cluster_key(self, cluster):
+    @staticmethod
+    def _cluster_key(cluster):
         """Return a unique cluster key for a cluster
 
         Default is {profile}:{cluster_id}

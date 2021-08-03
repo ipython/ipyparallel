@@ -82,6 +82,12 @@ class UnknownStatus(LauncherError):
     pass
 
 
+class NotRunning(LauncherError):
+    """Raised when a launcher is no longer running"""
+
+    pass
+
+
 class BaseLauncher(LoggingConfigurable):
     """An abstraction for starting, stopping and signaling a process."""
 
@@ -408,7 +414,10 @@ class LocalProcessLauncher(BaseLauncher):
     def _reconstruct_process(self, d):
         """Reconstruct our process"""
         if 'pid' in d and d['pid'] > 0:
-            self.process = psutil.Process(d['pid'])
+            try:
+                self.process = psutil.Process(d['pid'])
+            except psutil.NoSuchProcess as e:
+                raise NotRunning(f"Process {d['pid']}")
             self._start_waiting()
 
     def _wait(self):
@@ -646,8 +655,20 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
     @classmethod
     def from_dict(cls, d, **kwargs):
         self = super().from_dict(d, **kwargs)
+        n = 0
         for i, engine_dict in d['engines'].items():
-            self.launchers[i] = self.launcher_class.from_dict(engine_dict, parent=self)
+            try:
+                self.launchers[i] = self.launcher_class.from_dict(
+                    engine_dict, parent=self
+                )
+            except NotRunning as e:
+                self.log.error(f"Engine {i} not running: {e}")
+            else:
+                n += 1
+        if n == 0:
+            raise NotRunning("No engines left")
+        else:
+            self.n = n
         return self
 
     def start(self, n):
