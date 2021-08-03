@@ -125,9 +125,6 @@ class BaseParallelApplication(BaseIPythonApplication):
         else:
             self.name = self.__class__.name
 
-    def _config_files_default(self):
-        return ['ipcontroller_config.py', 'ipengine_config.py', 'ipcluster_config.py']
-
     loop = Instance(IOLoop)
 
     def _loop_default(self):
