@@ -104,7 +104,7 @@ class ClusterListHandler(ClusterHandler):
         if (
             'profile' in body
             and 'cluster_id' not in body
-            and f"{body['profile']}:" not in self.cluster_mananger._clusters
+            and f"{body['profile']}:" not in self.cluster_mananger.clusters
         ):
             # if no cluster exists for a profile,
             # default for no cluster id instead of random

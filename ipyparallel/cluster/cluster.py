@@ -715,7 +715,7 @@ class ClusterManager(LoggingConfigurable):
     Wraps Cluster, adding lookup/list by cluster id
     """
 
-    _clusters = Dict(help="My cluster objects")
+    clusters = Dict(help="My cluster objects")
 
     @staticmethod
     def _cluster_key(cluster):
@@ -777,7 +777,7 @@ class ClusterManager(LoggingConfigurable):
                 # totally unspecified, default to all
                 profile_dirs = _all_profile_dirs()
 
-        by_cluster_file = {c.cluster_file: c for c in self._clusters.values()}
+        by_cluster_file = {c.cluster_file: c for c in self.clusters.values()}
         for profile_dir in profile_dirs:
             cluster_files = self._cluster_files_in_profile_dir(profile_dir)
             # load default cluster for each profile
@@ -787,8 +787,8 @@ class ClusterManager(LoggingConfigurable):
 
                 cluster = Cluster(profile_dir=profile_dir, cluster_id="")
                 cluster_key = self._cluster_key(cluster)
-                if cluster_key not in self._clusters:
-                    self._clusters[cluster_key] = cluster
+                if cluster_key not in self.clusters:
+                    self.clusters[cluster_key] = cluster
 
             for cluster_file in cluster_files:
                 if cluster_file in by_cluster_file:
@@ -802,31 +802,24 @@ class ClusterManager(LoggingConfigurable):
                     continue
                 else:
                     cluster_key = self._cluster_key(cluster)
-                    self._clusters[cluster_key] = cluster
+                    self.clusters[cluster_key] = cluster
 
-        return self._clusters
-
-    def list_clusters(self):
-        """List current clusters"""
-        # TODO: what should we return?
-        # just cluster ids or the full dict?
-        # just cluster ids for now
-        return self._clusters.items()
+        return self.clusters
 
     def new_cluster(self, **kwargs):
         """Create a new cluster"""
         cluster = Cluster(parent=self, **kwargs)
         cluster_key = self._cluster_key(cluster)
-        if cluster_key in self._clusters:
+        if cluster_key in self.clusters:
             raise KeyError(f"Cluster {cluster_key} already exists!")
-        self._clusters[cluster_key] = cluster
+        self.clusters[cluster_key] = cluster
         return cluster_key, cluster
 
     def get_cluster(self, cluster_id):
         """Get a Cluster object by id"""
-        return self._clusters[cluster_id]
+        return self.clusters[cluster_id]
 
     def remove_cluster(self, cluster_id):
         """Delete a cluster by id"""
         # TODO: check running?
-        del self._clusters[cluster_id]
+        del self.clusters[cluster_id]

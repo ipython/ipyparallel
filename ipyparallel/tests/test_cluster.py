@@ -216,19 +216,18 @@ async def test_cluster_repr(Cluster):
 
 async def test_cluster_manager():
     m = cluster.ClusterManager()
-    assert m.list_clusters() == []
-    c = m.new_cluster(profile_dir="/tmp")
+    assert m.clusters == {}
+    key, c = m.new_cluster(profile_dir="/tmp")
     assert c.profile_dir == "/tmp"
-    assert m.get_cluster(c.cluster_id) is c
+    assert m.get_cluster(key) is c
     with pytest.raises(KeyError):
         m.get_cluster("nosuchcluster")
 
     with pytest.raises(KeyError):
-        m.new_cluster(cluster_id=c.cluster_id)
+        m.new_cluster(cluster_id=c.cluster_id, profile_dir=c.profile_dir)
 
-    assert m.list_clusters() == [c.cluster_id]
-    m.remove_cluster(c.cluster_id)
-    assert m.list_clusters() == []
+    assert list(m.clusters) == [key]
+    m.remove_cluster(key)
     with pytest.raises(KeyError):
         m.remove_cluster("nosuchcluster")
 
