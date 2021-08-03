@@ -3,7 +3,6 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 import os
-import sys
 
 from jupyter_server.utils import url_path_join as ujoin
 from tornado import web
@@ -170,7 +169,6 @@ default_handlers = [
 
 def load_jupyter_server_extension(nbapp):
     """Load the nbserver extension"""
-    import notebook
 
     nbapp.log.info("Loading IPython parallel extension")
     webapp = nbapp.web_app
