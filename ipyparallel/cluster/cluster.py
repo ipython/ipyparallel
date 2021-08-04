@@ -304,10 +304,11 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         self.log.debug(f"Loading profile {self.profile_dir}")
         # set profile dir via config
-        self.config.ProfileDir.location = self.profile_dir
+        config = Config()
+        config.ProfileDir.location = self.profile_dir
 
         # load profile config via IPCluster
-        app = IPClusterStart(parent=self, log_level=10)
+        app = IPClusterStart(config=config, log=self.log, log_level=10)
         # adds profile dir to config_files_path
         app.init_profile_dir()
         # adds system to config_files_path
