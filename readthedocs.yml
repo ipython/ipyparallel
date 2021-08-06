@@ -3,12 +3,16 @@ version: 2
 sphinx:
   configuration: docs/source/conf.py
 
+conda:
+  environment: docs/environment.yml
+
 build:
   image: latest
 
 python:
   version: 3.8
   install:
+    # install ipp itself
     - method: pip
       path: .
     - requirements: docs/requirements.txt
