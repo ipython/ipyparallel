@@ -1,4 +1,5 @@
 """Test CLI application behavior"""
+import glob
 import json
 import os
 import sys
@@ -169,12 +170,27 @@ def test_ipcluster_list(Cluster):
 
 @pytest.mark.parametrize("daemonize", (False, True))
 def test_ipcluster_start_stop(request, ipython_dir, daemonize):
-    default_profile = ProfileDir.find_profile_dir_by_name(ipython_dir).location
+    default_profile = ProfileDir.find_profile_dir_by_name(ipython_dir)
+    default_profile_dir = default_profile.location
+
+    # cleanup the security directory to avoid leaking files from one test to the next
+    def cleanup_security():
+        for f in glob.glob(os.path.join(default_profile.security_dir, "*.json")):
+            print(f"Cleaning up {f}")
+            try:
+                os.remove(f)
+            except Exception as e:
+                print(f"Error removing {f}: {e}")
+
+    request.addfinalizer(cleanup_security)
+
     n = 2
     start_args = ["-n", str(n)]
     if daemonize:
         start_args.append("--daemonize")
-    start = Popen([sys.executable, "-m", "ipyparallel.cluster", "start"] + start_args)
+    start = Popen(
+        [sys.executable, "-m", "ipyparallel.cluster", "start", "--debug"] + start_args
+    )
     request.addfinalizer(start.terminate)
     if daemonize:
         # if daemonize, should exit after starting
@@ -183,7 +199,7 @@ def test_ipcluster_start_stop(request, ipython_dir, daemonize):
         # wait for file to appear
         # only need this if not daemonize
         cluster_file = ipp.Cluster(
-            profile_dir=default_profile, cluster_id=""
+            profile_dir=default_profile_dir, cluster_id=""
         ).cluster_file
         for i in range(100):
             if os.path.isfile(cluster_file) or start.poll() is not None:
@@ -197,10 +213,18 @@ def test_ipcluster_start_stop(request, ipython_dir, daemonize):
     assert len(out.splitlines()) == 2
 
     # cluster running, try to connect with default args
-    cluster = ipp.Cluster.from_file()
-    with cluster.connect_client_sync() as rc:
-        rc.wait_for_engines(n=2)
-        rc[:].apply_sync(os.getpid)
+    cluster = ipp.Cluster.from_file(log_level=10)
+    try:
+        with cluster.connect_client_sync() as rc:
+            rc.wait_for_engines(n=2, timeout=60)
+            rc[:].apply_async(os.getpid).get(timeout=10)
+    except Exception:
+        print("controller output")
+        print(cluster.controller.get_output())
+        print("engine output")
+        for engine_set in cluster.engines.values():
+            print(engine_set.get_output())
+        raise
 
     # stop with ipcluster stop
     check_call([sys.executable, "-m", "ipyparallel.cluster", "stop"])
