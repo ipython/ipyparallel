@@ -293,11 +293,26 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         from .app import BaseParallelApplication, IPClusterStart
 
+        # look up if we are descended from an 'ipcluster' app
+        # avoids repeated load of the current profile dir
+        parents = []
+        parent = self.parent
+        while parent is not None:
+            parents.append(parent)
+            parent = parent.parent
+
+        app_parents = list(
+            filter(lambda p: isinstance(p, BaseParallelApplication), parents)
+        )
+        if app_parents:
+            app_parent = app_parents[0]
+        else:
+            app_parent = None
+
         if (
-            self.parent
-            and isinstance(self.parent, BaseParallelApplication)
-            and self.parent.name == 'ipcluster'
-            and self.parent.profile_dir.location == self.profile_dir
+            app_parent
+            and app_parent.name == 'ipcluster'
+            and app_parent.profile_dir.location == self.profile_dir
         ):
             # profile config already loaded by parent, nothing new to load
             return Config()
@@ -308,7 +323,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         config.ProfileDir.location = self.profile_dir
 
         # load profile config via IPCluster
-        app = IPClusterStart(config=config, log=self.log, log_level=10)
+        app = IPClusterStart(config=config, log=self.log)
         # adds profile dir to config_files_path
         app.init_profile_dir()
         # adds system to config_files_path
