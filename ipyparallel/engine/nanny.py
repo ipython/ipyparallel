@@ -149,7 +149,7 @@ class KernelNanny:
         handler = self.control_handlers.get(msg_type, None)
         if handler is None:
             # don't have an intercept handler, relay original message to parent
-            self.log.debug("Relaying {msg_type} {msg['header']['msg_id']}")
+            self.log.debug(f"Relaying {msg_type} {msg['header']['msg_id']}")
             self.parent_stream.send_multipart(raw_msg)
             return
 
