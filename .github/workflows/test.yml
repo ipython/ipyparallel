@@ -43,6 +43,15 @@ jobs:
             ~/conda
           key: conda
 
+      - name: Cache node_modules
+        uses: actions/cache@v2
+        with:
+          path: |
+            node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
       - name: Set environment variables
         if: matrix.controller_ip
         run: |
