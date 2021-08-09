@@ -307,3 +307,23 @@ async def test_default_from_file(Cluster):
         assert cluster2.cluster_file == cluster.cluster_file
         with await cluster.connect_client() as rc:
             assert len(rc) == 1
+
+
+async def test_cluster_manager_notice_stop(Cluster):
+    cm = cluster.ClusterManager()
+    cm.load_clusters()
+    c = Cluster(n=1)
+    key = cm._cluster_key(c)
+    assert key not in cm.clusters
+
+    await c.start_cluster()
+    cm.load_clusters()
+    assert key in cm.clusters
+    c_copy = cm.clusters[key]
+
+    await c.stop_cluster()
+    # give it a moment to notice
+    time.sleep(5)
+    # refresh list, cleans out stopped clusters
+    cm.load_clusters()
+    assert key not in cm.clusters

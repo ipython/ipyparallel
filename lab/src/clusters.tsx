@@ -717,6 +717,9 @@ function ClusterListingItem(props: IClusterListingItemProps) {
   let cluster_state = "Stopped";
   if (cluster.controller) {
     cluster_state = cluster.controller.state.state;
+    if (cluster_state == "after") {
+      cluster_state = "Stopped";
+    }
   }
 
   // stop action is 'delete' for already-stopped clusters

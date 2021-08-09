@@ -378,7 +378,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             fields["profile_dir"] = repr(profile_dir)
 
         if self.controller:
-            fields["controller"] = "<running>"
+            fields["controller"] = f"<{self.controller.state}>"
         if self.engines:
             fields["engine_sets"] = list(self.engines)
 
@@ -398,7 +398,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         cluster_info["class"] = _cls_str(self.__class__)
 
-        if self.controller:
+        if self.controller and self.controller.state != 'after':
             d["controller"] = {
                 "class": _cls_str(self.controller_launcher_class),
                 "state": None,
@@ -411,7 +411,8 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         }
         sets = d["engines"]["sets"]
         for engine_set_id, engine_launcher in self.engines.items():
-            sets[engine_set_id] = engine_launcher.to_dict()
+            if engine_launcher.state != 'after':
+                sets[engine_set_id] = engine_launcher.to_dict()
         return d
 
     @classmethod
@@ -447,13 +448,15 @@ class Cluster(AsyncFirst, LoggingConfigurable):
                     )
                 except launcher.NotRunning as e:
                     self.log.error(f"Controller for {cluster_key} not running: {e}")
+                else:
+                    self.controller.on_stop(self._controller_stopped)
 
         engine_info = d.get("engines")
         if engine_info:
             cls = self.engine_launcher_class = import_item(engine_info["class"])
             for engine_set_id, engine_state in engine_info.get("sets", {}).items():
                 try:
-                    self.engines[engine_set_id] = cls.from_dict(
+                    self.engines[engine_set_id] = engine_set = cls.from_dict(
                         engine_state,
                         engine_set_id=engine_set_id,
                         parent=self,
@@ -462,6 +465,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
                     self.log.error(
                         f"Engine set {cluster_key}{engine_set_id} not running: {e}"
                     )
+                else:
+                    engine_set.on_stop(partial(self._engines_stopped, engine_set_id))
+
         # check if state changed
         if self.to_dict() != d:
             # if so, update our cluster file
@@ -527,7 +533,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             # setting cluster_file='' disables saving to disk
             return
 
-        if not self.controller and not self.engines:
+        if (not self.controller or self.controller.state == 'after') and not any(
+            es.state == 'after' for es in self.engines.values()
+        ):
             self.remove_cluster_file()
         else:
             self.write_cluster_file()
@@ -594,6 +602,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     def _controller_stopped(self, stop_data=None):
         """Callback when a controller stops"""
         self.log.info(f"Controller stopped: {stop_data}")
+        self.update_cluster_file()
 
     async def start_engines(self, n=None, engine_set_id=None, **kwargs):
         """Start an engine set
@@ -839,6 +848,17 @@ class ClusterManager(LoggingConfigurable):
         - single profile by name
         - all IPython profiles, if nothing else specified
         """
+
+        # first, check our current clusters
+        for key, cluster in list(self.clusters.items()):
+            # remove stopped clusters
+            # but not *new* clusters that haven't started yet
+            if (cluster.controller and cluster.controller.state == 'after') and all(
+                es.state == 'after' for es in cluster.engines.values()
+            ):
+                self.log.info("Removing stopped cluster {key}")
+                self.clusters.pop(key)
+
         if profile_dirs is None:
             if profile_dir is not None:
                 profile_dirs = [profile_dir]
