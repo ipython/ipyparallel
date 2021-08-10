@@ -309,10 +309,9 @@ def interactive(f):
     return f
 
 
-@interactive
 def _push(**ns):
     """helper method for implementing `client.push` via `client.apply`"""
-    user_ns = globals()
+    user_ns = get_ipython().user_global_ns
     tmp = '_IP_PUSH_TMP_'
     while tmp in user_ns:
         tmp = tmp + '_'
@@ -324,19 +323,19 @@ def _push(**ns):
         user_ns.pop(tmp, None)
 
 
-@interactive
 def _pull(keys):
     """helper method for implementing `client.pull` via `client.apply`"""
+    user_ns = get_ipython().user_global_ns
     if isinstance(keys, (list, tuple, set)):
-        return [eval(key, globals()) for key in keys]
+        return [eval(key, user_ns) for key in keys]
     else:
-        return eval(keys, globals())
+        return eval(keys, user_ns)
 
 
-@interactive
 def _execute(code):
     """helper method for implementing `client.execute` via `client.apply`"""
-    exec(code, globals())
+    user_ns = get_ipython().user_global_ns
+    exec(code, user_ns)
 
 
 # --------------------------------------------------------------------------
