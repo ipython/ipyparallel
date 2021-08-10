@@ -23,7 +23,6 @@ from weakref import WeakSet
 
 import IPython
 import traitlets.log
-from IPython.core.profiledir import ProfileDir
 from traitlets import Any
 from traitlets import Bool
 from traitlets import default
@@ -146,7 +145,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
     controller_launcher_class = Launcher(
         default_value=launcher.LocalControllerLauncher,
-        kind='Controller',
+        entry_point_group='ipyparallel.controller_launchers',
         help="""The class for launching a Controller. Change this value if you want
         your controller to also be launched by a batch system, such as PBS,SGE,MPI,etc.
 
@@ -156,20 +155,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         Note that using a batch launcher for the controller *does not* put it
         in the same batch job as the engines, so they will still start separately.
 
-        IPython's bundled examples include:
+        Third-party engine launchers can be registered via `ipyparallel.engine_launchers` entry point.
 
-            Local : start engines locally as subprocesses
-            MPI : use mpiexec to launch the controller in an MPI universe
-            PBS : use PBS (qsub) to submit the controller to a batch queue
-            SGE : use SGE (qsub) to submit the controller to a batch queue
-            LSF : use LSF (bsub) to submit the controller to a batch queue
-            HTCondor : use HTCondor to submit the controller to a batch queue
-            Slurm : use Slurm to submit engines to a batch queue
-            SSH : use SSH to start the controller
-            WindowsHPC : use Windows HPC
-
-        If you are using one of IPython's builtin launchers, you can specify just the
-        prefix, e.g:
+        They can be selected via case-insensitive abbreviation, e.g.
 
             c.Cluster.controller_launcher_class = 'SSH'
 
@@ -183,38 +171,21 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
     engine_launcher_class = Launcher(
         default_value=launcher.LocalEngineSetLauncher,
-        kind='EngineSet',
+        entry_point_group='ipyparallel.engine_launchers',
         help="""The class for launching a set of Engines. Change this value
         to use various batch systems to launch your engines, such as PBS,SGE,MPI,etc.
         Each launcher class has its own set of configuration options, for making sure
         it will work in your environment.
 
-        You can also write your own launcher, and specify it's absolute import path,
-        as in 'mymodule.launcher.FTLEnginesLauncher`.
+        Third-party engine launchers can be registered via `ipyparallel.engine_launchers` entry point.
 
-        IPython's bundled examples include:
+        They can be selected via case-insensitive abbreviation, e.g.
 
-            Local : start engines locally as subprocesses [default]
-            MPI : use mpiexec to launch engines in an MPI environment
-            PBS : use PBS (qsub) to submit engines to a batch queue
-            SGE : use SGE (qsub) to submit engines to a batch queue
-            LSF : use LSF (bsub) to submit engines to a batch queue
-            SSH : use SSH to start the controller
-                        Note that SSH does *not* move the connection files
-                        around, so you will likely have to do this manually
-                        unless the machines are on a shared file system.
-            HTCondor : use HTCondor to submit engines to a batch queue
-            Slurm : use Slurm to submit engines to a batch queue
-            WindowsHPC : use Windows HPC
-
-        If you are using one of IPython's builtin launchers, you can specify just the
-        prefix, e.g:
-
-            c.Cluster.engine_launcher_class = 'SSH'
+            c.Cluster.engine_launcher_class = 'ssh'
 
         or:
 
-            ipcluster start --engines=MPI
+            ipcluster start --engines=mpi
 
         """,
         config=True,
@@ -400,13 +371,15 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         if self.controller and self.controller.state != 'after':
             d["controller"] = {
-                "class": _cls_str(self.controller_launcher_class),
+                "class": launcher.abbreviate_launcher_class(
+                    self.controller_launcher_class
+                ),
                 "state": None,
             }
             d["controller"]["state"] = self.controller.to_dict()
 
         d["engines"] = {
-            "class": _cls_str(self.engine_launcher_class),
+            "class": launcher.abbreviate_launcher_class(self.engine_launcher_class),
             "sets": {},
         }
         sets = d["engines"]["sets"]
@@ -440,7 +413,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         if d.get("controller"):
             controller_info = d["controller"]
-            cls = self.controller_launcher_class = import_item(controller_info["class"])
+            self.controller_launcher_class = controller_info["class"]
+            # after traitlet coercion, which imports strings
+            cls = self.controller_launcher_class
             if controller_info["state"]:
                 try:
                     self.controller = cls.from_dict(
@@ -453,7 +428,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         engine_info = d.get("engines")
         if engine_info:
-            cls = self.engine_launcher_class = import_item(engine_info["class"])
+            self.engine_launcher_class = engine_info["class"]
+            # after traitlet coercion, which imports strings
+            cls = self.engine_launcher_class
             for engine_set_id, engine_state in engine_info.get("sets", {}).items():
                 try:
                     self.engines[engine_set_id] = engine_set = cls.from_dict(

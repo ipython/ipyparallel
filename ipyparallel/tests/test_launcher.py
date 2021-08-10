@@ -9,6 +9,7 @@ import sys
 import time
 from subprocess import Popen
 
+import entrypoints
 import pytest
 from traitlets.config import Config
 
@@ -151,3 +152,20 @@ def test_ssh_waitpid(capsys):
     assert _wait_one(timeout=5) == {"process_running": "0", "exit_code": "-1"}
     # third run, process has already exited
     assert _wait_one(timeout=5) == {"process_running": "0", "exit_code": "-1"}
+
+
+@pytest.mark.parametrize("kind", ("controller", "engine"))
+def test_entrypoints(kind):
+    group_name = f"ipyparallel.{kind}_launchers"
+    group = entrypoints.get_group_named(group_name)
+    assert len(group) > 2
+    for key, entrypoint in group.items():
+        # verify entrypoints are valid
+        cls = entrypoint.load()
+
+        # verify find method
+        assert launcher_mod.find_launcher_class(key, kind=kind) is cls
+
+        # verify abbreviation roundtrip
+        abbreviation = launcher_mod.abbreviate_launcher_class(cls)
+        assert abbreviation == key

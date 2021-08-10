@@ -90,7 +90,7 @@ async def test_start_stop_engines(Cluster, engine_launcher_class):
     engine_set_id = await cluster.start_engines(n)
     assert engine_set_id in cluster.engines
     engine_set = cluster.engines[engine_set_id]
-    launcher_class = find_launcher_class(engine_launcher_class, "EngineSet")
+    launcher_class = find_launcher_class(engine_launcher_class, "engine")
     assert isinstance(engine_set, launcher_class)
 
     with await cluster.connect_client() as rc:

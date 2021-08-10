@@ -109,6 +109,7 @@ setup_args = dict(
     cmdclass=cmdclass,
     include_package_data=True,
     install_requires=[
+        "entrypoints",
         "ipython_genutils",
         "decorator",
         "pyzmq>=18",
@@ -136,11 +137,35 @@ setup_args = dict(
         ],
     },
     entry_points={
+        'ipyparallel.controller_launchers': [
+            'batch = ipyparallel.cluster.launcher:BatchControllerLauncher',
+            'htcondor = ipyparallel.cluster.launcher:HTCondorControllerLauncher',
+            'local = ipyparallel.cluster.launcher:LocalControllerLauncher',
+            'lsf = ipyparallel.cluster.launcher:LSFControllerLauncher',
+            'mpi = ipyparallel.cluster.launcher:MPIControllerLauncher',
+            'pbs = ipyparallel.cluster.launcher:PBSControllerLauncher',
+            'sge = ipyparallel.cluster.launcher:SGEControllerLauncher',
+            'ssh = ipyparallel.cluster.launcher:SSHControllerLauncher',
+            'slurm = ipyparallel.cluster.launcher:SlurmControllerLauncher',
+            'winhpc = ipyparallel.cluster.launcher:WindowsHPCControllerLauncher',
+        ],
+        'ipyparallel.engine_launchers': [
+            'batch = ipyparallel.cluster.launcher:BatchEngineSetLauncher',
+            'htcondor = ipyparallel.cluster.launcher:HTCondorEngineSetLauncher',
+            'local = ipyparallel.cluster.launcher:LocalEngineSetLauncher',
+            'lsf = ipyparallel.cluster.launcher:LSFEngineSetLauncher',
+            'mpi = ipyparallel.cluster.launcher:MPIEngineSetLauncher',
+            'sge = ipyparallel.cluster.launcher:SGEEngineSetLauncher',
+            'slurm = ipyparallel.cluster.launcher:SlurmEngineSetLauncher',
+            'ssh = ipyparallel.cluster.launcher:SSHEngineSetLauncher',
+            'sshproxy = ipyparallel.cluster.launcher:SSHProxyEngineSetLauncher',
+            'winhpc = ipyparallel.cluster.launcher:WindowsHPCEngineSetLauncher',
+        ],
         "console_scripts": [
             "ipcluster = ipyparallel.cluster.app:main",
             "ipcontroller = ipyparallel.controller.app:main",
             "ipengine = ipyparallel.engine.app:main",
-        ]
+        ],
     },
     zip_safe=False,
 )

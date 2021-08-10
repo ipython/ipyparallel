@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from functools import partial
 from signal import SIGTERM
 from subprocess import check_output
@@ -25,6 +26,7 @@ from subprocess import STDOUT
 from tempfile import TemporaryDirectory
 from textwrap import indent
 
+import entrypoints
 import psutil
 from IPython.utils.path import ensure_dir_exists
 from IPython.utils.path import get_home_dir
@@ -2322,24 +2324,43 @@ all_launchers = (
 )
 
 
-def find_launcher_class(clsname, kind):
-    """Return a launcher class for a given clsname and kind.
+def find_launcher_class(name, kind):
+    """Return a launcher class for a given name and kind.
 
     Parameters
     ----------
-    clsname : str
+    name : str
         The full name of the launcher class, either with or without the
         module path, or an abbreviation (MPI, SSH, SGE, PBS, LSF, HTCondor
         Slurm, WindowsHPC).
     kind : str
         Either 'EngineSet' or 'Controller'.
     """
-    if '.' not in clsname:
-        # not a module, presume it's the raw name in cluster.launcher
-        if kind and kind not in clsname:
-            # doesn't match necessary full class name, assume it's
-            # just 'PBS' or 'MPI' etc prefix:
-            clsname = clsname + kind + 'Launcher'
-        clsname = 'ipyparallel.cluster.launcher.' + clsname
-    klass = import_item(clsname)
-    return klass
+    if kind == 'engine':
+        group_name = 'ipyparallel.engine_launchers'
+    elif kind == 'controller':
+        group_name = 'ipyparallel.controller_launchers'
+    else:
+        raise ValueError(f"kind must be 'engine' or 'controller', not {kind!r}")
+    group = entrypoints.get_group_named(group_name)
+    # make it case-insensitive
+    registry = {key.lower(): value for key, value in group.items()}
+    return registry[name.lower()].load()
+
+
+@lru_cache()
+def abbreviate_launcher_class(cls):
+    """Abbreviate a launcher class back to its entrypoint name"""
+    cls_key = f"{cls.__module__}.{cls.__name__}"
+    # allow entrypoint_name attribute in case the definition module
+    # is not the same as the 'import' module
+    if getattr(cls, 'entrypoint_name', None):
+        return getattr(cls, 'entrypoint_name')
+
+    for kind in ('controller', 'engine'):
+        group_name = f'ipyparallel.{kind}_launchers'
+        group = entrypoints.get_group_named(group_name)
+        for key, value in group.items():
+            if f"{value.module_name}.{value.object_name}" == cls_key:
+                return key.lower()
+    return cls_key
