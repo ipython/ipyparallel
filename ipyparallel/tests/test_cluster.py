@@ -322,8 +322,12 @@ async def test_cluster_manager_notice_stop(Cluster):
     c_copy = cm.clusters[key]
 
     await c.stop_cluster()
-    # give it a moment to notice
-    time.sleep(5)
+
     # refresh list, cleans out stopped clusters
-    cm.load_clusters()
+    # can take some time to notice
+    tic = time.perf_counter()
+    deadline = time.perf_counter() + 30
+    while time.perf_counter() < deadline and key in cm.clusters:
+        time.sleep(0.2)
+        cm.load_clusters()
     assert key not in cm.clusters
