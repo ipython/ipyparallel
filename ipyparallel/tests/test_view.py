@@ -858,11 +858,10 @@ class TestView(ClusterTestCase):
         assert view.apply_sync(find_ipython)
 
     @skip_without('cloudpickle')
-    @pytest.mark.xfail(reason="cloudpickle doesn't seem to work right now")
     def test_use_cloudpickle(self):
         view = self.client[:]
         view['_a'] = 'engine'
-        sys.modules['__main__']._a = 'client'
+        __main__ = sys.modules['__main__']
 
         @interactive
         def get_a():
@@ -874,14 +873,52 @@ class TestView(ClusterTestCase):
 
         # enable cloudpickle
         view.use_cloudpickle()
-        # cloudpickle respects engine values *if defined*
+
+        # cloudpickle prefers client values
+        __main__._a = 'client'
         a_list = view.apply_sync(get_a)
-        self.assertEqual(a_list, ['engine'] * len(view))
-        # cloudpickle uses client values if engine doesn't override
+        self.assertEqual(a_list, ['client'] * len(view))
+
+        # still works even if remote is undefined
         view.execute('del _a', block=True)
         a_list = view.apply_sync(get_a)
         self.assertEqual(a_list, ['client'] * len(view))
+
         # restore pickle, shouldn't resolve
-        view.execute('del _a', block=True)
         view.use_pickle()
         self.assertRaisesRemote(NameError, view.apply_sync, get_a)
+
+    @skip_without('cloudpickle')
+    def test_cloudpickle_push_pull(self):
+        view = self.client[:]
+        # enable cloudpickle
+        view.use_cloudpickle()
+
+        # push/pull still work
+        view.push({"key": "pushed"}, block=True)
+        ar = view.pull("key")
+        assert ar.get(timeout=10) == ["pushed"] * len(view)
+
+        # restore pickle, should get the same value
+        view.use_pickle()
+        ar = view.pull("key")
+        assert ar.get(timeout=10) == ["pushed"] * len(view)
+
+    @skip_without('cloudpickle')
+    @pytest.mark.xfail(reason="@require doesn't work with cloudpickle")
+    def test_cloudpickle_require(self):
+        view = self.client[:]
+        # enable cloudpickle
+        view.use_cloudpickle()
+        assert (
+            'types' not in globals()
+        ), "Test condition isn't met if types is already imported"
+
+        @ipp.require("types")
+        @ipp.interactive
+        def func(x):
+            return types.SimpleNamespace(n=x)  # noqa: F821
+
+        res = view.apply_async(func, 5)
+        assert res.get(timeout=10) == []
+        view.use_pickle()
