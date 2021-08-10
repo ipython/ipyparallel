@@ -683,7 +683,7 @@ def _all_profile_dirs():
     with os.scandir(get_ipython_dir()) as paths:
         for path in paths:
             if path.is_dir() and path.name.startswith('profile_'):
-                profile_dirs.append(path)
+                profile_dirs.append(path.path)
     return profile_dirs
 
 

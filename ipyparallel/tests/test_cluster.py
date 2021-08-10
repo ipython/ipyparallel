@@ -1,10 +1,12 @@
 import asyncio
+import json
 import os
 import signal
 import sys
 import time
 
 import pytest
+from traitlets.config import Config
 
 import ipyparallel as ipp
 from .clienttest import raises_remote
@@ -183,6 +185,34 @@ def test_sync_with(Cluster):
         assert rc[:]['a'] == [5] * 5
 
 
+def test_load_profile(tmpdir):
+    profile_dir = tmpdir.join("profile").mkdir()
+    # config cases:
+    # - only in profile config (used)
+    # - in profile config and direct config (direct used)
+    # - in profile config and kwargs (kwargs used)
+    with profile_dir.join("ipcluster_config.json").open("w") as f:
+        json.dump(
+            {
+                "Cluster": {
+                    "controller_args": ["--from-profile"],
+                    "n": 5,
+                    "engine_timeout": 10,
+                }
+            },
+            f,
+        )
+    print(profile_dir.listdir())
+    config = Config()
+    config.Cluster.engine_timeout = 20
+    c = cluster.Cluster(profile_dir=str(profile_dir), n=10, config=config)
+    print(c.config)
+    assert c.profile_dir == str(profile_dir)
+    assert c.controller_args == ['--from-profile']  # from profile
+    assert c.engine_timeout == 20  # from config
+    assert c.n == 10  # from kwarg
+
+
 @pytest.mark.parametrize(
     "classname, expected_class",
     [
@@ -216,19 +246,18 @@ async def test_cluster_repr(Cluster):
 
 async def test_cluster_manager():
     m = cluster.ClusterManager()
-    assert m.list_clusters() == []
-    c = m.new_cluster(profile_dir="/tmp")
+    assert m.clusters == {}
+    key, c = m.new_cluster(profile_dir="/tmp")
     assert c.profile_dir == "/tmp"
-    assert m.get_cluster(c.cluster_id) is c
+    assert m.get_cluster(key) is c
     with pytest.raises(KeyError):
         m.get_cluster("nosuchcluster")
 
     with pytest.raises(KeyError):
-        m.new_cluster(cluster_id=c.cluster_id)
+        m.new_cluster(cluster_id=c.cluster_id, profile_dir=c.profile_dir)
 
-    assert m.list_clusters() == [c.cluster_id]
-    m.remove_cluster(c.cluster_id)
-    assert m.list_clusters() == []
+    assert list(m.clusters) == [key]
+    m.remove_cluster(key)
     with pytest.raises(KeyError):
         m.remove_cluster("nosuchcluster")
 
@@ -278,3 +307,23 @@ async def test_default_from_file(Cluster):
         assert cluster2.cluster_file == cluster.cluster_file
         with await cluster.connect_client() as rc:
             assert len(rc) == 1
+
+
+async def test_cluster_manager_notice_stop(Cluster):
+    cm = cluster.ClusterManager()
+    cm.load_clusters()
+    c = Cluster(n=1)
+    key = cm._cluster_key(c)
+    assert key not in cm.clusters
+
+    await c.start_cluster()
+    cm.load_clusters()
+    assert key in cm.clusters
+    c_copy = cm.clusters[key]
+
+    await c.stop_cluster()
+    # give it a moment to notice
+    time.sleep(5)
+    # refresh list, cleans out stopped clusters
+    cm.load_clusters()
+    assert key not in cm.clusters

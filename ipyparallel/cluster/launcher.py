@@ -112,7 +112,7 @@ class BaseLauncher(LoggingConfigurable):
     start_data = Any()
     stop_data = Any()
 
-    identifier = Any(
+    identifier = Unicode(
         help="Used for lookup in e.g. EngineSetLauncher during notify_stop and default log files"
     )
 
@@ -521,7 +521,7 @@ class LocalProcessLauncher(BaseLauncher):
                     with open(self.output_file) as f:
                         self._output = f.read()
                 except FileNotFoundError:
-                    self.log.error(f"Missing output file: {self.output_file}")
+                    self.log.debug(f"Missing output file: {self.output_file}")
                     self._output = ""
             else:
                 self._output = ""
@@ -658,13 +658,14 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
         n = 0
         for i, engine_dict in d['engines'].items():
             try:
-                self.launchers[i] = self.launcher_class.from_dict(
-                    engine_dict, parent=self
+                self.launchers[i] = el = self.launcher_class.from_dict(
+                    engine_dict, identifier=i, parent=self
                 )
             except NotRunning as e:
                 self.log.error(f"Engine {i} not running: {e}")
             else:
                 n += 1
+                el.on_stop(self._notice_engine_stopped)
         if n == 0:
             raise NotRunning("No engines left")
         else:
@@ -676,15 +677,16 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
         self.n = n
         dlist = []
         for i in range(n):
+            identifier = str(i)
             if i > 0:
                 time.sleep(self.delay)
-            el = self.launchers[i] = self.launcher_class(
+            el = self.launchers[identifier] = self.launcher_class(
                 work_dir=self.work_dir,
                 parent=self,
                 log=self.log,
                 profile_dir=self.profile_dir,
                 cluster_id=self.cluster_id,
-                identifier=i,
+                identifier=identifier,
                 output_file=os.path.join(
                     self.profile_dir,
                     "log",

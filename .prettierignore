@@ -1,0 +1,7 @@
+node_modules
+docs/build
+htmlcov
+ipyparallel/labextension
+**/node_modules
+**/lib
+**/package.json

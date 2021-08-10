@@ -1,0 +1,16 @@
+name: ipyparallel-docs
+channels:
+  - conda-forge
+dependencies:
+  - python=3.8
+  - pip
+
+  - sphinx>=1.8
+  - sphinx-copybutton
+  - pydata-sphinx-theme
+  - nbsphinx
+  - myst-parser
+
+  - matplotlib
+  # nodejs needed for extension build
+  - nodejs

@@ -2,7 +2,17 @@ include COPYING.md
 include CONTRIBUTING.md
 include README.md
 
+# enable-at-install config
 graft etc
+
+# lab extension
+graft lab
+prune lab/lib
+include install.json
+include package*.json
+include tsconfig*.json
+graft ipyparallel/labextension
+
 
 # Documentation
 graft docs
@@ -19,3 +29,4 @@ global-exclude *.pyc
 global-exclude *.pyo
 global-exclude .git
 global-exclude .ipynb_checkpoints
+global-exclude .DS_Store

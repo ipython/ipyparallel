@@ -1,3 +1,12 @@
+[build-system]
+requires = [
+  "jupyter_packaging~=0.10.0",
+  "jupyterlab>=3.0.0,==3.*",
+  "setuptools>=40.8.0",
+  "wheel",
+]
+build-backend = "setuptools.build_meta"
+
 [tool.black]
 skip-string-normalization = true
 target_version = [

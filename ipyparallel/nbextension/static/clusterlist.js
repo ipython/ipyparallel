@@ -49,7 +49,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
       success: $.proxy(this.load_list_success, this),
       error: utils.log_ajax_error,
     };
-    var url = utils.url_join_encode(this.base_url, "clusters");
+    var url = utils.url_join_encode(this.base_url, "ipyparallel/clusters");
     ajax(url, settings);
   };
 
@@ -60,21 +60,21 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
   ClusterList.prototype.load_list_success = function (data, status, xhr) {
     this.clear_list();
     var len = data.length;
-    for (var i = 0; i < len; i++) {
+    for (var cluster of data) {
       var element = $("<div/>");
-      var item = new ClusterItem(element, this.options);
-      item.update_state(data[i]);
+      var item = new ClusterItem(element, cluster, this, this.options);
       element.data("item", item);
       this.element.append(element);
     }
   };
 
-  var ClusterItem = function (element, options) {
+  var ClusterItem = function (element, cluster, cluster_list, options) {
     this.element = $(element);
+    this.cluster_list = cluster_list;
     this.base_url = options.base_url || utils.get_body_data("baseUrl");
     this.notebook_path =
       options.notebook_path || utils.get_body_data("notebookPath");
-    this.data = null;
+    this.update_state(cluster);
     this.style();
   };
 
@@ -82,11 +82,11 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
     this.element.addClass("list_item").addClass("row");
   };
 
-  ClusterItem.prototype.update_state = function (data) {
-    this.data = data;
-    if (data.status === "running") {
+  ClusterItem.prototype.update_state = function (cluster) {
+    this.cluster = cluster;
+    if (cluster.controller && cluster.controller.state) {
       this.state_running();
-    } else if (data.status === "stopped") {
+    } else {
       this.state_stopped();
     }
   };
@@ -94,8 +94,11 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
   ClusterItem.prototype.state_stopped = function () {
     var that = this;
     var profile_col = $("<div/>")
-      .addClass("profile_col col-xs-4")
-      .text(this.data.profile);
+      .addClass("profile_col col-xs-2")
+      .text(this.cluster.cluster.profile);
+    var cluster_id_col = $("<div/>")
+      .addClass("cluster_id_col col-xs-2")
+      .text(this.cluster.cluster.cluster_id);
     var status_col = $("<div/>")
       .addClass("status_col col-xs-3")
       .text("stopped");
@@ -117,6 +120,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
     this.element
       .empty()
       .append(profile_col)
+      .append(cluster_id_col)
       .append(status_col)
       .append(engines_col)
       .append(action_col);
@@ -125,9 +129,12 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
       if (!/^\d+$/.test(n) && n.length > 0) {
         status_col.text("invalid engine #");
       } else {
+        if (n === "") {
+          n = null;
+        }
         var settings = {
           cache: false,
-          data: { n: n },
+          data: JSON.stringify({ n: n }),
           type: "POST",
           dataType: "json",
           success: function (data, status, xhr) {
@@ -141,9 +148,8 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
         status_col.text("starting");
         var url = utils.url_join_encode(
           that.base_url,
-          "clusters",
-          that.data.profile,
-          "start"
+          "ipyparallel/clusters",
+          that.cluster.id
         );
         ajax(url, settings);
       }
@@ -152,15 +158,20 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
 
   ClusterItem.prototype.state_running = function () {
     var that = this;
+
     var profile_col = $("<div/>")
-      .addClass("profile_col col-xs-4")
-      .text(this.data.profile);
+      .addClass("profile_col col-xs-2")
+      .text(this.cluster.cluster.profile);
+    var cluster_id_col = $("<div/>")
+      .addClass("cluster_id_col col-xs-2")
+      .text(this.cluster.cluster.cluster_id);
     var status_col = $("<div/>")
       .addClass("status_col col-xs-3")
       .text("running");
+
     var engines_col = $("<div/>")
       .addClass("engines_col col-xs-3")
-      .text(this.data.n);
+      .text(this.cluster.engines.n);
     var stop_button = $("<button/>")
       .addClass("btn btn-default btn-xs")
       .text("Stop");
@@ -169,19 +180,21 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
       .append(
         $("<span/>").addClass("item_buttons btn-group").append(stop_button)
       );
+
     this.element
       .empty()
       .append(profile_col)
+      .append(cluster_id_col)
       .append(status_col)
       .append(engines_col)
       .append(action_col);
     stop_button.click(function (e) {
       var settings = {
         cache: false,
-        type: "POST",
+        type: "DELETE",
         dataType: "json",
         success: function (data, status, xhr) {
-          that.update_state(data);
+          that.cluster_list.load_list();
         },
         error: function (xhr, status, error) {
           utils.log_ajax_error(xhr, status, error),
@@ -191,9 +204,8 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
       status_col.text("stopping");
       var url = utils.url_join_encode(
         that.base_url,
-        "clusters",
-        that.data.profile,
-        "stop"
+        "ipyparallel/clusters",
+        that.cluster.id
       );
       ajax(url, settings);
     });

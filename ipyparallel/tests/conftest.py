@@ -117,9 +117,11 @@ def Cluster(request, ipython_dir, io_loop):
         cfg.EngineLauncher.engine_args = ['--log-level=10']
         cfg.ControllerLauncher.controller_args = ['--log-level=10']
         kwargs.setdefault("controller_args", ['--ping=250'])
+        kwargs.setdefault("load_profile", False)
 
         c = ipp.Cluster(**kwargs)
-        assert c.config is cfg
+        if not kwargs['load_profile']:
+            assert c.config == cfg
         request.addfinalizer(c.stop_cluster_sync)
         return c
 

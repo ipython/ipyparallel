@@ -22,3 +22,18 @@ repos:
       - id: check-case-conflict
       - id: check-executables-have-shebangs
       - id: requirements-txt-fixer
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v7.14.0
+    hooks:
+      - id: eslint
+        files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
+        exclude: ipyparallel/nbextension/.*
+        types: [file]
+        additional_dependencies:
+          - "@typescript-eslint/eslint-plugin@2.27.0"
+          - "@typescript-eslint/parser@2.27.0"
+          - eslint@^6.0.0
+          - eslint-config-prettier@6.10.1
+          - eslint-plugin-prettier@3.1.4
+          - eslint-plugin-react@7.21.5
+          - typescript@4.1.3

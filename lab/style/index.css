@@ -1,0 +1,199 @@
+:root {
+  --ipp-launch-button-height: 24px;
+}
+
+/**
+ * Rules related to the overall sidebar panel.
+ */
+
+.ipp-Sidebar {
+  background: var(--jp-layout-color1);
+  color: var(--jp-ui-font-color1);
+  font-size: var(--jp-ui-font-size1);
+  overflow: auto;
+}
+
+/**
+ * Rules related to the cluster manager.
+ */
+
+.ipp-ClusterManager {
+  border-top: 6px solid var(--jp-toolbar-border-color);
+}
+
+.ipp-ClusterManager .jp-Toolbar {
+  align-items: center;
+}
+
+.ipp-ClusterManager .jp-Toolbar .ipp-ClusterManager-label {
+  flex: 0 0 auto;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: var(--jp-ui-font-size0);
+  padding: 8px 8px 8px 12px;
+  margin: 0px;
+}
+
+.ipp-ClusterManager button.jp-Button > span {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.ipp-ClusterListing ul.ipp-ClusterListing-list {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ipp-ClusterListingItem {
+  display: inline-block;
+  list-style-type: none;
+  padding: 8px;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: grab;
+}
+
+.ipp-ClusterListingItem-drag {
+  opacity: 0.7;
+  color: var(--jp-ui-font-color1);
+  cursor: grabbing;
+  max-width: 260px;
+  transform: translateX(-50%) translateY(-50%);
+}
+
+.ipp-ClusterListingItem-title {
+  margin: 0px;
+  font-size: var(--jp-ui-font-size2);
+}
+
+.ipp-ClusterListingItem-link a {
+  text-decoration: none;
+  color: var(--jp-content-link-color);
+}
+
+.ipp-ClusterListingItem-link a:hover {
+  text-decoration: underline;
+}
+
+.ipp-ClusterListingItem-link a:visited {
+  color: var(--jp-content-link-color);
+}
+
+.ipp-ClusterListingItem:hover {
+  background: var(--jp-layout-color2);
+}
+
+.ipp-ClusterListingItem.jp-mod-active {
+  color: white;
+  background: var(--jp-brand-color0);
+}
+
+.ipp-ClusterListingItem.jp-mod-active a,
+.ipp-ClusterListingItem.jp-mod-active a:visited {
+  color: white;
+}
+
+.ipp-ClusterListingItem button.jp-mod-styled {
+  background-color: transparent;
+}
+
+.ipp-ClusterListingItem button.jp-mod-styled:hover {
+  background-color: var(--jp-layout-color3);
+}
+
+.ipp-ClusterListingItem.jp-mod-active button.jp-mod-styled:hover {
+  background-color: var(--jp-brand-color1);
+}
+
+.ipp-ClusterListingItem-button-panel {
+  display: flex;
+  align-content: center;
+}
+
+button.ipp-ClusterListingItem-stop {
+  color: var(--jp-warn-color1);
+  font-weight: 600;
+}
+
+button.ipp-ClusterListingItem-scale {
+  color: var(--jp-accent-color1);
+  font-weight: 600;
+}
+
+button.ipp-ClusterListingItem-start {
+  color: var(--jp-accent-color1);
+  font-weight: 600;
+}
+
+button.ipp-hidden {
+  display: none;
+}
+
+.ipp-ClusterListingItem button.ipp-ClusterListingItem-code.jp-mod-styled {
+  margin: 0 4px 0 4px;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/**
+ * Rules for the scaling dialog.
+ */
+
+.ipp-DialogHeader {
+  font-size: var(--jp-ui-font-size2);
+}
+
+.ipp-DialogSection {
+  margin-left: 24px;
+}
+
+.ipp-DialogSection-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  margin: 12px 0 12px 0;
+}
+
+.ipp-DialogHeader input[type="checkbox"] {
+  position: relative;
+  top: 4px;
+  left: 4px;
+  margin: 0 0 0 8px;
+}
+
+.ipp-DialogSection input[type="number"] {
+  width: 72px;
+}
+
+.ipp-DialogSection-label.ipp-mod-disabled {
+  color: var(--jp-ui-font-color3);
+}
+
+.ipp-DialogSection input[type="number"]:disabled {
+  color: var(--jp-ui-font-color3);
+}
+
+/**
+ * Rules for the logos.
+ */
+
+.ipp-SearchIcon {
+  background-image: var(--jp-icon-search);
+}
+
+[data-jp-theme-light="true"] .ipp-CodeIcon {
+  background-image: url(code-light.svg);
+}
+
+[data-jp-theme-light="false"] .ipp-CodeIcon {
+  background-image: url(code-dark.svg);
+}
+
+.ipp-ClusterListingItem.jp-mod-active .ipp-CodeIcon {
+  background-image: url(code-dark.svg);
+}
