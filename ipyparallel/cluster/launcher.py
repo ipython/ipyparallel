@@ -150,7 +150,21 @@ class BaseLauncher(LoggingConfigurable):
 
     @classmethod
     def from_dict(cls, d, *, config=None, parent=None, **kwargs):
-        """Restore a Launcher from a dict"""
+        """Restore a Launcher from a dict
+
+        Subclasses should always call `launcher = super().from_dict(*args, **kwargs)`
+        and finish initialization after that.
+
+        After calling from_dict(),
+        the launcher should be in the same state as after `.start()`
+        (i.e. monitoring for exit, etc.)
+
+        Returns: Launcher
+            The instantiated and fully configured Launcher.
+
+        Raises: NotRunning
+            e.g. if the process has stopped and is no longer running.
+        """
         launcher = cls(config=config, parent=parent, **kwargs)
         for attr in launcher.traits(to_dict=True):
             if attr in d:
@@ -203,15 +217,25 @@ class BaseLauncher(LoggingConfigurable):
         else:
             return False
 
-    def start(self):
-        """Start the process."""
+    async def start(self):
+        """Start the process.
+
+        Should be an `async def` coroutine.
+
+        When start completes,
+        the process should be requested (it need not be running yet),
+        and waiting should begin in the background such that :meth:`.notify_stop`
+        will be called when the process finishes.
+        """
         raise NotImplementedError('start must be implemented in a subclass')
 
-    def stop(self):
+    async def stop(self):
         """Stop the process and notify observers of stopping.
 
-        This method will return None immediately.
-        To observe the actual process stopping, see :meth:`on_stop`.
+        This method should be an `async def` coroutine,
+        and return only after the process has stopped.
+
+        All resources should be cleaned up by the time this returns.
         """
         raise NotImplementedError('stop must be implemented in a subclass')
 
@@ -263,7 +287,7 @@ class BaseLauncher(LoggingConfigurable):
         """
         raise NotImplementedError('signal must be implemented in a subclass')
 
-    def join(self, timeout=None):
+    async def join(self, timeout=None):
         """Wait for the process to finish"""
         raise NotImplementedError('join must be implemented in a subclass')
 

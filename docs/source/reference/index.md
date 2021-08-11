@@ -12,4 +12,5 @@ details
 transition
 messages
 connections
+launchers
 ```
