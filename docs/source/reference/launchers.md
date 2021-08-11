@@ -1,11 +1,21 @@
 # Launchers
 
-The `Launcher` is the basic
+The `Launcher` is the basic abstraction in IPython Parallel
+for starting and stopping processes.
 
-A Launcher has two basic methods: {meth}`~.BaseLauncher.start` and {meth}`~.BaseLauncher.stop`.
-These should be `async def` coroutines.
+A Launcher has two primary methods: {meth}`~.BaseLauncher.start` and {meth}`~.BaseLauncher.stop`,
+which should be `async def` coroutines.
 
 There are two basic kinds of Launcher: {class}`~.ControllerLauncher` and {class}`~.EngineLauncher`.
+A ControllerLauncher should launch `ipcontroller` somewhere,
+and an EngineLauncher should start `n` engines somewhere.
+Shared configuration,
+principally `profile_dir` and `cluster_id` are typically used to locate the connection files necessary for these two communicate,
+though explicit paths can be added to arguments.
+
+Launchers are used through the {class}`~.Cluster` API,
+which manages one ControllerLauncher and zero to many EngineLaunchers,
+each representing a set of engines.
 
 Launchers are registered via entry points ([more below](#entrypoints)),
 and can be selected via short lowercase string naming the kind of launcher, e.g. 'mpi' or 'local':
