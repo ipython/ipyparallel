@@ -30,10 +30,12 @@ jobs:
       - name: verify wheel
         run: |
           cd dist
-          pip install ./*.whl
+          pip install ./*.whl jupyterlab==3.*
           ipcluster --help-all
           ipcontroller --help-all
           ipengine --help-all
+          jupyter labextension list 2>&1 | grep ipyparallel
+          jupyter server extension list 2>&1 | grep ipyparallel
 
       - name: Publish to PyPI
         if: startsWith(github.ref, 'refs/tags/')
