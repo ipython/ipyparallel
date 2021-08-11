@@ -24,6 +24,9 @@ Changes in IPython Parallel
 - Nicer progress bars for interactive waits, such as :meth:`.AsyncResult.wait_interactive`.
 - Add :meth:`.AsyncResult.stream_output` context manager for streaming output.
   Stream output by default in parallel magics.
+- Launchers registered via entrypoints for better support of third-party Launchers.
+- New JupyterLab extension (enabled by default) based on dask-labextension
+  for managing clusters.
 
 
 The repo has been updated to use pre-commit, black, myst, and friends and GitHub Actions for CI, but this should not affect users, only making it a bit nicer for contributors.
