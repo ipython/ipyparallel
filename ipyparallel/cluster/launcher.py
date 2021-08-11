@@ -16,6 +16,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from functools import lru_cache
 from functools import partial
 from signal import SIGTERM
 from subprocess import check_output
@@ -25,6 +26,7 @@ from subprocess import STDOUT
 from tempfile import TemporaryDirectory
 from textwrap import indent
 
+import entrypoints
 import psutil
 from IPython.utils.path import ensure_dir_exists
 from IPython.utils.path import get_home_dir
@@ -148,7 +150,21 @@ class BaseLauncher(LoggingConfigurable):
 
     @classmethod
     def from_dict(cls, d, *, config=None, parent=None, **kwargs):
-        """Restore a Launcher from a dict"""
+        """Restore a Launcher from a dict
+
+        Subclasses should always call `launcher = super().from_dict(*args, **kwargs)`
+        and finish initialization after that.
+
+        After calling from_dict(),
+        the launcher should be in the same state as after `.start()`
+        (i.e. monitoring for exit, etc.)
+
+        Returns: Launcher
+            The instantiated and fully configured Launcher.
+
+        Raises: NotRunning
+            e.g. if the process has stopped and is no longer running.
+        """
         launcher = cls(config=config, parent=parent, **kwargs)
         for attr in launcher.traits(to_dict=True):
             if attr in d:
@@ -201,15 +217,25 @@ class BaseLauncher(LoggingConfigurable):
         else:
             return False
 
-    def start(self):
-        """Start the process."""
+    async def start(self):
+        """Start the process.
+
+        Should be an `async def` coroutine.
+
+        When start completes,
+        the process should be requested (it need not be running yet),
+        and waiting should begin in the background such that :meth:`.notify_stop`
+        will be called when the process finishes.
+        """
         raise NotImplementedError('start must be implemented in a subclass')
 
-    def stop(self):
+    async def stop(self):
         """Stop the process and notify observers of stopping.
 
-        This method will return None immediately.
-        To observe the actual process stopping, see :meth:`on_stop`.
+        This method should be an `async def` coroutine,
+        and return only after the process has stopped.
+
+        All resources should be cleaned up by the time this returns.
         """
         raise NotImplementedError('stop must be implemented in a subclass')
 
@@ -261,7 +287,7 @@ class BaseLauncher(LoggingConfigurable):
         """
         raise NotImplementedError('signal must be implemented in a subclass')
 
-    def join(self, timeout=None):
+    async def join(self, timeout=None):
         """Wait for the process to finish"""
         raise NotImplementedError('join must be implemented in a subclass')
 
@@ -2322,24 +2348,43 @@ all_launchers = (
 )
 
 
-def find_launcher_class(clsname, kind):
-    """Return a launcher class for a given clsname and kind.
+def find_launcher_class(name, kind):
+    """Return a launcher class for a given name and kind.
 
     Parameters
     ----------
-    clsname : str
+    name : str
         The full name of the launcher class, either with or without the
         module path, or an abbreviation (MPI, SSH, SGE, PBS, LSF, HTCondor
         Slurm, WindowsHPC).
     kind : str
         Either 'EngineSet' or 'Controller'.
     """
-    if '.' not in clsname:
-        # not a module, presume it's the raw name in cluster.launcher
-        if kind and kind not in clsname:
-            # doesn't match necessary full class name, assume it's
-            # just 'PBS' or 'MPI' etc prefix:
-            clsname = clsname + kind + 'Launcher'
-        clsname = 'ipyparallel.cluster.launcher.' + clsname
-    klass = import_item(clsname)
-    return klass
+    if kind == 'engine':
+        group_name = 'ipyparallel.engine_launchers'
+    elif kind == 'controller':
+        group_name = 'ipyparallel.controller_launchers'
+    else:
+        raise ValueError(f"kind must be 'engine' or 'controller', not {kind!r}")
+    group = entrypoints.get_group_named(group_name)
+    # make it case-insensitive
+    registry = {key.lower(): value for key, value in group.items()}
+    return registry[name.lower()].load()
+
+
+@lru_cache()
+def abbreviate_launcher_class(cls):
+    """Abbreviate a launcher class back to its entrypoint name"""
+    cls_key = f"{cls.__module__}.{cls.__name__}"
+    # allow entrypoint_name attribute in case the definition module
+    # is not the same as the 'import' module
+    if getattr(cls, 'entrypoint_name', None):
+        return getattr(cls, 'entrypoint_name')
+
+    for kind in ('controller', 'engine'):
+        group_name = f'ipyparallel.{kind}_launchers'
+        group = entrypoints.get_group_named(group_name)
+        for key, value in group.items():
+            if f"{value.module_name}.{value.object_name}" == cls_key:
+                return key.lower()
+    return cls_key

@@ -12,14 +12,15 @@ import signal
 import sys
 from functools import partial
 
+import entrypoints
 import zmq
 from IPython.core.profiledir import ProfileDir
 from traitlets import Bool
 from traitlets import CaselessStrEnum
+from traitlets import default
 from traitlets import Dict
 from traitlets import Integer
 from traitlets import List
-from traitlets import observe
 from traitlets.config.application import catch_config_error
 
 from ipyparallel._version import __version__
@@ -241,11 +242,23 @@ class IPClusterEngines(BaseParallelApplication):
     default_log_level = logging.INFO
     classes = List()
 
+    @default("classes")
     def _classes_default(self):
-        from ipyparallel.cluster.launcher import all_launchers
-
-        eslaunchers = [l for l in all_launchers if 'EngineSet' in l.__name__]
-        return [ProfileDir, Cluster] + eslaunchers
+        launcher_classes = []
+        for kind in ('controller', 'engine'):
+            group_name = f'ipyparallel.{kind}_launchers'
+            group = entrypoints.get_group_named(group_name)
+            for key, value in group.items():
+                print("loading", key, value)
+                try:
+                    cls = value.load()
+                except Exception as e:
+                    self.log.error(
+                        f"Failed to load entrypoint {group_name}: {key} = {value}\n{e}"
+                    )
+                else:
+                    launcher_classes.append(cls)
+        return [ProfileDir, Cluster] + launcher_classes
 
     daemonize = Bool(
         False,
@@ -432,10 +445,10 @@ start_aliases = {}
 start_aliases.update(engine_aliases)
 start_aliases.update(
     dict(
-        delay='IPClusterStart.delay',
-        controller='IPClusterStart.controller_launcher_class',
-        ip='IPClusterStart.controller_ip',
-        location='IPClusterStart.controller_location',
+        delay='Cluster.delay',
+        controller='Cluster.controller_launcher_class',
+        ip='Cluster.controller_ip',
+        location='Cluster.controller_location',
     )
 )
 start_aliases['clean-logs'] = 'IPClusterStart.clean_logs'
@@ -450,14 +463,6 @@ class IPClusterStart(IPClusterEngines):
     auto_create = Bool(
         True, config=True, help="whether to create the profile_dir if it doesn't exist"
     )
-    classes = List()
-
-    def _classes_default(
-        self,
-    ):
-        from ipyparallel.cluster.launcher import all_launchers
-
-        return [ProfileDir] + [IPClusterEngines] + all_launchers
 
     clean_logs = Bool(
         True, config=True, help="whether to cleanup old logs before starting"

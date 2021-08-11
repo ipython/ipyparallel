@@ -57,6 +57,21 @@ def test_help_all(submod):
     out = _get_output([sys.executable, '-m', 'ipyparallel.%s' % submod, '--help-all'])
 
 
+@pytest.mark.parametrize(
+    "subcommand",
+    [
+        "list",
+        "engines",
+        "start",
+        "stop",
+    ],
+)
+def test_ipcluster_help_all(subcommand):
+    out = _get_output(
+        [sys.executable, '-m', 'ipyparallel.cluster', subcommand, '--help-all']
+    )
+
+
 def bind_kernel(engineapp):
     app = MagicMock(spec=kernelapp.IPKernelApp)
     with patch.object(
