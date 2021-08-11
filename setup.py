@@ -61,12 +61,16 @@ with open(pjoin(here, "README.md")) as f:
     readme = f.read()
 
 try:
-    from jupyter_packaging import wrap_installers, npm_builder
+    from jupyter_packaging import wrap_installers, npm_builder, get_data_files
+
+    data_files = get_data_files(data_files_spec)
 
     builder = npm_builder()
     cmdclass = wrap_installers(pre_develop=builder, pre_dist=builder)
 except ImportError:
     from setuptools.command.build_py import build_py
+
+    data_files = {}  # ignored
 
     class NeedsJupyterPackaging(build_py):
         def run(self):
@@ -87,11 +91,12 @@ setup_args = dict(
     version=version_ns["__version__"],
     packages=setuptools.find_packages(),
     description="Interactive Parallel Computing with IPython",
+    data_files=data_files,
     long_description=readme,
     long_description_content_type="text/markdown",
     author="IPython Development Team",
     author_email="ipython-dev@scipy.org",
-    url="http://ipython.org",
+    url="https://ipython.org",
     license="BSD",
     platforms="Linux, Mac OS X, Windows",
     keywords=["Interactive", "Interpreter", "Shell", "Parallel"],
