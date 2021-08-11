@@ -101,7 +101,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
     @default("cluster_id")
     def _default_cluster_id(self):
-        return f"{socket.gethostname()}-{int(time.time())}-{''.join(random.choice(_suffix_chars) for i in range(4))}"
+        return f"{int(time.time())}-{''.join(random.choice(_suffix_chars) for i in range(4))}"
 
     profile_dir = Unicode(
         help="""The profile directory.
@@ -604,6 +604,15 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         self.log.info(f"Controller stopped: {stop_data}")
         self.update_cluster_file()
 
+    def _new_engine_set_id(self):
+        """Generate a new engine set id"""
+        engine_set_id = base = f"{int(time.time())}"
+        i = 1
+        while engine_set_id in self.engines:
+            engine_set_id = f"{base}-{i}"
+            i += 1
+        return engine_set_id
+
     async def start_engines(self, n=None, engine_set_id=None, **kwargs):
         """Start an engine set
 
@@ -611,7 +620,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """
         # TODO: send engines connection info
         if engine_set_id is None:
-            engine_set_id = f"{int(time.time())}-{''.join(random.choice(_suffix_chars) for i in range(4))}"
+            engine_set_id = self._new_engine_set_id()
         engine_set = self.engines[engine_set_id] = self.engine_launcher_class(
             work_dir=u'.',
             parent=self,
