@@ -490,6 +490,11 @@ class LocalProcessLauncher(BaseLauncher):
                 raise TimeoutError(
                     f"Process {self.pid} did not complete in {timeout} seconds."
                 )
+        if getattr(self, '_stop_waiting', None) and getattr(self, "_wait_thread", None):
+            self._stop_waiting.set()
+            # got here, should be done
+            # wait for wait_thread to cleanup
+            self._wait_thread.join()
 
     def _stream_file(self, path):
         """Stream one file"""
@@ -1226,6 +1231,11 @@ class SSHLauncher(LocalProcessLauncher):
                 wait()
             else:
                 await asyncio.wrap_future(future)
+        if getattr(self, '_stop_waiting', None) and getattr(self, "_wait_thread", None):
+            self._stop_waiting.set()
+            # got here, should be done
+            # wait for wait_thread to cleanup
+            self._wait_thread.join()
 
     def signal(self, sig):
         if self.state == 'running':
