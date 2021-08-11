@@ -49,8 +49,8 @@ data_files_spec = [
         '*',
     ),
     # lab extension
-    ('share/jupyter/labextensions/ipyparallel', here, 'install.json'),
-    ('share/jupyter/labextensions/ipyparallel', lab_path, '**'),
+    ('share/jupyter/labextensions/ipyparallel-labextension', here, 'install.json'),
+    ('share/jupyter/labextensions/ipyparallel-labextension', lab_path, '**'),
 ]
 
 version_ns = {}
