@@ -235,9 +235,11 @@ class IPController(BaseParallelApplication):
 
     @observe('cluster_id')
     def _cluster_id_changed(self, change):
-        super()._cluster_id_changed(change)
-        self.engine_json_file = "%s-engine.json" % self.name
-        self.client_json_file = "%s-client.json" % self.name
+        base = 'ipcontroller'
+        if change.new:
+            base = f"{base}-{change.new}"
+        self.engine_json_file = f"{base}-engine.json"
+        self.client_json_file = f"{base}-client.json"
 
     # internal
     children = List()

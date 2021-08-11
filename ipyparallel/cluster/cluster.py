@@ -101,7 +101,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
     @default("cluster_id")
     def _default_cluster_id(self):
-        return f"{socket.gethostname()}-{int(time.time())}-{''.join(random.choice(_suffix_chars) for i in range(4))}"
+        return f"{int(time.time())}-{''.join(random.choice(_suffix_chars) for i in range(4))}"
 
     profile_dir = Unicode(
         help="""The profile directory.
@@ -511,6 +511,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     def write_cluster_file(self):
         """Write cluster info to disk for later loading"""
         os.makedirs(os.path.dirname(self.cluster_file), exist_ok=True)
+        self.log.debug(f"Updating {self.cluster_file}")
         with open(self.cluster_file, "w") as f:
             json.dump(self.to_dict(), f)
 
@@ -523,6 +524,14 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         else:
             self.log.debug(f"Removed cluster file: {self.cluster_file}")
 
+    def _is_running(self):
+        """Return if we have any running components"""
+        if self.controller and self.controller.state != 'after':
+            return True
+        if any(es.state != 'after' for es in self.engines.values()):
+            return True
+        return False
+
     def update_cluster_file(self):
         """Update my cluster file
 
@@ -533,9 +542,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             # setting cluster_file='' disables saving to disk
             return
 
-        if (not self.controller or self.controller.state == 'after') and not any(
-            es.state == 'after' for es in self.engines.values()
-        ):
+        if not self._is_running():
             self.remove_cluster_file()
         else:
             self.write_cluster_file()
@@ -604,6 +611,15 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         self.log.info(f"Controller stopped: {stop_data}")
         self.update_cluster_file()
 
+    def _new_engine_set_id(self):
+        """Generate a new engine set id"""
+        engine_set_id = base = f"{int(time.time())}"
+        i = 1
+        while engine_set_id in self.engines:
+            engine_set_id = f"{base}-{i}"
+            i += 1
+        return engine_set_id
+
     async def start_engines(self, n=None, engine_set_id=None, **kwargs):
         """Start an engine set
 
@@ -611,7 +627,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """
         # TODO: send engines connection info
         if engine_set_id is None:
-            engine_set_id = f"{int(time.time())}-{''.join(random.choice(_suffix_chars) for i in range(4))}"
+            engine_set_id = self._new_engine_set_id()
         engine_set = self.engines[engine_set_id] = self.engine_launcher_class(
             work_dir=u'.',
             parent=self,
@@ -853,10 +869,10 @@ class ClusterManager(LoggingConfigurable):
         for key, cluster in list(self.clusters.items()):
             # remove stopped clusters
             # but not *new* clusters that haven't started yet
-            if (cluster.controller and cluster.controller.state == 'after') and all(
-                es.state == 'after' for es in cluster.engines.values()
-            ):
-                self.log.info("Removing stopped cluster {key}")
+            # if `cluster.controller` is present
+            # that means it was running at some point
+            if cluster.controller and not cluster._is_running():
+                self.log.info(f"Removing stopped cluster {key}")
                 self.clusters.pop(key)
 
         if profile_dirs is None:

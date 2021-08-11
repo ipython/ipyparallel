@@ -118,13 +118,6 @@ class BaseParallelApplication(BaseIPythonApplication):
         """,
     )
 
-    @observe('cluster_id')
-    def _cluster_id_changed(self, change):
-        if change['new']:
-            self.name = '{}-{}'.format(self.__class__.name, change['new'])
-        else:
-            self.name = self.__class__.name
-
     loop = Instance(IOLoop)
 
     def _loop_default(self):
@@ -197,7 +190,7 @@ class BaseParallelApplication(BaseIPythonApplication):
                         pass
         if self.log_to_file:
             # Start logging to the new log file
-            log_filename = self.name + u'-' + str(os.getpid()) + u'.log'
+            log_filename = f"{self.name}-{self.cluster_id}-{os.getpid()}.log"
             logfile = os.path.join(log_dir, log_filename)
             if sys.__stderr__:
                 print(f"Sending logs to {logfile}", file=sys.__stderr__)

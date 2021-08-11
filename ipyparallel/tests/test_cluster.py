@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import os
 import signal
 import sys
@@ -310,9 +311,9 @@ async def test_default_from_file(Cluster):
 
 
 async def test_cluster_manager_notice_stop(Cluster):
-    cm = cluster.ClusterManager()
+    cm = cluster.ClusterManager(log=logging.getLogger())
     cm.load_clusters()
-    c = Cluster(n=1)
+    c = Cluster(n=1, log=cm.log)
     key = cm._cluster_key(c)
     assert key not in cm.clusters
 
@@ -326,8 +327,8 @@ async def test_cluster_manager_notice_stop(Cluster):
     # refresh list, cleans out stopped clusters
     # can take some time to notice
     tic = time.perf_counter()
-    deadline = time.perf_counter() + 30
+    deadline = time.perf_counter() + _timeout
     while time.perf_counter() < deadline and key in cm.clusters:
-        time.sleep(0.2)
+        await asyncio.sleep(0.2)
         cm.load_clusters()
     assert key not in cm.clusters
