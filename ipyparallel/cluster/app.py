@@ -249,7 +249,6 @@ class IPClusterEngines(BaseParallelApplication):
             group_name = f'ipyparallel.{kind}_launchers'
             group = entrypoints.get_group_named(group_name)
             for key, value in group.items():
-                print("loading", key, value)
                 try:
                     cls = value.load()
                 except Exception as e:
