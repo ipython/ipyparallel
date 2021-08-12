@@ -166,11 +166,21 @@ def launch_broadcast_scheduler(
     is_leaf=False,
     in_thread=False,
     outgoing_ids=None,
+    curve_publickey=None,
+    curve_secretkey=None,
     depth=0,
     max_depth=0,
 ):
     config, ctx, loop, mons, nots, querys, log = get_common_scheduler_streams(
-        mon_addr, not_addr, reg_addr, config, 'scheduler', log_url, loglevel, in_thread
+        mon_addr,
+        not_addr,
+        reg_addr,
+        config,
+        'scheduler',
+        log_url,
+        loglevel,
+        in_thread,
+        curve_serverkey=curve_publickey,
     )
 
     is_root = depth == 0
@@ -181,16 +191,16 @@ def launch_broadcast_scheduler(
     incoming_stream.setsockopt(zmq.IDENTITY, sub_scheduler_id)
 
     if is_root:
-        incoming_stream.bind(in_addr)
+        util.bind(incoming_stream, in_addr, curve_secretkey=curve_secretkey)
     else:
-        incoming_stream.connect(in_addr)
+        util.connect(incoming_stream, in_addr, curve_serverkey=curve_publickey)
 
     outgoing_streams = []
     for out_addr in out_addrs:
         out = ZMQStream(ctx.socket(zmq.ROUTER), loop)
         util.set_hwm(out, 0)
         out.setsockopt(zmq.IDENTITY, sub_scheduler_id)
-        out.bind(out_addr)
+        util.bind(out, out_addr, curve_secretkey=curve_secretkey)
         outgoing_streams.append(out)
 
     scheduler_args = dict(

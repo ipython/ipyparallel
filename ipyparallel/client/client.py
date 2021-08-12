@@ -37,6 +37,7 @@ from jupyter_client.session import Session
 from tornado import ioloop
 from traitlets import Any
 from traitlets import Bool
+from traitlets import Bytes
 from traitlets import Dict
 from traitlets import HasTraits
 from traitlets import Instance
@@ -369,6 +370,7 @@ class Client(HasTraits):
     _task_socket = Instance('zmq.Socket', allow_none=True)
     _broadcast_socket = Instance('zmq.Socket', allow_none=True)
     _registration_callbacks = List()
+    curve_serverkey = Bytes(allow_none=True)
 
     _task_scheme = Unicode()
     _closed = False
@@ -470,6 +472,14 @@ class Client(HasTraits):
 
         self._task_scheme = cfg['task_scheme']
 
+        if cfg.get("curve_serverkey"):
+            self.curve_serverkey = cfg["curve_serverkey"].encode('ascii')
+            if not self.curve_publickey or not self.curve_secretkey:
+                # if context: this could crash!
+                # inappropriately closes libsodium random_bytes source
+                # with libzmq <= 4.3.4
+                self.curve_publickey, self.curve_secretkey = zmq.curve_keypair()
+
         # sync defaults from args, json:
         if sshserver:
             cfg['ssh'] = sshserver
@@ -568,7 +578,11 @@ class Client(HasTraits):
                 **ssh_kwargs,
             )
         else:
-            self._query_socket.connect(cfg['registration'])
+            util.connect(
+                self._query_socket,
+                cfg['registration'],
+                curve_serverkey=self.curve_serverkey,
+            )
 
         self.session.debug = self.debug
 
@@ -719,7 +733,7 @@ class Client(HasTraits):
 
                 return tunnel.tunnel_connection(s, url, sshserver, **ssh_kwargs)
             else:
-                return s.connect(url)
+                return util.connect(s, url, curve_serverkey=self.curve_serverkey)
 
         self.session.send(self._query_socket, 'connection_request')
         # use Poller because zmq.select has wrong units in pyzmq 2.1.7

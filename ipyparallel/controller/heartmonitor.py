@@ -7,6 +7,7 @@ and hearts are tracked based on their DEALER identities.
 # Distributed under the terms of the Modified BSD License.
 from __future__ import print_function
 
+import logging
 import time
 import uuid
 
@@ -25,6 +26,8 @@ from zmq.devices import ThreadDevice
 from zmq.devices import ThreadMonitoredQueue
 from zmq.eventloop.zmqstream import ZMQStream
 
+from ipyparallel.util import bind
+from ipyparallel.util import connect
 from ipyparallel.util import log_errors
 from ipyparallel.util import set_hwm
 
@@ -34,7 +37,7 @@ class Heart:
     This is a simple wrapper with defaults for the most common
     Device model for responding to heartbeats.
 
-    It simply builds a threadsafe zmq.FORWARDER Device, defaulting to using
+    Builds a threadsafe zmq.FORWARDER Device, defaulting to using
     SUB/DEALER for in/out.
 
     You can specify the DEALER's IDENTITY via the optional heart_id argument."""
@@ -51,6 +54,9 @@ class Heart:
         out_type=zmq.DEALER,
         mon_type=zmq.PUB,
         heart_id=None,
+        curve_serverkey=None,
+        curve_secretkey=None,
+        curve_publickey=None,
     ):
         if mon_addr is None:
             self.device = ThreadDevice(zmq.FORWARDER, in_type, out_type)
@@ -65,6 +71,19 @@ class Heart:
         self.device.daemon = True
         self.device.connect_in(in_addr)
         self.device.connect_out(out_addr)
+        if curve_serverkey:
+            self.device.setsockopt_in(zmq.CURVE_SERVERKEY, curve_serverkey)
+            self.device.setsockopt_in(zmq.CURVE_PUBLICKEY, curve_publickey)
+            self.device.setsockopt_in(zmq.CURVE_SECRETKEY, curve_secretkey)
+
+            self.device.setsockopt_out(zmq.CURVE_SERVERKEY, curve_serverkey)
+            self.device.setsockopt_out(zmq.CURVE_PUBLICKEY, curve_publickey)
+            self.device.setsockopt_out(zmq.CURVE_SECRETKEY, curve_secretkey)
+            if mon_addr is not None:
+                self.device.setsockopt_mon(zmq.CURVE_SERVERKEY, curve_publickey)
+                self.device.setsockopt_mon(zmq.CURVE_PUBLICKEY, curve_publickey)
+                self.device.setsockopt_mon(zmq.CURVE_SECRETKEY, curve_secretkey)
+
         if mon_addr is not None:
             self.device.connect_mon(mon_addr)
         if in_type == zmq.SUB:
@@ -234,7 +253,15 @@ class HeartMonitor(LoggingConfigurable):
             )
 
 
-def start_heartmonitor(ping_url, pong_url, monitor_url, **kwargs):
+def start_heartmonitor(
+    ping_url,
+    pong_url,
+    monitor_url,
+    log_level=logging.INFO,
+    curve_publickey=None,
+    curve_secretkey=None,
+    **kwargs,
+):
     """Start a heart monitor.
 
     For use in a background process,
@@ -245,22 +272,38 @@ def start_heartmonitor(ping_url, pong_url, monitor_url, **kwargs):
     ctx = zmq.Context()
 
     ping_socket = ctx.socket(zmq.PUB)
-    ping_socket.bind(ping_url)
+    bind(
+        ping_socket,
+        ping_url,
+        curve_publickey=curve_publickey,
+        curve_secretkey=curve_secretkey,
+    )
     ping_stream = ZMQStream(ping_socket)
 
     pong_socket = ctx.socket(zmq.ROUTER)
     set_hwm(pong_socket, 0)
-    pong_socket.bind(pong_url)
+    bind(
+        pong_socket,
+        pong_url,
+        curve_publickey=curve_publickey,
+        curve_secretkey=curve_secretkey,
+    )
     pong_stream = ZMQStream(pong_socket)
 
     monitor_socket = ctx.socket(zmq.XPUB)
-    monitor_socket.connect(monitor_url)
+    connect(
+        monitor_socket,
+        monitor_url,
+        curve_publickey=curve_publickey,
+        curve_secretkey=curve_secretkey,
+        curve_serverkey=curve_publickey,
+    )
     monitor_stream = ZMQStream(monitor_socket)
 
     # reinitialize logging after fork
     from .app import IPController
 
-    app = IPController(log_level=kwargs.pop("log_level"))
+    app = IPController(log_level=log_level)
     kwargs['log'] = app.log
 
     heart_monitor = HeartMonitor(

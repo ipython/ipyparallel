@@ -304,11 +304,20 @@ class IPEngine(BaseParallelApplication):
     aliases = Dict(aliases)
     flags = Dict(flags)
 
+    curve_serverkey = Bytes(help="The controller's public key for CURVE auth")
+    curve_secretkey = Bytes(help="My secret key for CURVE auth")
+    curve_publickey = Bytes(help="My public key for CURVE auth")
+
+    def _ensure_curve_keypair(self):
+        if not self.curve_secretkey or not self.curve_publickey:
+            self.log.info("Generating new CURVE credentials")
+            self.curve_publickey, self.curve_secretkey = zmq.curve_keypair()
+
     def find_url_file(self):
         """Set the url file.
 
         Here we don't try to actually see if it exists for is valid as that
-        is hadled by the connection logic.
+        is handled by the connection logic.
         """
         # Find the actual controller key file
         if not self.url_file:
@@ -338,6 +347,12 @@ class IPEngine(BaseParallelApplication):
         ip = disambiguate_ip_address(ip, self.location)
         d['interface'] = '%s://%s' % (proto, ip)
 
+        if d.get('curve_serverkey'):
+            self.log.info("Using CURVE security")
+            self.curve_serverkey = d['curve_serverkey'].encode('ascii')
+        else:
+            self.log.warning("Not using CURVE security")
+
         # DO NOT allow override of basic URLs, serialization, or key
         # JSON file takes top priority there
         config.Session.key = d['key'].encode('utf8')
@@ -359,6 +374,8 @@ class IPEngine(BaseParallelApplication):
             return
 
         self.log.info("Opening ports for direct connections as an IPython kernel")
+        if self.curve_serverkey:
+            self.log.warning("Bound kernel does not support CURVE security")
 
         kernel = self.kernel
 
@@ -422,8 +439,16 @@ class IPEngine(BaseParallelApplication):
         else:
             password = False
 
-        def connect(s, url):
+        def connect(s, url, curve_serverkey=None):
             url = disambiguate_url(url, self.location)
+            if curve_serverkey is None:
+                curve_serverkey = self.curve_serverkey
+            if curve_serverkey:
+                self._ensure_curve_keypair()
+                s.setsockopt(zmq.CURVE_SERVERKEY, curve_serverkey)
+                s.setsockopt(zmq.CURVE_SECRETKEY, self.curve_secretkey)
+                s.setsockopt(zmq.CURVE_PUBLICKEY, self.curve_publickey)
+
             if self.using_ssh:
                 self.log.debug("Tunneling connection to %s via %s", url, self.sshserver)
                 return self.tunnel_mod.tunnel_connection(
@@ -551,14 +576,17 @@ class IPEngine(BaseParallelApplication):
 
             # control stream:
             control_url = url('control')
+            curve_serverkey = self.curve_serverkey
             if self.enable_nanny:
                 nanny_url, self.nanny_pipe = self.start_nanny(
                     control_url=control_url,
                 )
                 control_url = nanny_url
+                # nanny uses our curve_publickey, not the controller's publickey
+                curve_serverkey = self.curve_publickey
             control_stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
             control_stream.setsockopt(zmq.IDENTITY, identity)
-            connect(control_stream, control_url)
+            connect(control_stream, control_url, curve_serverkey=curve_serverkey)
 
             # create iopub stream:
             iopub_addr = url('iopub')
@@ -688,18 +716,22 @@ class IPEngine(BaseParallelApplication):
             engine_id=self.id,
             identity=self.bident,
             control_url=control_url,
+            curve_serverkey=self.curve_serverkey,
+            curve_secretkey=self.curve_secretkey,
             registration_url=self.registration_url,
             config=config,
         )
 
     def start_heartbeat(self, hb_ping, hb_pong, hb_period, identity):
         """Start our heart beating"""
-        self.log.info("Starting heartbeat")
 
         hb_monitor = None
         if self.max_heartbeat_misses > 0:
             # Add a monitor socket which will record the last time a ping was seen
             mon = self.context.socket(zmq.SUB)
+            if self.curve_serverkey:
+                mon.setsockopt(zmq.CURVE_SERVER, 1)
+                mon.setsockopt(zmq.CURVE_SECRETKEY, self.curve_secretkey)
             mport = mon.bind_to_random_port('tcp://%s' % localhost())
             mon.setsockopt(zmq.SUBSCRIBE, b"")
             self._hb_listener = zmqstream.ZMQStream(mon, self.loop)
@@ -707,7 +739,15 @@ class IPEngine(BaseParallelApplication):
 
             hb_monitor = "tcp://%s:%i" % (localhost(), mport)
 
-        heart = Heart(hb_ping, hb_pong, hb_monitor, heart_id=identity)
+        heart = Heart(
+            hb_ping,
+            hb_pong,
+            hb_monitor,
+            heart_id=identity,
+            curve_serverkey=self.curve_serverkey,
+            curve_secretkey=self.curve_secretkey,
+            curve_publickey=self.curve_publickey,
+        )
         heart.start()
 
         # periodically check the heartbeat pings of the controller
@@ -829,10 +869,19 @@ class IPEngine(BaseParallelApplication):
             handler.setLevel(self.log_level)
             self.log.addHandler(handler)
 
+    @default("log_level")
+    def _default_debug(self):
+        return 10
+
     @catch_config_error
     def initialize(self, argv=None):
+        self.log_level = 10
         super().initialize(argv)
+        self.log_level = 10
+        self.log.info(f"log level {self.log_level}")
+        self.log.debug("init")
         self.init_engine()
+        self.log.debug("init engine")
         self.forward_logging()
 
     def init_signal(self):
