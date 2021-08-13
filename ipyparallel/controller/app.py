@@ -258,6 +258,9 @@ class IPController(BaseParallelApplication):
     def _default_enable_curve(self):
         if zmq.has("curve"):
             self._ensure_curve_keypair()
+            # disable redundant digest-key, CurveZMQ protects against replays
+            if 'key' not in self.config.Session:
+                self.config.Session.key = b''
             return True
         else:
             return False
@@ -266,6 +269,9 @@ class IPController(BaseParallelApplication):
     def _enable_curve_changed(self, change):
         if change.new:
             self._ensure_curve_keypair()
+            # disable redundant digest-key, CurveZMQ protects against replays
+            if 'key' not in self.config.Session:
+                self.config.Session.key = b''
 
     def _ensure_curve_keypair(self):
         if not self.curve_secretkey or not self.curve_publickey:
@@ -743,6 +749,11 @@ class IPController(BaseParallelApplication):
                 self.write_connection_files = False
 
     def init_hub(self):
+        if self.enable_curve:
+            self.log.info(
+                "Using CURVE security. Ignore warnings about disabled message signing."
+            )
+
         c = self.config
 
         ctx = self.context
