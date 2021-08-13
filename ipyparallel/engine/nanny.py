@@ -52,6 +52,7 @@ class KernelNanny:
         registration_url: str,
         identity: bytes,
         curve_serverkey: bytes,
+        curve_publickey: bytes,
         curve_secretkey: bytes,
         config: Config,
         pipe,
@@ -64,6 +65,7 @@ class KernelNanny:
         self.registration_url = registration_url
         self.identity = identity
         self.curve_serverkey = curve_serverkey
+        self.curve_publickey = curve_publickey
         self.curve_secretkey = curve_secretkey
         self.config = config
         self.pipe = pipe
@@ -114,7 +116,13 @@ class KernelNanny:
         s = self.context.socket(zmq.DEALER)
         # finite, nonzero LINGER to prevent hang without dropping message during exit
         s.LINGER = 3000
-        util.connect(s, self.registration_url, curve_serverkey=self.curve_serverkey)
+        util.connect(
+            s,
+            self.registration_url,
+            curve_serverkey=self.curve_serverkey,
+            curve_secretkey=self.curve_secretkey,
+            curve_publickey=self.curve_publickey,
+        )
         self.session.send(s, "unregistration_request", content={"id": self.engine_id})
         s.close()
 

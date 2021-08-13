@@ -170,17 +170,21 @@ def launch_broadcast_scheduler(
     curve_secretkey=None,
     depth=0,
     max_depth=0,
+    scheduler_class=BroadcastScheduler,
+    logname='broadcast',
 ):
     config, ctx, loop, mons, nots, querys, log = get_common_scheduler_streams(
         mon_addr,
         not_addr,
         reg_addr,
         config,
-        'scheduler',
+        logname,
         log_url,
         loglevel,
         in_thread,
         curve_serverkey=curve_publickey,
+        curve_publickey=curve_publickey,
+        curve_secretkey=curve_secretkey,
     )
 
     is_root = depth == 0
@@ -193,7 +197,13 @@ def launch_broadcast_scheduler(
     if is_root:
         util.bind(incoming_stream, in_addr, curve_secretkey=curve_secretkey)
     else:
-        util.connect(incoming_stream, in_addr, curve_serverkey=curve_publickey)
+        util.connect(
+            incoming_stream,
+            in_addr,
+            curve_serverkey=curve_publickey,
+            curve_publickey=curve_publickey,
+            curve_secretkey=curve_secretkey,
+        )
 
     outgoing_streams = []
     for out_addr in out_addrs:
@@ -224,7 +234,7 @@ def launch_broadcast_scheduler(
             outgoing_streams=outgoing_streams,
         )
 
-    scheduler = BroadcastScheduler(**scheduler_args)
+    scheduler = scheduler_class(**scheduler_args)
 
     scheduler.start()
     if not in_thread:

@@ -124,6 +124,8 @@ def get_common_scheduler_streams(
     loglevel,
     in_thread,
     curve_serverkey,
+    curve_publickey,
+    curve_secretkey,
 ):
     if config:
         # unwrap dict back into Config
@@ -139,14 +141,24 @@ def get_common_scheduler_streams(
         ctx = zmq.Context()
         loop = ioloop.IOLoop()
         loop.make_current()
+
+    def connect(s, addr):
+        return util.connect(
+            s,
+            addr,
+            curve_serverkey=curve_serverkey,
+            curve_secretkey=curve_secretkey,
+            curve_publickey=curve_publickey,
+        )
+
     mons = zmqstream.ZMQStream(ctx.socket(zmq.PUB), loop)
-    util.connect(mons, mon_addr, curve_serverkey=curve_serverkey)
+    connect(mons, mon_addr)
     nots = zmqstream.ZMQStream(ctx.socket(zmq.SUB), loop)
     nots.setsockopt(zmq.SUBSCRIBE, b'')
-    util.connect(nots, not_addr, curve_serverkey=curve_serverkey)
+    connect(nots, not_addr)
 
     querys = ZMQStream(ctx.socket(zmq.DEALER), loop)
-    util.connect(querys, reg_addr, curve_serverkey=curve_serverkey)
+    connect(querys, reg_addr)
 
     # setup logging.
     if in_thread:
@@ -187,6 +199,8 @@ def launch_scheduler(
         loglevel,
         in_thread,
         curve_serverkey=curve_publickey,
+        curve_publickey=curve_publickey,
+        curve_secretkey=curve_secretkey,
     )
 
     util.set_hwm(mons, 0)

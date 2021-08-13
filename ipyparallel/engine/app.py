@@ -718,6 +718,7 @@ class IPEngine(BaseParallelApplication):
             control_url=control_url,
             curve_serverkey=self.curve_serverkey,
             curve_secretkey=self.curve_secretkey,
+            curve_publickey=self.curve_publickey,
             registration_url=self.registration_url,
             config=config,
         )

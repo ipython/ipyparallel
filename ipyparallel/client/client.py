@@ -38,6 +38,7 @@ from tornado import ioloop
 from traitlets import Any
 from traitlets import Bool
 from traitlets import Bytes
+from traitlets import default
 from traitlets import Dict
 from traitlets import HasTraits
 from traitlets import Instance
@@ -360,6 +361,11 @@ class Client(HasTraits):
     _connected = Bool(False)
     _ssh = Bool(False)
     _context = Instance('zmq.Context', allow_none=True)
+
+    @default("_context")
+    def _default_context(self):
+        return zmq.Context.instance()
+
     _config = Dict()
     _engines = Instance(util.ReverseDict, (), {})
     _query_socket = Instance('zmq.Socket', allow_none=True)
@@ -370,7 +376,10 @@ class Client(HasTraits):
     _task_socket = Instance('zmq.Socket', allow_none=True)
     _broadcast_socket = Instance('zmq.Socket', allow_none=True)
     _registration_callbacks = List()
+
     curve_serverkey = Bytes(allow_none=True)
+    curve_secretkey = Bytes(allow_none=True)
+    curve_publickey = Bytes(allow_none=True)
 
     _task_scheme = Unicode()
     _closed = False
@@ -403,9 +412,8 @@ class Client(HasTraits):
         if profile:
             super_kwargs['profile'] = profile
         super(Client, self).__init__(**super_kwargs)
-        if context is None:
-            context = zmq.Context.instance()
-        self._context = context
+        if context is not None:
+            self._context = context
 
         for argname in ('url_or_file', 'url_file'):
             if argname in extra_args:
@@ -566,6 +574,10 @@ class Client(HasTraits):
         self.session = Session(**extra_args)
 
         self._query_socket = self._context.socket(zmq.DEALER)
+        if self.curve_serverkey:
+            self._query_socket.curve_serverkey = self.curve_serverkey
+            self._query_socket.curve_secretkey = self.curve_secretkey
+            self._query_socket.curve_publickey = self.curve_publickey
 
         if self._ssh:
             from zmq.ssh import tunnel
@@ -578,11 +590,7 @@ class Client(HasTraits):
                 **ssh_kwargs,
             )
         else:
-            util.connect(
-                self._query_socket,
-                cfg['registration'],
-                curve_serverkey=self.curve_serverkey,
-            )
+            self._query_socket.connect(cfg['registration'])
 
         self.session.debug = self.debug
 
@@ -733,7 +741,13 @@ class Client(HasTraits):
 
                 return tunnel.tunnel_connection(s, url, sshserver, **ssh_kwargs)
             else:
-                return util.connect(s, url, curve_serverkey=self.curve_serverkey)
+                return util.connect(
+                    s,
+                    url,
+                    curve_serverkey=self.curve_serverkey,
+                    curve_secretkey=self.curve_secretkey,
+                    curve_publickey=self.curve_publickey,
+                )
 
         self.session.send(self._query_socket, 'connection_request')
         # use Poller because zmq.select has wrong units in pyzmq 2.1.7

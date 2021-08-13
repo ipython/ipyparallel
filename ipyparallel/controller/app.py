@@ -650,6 +650,8 @@ class IPController(BaseParallelApplication):
             socket,
             url,
             curve_serverkey=self.curve_publickey if self.enable_curve else None,
+            curve_publickey=self.curve_publickey if self.enable_curve else None,
+            curve_secretkey=self.curve_secretkey if self.enable_curve else None,
         )
 
     def client_url(self, channel, index=None):
@@ -945,16 +947,24 @@ class IPController(BaseParallelApplication):
             launch_scheduler(**scheduler_args)
 
     def get_python_scheduler_args(
-        self, scheduler_name, scheduler_class, monitor_url, identity=None
+        self,
+        scheduler_name,
+        scheduler_class,
+        monitor_url,
+        identity=None,
+        in_addr=None,
+        out_addr=None,
     ):
         return {
             'scheduler_class': scheduler_class,
-            'in_addr': self.client_url(scheduler_name),
-            'out_addr': self.engine_url(scheduler_name),
+            'in_addr': in_addr or self.client_url(scheduler_name),
+            'out_addr': out_addr or self.engine_url(scheduler_name),
             'mon_addr': monitor_url,
             'not_addr': disambiguate_url(self.client_url('notification')),
             'reg_addr': disambiguate_url(self.client_url('registration')),
-            'identity': identity if identity else bytes(scheduler_name, 'utf8'),
+            'identity': identity
+            if identity is not None
+            else bytes(scheduler_name, 'utf8'),
             'logname': 'scheduler',
             'loglevel': self.log_level,
             'log_url': self.log_url,
@@ -1000,20 +1010,23 @@ class IPController(BaseParallelApplication):
                     index=identity,
                 )
 
-            scheduler_args = dict(
+            scheduler_args = self.get_python_scheduler_args(
+                BroadcastScheduler.port_name,
+                BroadcastScheduler,
+                monitor_url,
+                identity,
                 in_addr=in_addr,
-                mon_addr=monitor_url,
-                not_addr=disambiguate_url(self.client_url('notification')),
-                reg_addr=disambiguate_url(self.client_url('registration')),
-                identity=identity,
-                config=dict(self.config),
-                loglevel=self.log_level,
-                log_url=self.log_url,
+                out_addr='ignored',
+            )
+            scheduler_args.pop('out_addr')
+            # add broadcast args
+            scheduler_args.update(
                 outgoing_ids=[outgoing_id1, outgoing_id2],
                 depth=depth,
                 max_depth=self.broadcast_scheduler_depth,
                 is_leaf=is_leaf,
             )
+
             if is_leaf:
                 scheduler_args.update(
                     out_addrs=[
