@@ -1,44 +1,40 @@
-.. _parallelsecurity:
+(parallelsecurity)=
 
-===========================
-Security details of IPython
-===========================
+# Security details of IPython
 
-.. note::
+:::{note}
+This section is not thorough, and IPython.kernel.zmq needs a thorough security
+audit.
+:::
 
-    This section is not thorough, and IPython.kernel.zmq needs a thorough security
-    audit.
-
-IPython's :mod:`IPython.kernel.zmq` package exposes the full power of the
+IPython's {mod}`IPython.kernel.zmq` package exposes the full power of the
 Python interpreter over a TCP/IP network for the purposes of parallel
 computing. This feature brings up the important question of IPython's security
 model. This document gives details about this model and how it is implemented
 in IPython's architecture.
 
-Process and network topology
-============================
+## Process and network topology
 
 To enable parallel computing, IPython has a number of different processes that
 run. These processes are discussed at length in the IPython documentation and
 are summarized here:
 
-* The IPython *engine*.  This process is a full blown Python
-  interpreter in which user code is executed.  Multiple
+- The IPython _engine_. This process is a full blown Python
+  interpreter in which user code is executed. Multiple
   engines are started to make parallel computing possible.
-* The IPython *hub*.  This process monitors a set of
+- The IPython _hub_. This process monitors a set of
   engines and schedulers, and keeps track of the state of the processes. It listens
   for registration connections from engines and clients, and monitor connections
   from schedulers.
-* The IPython *schedulers*. This is a set of processes that relay commands and results
+- The IPython _schedulers_. This is a set of processes that relay commands and results
   between clients and engines. They are typically on the same machine as the controller,
   and listen for connections from engines and clients, but connect to the Hub.
-* The IPython *client*.  This process is typically an
+- The IPython _client_. This process is typically an
   interactive Python process that is used to coordinate the
   engines to get a parallel computation done.
 
-Collectively, these processes are called the IPython *cluster*, and the hub and schedulers
-together are referred to as the *controller*.
-
+Collectively, these processes are called the IPython _cluster_, and the hub and schedulers
+together are referred to as the _controller_.
 
 These processes communicate over any transport supported by ZeroMQ (tcp,pgm,infiniband,ipc)
 with a well defined topology. The IPython hub and schedulers listen on sockets. Upon
@@ -55,10 +51,9 @@ A given IPython controller and set of engines engines typically has a relatively
 short lifetime. Typically this lifetime corresponds to the duration of a single parallel
 simulation performed by a single user. Finally, the hub, schedulers, engines, and client
 processes typically execute with the permissions of that same user. More specifically, the
-controller and engines are *not* executed as root or with any other superuser permissions.
+controller and engines are _not_ executed as root or with any other superuser permissions.
 
-Application logic
-=================
+## Application logic
 
 When running the IPython kernel to perform a parallel computation, a user
 utilizes the IPython client to send Python commands and data through the
@@ -74,11 +69,9 @@ application code. From this perspective, when a user runs an IPython engine on
 a host, that engine has the same capabilities and permissions as the user
 themselves (as if they were logged onto the engine's host with a terminal).
 
-Secure network connections
-==========================
+## Secure network connections
 
-Overview
---------
+### Overview
 
 ZeroMQ provides exactly no security. For this reason, users of IPython must be very
 careful in managing connections, because an open TCP/IP socket presents access to
@@ -86,30 +79,26 @@ arbitrary execution as the user on the engine machines. As a result, the default
 of controller processes is to only listen for clients on the loopback interface, and the
 client must establish SSH tunnels to connect to the controller processes.
 
-.. warning::
+:::{warning}
+If the controller's loopback interface is untrusted, then IPython should be considered
+vulnerable, and this extends to the loopback of all connected clients, which have
+opened a loopback port that is redirected to the controller's loopback port.
+:::
 
-    If the controller's loopback interface is untrusted, then IPython should be considered
-    vulnerable, and this extends to the loopback of all connected clients, which have
-    opened a loopback port that is redirected to the controller's loopback port.
-
-
-SSH
----
+### SSH
 
 Since ZeroMQ provides no security, SSH tunnels are the primary source of secure
 connections. A connector file, such as `ipcontroller-client.json`, will contain
 information for connecting to the controller, possibly including the address of an
 ssh-server through with the client is to tunnel. The Client object then creates tunnels
-using either [OpenSSH]_ or [Paramiko]_, depending on the platform. If users do not wish to
+using either [^cite_openssh] or [^cite_paramiko], depending on the platform. If users do not wish to
 use OpenSSH or Paramiko, or the tunneling utilities are insufficient, then they may
 construct the tunnels themselves, and connect clients and engines as if the
 controller were on loopback on the connecting machine.
 
+### Authentication
 
-Authentication
---------------
-
-To protect users of shared machines, [HMAC]_ digests are used to sign messages, using a
+To protect users of shared machines, [^cite_hmac] digests are used to sign messages, using a
 shared key.
 
 The Session object that handles the message protocol uses a unique key to verify valid
@@ -127,30 +116,25 @@ the controller creates this key, and stores it in the private connection files
 `~/.ipython/profile_<name>/security` directory, and are maintained as readable only by the
 owner, as is common practice with a user's keys in their `.ssh` directory.
 
-.. warning::
+:::{warning}
+It is important to note that the signatures protect against unauthorized messages,
+but, as there is no encryption, provide exactly no protection of data privacy. It is
+possible, however, to use a custom serialization scheme (via Session.packer/unpacker
+traits) that does incorporate your own encryption scheme.
+:::
 
-    It is important to note that the signatures protect against unauthorized messages,
-    but, as there is no encryption, provide exactly no protection of data privacy.  It is
-    possible, however, to use a custom serialization scheme (via Session.packer/unpacker
-    traits) that does incorporate your own encryption scheme.
-
-
-
-Specific security vulnerabilities
-=================================
+## Specific security vulnerabilities
 
 There are a number of potential security vulnerabilities present in IPython's
 architecture. In this section we discuss those vulnerabilities and detail how
 the security architecture described above prevents them from being exploited.
 
-Unauthorized clients
---------------------
+### Unauthorized clients
 
 The IPython client can instruct the IPython engines to execute arbitrary
 Python code with the permissions of the user who started the engines. If an
 attacker were able to connect their own hostile IPython client to the IPython
 controller, they could instruct the engines to execute code.
-
 
 On the first level, this attack is prevented by requiring access to the controller's
 ports, which are recommended to only be open on loopback if the controller is on an
@@ -164,19 +148,17 @@ It is highly unlikely that an execution key could be guessed by an attacker
 in a brute force guessing attack. A given instance of the IPython controller
 only runs for a relatively short amount of time (on the order of hours). Thus
 an attacker would have only a limited amount of time to test a search space of
-size 2**128.  For added security, users can have arbitrarily long keys.
+size 2\*\*128. For added security, users can have arbitrarily long keys.
 
-.. warning::
+:::{warning}
+If the attacker has gained enough access to intercept loopback connections on _either_ the
+controller or client, then a duplicate message can be sent. To protect against this,
+recipients only allow each signature once, and consider duplicates invalid. However,
+the duplicate message could be sent to _another_ recipient using the same key,
+and it would be considered valid.
+:::
 
-    If the attacker has gained enough access to intercept loopback connections on *either* the
-    controller or client, then a duplicate message can be sent. To protect against this,
-    recipients only allow each signature once, and consider duplicates invalid.  However,
-    the duplicate message could be sent to *another* recipient using the same key,
-    and it would be considered valid.
-
-
-Unauthorized engines
---------------------
+### Unauthorized engines
 
 If an attacker were able to connect a hostile engine to a user's controller,
 the user might unknowingly send sensitive code or data to the hostile engine.
@@ -185,8 +167,7 @@ This attacker's engine would then have full access to that code and data.
 This type of attack is prevented in the same way as the unauthorized client
 attack, through the usage of the capabilities based authentication scheme.
 
-Unauthorized controllers
-------------------------
+### Unauthorized controllers
 
 It is also possible that an attacker could try to convince a user's IPython
 client or engine to connect to a hostile IPython controller. That controller
@@ -205,12 +186,11 @@ attacker must convince the user to use the key associated with the
 hostile controller. As long as a user is diligent in only using keys from
 trusted sources, this attack is not possible.
 
-.. note::
+:::{note}
+I may be wrong, the unauthorized controller may be easier to fake than this.
+:::
 
-    I may be wrong, the unauthorized controller may be easier to fake than this.
-
-Other security measures
-=======================
+## Other security measures
 
 A number of other measures are taken to further limit the security risks
 involved in running the IPython kernel.
@@ -220,32 +200,31 @@ While this can be overridden by the user, in the default configuration, an
 attacker would have to do a port scan to even find a controller to attack.
 When coupled with the relatively short running time of a typical controller
 (on the order of hours), an attacker would have to work extremely hard and
-extremely *fast* to even find a running controller to attack.
+extremely _fast_ to even find a running controller to attack.
 
 Second, much of the time, especially when run on supercomputers or clusters,
 the controller is running behind a firewall. Thus, for engines or client to
 connect to the controller:
 
-* The different processes have to all be behind the firewall.
+- The different processes have to all be behind the firewall.
 
 or:
 
-* The user has to use SSH port forwarding to tunnel the
+- The user has to use SSH port forwarding to tunnel the
   connections through the firewall.
 
 In either case, an attacker is presented with additional barriers that prevent
 attacking or even probing the system.
 
-Summary
-=======
+## Summary
 
 IPython's architecture has been carefully designed with security in mind. The
 capabilities based authentication model, in conjunction with SSH tunneled
 TCP/IP channels, address the core potential vulnerabilities in the system,
 while still enabling user's to use the system in open networks.
 
-.. _RFC5246: <http://tools.ietf.org/html/rfc5246>
+[^cite_openssh]: \<<http://www.openssh.com/>>
+[^cite_paramiko]: \<<https://www.lag.net/paramiko/>>
+[^cite_hmac]: \<<http://tools.ietf.org/html/rfc2104.html>>
 
-.. [OpenSSH] <http://www.openssh.com/>
-.. [Paramiko] <https://www.lag.net/paramiko/>
-.. [HMAC] <http://tools.ietf.org/html/rfc2104.html>
+[rfc5246]: http://tools.ietf.org/html/rfc5246

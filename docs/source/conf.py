@@ -49,12 +49,17 @@ extensions = [
     'IPython.sphinxext.ipython_console_highlighting',
 ]
 
+myst_enable_extensions = [
+    'colon_fence',
+    'deflist',
+]
+
 # Add any paths that contain templates here, relative to this directory.
 # templates_path = ['_templates']
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-source_suffix = ['.rst', '.md']
+source_suffix = ['.md', '.rst']
 
 from traitlets.config import LoggingConfigurable
 
@@ -109,7 +114,7 @@ language = None
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = ['winhpc.rst']
+exclude_patterns = []
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
