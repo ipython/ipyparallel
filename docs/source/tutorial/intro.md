@@ -5,8 +5,9 @@
 ## Examples
 
 We have various example scripts and notebooks for using ipyparallel in our
-{file}`examples` directory, or they can be viewed [using nbviewer](http://nbviewer.jupyter.org/github/ipython/ipyparallel/blob/master/examples/Index.ipynb).
-Some of these are covered in more detail in the {ref}`examples <parallel_examples>` section.
+{file}`docs/source/examples` directory, as covered in the [examples][] section.
+
+[examples]: ../examples/Index.ipynb
 
 ## Introduction
 
@@ -222,7 +223,7 @@ $ ipcluster start -n 4
 ```
 
 More details about starting the IPython controller and engines can be found
-{ref}`here <parallel_process>`.
+{ref}`here <parallel-process>`.
 
 Once you have started the IPython controller and one or more engines, you
 are ready to use the engines to do something useful. To make sure
@@ -269,7 +270,7 @@ which the Hub process is running (or another machine that has direct access to t
 The SSH server may already be specified in ipcontroller-client.json, if the controller was
 instructed at its launch time.
 
-You are now ready to learn more about the {ref}`Direct <parallel_direct>` and {ref}`LoadBalanced <parallel_task>` interfaces to the
+You are now ready to learn more about the {ref}`Direct <parallel-direct>` and {ref}`LoadBalanced <parallel-task>` interfaces to the
 controller.
 
 [zeromq]: http://zeromq.org/
