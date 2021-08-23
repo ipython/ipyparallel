@@ -20,7 +20,7 @@ If you want to use MPI with IPython, you will need to install:
 - A standard MPI implementation such as OpenMPI [^cite_openmpi] or MPICH.
 - The mpi4py [^cite_mpi4py] package.
 
-:::{note}
+```{note}
 The mpi4py package is not a strict requirement. However, you need to
 have _some_ way of calling MPI from Python. You also need some way of
 making sure that {func}`MPI_Init` is called when the IPython engines start
@@ -28,7 +28,7 @@ up. There are a number of ways of doing this and a good number of
 associated subtleties. We highly recommend using mpi4py as it
 takes care of most of these problems. If you want to do something
 different, let us know and we can help you get started.
-:::
+```
 
 ## Starting the engines with MPI enabled
 
@@ -106,9 +106,9 @@ Now, start an IPython cluster:
 $ ipcluster start --profile=mpi -n 4
 ```
 
-:::{note}
+```{note}
 It is assumed here that the mpi profile has been set up, as described {ref}`here <parallel_process>`.
-:::
+```
 
 Finally, connect to the cluster and use this function interactively. In this
 case, we create a distributed array and sum up all its elements in a distributed

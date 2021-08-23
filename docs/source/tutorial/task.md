@@ -58,9 +58,9 @@ be constructed via the client's {meth}`load_balanced_view` method:
 In [4]: lview = rc.load_balanced_view() # default load-balanced view
 ```
 
-:::{seealso}
+```{seealso}
 For more information, see the in-depth explanation of {ref}`Views <parallel_details>`.
-:::
+```
 
 ## Quick and easy parallelism
 
@@ -113,11 +113,11 @@ may want to associate some kind of `Dependency` that describes when, where, or w
 a task can be run. In IPython, we provide two types of dependencies:
 [Functional Dependencies] and [Graph Dependencies]
 
-:::{note}
+```{note}
 It is important to note that the pure ZeroMQ scheduler does not support dependencies,
 and you will see errors or warnings if you try to use dependencies with the pure
 scheduler.
-:::
+```
 
 ### Functional Dependencies
 
@@ -269,10 +269,10 @@ indicates that the task should never timeout. If the timeout is reached, and the
 scheduler still hasn't been able to assign the task to an engine, the task will fail
 with a {class}`DependencyTimeout`.
 
-:::{note}
+```{note}
 Dependencies only work within the task scheduler. You cannot instruct a load-balanced
 task to run after a job submitted via the MUX interface.
-:::
+```
 
 The simplest form of Dependencies is with `all=True, success=True, failure=False`. In these cases,
 you can skip using Dependency objects, and pass msg_ids or AsyncResult objects as the
@@ -292,10 +292,10 @@ In [18]: with lview.temp_flags(follow=[ar], timeout=2.5)
    ....:    ar4 = lview.apply(f3)
 ```
 
-:::{seealso}
+```{seealso}
 Some parallel workloads can be described as a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph), or DAG. See {ref}`DAG Dependencies <dag_dependencies>` for an example demonstrating how to use map a NetworkX DAG
 onto task dependencies.
-:::
+```
 
 #### Impossible Dependencies
 
@@ -312,10 +312,10 @@ The basic cases that are checked:
 - any dependencies failed and `all=True,success=True,failures=False`
 - all dependencies failed and `all=False,success=True,failure=False`
 
-:::{warning}
+```{warning}
 This analysis has not been proven to be rigorous, so it is likely possible for tasks
 to become impossible to run in obscure situations, so a timeout may be a good choice.
-:::
+```
 
 ## Retries and Resubmit
 
@@ -435,9 +435,9 @@ Disabled features when using the ZMQ Scheduler:
   where ZeroMQ messages have gone, so there is no way to know what tasks are on which
   engine until they _finish_. This makes recovery from engine shutdown very difficult.
 
-:::{note}
+```{note}
 TODO: performance comparisons
-:::
+```
 
 ## More details
 
@@ -460,6 +460,6 @@ The following is an overview of how to use these classes together:
    tasks, or use the {meth}`AsyncResult.get` method of the results to wait
    for and then receive the results.
 
-:::{seealso}
+```{seealso}
 A demo of {ref}`DAG Dependencies <dag_dependencies>` with NetworkX and IPython.
-:::
+```

@@ -16,13 +16,13 @@ It is important for security/practicality reasons that all connections be inboun
 controller processes. The arrows in the figures indicate the direction of the
 connection.
 
-:::{figure} figs/allconnections.png
+```{figure} figs/allconnections.png
 :align: center
 :alt: IPython cluster connections
 :width: 432px
 
 All the connections involved in connecting one client to one engine.
-:::
+```
 
 The Controller consists of 1-5 processes. Central to the cluster is the **Hub**, which monitors
 engine state, execution traffic, and handles registration and notification. The Hub includes a
@@ -38,14 +38,14 @@ the clients via a PUB/SUB MonitoredQueue.
 
 ### Registration
 
-:::{figure} figs/queryfade.png
+```{figure} figs/queryfade.png
 :align: center
 :alt: IPython Registration connections
 :width: 432px
 
 Engines and Clients only need to know where the Query `ROUTER` is located to start
 connecting.
-:::
+```
 
 Once a controller is launched, the only information needed for connecting clients and/or
 engines is the IP/port of the Hub's `ROUTER` socket called the Registrar. This socket
@@ -55,13 +55,13 @@ querying the Hub for state information.
 
 ### Heartbeat
 
-:::{figure} figs/hbfade.png
+```{figure} figs/hbfade.png
 :align: center
 :alt: IPython Heartbeat connections
 :width: 432px
 
 The heartbeat sockets.
-:::
+```
 
 The heartbeat process has been described elsewhere. To summarize: the Heartbeat Monitor
 publishes a distinct message periodically via a `PUB` socket. Each engine has a
@@ -75,13 +75,13 @@ the Hub uses to notify clients of any changes in the available engines.
 
 ### Schedulers
 
-:::{figure} figs/queuefade.png
+```{figure} figs/queuefade.png
 :align: center
 :alt: IPython Queue connections
 :width: 432px
 
 Control message scheduler on the left, execution (apply) schedulers on the right.
-:::
+```
 
 The controller has at least three Schedulers. These devices are primarily for
 relaying messages between clients and engines, but the Hub needs to see those
@@ -109,13 +109,13 @@ the upstream sockets in each MonitoredQueue.
 
 ### IOPub
 
-:::{figure} figs/iopubfade.png
+```{figure} figs/iopubfade.png
 :align: center
 :alt: IOPub connections
 :width: 432px
 
 stdout/err are published via a `PUB/SUB` MonitoredQueue
-:::
+```
 
 On the kernels, stdout/stderr are captured and published via a `PUB` socket. These `PUB`
 sockets all connect to a `SUB` socket input of a MonitoredQueue, which subscribes to all
@@ -124,24 +124,24 @@ subscribed by the clients.
 
 ### Client connections
 
-:::{figure} figs/queryfade.png
+```{figure} figs/queryfade.png
 :align: center
 :alt: IPython client query connections
 :width: 432px
 
 Clients connect to an `ROUTER` socket to query the hub.
-:::
+```
 
 The hub's registrar `ROUTER` socket also listens for queries from clients as to queue status,
 and control instructions. Clients connect to this socket via an `DEALER` during registration.
 
-:::{figure} figs/notiffade.png
+```{figure} figs/notiffade.png
 :align: center
 :alt: IPython Registration connections
 :width: 432px
 
 Engine registration events are published via a `PUB` socket.
-:::
+```
 
 The Hub publishes all registration/unregistration events via a `PUB` socket. This
 allows clients to stay up to date with what engines are available by subscribing to the

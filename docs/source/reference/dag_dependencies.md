@@ -25,9 +25,9 @@ dependencies to cause a deadlock.
 
 Here, we have a very simple 5-node DAG:
 
-:::{figure} figs/simpledag.\*
+```{figure} figs/simpledag.*
 :width: 600px
-:::
+```
 
 With NetworkX, an arrow is a fattened bit on the edge. Here, we can see that task 0
 depends on nothing, and can run immediately. 1 and 2 depend on 0; 3 depends on
@@ -162,11 +162,11 @@ In [13]: nx.draw(G, pos, node_list=colors.keys(), node_color=colors.values(),
    ....:    cmap=gist_rainbow)
 ```
 
-:::{figure} figs/dagdeps.\*
+```{figure} figs/dagdeps.*
 :width: 600px
 
 Time started on x, runtime on y, and color-coded by engine-id (in this case there
 were four engines). Edges denote dependencies.
-:::
+```
 
 [networkx]: https://networkx.github.io/

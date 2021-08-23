@@ -2,9 +2,9 @@
 
 # Details of Parallel Computing with IPython
 
-:::{note}
+```{note}
 There are still many sections to fill out in this doc
-:::
+```
 
 ## Caveats
 
@@ -217,10 +217,10 @@ if int:
 
 : Run on single engine
 
-:::{note}
+```{note}
 {class}`LoadBalancedView` uses targets to restrict possible destinations.
 LoadBalanced calls will always execute on exactly one engine.
-:::
+```
 
 flags only in LoadBalancedViews:
 
@@ -253,9 +253,9 @@ a {meth}`~.DirectView.run` method, which rather than take functions and argument
 is the same as `execute`, but for a _filename_ rather than a string. It is a wrapper that
 does something very similar to `execute(open(f).read())`.
 
-:::{note}
+```{note}
 TODO: Examples for execute and run
-:::
+```
 
 ## Views
 
@@ -334,9 +334,9 @@ In [6]: dview.apply_sync(socket.gethostname)
 Out[6]: ['tesla', 'tesla', 'edison', 'edison', 'edison']
 ```
 
-:::{note}
+```{note}
 TODO: expand on direct execution
-:::
+```
 
 #### Data movement via DirectView
 
@@ -379,9 +379,9 @@ Out[60]: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
 
 {meth}`~ipyparallel.client.view.DirectView.pull`
 
-:::{note}
+```{note}
 TODO: write this section
-:::
+```
 
 ### LoadBalancedView
 
@@ -465,9 +465,9 @@ original exception, a RemoteError will be raised, encapsulating the remote excep
 metadata. If the AsyncResult represents multiple calls (e.g. any time `targets` is plural), then
 a CompositeError, a subclass of RemoteError, will be raised.
 
-:::{seealso}
+```{seealso}
 For more information on remote exceptions, see {ref}`the section in the Direct Interface <parallel_exceptions>`.
-:::
+```
 
 #### Extended interface
 
@@ -633,9 +633,9 @@ The client also has an `outstanding` attribute - a `set` of msg ids that are awa
 replies. This is the default if wait is called with no arguments - i.e. wait on _all_
 outstanding messages.
 
-:::{note}
+```{note}
 TODO wait example
-:::
+```
 
 ## Map
 
@@ -669,9 +669,9 @@ What keyword arguments are available depends on the view being used.
 
 ## Decorators and RemoteFunctions
 
-:::{note}
+```{note}
 TODO: write this section
-:::
+```
 
 {func}`~ipyparallel.client.remotefunction.parallel`
 
@@ -683,9 +683,9 @@ TODO: write this section
 
 ## Dependencies
 
-:::{note}
+```{note}
 TODO: write this section
-:::
+```
 
 {func}`~ipyparallel.controller.dependency.depend`
 

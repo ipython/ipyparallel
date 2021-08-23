@@ -2,12 +2,12 @@
 
 # Security details of IPython
 
-:::{note}
-This section is not thorough, and IPython.kernel.zmq needs a thorough security
+```{note}
+This section is not thorough, and IPython Parallel needs a thorough security
 audit.
-:::
+```
 
-IPython's {mod}`IPython.kernel.zmq` package exposes the full power of the
+IPython Parallel exposes the full power of the
 Python interpreter over a TCP/IP network for the purposes of parallel
 computing. This feature brings up the important question of IPython's security
 model. This document gives details about this model and how it is implemented
@@ -36,58 +36,174 @@ are summarized here:
 Collectively, these processes are called the IPython _cluster_, and the hub and schedulers
 together are referred to as the _controller_.
 
-These processes communicate over any transport supported by ZeroMQ (tcp,pgm,infiniband,ipc)
-with a well defined topology. The IPython hub and schedulers listen on sockets. Upon
-starting, an engine connects to a hub and registers itself, which then informs the engine
+These processes communicate over any transport supported by ZeroMQ (tcp,pgm,ipc)
+with a well defined topology. The IPython controller processes listen on sockets.
+Upon starting, an engine connects to a hub and registers itself, which then informs the engine
 of the connection information for the schedulers, and the engine then connects to the
-schedulers. These engine/hub and engine/scheduler connections persist for the
+schedulers.
+These engine->hub and engine->scheduler connections persist for the
 lifetime of each engine.
 
-The IPython client also connects to the controller processes using a number of socket
-connections. As of writing, this is one socket per scheduler (4), and 3 connections to the
-hub for a total of 7. These connections persist for the lifetime of the client only.
+The IPython client also connects to the controller processes using a number of sockets.
+As of writing, this is one socket per scheduler (4), and 3 connections to the
+hub for a total of 7.
+These connections persist for the lifetime of the client only.
 
-A given IPython controller and set of engines engines typically has a relatively
-short lifetime. Typically this lifetime corresponds to the duration of a single parallel
-simulation performed by a single user. Finally, the hub, schedulers, engines, and client
+A given IPython controller and set of engines typically has a relatively
+short lifetime.
+Typically this lifetime corresponds to the duration of a single parallel
+computation performed by a single user.
+Finally, the hub, schedulers, engines, and client
 processes typically execute with the permissions of that same user. More specifically, the
 controller and engines are _not_ executed as root or with any other superuser permissions.
 
 ## Application logic
 
 When running the IPython kernel to perform a parallel computation, a user
-utilizes the IPython client to send Python commands and data through the
+connects an IPython client to send Python commands and data through the
 IPython schedulers to the IPython engines, where those commands are executed
-and the data processed. The design of IPython ensures that the client is the
-only access point for the capabilities of the engines. That is, the only way
-of addressing the engines is through a client.
+and the data processed.
 
-A user can utilize the client to instruct the IPython engines to execute
-arbitrary Python commands. These Python commands can include calls to the
+Via the client, a user can instruct the IPython engines to execute
+arbitrary Python commands.
+These Python commands can include calls to the
 system shell, access the filesystem, etc., as required by the user's
-application code. From this perspective, when a user runs an IPython engine on
+application. From this perspective, when a user runs an IPython engine on
 a host, that engine has the same capabilities and permissions as the user
 themselves (as if they were logged onto the engine's host with a terminal).
+
+### ZeroMQ and Connection files
+
+IPython uses ZeroMQ for networking, and does not yet support ZeroMQ's encryption and authentication.
+By default, no IPython
+connections are encrypted, but open ports only listen on localhost. The only
+source of encryption for IPython is via ssh-tunnel. IPython supports both shell
+(`openssh`) and `paramiko` based tunnels for connections. There is a key used to
+authenticate requests, but due to the lack of encryption, it does not provide
+significant security if loopback traffic is compromised.
+
+In our architecture, the controller is the only process that listens on
+network ports, and is thus the main point of vulnerability. The standard model
+for secure connections is to designate that the controller listen on
+localhost, and use ssh-tunnels to connect clients and/or
+engines.
+
+To connect and authenticate to the controller an engine or client needs
+some information that the controller has stored in a JSON file.
+The JSON files may need to be copied to a location where
+the clients and engines can find them. Typically, this is the
+{file}`~/.ipython/profile_default/security` directory on the host where the
+client/engine is running, which could be on a different filesystemx than the controller.
+Once the JSON files are copied over, everything should work fine.
+
+Currently, there are two JSON files that the controller creates:
+
+ipcontroller-engine.json
+
+: This JSON file has the information necessary for an engine to connect
+to a controller.
+
+ipcontroller-client.json
+
+: The client's connection information. This may not differ from the engine's,
+but since the controller may listen on different ports for clients and
+engines, it is stored separately.
+
+ipcontroller-client.json will look something like this, under default localhost
+circumstances:
+
+```python
+{
+  "ssh": "",
+  "interface": "tcp://127.0.0.1",
+  "registration": 54886,
+  "control": 54888,
+  "mux": 54890,
+  "hb_ping": 54891,
+  "hb_pong": 54892,
+  "task": 54894,
+  "iopub": 54896,
+  "broadcast": [
+    54900,
+    54901
+  ],
+  "key": "7e99e423-c437d4daf7cf23ee84cae803",
+  "location": "mylaptop",
+  "pack": "json",
+  "unpack": "json",
+  "signature_scheme": "hmac-sha256"
+}
+```
+
+If, however, you are running the controller on a work node on a cluster, you will likely
+need to use ssh tunnels to connect clients from your laptop to it. You will also
+probably need to instruct the controller to listen for engines coming from other work nodes
+on the cluster. An example of ipcontroller-client.json, as created by:
+
+```
+$> ipcontroller --ip=* --ssh=login.mycluster.com
+```
+
+```python
+{
+  "ssh": "login.mycluster.com",
+  "interface": "tcp://*",
+  "registration": 55836,
+  "control": 55837,
+  "mux": 55839,
+  "task": 55843,
+  "task_scheme": "lru",
+  "iopub": 55845,
+  "notification": 55852,
+  "broadcast": [
+    55847,
+    55848,
+    55849
+  ],
+  "key": "70bc97ac-e66ac5143885ca8b376d4cb7",
+  "location": "mylaptop",
+  "pack": "json",
+  "unpack": "json",
+  "signature_scheme": "hmac-sha256"
+}
+```
+
+More details of how these JSON files are used are given below.
+
+A detailed description of the security model and its implementation in IPython
+can be found {ref}`here <parallelsecurity>`.
+
+```{warning}
+Even at its most secure, the Controller listens on ports on localhost, and
+every time you make a tunnel, you open a localhost port on the connecting
+machine that points to the Controller. If localhost on the Controller's
+machine, or the machine of any client or engine, is untrusted, then your
+Controller is insecure.
+```
 
 ## Secure network connections
 
 ### Overview
 
-ZeroMQ provides exactly no security. For this reason, users of IPython must be very
+ZeroMQ supports encryption and authentication via a mechanism
+called [CurveMQ][].
+IPython Parallel does not _yet_ support this mechanism,
+so all ZeroMQ connections are not authenticated and not encrypted.
+For this reason, users of IPython must be very
 careful in managing connections, because an open TCP/IP socket presents access to
 arbitrary execution as the user on the engine machines. As a result, the default behavior
 of controller processes is to only listen for clients on the loopback interface, and the
 client must establish SSH tunnels to connect to the controller processes.
 
-:::{warning}
+```{warning}
 If the controller's loopback interface is untrusted, then IPython should be considered
 vulnerable, and this extends to the loopback of all connected clients, which have
 opened a loopback port that is redirected to the controller's loopback port.
-:::
+```
 
 ### SSH
 
-Since ZeroMQ provides no security, SSH tunnels are the primary source of secure
+Since ZeroMQ sockets provide no security, SSH tunnels are the primary source of secure
 connections. A connector file, such as `ipcontroller-client.json`, will contain
 information for connecting to the controller, possibly including the address of an
 ssh-server through with the client is to tunnel. The Client object then creates tunnels
@@ -116,12 +232,12 @@ the controller creates this key, and stores it in the private connection files
 `~/.ipython/profile_<name>/security` directory, and are maintained as readable only by the
 owner, as is common practice with a user's keys in their `.ssh` directory.
 
-:::{warning}
+```{warning}
 It is important to note that the signatures protect against unauthorized messages,
 but, as there is no encryption, provide exactly no protection of data privacy. It is
 possible, however, to use a custom serialization scheme (via Session.packer/unpacker
 traits) that does incorporate your own encryption scheme.
-:::
+```
 
 ## Specific security vulnerabilities
 
@@ -150,13 +266,13 @@ only runs for a relatively short amount of time (on the order of hours). Thus
 an attacker would have only a limited amount of time to test a search space of
 size 2\*\*128. For added security, users can have arbitrarily long keys.
 
-:::{warning}
+```{warning}
 If the attacker has gained enough access to intercept loopback connections on _either_ the
 controller or client, then a duplicate message can be sent. To protect against this,
 recipients only allow each signature once, and consider duplicates invalid. However,
 the duplicate message could be sent to _another_ recipient using the same key,
 and it would be considered valid.
-:::
+```
 
 ### Unauthorized engines
 
@@ -186,9 +302,9 @@ attacker must convince the user to use the key associated with the
 hostile controller. As long as a user is diligent in only using keys from
 trusted sources, this attack is not possible.
 
-:::{note}
+```{note}
 I may be wrong, the unauthorized controller may be easier to fake than this.
-:::
+```
 
 ## Other security measures
 

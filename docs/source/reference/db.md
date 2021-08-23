@@ -41,9 +41,9 @@ the Client is modeled after MongoDB queries, so if you have used MongoDB it shou
 familiar. In fact, when the MongoDB backend is in use, the query is relayed directly.
 When using other backends, the interface is emulated and only a subset of queries is possible.
 
-:::{seealso}
+```{seealso}
 MongoDB query docs: <https://docs.mongodb.org/manual/tutorial/query-documents/>
-:::
+```
 
 {meth}`Client.db_query` takes a dictionary query object, with keys from the TaskRecord key list,
 and values of either exact values to test, or MongoDB queries, which are dicts of The form:

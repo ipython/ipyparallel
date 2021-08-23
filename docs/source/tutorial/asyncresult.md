@@ -15,11 +15,11 @@ This means it can be integrated into existing async workflows,
 with e.g. {py:func}`asyncio.wrap_future`.
 It also extends the {py:class}`~.multiprocessing.AsyncResult` API.
 
-:::{seealso}
+```{seealso}
 
 - {py:class}`multiprocessing.AsyncResult` API
 - {py:class}`concurrent.futures.Future` API
-  :::
+```
 
 In addition to these common features,
 our AsyncResult objects add a number of convenient methods for working with parallel results,
@@ -78,13 +78,13 @@ For use after the tasks are done:
 - {attr}`ar.wall_time` is the time between the first task submitted and last result
   received. This is the actual cost of computation, including IPython overhead.
 
-:::{note}
+```{note}
 wall_time is only precise if the Client is waiting for results when
 the task finished, because the `received` timestamp is made when the result is
 unpacked by the Client, triggered by the {meth}`~Client.spin` call. If you
 are doing work in the Client, and not waiting/spinning, then `received` might
 be artificially high.
-:::
+```
 
 An often interesting metric is the time it cost to do the work in parallel
 relative to the serial computation, and this can be given with
@@ -136,10 +136,10 @@ To break that down:
    and dividing by the size
 3. take the square root of the resulting number
 
-:::{seealso}
+```{seealso}
 When AsyncResult or the AsyncMapResult don't provide what you need (for instance,
 handling individual results as they arrive, but with metadata), you can always
 split the original result's `msg_ids` attribute, and handle them as you like.
 
 For an example of this, see {file}`examples/customresult.py`
-:::
+```

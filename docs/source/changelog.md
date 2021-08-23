@@ -197,12 +197,12 @@ Views have also received an Executor interface.
 This rewrite better connects results to their handles,
 so the Client.results cache should no longer grow unbounded.
 
-:::{seealso}
+```{seealso}
 
 - The Executor API {class}`ipyparallel.ViewExecutor`
 - Creating an Executor from a Client: {meth}`ipyparallel.Client.executor`
 - Each View has an {attr}`executor` attribute
-  :::
+```
 
 Part of the Future refactor is that Client IO is now handled in a background thread,
 which means that {meth}`Client.spin_thread` is obsolete and deprecated.

@@ -130,19 +130,19 @@ Out[2:12]: 1339454561.072837
 Out[3:10]: 1339454561.066665
 ```
 
-:::{seealso}
+```{seealso}
 {ref}`pxconfig` accepts these same arguments for changing the _default_
 values of targets/blocking for the active View.
-:::
+```
 
 #### Output Display
 
 \%%px also accepts a `--group-outputs` argument,
 which adjusts how the outputs of multiple engines are presented.
 
-:::{seealso}
+```{seealso}
 {meth}`.AsyncResult.display_outputs` for the grouping options.
-:::
+```
 
 ```ipython
 In [50]: %%px --block --group-outputs=engine
@@ -358,7 +358,7 @@ if this is the most recent IPython session you have started.
 ...
 ```
 
-:::{note}
+```{note}
 `%qtconsole` will call {func}`bind_kernel` on an engine if it hasn't been done already,
 so you can often skip that first step.
-:::
+```

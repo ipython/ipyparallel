@@ -2,20 +2,27 @@
 
 # Starting the IPython controller and engines
 
-To use IPython for parallel computing, you need to start one instance of
-the controller and one or more instances of the engine. The controller
-and each engine can run on different machines or on the same machine.
-Because of this, there are many different possibilities.
+To use IPython for parallel computing, you need to start
+an IPython cluster.
+This includes one instance of the controller and one or more instances of the engine.
+The controller and each engine can run on different machines or on the same machine.
+Any mechanism for starting processes that can communicate over the network
 
 Broadly speaking, there are two ways of going about starting a controller and engines:
 
-- In an automated manner using the {command}`ipcluster` command.
+- As managed processes, using {class}`.Cluster` objects.
+  This includes via the {command}`ipcluster` command.
 - In a more manual way using the {command}`ipcontroller` and
-  {command}`ipengine` commands.
+  {command}`ipengine` commands directly.
+
+Starting with IPython Parallel 7,
+some features are only available when using the `Cluster` API,
+so this is encouraged.
+Such features include collective interrupts, signaling support, restart APIs,
+and improved crash handling.
 
 This document describes both of these methods. We recommend that new users
-start with the {command}`ipcluster` command as it simplifies many common usage
-cases.
+start with the `Cluster` API within scripts or notebooks.
 
 ## General considerations
 
@@ -27,10 +34,17 @@ matter which method you use to start your IPython cluster.
 If you are running engines on multiple machines, you will likely need to instruct the
 controller to listen for connections on an external interface. This can be done by specifying
 the `ip` argument on the command-line, or the `IPController.ip` configurable in
-{file}`ipcontroller_config.py`.
+{file}`ipcontroller_config.py`,
+or the `controller_ip` argument when creating a Cluster:
 
 If your machines are on a trusted network, you can safely instruct the controller to listen
 on all interfaces with:
+
+```python
+cluster = ipp.Cluster(controller_ip='*')
+```
+
+or
 
 ```
 $> ipcontroller --ip="*"
@@ -43,7 +57,7 @@ c.IPController.ip = '*'
 # c.IPController.location = 'controllerhost.tld'
 ```
 
-:::{note}
+```{note}
 `--ip=*` instructs ZeroMQ to listen on all interfaces,
 but it does not contain the IP needed for engines / clients
 to know where the controller is.
@@ -53,22 +67,22 @@ the specific IP address or hostname of the controller, as seen from engines and/
 IPython uses `socket.gethostname()` for this value by default,
 but it may not always be the right value.
 Check the `location` field in your connection files if you are having connection trouble.
-:::
+```
 
-:::{versionchanged} 6.1
+```{versionchanged} 6.1
 Support hostnames in location, in addition to ip addresses.
-:::
+```
 
-:::{note}
+```{note}
 Due to the lack of security in ZeroMQ, the controller will only listen for connections on
 localhost by default. If you see Timeout errors on engines or clients, then the first
 thing you should check is the ip address the controller is listening on, and make sure
 that it is visible from the timing out machine.
-:::
+```
 
-:::{seealso}
+```{seealso}
 Our [notes](parallel_security) on security in the new parallel computing code.
-:::
+```
 
 Let's say that you want to start the controller on `host0` and engines on
 hosts `host1`-`hostn`. The following steps are then required:
@@ -77,14 +91,14 @@ hosts `host1`-`hostn`. The following steps are then required:
    `host0`. The controller must be instructed to listen on an interface visible
    to the engine machines, via the `ip` command-line argument or `IPController.ip`
    in {file}`ipcontroller_config.py`.
-2. Move the JSON file ({file}`ipcontroller-engine.json`) created by the
-   controller from `host0` to hosts `host1`-`hostn`.
+2. Make the JSON file ({file}`ipcontroller-engine.json`) created by the
+   controller on `host0` available on hosts `host1`-`hostn`.
 3. Start the engines on hosts `host1`-`hostn` by running
-   {command}`ipengine`. This command has to be told where the JSON file
+   {command}`ipengine`. This command may have to be told where the JSON file
    ({file}`ipcontroller-engine.json`) is located.
 
 At this point, the controller and engines will be connected. By default, the JSON files
-created by the controller are put into the {file}`IPYTHONDIR/profile_default/security`
+created by the controller are put into the {file}`$IPYTHONDIR/profile_default/security`
 directory. If the engines share a filesystem with the controller, step 2 can be skipped as
 the engines will automatically look at that location.
 
@@ -94,9 +108,9 @@ will be run. If these file are put into the {file}`IPYTHONDIR/profile_default/se
 directory of the client's host, they will be found automatically. Otherwise, the full path
 to them has to be passed to the client's constructor.
 
-## Using {command}`ipcluster`
+## Managing `Clusters`
 
-The {command}`ipcluster` command provides a simple way of starting a
+The {class}`~.ipyparallel.Cluster` class provides a managed way of starting a
 controller and engines in the following situations:
 
 1. When the controller and engines are all run on localhost. This is useful
@@ -107,31 +121,17 @@ controller and engines in the following situations:
    (or other `qsub` systems, such as SGE).
 4. When the controller is started on localhost and the engines are started on
    remote nodes using {command}`ssh`.
-5. When engines are started using the Windows HPC Server batch system.
 
-:::{note}
-Currently {command}`ipcluster` requires that the
-{file}`IPYTHONDIR/profile_<name>/security` directory live on a shared filesystem that is
-seen by both the controller and engines. If you don't have a shared file
-system you will need to use {command}`ipcontroller` and
-{command}`ipengine` directly.
-:::
+Under the hood, `Cluster` objects ultimately launch {command}`ipcontroller`
+and {command}`ipengine` processes to perform the steps described above.
 
-Under the hood, {command}`ipcluster` uses {command}`ipcontroller`
-and {command}`ipengine` to perform the steps described above.
-
-The simplest way to use ipcluster requires no configuration, and will
+The simplest way to use clusters requires no configuration, and will
 launch a controller and a number of engines on the local machine. For instance,
 to start one controller and 4 engines on localhost:
 
-```
-$ ipcluster start -n 4
-```
-
-To see other command line options:
-
-```
-$ ipcluster -h
+```python
+cluster = ipp.Cluster(n=4)
+cluster.start_cluster_sync()
 ```
 
 ## Configuring an IPython cluster
@@ -155,23 +155,28 @@ represent your most common use case.
 The configuration files are loaded with commented-out settings and explanations,
 which should cover most of the available possibilities.
 
+Additionally, each profile can have many cluster instances at once, identified by a `cluster_id`.
+
+You can see running clusters with:
+
+```
+$> ipcluster list
+```
+
 ### Using various batch systems with {command}`ipcluster`
 
-{command}`ipcluster` has a notion of Launchers that can start controllers
-and engines with various remote execution schemes. Currently supported
-models include {command}`ssh`, {command}`mpiexec`, PBS-style (Torque, SGE, LSF),
-and Windows HPC Server.
+{command}`ipcluster` has a notion of {class}`Launcher` that can start controllers
+and engines via some mechanism. Currently supported
+models include {command}`ssh`, {command}`mpiexec`, and PBS-style (Torque, SGE, LSF).
 
-In general, these are configured by the {attr}`IPClusterEngines.engine_set_launcher_class`,
-and {attr}`IPClusterStart.controller_launcher_class` configurables, which can be the
+In general, these are configured by the {attr}`Cluster.engine_set_launcher_class`,
+and {attr}`Cluster.controller_launcher_class` configurables, which can be the
 fully specified object name (e.g. `'ipyparallel.cluster.launcher.LocalControllerLauncher'`),
-but if you are using IPython's builtin launchers, you can specify a launcher by its prefix e.g:
+but if you are using IPython's builtin launchers, you can specify a launcher by its short name, e.g:
 
 ```python
-c.IPClusterEngines.engine_launcher_class = 'SSH'
-# equivalent to
-c.IPClusterEngines.engine_launcher_class = 'SSHEngineSetLauncher'
-# both of which expand to
+c.IPClusterEngines.engine_launcher_class = 'ssh'
+# which is equivalent to
 c.IPClusterEngines.engine_launcher_class = 'ipyparallel.cluster.launcher.SSHEngineSetLauncher'
 ```
 
@@ -179,22 +184,20 @@ The shortest form being of particular use on the command line, where all you nee
 get an IPython cluster running with engines started with MPI is:
 
 ```bash
-$> ipcluster start --engines=MPI
+$> ipcluster start --engines=mpi
 ```
 
-Assuming that the default MPI config is sufficient.
+Assuming that the default MPI configuration is sufficient.
 
-:::{note}
-shortcuts for builtin launcher names were added in 0.12, as was the `_class` suffix
-on the configurable names. If you use the old 0.11 names (e.g. `engine_set_launcher`),
-they will still work, but you will get a deprecation warning that the name has changed.
-:::
-
-:::{note}
+```{note}
 The Launchers and configuration are designed in such a way that advanced
 users can subclass and configure them to fit their own system that we
-have not yet supported (such as Condor)
-:::
+have not yet supported
+```
+
+### Writing custom Launchers
+
+TODO: example writing custom Launchers
 
 ### Using {command}`ipcluster` in mpiexec/mpirun mode
 
@@ -215,7 +218,7 @@ and edit the file {file}`IPYTHONDIR/profile_mpi/ipcluster_config.py`.
 There, instruct ipcluster to use the MPI launchers by adding the lines:
 
 ```python
-c.IPClusterEngines.engine_launcher_class = 'MPIEngineSetLauncher'
+c.Cluster.engine_launcher_class = 'mpi'
 ```
 
 If the default MPI configuration is correct, then you can now start your cluster, with:
@@ -229,33 +232,10 @@ This does the following:
 1. Starts the IPython controller on current host.
 2. Uses {command}`mpiexec` to start 4 engines.
 
-If you have a reason to also start the Controller with mpi, you can specify:
-
-```python
-c.IPClusterStart.controller_launcher_class = 'MPIControllerLauncher'
-```
-
-:::{note}
-The Controller _will not_ be in the same MPI universe as the engines, so there is not
-much reason to do this unless sysadmins demand it.
-:::
-
 On newer MPI implementations (such as OpenMPI), this will work even if you
 don't make any calls to MPI or call {func}`MPI_Init`. However, older MPI
 implementations require each process to call {func}`MPI_Init` upon
-starting. The easiest way of having this done is to install the mpi4py
-[^cite_mpi4py] package and then specify the `c.MPI.use` option in {file}`ipengine_config.py`:
-
-```python
-c.MPI.use = 'mpi4py'
-```
-
-Unfortunately, even this won't work for some MPI implementations. If you are
-having problems with this, you will likely have to use a custom Python
-executable that itself calls {func}`MPI_Init` at the appropriate time.
-Fortunately, mpi4py comes with such a custom Python executable that is easy to
-install and use. However, this custom Python executable approach will not work
-with {command}`ipcluster` currently.
+starting.
 
 More details on using MPI with IPython can be found {ref}`here <parallelmpi>`.
 
@@ -273,17 +253,9 @@ And in {file}`ipcluster_config.py`, we will select the PBS launchers for the con
 and engines:
 
 ```python
-c.IPClusterStart.controller_launcher_class = 'PBSControllerLauncher'
-c.IPClusterEngines.engine_launcher_class = 'PBSEngineSetLauncher'
+c.Cluster.controller_launcher_class = 'pbs'
+c.Cluster.engine_launcher_class = 'pbs'
 ```
-
-:::{note}
-Note that the configurable is IPClusterEngines for the engine launcher, and
-IPClusterStart for the controller launcher. This is because the start command is a
-subclass of the engine command, adding a controller launcher. Since it is a subclass,
-any configuration made in IPClusterEngines is inherited by IPClusterStart unless it is
-overridden.
-:::
 
 IPython does provide simple default batch templates for PBS and SGE, but you may need
 to specify your own. Here is a sample PBS script template:
@@ -369,21 +341,21 @@ $ ipcluster start --profile=pbs -n 128
 
 Additional configuration options can be found in the PBS section of {file}`ipcluster_config`.
 
-:::{note}
+```{note}
 Due to the flexibility of configuration, the PBS launchers work with simple changes
 to the template for other {command}`qsub`-using systems, such as Sun Grid Engine,
 and with further configuration in similar batch systems like Condor.
-:::
+```
 
 ### Using {command}`ipcluster` in SSH mode
 
 The SSH mode uses {command}`ssh` to execute {command}`ipengine` on remote
 nodes and {command}`ipcontroller` can be run remotely as well, or on localhost.
 
-:::{note}
+```{note}
 When using this mode it highly recommended that you have set up SSH keys
 and are using ssh-agent [^cite_ssh] for password-less logins.
-:::
+```
 
 As usual, we start by creating a clean profile:
 
@@ -394,9 +366,9 @@ $ ipython profile create --parallel --profile=ssh
 To use this mode, select the SSH launchers in {file}`ipcluster_config.py`:
 
 ```python
-c.IPClusterEngines.engine_launcher_class = 'SSHEngineSetLauncher'
+c.IPClusterEngines.engine_launcher_class = 'ssh' # or 'sshproxy'
 # and if the Controller is also to be remote:
-c.IPClusterStart.controller_launcher_class = 'SSHControllerLauncher'
+c.IPClusterStart.controller_launcher_class = 'ssh'
 ```
 
 The controller's remote location and configuration can be specified:
@@ -464,53 +436,6 @@ If you do specify these lists explicitly,
 IPython _will not_ automatically send connection files,
 so you must include this yourself if they should still be sent/retrieved.
 
-## IPython on EC2 with StarCluster
-
-The excellent [StarCluster] toolkit for managing [Amazon EC2] clusters has a plugin
-which makes deploying IPython on EC2 quite simple. The starcluster plugin uses
-{command}`ipcluster` with the SGE launchers to distribute engines across the
-EC2 cluster. See their [ipcluster plugin documentation] for more information.
-
-## Using the {command}`ipcontroller` and {command}`ipengine` commands
-
-It is also possible to use the {command}`ipcontroller` and {command}`ipengine`
-commands to start your controller and engines. This approach gives you full
-control over all aspects of the startup process.
-
-### Starting the controller and engine on your local machine
-
-To use {command}`ipcontroller` and {command}`ipengine` to start things on your
-local machine, do the following.
-
-First start the controller:
-
-```
-$ ipcontroller
-```
-
-Next, start however many instances of the engine you want using (repeatedly)
-the command:
-
-```
-$ ipengine
-```
-
-The engines should start and automatically connect to the controller using the
-JSON files in {file}`IPYTHONDIR/profile_default/security`. You are now ready to use the
-controller and engines from IPython.
-
-:::{warning}
-The order of the above operations may be important. You _must_
-start the controller before the engines, unless you are reusing connection
-information (via `--reuse`), in which case ordering is not important.
-:::
-
-:::{note}
-On some platforms (OS X), to put the controller and engine into the
-background you may need to give these commands in the form `(ipcontroller &)` and `(ipengine &)` (with the parentheses) for them to work
-properly.
-:::
-
 ### Starting the controller and engines on different hosts
 
 When the controller and engines are running on different hosts, things are
@@ -549,11 +474,11 @@ The `file` flag works like this:
 $ ipengine --file=/path/to/my/ipcontroller-engine.json
 ```
 
-:::{note}
+```{note}
 If the controller's and engine's hosts all have a shared file system
 ({file}`IPYTHONDIR/profile_<name>/security` is the same on all of them),
 then no paths need to be specified or files copied.
-:::
+```
 
 #### SSH Tunnels
 
@@ -561,10 +486,10 @@ If your engines are not on the same LAN as the controller, or you are on a highl
 restricted network where your nodes cannot see each others ports, then you can
 use SSH tunnels to connect engines to the controller.
 
-:::{note}
+```{note}
 This does not work in all cases. Manual tunnels may be an option, but are
 highly inconvenient. Support for manual tunnels will be improved.
-:::
+```
 
 You can instruct all engines to use ssh, by specifying the ssh server in
 {file}`ipcontroller-engine.json`:
@@ -631,11 +556,11 @@ the engines.
    [engine.host.n] $ scp controller.host:.ipython/profile_default/security/ipcontroller-engine.json ./
    ```
 
-   :::{note}
+   ```{note}
    The log output of ipcontroller above shows you where the json files were written.
    They will be in {file}`~/.ipython` under
    {file}`profile_default/security/ipcontroller-engine.json`
-   :::
+   ```
 
 3. start the engines, using the connection file:
 
@@ -685,13 +610,13 @@ Then copy the JSON files over the first time and you are set. You can
 start and stop the controller and engines any many times as you want in the
 future, as long as you make sure to tell the controller to reuse the file.
 
-:::{note}
+```{note}
 You may ask the question: what ports does the controller listen on if you
 don't tell is to use specific ones? The default is to use high random port
 numbers. We do this for two reasons: i) to increase security through
 obscurity and ii) to multiple controllers on a given host to start and
 automatically use different ports.
-:::
+```
 
 ### Log files
 
@@ -775,9 +700,9 @@ as we are concerned, BSON can be considered essentially the same as JSON, adding
 for binary data and datetime objects, and any new database backend must support the same
 data types.
 
-:::{seealso}
+```{seealso}
 MongoDB [BSON doc](http://bsonspec.org/)
-:::
+```
 
 To use one of these backends, you must set the {attr}`IPController.db_class` trait:
 
@@ -831,9 +756,9 @@ submit, etc.). To use this backend, pass `--nodb` to
 {command}`ipcontroller` on the command-line, or specify the {class}`NoDB` class
 in your {file}`ipcontroller_config.py` as described above.
 
-:::{seealso}
+```{seealso}
 For more information on the database backends, see the {ref}`db backend reference <parallel_db>`.
-:::
+```
 
 ### Configuring `ipengine`
 

@@ -45,19 +45,19 @@ the `I` in IPython. The following are some example use cases for IPython:
   local IPython session for plotting and analysis.
 - Run a set of tasks on a set of CPUs using dynamic load balancing.
 
-:::{tip}
+```{tip}
 At the SciPy 2014 conference in Austin, Min Ragan-Kelley presented a
 complete 4-hour tutorial on the use of these features, and all the materials
-for the tutorial are now [available online](https://github.com/minrk/IPython-parallel-tutorial/blob/master/Index.ipynb). That tutorial provides an
+for the tutorial are now [available online](https://github.com/minrk/IPython-parallel-tutorial/blob/HEAD/Index.ipynb). That tutorial provides an
 excellent, hands-on oriented complement to the reference documentation
 presented here.
-:::
+```
 
 ## Architecture overview
 
-:::{figure} figs/wideView.png
+```{figure} figs/wideView.png
 :width: 300px
-:::
+```
 
 The IPython architecture consists of four components:
 
@@ -101,10 +101,10 @@ primary models for interacting with engines are:
 Advanced users can readily extend the View models to enable other
 styles of parallelism.
 
-:::{note}
+```{note}
 A single controller and set of engines can be used with multiple models
 simultaneously. This opens the door for lots of interesting things.
-:::
+```
 
 #### The Hub
 
@@ -130,86 +130,6 @@ views:
 - The {class}`DirectView` class for explicit addressing.
 - The {class}`LoadBalancedView` class for destination-agnostic scheduling.
 
-### Security
-
-IPython uses ZeroMQ for networking, and does not yet support ZeroMQ's encryption and authentication.
-By default, no IPython
-connections are encrypted, but open ports only listen on localhost. The only
-source of encryption for IPython is via ssh-tunnel. IPython supports both shell
-(`openssh`) and `paramiko` based tunnels for connections. There is a key used to
-authenticate requests, but due to the lack of encryption, it does not provide
-significant security if loopback traffic is compromised.
-
-In our architecture, the controller is the only process that listens on
-network ports, and is thus the main point of vulnerability. The standard model
-for secure connections is to designate that the controller listen on
-localhost, and use ssh-tunnels to connect clients and/or
-engines.
-
-To connect and authenticate to the controller an engine or client needs
-some information that the controller has stored in a JSON file.
-The JSON files may need to be copied to a location where
-the clients and engines can find them. Typically, this is the
-{file}`~/.ipython/profile_default/security` directory on the host where the
-client/engine is running, which could be on a different filesystemx than the controller.
-Once the JSON files are copied over, everything should work fine.
-
-Currently, there are two JSON files that the controller creates:
-
-ipcontroller-engine.json
-
-: This JSON file has the information necessary for an engine to connect
-to a controller.
-
-ipcontroller-client.json
-
-: The client's connection information. This may not differ from the engine's,
-but since the controller may listen on different ports for clients and
-engines, it is stored separately.
-
-ipcontroller-client.json will look something like this, under default localhost
-circumstances:
-
-```python
-{
-  "url":"tcp:\/\/127.0.0.1:54424",
-  "exec_key":"a361fe89-92fc-4762-9767-e2f0a05e3130",
-  "ssh":"",
-  "location":"yourmachine.local"
-}
-```
-
-If, however, you are running the controller on a work node on a cluster, you will likely
-need to use ssh tunnels to connect clients from your laptop to it. You will also
-probably need to instruct the controller to listen for engines coming from other work nodes
-on the cluster. An example of ipcontroller-client.json, as created by:
-
-```
-$> ipcontroller --ip=* --ssh=login.mycluster.com
-```
-
-```python
-{
-  "url":"tcp:\/\/*:54424",
-  "exec_key":"a361fe89-92fc-4762-9767-e2f0a05e3130",
-  "ssh":"login.mycluster.com",
-  "location":"yourmachine.local"
-}
-```
-
-More details of how these JSON files are used are given below.
-
-A detailed description of the security model and its implementation in IPython
-can be found {ref}`here <parallelsecurity>`.
-
-:::{warning}
-Even at its most secure, the Controller listens on ports on localhost, and
-every time you make a tunnel, you open a localhost port on the connecting
-machine that points to the Controller. If localhost on the Controller's
-machine, or the machine of any client or engine, is untrusted, then your
-Controller is insecure.
-:::
-
 ## Getting Started
 
 To use IPython for parallel computing, you need to start one instance of the
@@ -218,27 +138,52 @@ start a controller and engines on a single host using the
 {command}`ipcluster` command. To start a controller and 4 engines on your
 local machine:
 
+To launch a cluster:
+
+```ipython
+In [1]: import ipyparallel as ipp
+In [2]: cluster = ipp.Cluster(n=4)
+In [3]: await cluster.start_cluster() # or cluster.start_cluster_sync() without await
+```
+
+```{note}
+Most Cluster methods are async,
+and all async cluster methods have a blocking version with a `_sync` suffix,
+e.g. `await cluster.start_cluster()` and `cluster.start_cluster_sync()`
+```
+
+You can also launch clusters at the command-line with:
+
 ```
 $ ipcluster start -n 4
+```
+
+which is equivalent to `ipp.Cluster(n=4, cluster_id="")`
+
+and connect to the already-running cluster with {meth}`.Cluster.from_file`
+
+```python
+cluster = ipp.Cluster.from_file()
 ```
 
 More details about starting the IPython controller and engines can be found
 {ref}`here <parallel-process>`.
 
-Once you have started the IPython controller and one or more engines, you
-are ready to use the engines to do something useful. To make sure
-everything is working correctly, try the following commands:
+Once you have a handle on a cluster,
+you can connect a client.
+To make sure everything is working correctly,
+try the following commands:
 
 ```ipython
-In [1]: import ipyparallel as ipp
+In [2]: rc = cluster.connect_client_sync()
 
-In [2]: c = ipp.Client()
+In [3]: rc.wait_for_engines(n=4)
 
-In [3]: c.ids
-Out[3]: [0, 1, 2, 3]
+In [4]: rc.ids
+Out[4]: [0, 1, 2, 3]
 
-In [4]: c[:].apply_sync(lambda : "Hello, World")
-Out[4]: [ 'Hello, World', 'Hello, World', 'Hello, World', 'Hello, World' ]
+In [5]: rc[:].apply_sync(lambda: "Hello, World")
+Out[5]: [ 'Hello, World', 'Hello, World', 'Hello, World', 'Hello, World' ]
 ```
 
 When a client is created with no arguments, the client tries to find the corresponding JSON file
@@ -246,19 +191,21 @@ in the local `~/.ipython/profile_default/security` directory. Or if you specifie
 you can use that with the Client. This should cover most cases:
 
 ```ipython
-In [2]: c = ipp.Client(profile='myprofile')
+In [2]: cluster = ipp.Cluster.from_file(profile="myprofile", cluster_id="...")
+In [3]: rc = cluster.connect_client_sync()
 ```
 
 If you have put the JSON file in a different location or it has a different name, create the
-client like this:
+Cluster objct like this:
 
 ```ipython
-In [2]: c = ipp.Client('/path/to/my/ipcontroller-client.json')
+In [2]: cluster = ipp.Cluster.from_file('/path/to/my/cluster-.json')
 ```
 
-Remember, a client needs to be able to see the Hub's ports to connect. So if they are on a
-different machine, you may need to use an ssh server to tunnel access to that machine,
-then you would connect to it with:
+Remember, a client needs to be able to see the Hub's ports to connect. So if the controller and client are on
+different machines,
+you may need to use an ssh server to tunnel access to that machine,
+in which case you would connect with:
 
 ```ipython
 In [2]: c = ipp.Client('/path/to/my/ipcontroller-client.json', sshserver='me@myhub.example.com')
@@ -270,7 +217,37 @@ which the Hub process is running (or another machine that has direct access to t
 The SSH server may already be specified in ipcontroller-client.json, if the controller was
 instructed at its launch time.
 
+### Cluster as context manager
+
+The {class}`~.ipyparallel.Cluster` and {class}`~.ipyparallel.Client` classes can be used as context managers
+for easier cleanup of resources.
+
+- Entering a `Cluster` context
+
+  1. starts the cluster
+  2. waits for engines to be ready
+  3. connects a client
+  4. returns the client
+
+- Exiting a `Client` context closes the client's socket connections to the cluster.
+- Exiting a `Cluster` context shuts down all of the cluster's resources.
+
+If you know you won't need your cluster anymore after you use it,
+use of these context managers is encouraged.
+For example:
+
+```python
+import ipyparallel as ipp
+# start cluster, connect client
+with ipp.Cluster(n=4) as rc:
+    e_all = rc[:]
+    ar = e_all.apply_sync(task)
+    ar.wait_interactive()
+    results = ar.get()
+# have results, cluster is shutdown
+```
+
 You are now ready to learn more about the {ref}`Direct <parallel-direct>` and {ref}`LoadBalanced <parallel-task>` interfaces to the
 controller.
 
-[zeromq]: http://zeromq.org/
+[zeromq]: https://zeromq.org/

@@ -43,9 +43,9 @@ content = {
 }
 ```
 
-:::{note}
+```{note}
 these are always the same, at least for now.
-:::
+```
 
 The Controller replies to an Engine's registration request with the engine's integer ID,
 and all the remaining connection information for connecting the heartbeat process, and

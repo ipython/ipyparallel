@@ -62,9 +62,9 @@ constructed via list-access to the client:
 In [4]: dview = rc[:] # use all engines
 ```
 
-:::{seealso}
+```{seealso}
 For more information, see the in-depth explanation of {ref}`Views <parallel_details>`.
-:::
+```
 
 ## Quick and easy parallelism
 
@@ -89,15 +89,15 @@ In [64]: serial_result == parallel_result
 Out[64]: True
 ```
 
-:::{note}
+```{note}
 The {class}`DirectView`'s version of {meth}`map` does
 not do dynamic load balancing. For a load balanced version, use a
 {class}`LoadBalancedView`.
-:::
+```
 
-:::{seealso}
+```{seealso}
 {meth}`map` is implemented via {class}`ParallelFunction`.
-:::
+```
 
 ## Calling Python functions
 
@@ -200,9 +200,9 @@ then returns a {class}`AsyncResult` object immediately. The
 {class}`AsyncResult` object gives you a way of getting a result at a later
 time through its {meth}`get` method.
 
-:::{seealso}
+```{seealso}
 Docs on the {ref}`AsyncResult <parallel_asyncresult>` object.
-:::
+```
 
 This allows you to quickly submit long running commands without blocking your
 local IPython session:
@@ -246,12 +246,12 @@ TimeoutError                              Traceback (most recent call last)
 TimeoutError: Result not ready.
 ```
 
-:::{Note}
+```{Note}
 Note the import inside the function. This is a common model, to ensure
 that the appropriate modules are imported where the task is run. You can
 also manually import modules into the engine(s) namespace(s) via
 `view.execute('import numpy')`.
-:::
+```
 
 Often, it is desirable to wait until a set of {class}`AsyncResult` objects
 are done. For this, there is a the method {meth}`wait`. This method takes a
@@ -307,9 +307,9 @@ Out[22]: [42, 42, 42, 42]
 The {attr}`block` and {attr}`targets` instance attributes of the
 {class}`.DirectView` also determine the behavior of the parallel magic commands.
 
-:::{seealso}
+```{seealso}
 See the documentation of the {ref}`Parallel Magics <parallel_magics>`.
-:::
+```
 
 ## Moving Python objects around
 
@@ -500,10 +500,10 @@ In [18]: echo.map(range(5))
 Out[18]: ['0', '1', '2', '3', '4']
 ```
 
-:::{seealso}
+```{seealso}
 See the {func}`~.remotefunction.parallel` and {func}`~.remotefunction.remote`
 decorators for options.
-:::
+```
 
 ### How to do parallel list comprehensions
 
@@ -564,11 +564,11 @@ In [71]: @ipp.require(time)
    ....:     return t
 ```
 
-:::{note}
+```{note}
 {func}`sync_imports` does not allow `import foo as bar` syntax,
 because the assignment represented by the `as bar` part is not
 available to the import hook.
-:::
+```
 
 (parallel-exceptions)=
 
@@ -736,5 +736,8 @@ Out[90]:
  <Remote[3]:ZeroDivisionError(division by zero)>]
 ```
 
-:::{versionadded} 7.0 The `return_exceptions` feature
-:::
+```{versionadded} 7.0 The `return_exceptions` feature
+
+```
+
+```

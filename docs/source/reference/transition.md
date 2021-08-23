@@ -14,14 +14,14 @@ still a Controller, Engines, and Clients. However, the the Controller is now spl
 processes, and can even be split across multiple machines. There does remain a single
 ipcontroller script for starting all of the controller processes.
 
-:::{note}
+```{note}
 TODO: fill this out after config system is updated
-:::
+```
 
-:::{seealso}
+```{seealso}
 Detailed {ref}`Parallel Process <parallel_process>` doc for configuring and launching
 IPython processes.
-:::
+```
 
 ## Creating a Client
 
@@ -106,10 +106,10 @@ argument.
 - {meth}`push_function` and {meth}`push_serialized` are removed, as {meth}`push` handles
   functions without issue.
 
-:::{seealso}
+```{seealso}
 {ref}`Our Direct Interface doc <parallel_direct>` for a simple tutorial with the
 DirectView.
-:::
+```
 
 The other major difference is the use of {meth}`apply`. When remote work is comprised of functions,
 the natural return value is the actual Python objects. It is no longer the recommended pattern
@@ -174,14 +174,14 @@ pollution of the namespace, and bloating of engine memory. This is not necessary
 code, because only those objects explicitly pushed (or set via `globals()`) will be resident on
 the engine beyond the duration of the task.
 
-:::{seealso}
+```{seealso}
 Dependencies also work very differently than in IPython.kernel. See our {ref}`doc on Dependencies<parallel_dependencies>` for details.
-:::
+```
 
-:::{seealso}
+```{seealso}
 {ref}`Our Task Interface doc <parallel_task>` for a simple tutorial with the
 LoadBalancedView.
-:::
+```
 
 ### PendingResults to AsyncResults
 
@@ -219,9 +219,9 @@ Out[6]: [5, 5]
 The `.r` or `.result` property calls {meth}`get`, waiting for and returning the
 result.
 
-:::{seealso}
+```{seealso}
 {doc}`AsyncResult details <asyncresult>`
-:::
+```
 
 [0mq]: http://zeromq.org
 [tornado]: https://github.com/tornadoweb/tornado
