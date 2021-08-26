@@ -12,44 +12,48 @@ new users of IPython to begin.
 
 ## Starting the IPython controller and engines
 
-To follow along with this tutorial, you will need to start the IPython
-controller and four IPython engines. The simplest way of doing this is to use
-the {command}`ipcluster` command:
+In general, in this tutorial,
+each step will start with a fresh cluster.
 
+There is always a choice when starting an interactive session:
+
+Option 1. starting a new cluster
+
+```python
+import ipyparallel as ipp
+cluster = ipp.Cluster(n=4)
+cluster.start_cluster_sync()
 ```
-$ ipcluster start -n 4
+
+Option 2. connecting to an existing cluster,
+e.g. if it were started via {command}`ipcluster start`
+or another notebook,
+or a JupyterLab extension.
+
+```python
+import ipyparallel as ipp
+cluster = ipp.Cluster.from_file()
 ```
+
+No arguments are required for the default cluster (e.g. `ipcluster start` with no arguments),
+but `profile` and/or `cluster_id` would be typical arguments to specify a cluster.
 
 For more detailed information about starting the controller and engines, see
 our {ref}`introduction <parallel_overview>` to using IPython for parallel computing.
 
 ## Creating a `DirectView`
 
-The first step is to import the IPython {mod}`ipyparallel`
-module and create a {class}`.Client`:
+The first step is to connect a {class}`.Client` to your cluster:
 
 ```ipython
-In [1]: import ipyparallel as ipp
-In [2]: rc = ipp.Client()
-```
-
-This form assumes that the default connection information (stored in
-{file}`ipcontroller-client.json`, found in {file}`IPYTHONDIR/profile_default/security`) is
-accurate. If the controller was started on a remote machine, you must copy that connection
-file to the client machine, or enter its contents as arguments to the Client constructor:
-
-```ipython
-# If you have copied the json connector file from the controller:
-In [2]: rc = ipp.Client('/path/to/ipcontroller-client.json')
-# or to connect with a specific profile you have set up:
-In [3]: rc = ipp.Client(profile='mpi')
+In [2]: rc = cluster.connect_client_sync()
 ```
 
 To make sure there are engines connected to the controller, users can get a list
 of engine ids:
 
 ```ipython
-In [3]: rc.ids
+In [3]: rc.wait_for_engines(4); rc.ids
 Out[3]: [0, 1, 2, 3]
 ```
 
@@ -91,12 +95,8 @@ Out[64]: True
 
 ```{note}
 The {class}`DirectView`'s version of {meth}`map` does
-not do dynamic load balancing. For a load balanced version, use a
+not do dynamic load balancing. For a load-balanced version, use a
 {class}`LoadBalancedView`.
-```
-
-```{seealso}
-{meth}`map` is implemented via {class}`ParallelFunction`.
 ```
 
 ## Calling Python functions
@@ -109,7 +109,7 @@ done in blocking or non-blocking mode (non-blocking is default) using the
 
 ### apply
 
-The main method for doing remote execution (in fact, all methods that
+The main method for doing remote execution (in fact, almost all methods that
 communicate with the engines are built on top of it), is {meth}`View.apply`.
 
 We strive to provide the cleanest interface we can, so `apply` has the following
@@ -141,7 +141,7 @@ dv.targets
 
 : The engines associated with this View.
 
-Creating a view is simple: index-access on a client creates a {class}`.DirectView`.
+Creating a view is done as if the client is a Python 'container' of engines: index-access on a client creates a {class}`.DirectView`.
 
 ```ipython
 In [4]: view = rc[1:3]
@@ -151,7 +151,7 @@ In [5]: view.apply<tab>
 view.apply  view.apply_async  view.apply_sync
 ```
 
-For convenience, you specify blocking behavior explicitly for a single call with the extra sync/async methods.
+For convenience, you can specify blocking behavior explicitly for a single call with the extra sync/async methods.
 
 ### Blocking execution
 
@@ -175,7 +175,7 @@ You can also select blocking execution on a call-by-call basis with the {meth}`a
 method:
 
 ```ipython
-In [7]: dview.block=False
+In [7]: dview.block = False
 
 In [8]: dview.apply_sync(lambda x: a+b+x, 27)
 Out[8]: [42, 42, 42, 42]
@@ -185,17 +185,17 @@ Python commands can be executed as strings on specific engines by using a View's
 method:
 
 ```ipython
-In [6]: rc[::2].execute('c=a+b')
+In [6]: rc[::2].execute('c = a + b')
 
-In [7]: rc[1::2].execute('c=a-b')
+In [7]: rc[1::2].execute('c = a - b')
 
 In [8]: dview['c'] # shorthand for dview.pull('c', block=True)
 Out[8]: [15, -5, 15, -5]
 ```
 
-### Non-blocking execution
+### async execution
 
-In non-blocking mode, {meth}`apply` submits the command to be executed and
+In non-blocking (async) mode, {meth}`apply` submits the command to be executed and
 then returns a {class}`AsyncResult` object immediately. The
 {class}`AsyncResult` object gives you a way of getting a result at a later
 time through its {meth}`get` method.
@@ -204,7 +204,7 @@ time through its {meth}`get` method.
 Docs on the {ref}`AsyncResult <parallel_asyncresult>` object.
 ```
 
-This allows you to quickly submit long running commands without blocking your
+This allows you to quickly submit long-running commands without blocking your
 local IPython session:
 
 ```ipython
@@ -281,7 +281,7 @@ blocking mode and which engines the command is applied to. The {class}`View` cla
 arguments are not provided. Thus the following logic is used for {attr}`block` and {attr}`targets`:
 
 - If no keyword argument is provided, the instance attributes are used.
-- The Keyword arguments, if provided overrides the instance attributes for
+- The keyword arguments, if provided overrides the instance attributes for
   the duration of a single call.
 
 The following examples demonstrate how to use the instance attributes:
