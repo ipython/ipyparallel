@@ -11,6 +11,9 @@ import signal
 import sys
 import time
 from getpass import getpass
+from io import FileIO
+from io import TextIOWrapper
+from logging import StreamHandler
 
 import zmq
 from ipykernel.kernelapp import IPKernelApp
@@ -553,6 +556,20 @@ class IPEngine(BaseParallelApplication):
                     self.session, iopub_socket, u'stderr'
                 )
                 sys.stderr.topic = cast_bytes('engine.%i.stderr' % self.id)
+
+                # copied from ipykernel 6, which captures sys.__stderr__ at the FD-level
+                if getattr(sys.stderr, "_original_stdstream_copy", None) is not None:
+                    for handler in self.log.handlers:
+                        if isinstance(handler, StreamHandler) and (
+                            handler.stream.buffer.fileno() == 2
+                        ):
+                            self.log.debug(
+                                "Seeing logger to stderr, rerouting to raw filedescriptor."
+                            )
+
+                            handler.stream = TextIOWrapper(
+                                FileIO(sys.stderr._original_stdstream_copy, "w")
+                            )
             if self.display_hook_factory:
                 sys.displayhook = self.display_hook_factory(self.session, iopub_socket)
                 sys.displayhook.topic = cast_bytes('engine.%i.execute_result' % self.id)
