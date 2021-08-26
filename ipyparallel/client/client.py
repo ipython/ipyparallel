@@ -12,6 +12,7 @@ import types
 import warnings
 from collections.abc import Iterable
 from concurrent.futures import Future
+from contextlib import contextmanager
 from getpass import getpass
 from pprint import pprint
 from threading import current_thread
@@ -990,21 +991,59 @@ class Client(HasTraits):
             self._io_thread.join()
 
     def _setup_streams(self):
-        self._query_stream = ZMQStream(self._query_socket, self._io_loop)
-        self._query_stream.on_recv(self._dispatch_single_reply, copy=False)
-        self._control_stream = ZMQStream(self._control_socket, self._io_loop)
-        self._control_stream.on_recv(self._dispatch_single_reply, copy=False)
-        self._mux_stream = ZMQStream(self._mux_socket, self._io_loop)
-        self._mux_stream.on_recv(self._dispatch_reply, copy=False)
-        self._task_stream = ZMQStream(self._task_socket, self._io_loop)
-        self._task_stream.on_recv(self._dispatch_reply, copy=False)
-        self._iopub_stream = ZMQStream(self._iopub_socket, self._io_loop)
-        self._iopub_stream.on_recv(self._dispatch_iopub, copy=False)
-        self._notification_stream = ZMQStream(self._notification_socket, self._io_loop)
-        self._notification_stream.on_recv(self._dispatch_notification, copy=False)
+        self._streams = []  # all streams
+        self._engine_streams = []  # streams that talk to engines
+        self._query_stream = s = ZMQStream(self._query_socket, self._io_loop)
+        self._streams.append(s)
+        self._notification_stream = s = ZMQStream(
+            self._notification_socket, self._io_loop
+        )
+        self._streams.append(s)
 
-        self._broadcast_stream = ZMQStream(self._broadcast_socket, self._io_loop)
+        self._control_stream = s = ZMQStream(self._control_socket, self._io_loop)
+        self._streams.append(s)
+        self._engine_streams.append(s)
+        self._mux_stream = s = ZMQStream(self._mux_socket, self._io_loop)
+        self._streams.append(s)
+        self._engine_streams.append(s)
+        self._task_stream = s = ZMQStream(self._task_socket, self._io_loop)
+        self._streams.append(s)
+        self._engine_streams.append(s)
+        self._broadcast_stream = s = ZMQStream(self._broadcast_socket, self._io_loop)
+        self._streams.append(s)
+        self._engine_streams.append(s)
+        self._iopub_stream = s = ZMQStream(self._iopub_socket, self._io_loop)
+        self._streams.append(s)
+        self._engine_streams.append(s)
+        self._start_receiving(all=True)
+
+    def _start_receiving(self, all=False):
+        """Start receiving on streams
+
+        default: only engine streams
+
+        if all: include hub streams
+        """
+        if all:
+            self._query_stream.on_recv(self._dispatch_single_reply, copy=False)
+            self._notification_stream.on_recv(self._dispatch_notification, copy=False)
+        self._control_stream.on_recv(self._dispatch_single_reply, copy=False)
+        self._mux_stream.on_recv(self._dispatch_reply, copy=False)
+        self._task_stream.on_recv(self._dispatch_reply, copy=False)
         self._broadcast_stream.on_recv(self._dispatch_reply, copy=False)
+        self._iopub_stream.on_recv(self._dispatch_iopub, copy=False)
+
+    def _stop_receiving(self, all=False):
+        """Stop receiving on engine streams
+
+        If all: include hub streams
+        """
+        if all:
+            streams = self._streams
+        else:
+            streams = self._engine_streams
+        for s in streams:
+            s.stop_on_recv()
 
     def _start_io_thread(self):
         """Start IOLoop in a background thread."""
@@ -1033,6 +1072,30 @@ class Client(HasTraits):
             start_evt.set()
         self._io_loop.start()
         self._io_loop.close()
+
+    @contextmanager
+    def _pause_results(self):
+        """Context manager to pause receiving results
+
+        When submitting lots of tasks,
+        the arrival of results can disrupt the processing
+        of new submissions.
+
+        Threadsafe.
+        """
+        f = Future()
+
+        def _stop():
+            self._stop_receiving()
+            f.set_result(None)
+
+        # use add_callback to make it threadsafe
+        self._io_loop.add_callback(_stop)
+        f.result()
+        try:
+            yield
+        finally:
+            self._io_loop.add_callback(self._start_receiving)
 
     @unpack_message
     def _dispatch_single_reply(self, msg):

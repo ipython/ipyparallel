@@ -578,11 +578,12 @@ class DirectView(View):
         pargs = [PrePickled(arg) for arg in args]
         pkwargs = {k: PrePickled(v) for k, v in kwargs.items()}
 
-        for ident in _idents:
-            future = self.client.send_apply_request(
-                self._socket, pf, pargs, pkwargs, track=track, ident=ident
-            )
-            futures.append(future)
+        with self.client._pause_results():
+            for ident in _idents:
+                future = self.client.send_apply_request(
+                    self._socket, pf, pargs, pkwargs, track=track, ident=ident
+                )
+                futures.append(future)
         if track:
             trackers = [_.tracker for _ in futures]
         else:
@@ -641,9 +642,16 @@ class DirectView(View):
 
         assert len(sequences) > 0, "must have some sequences to map onto!"
         pf = ParallelFunction(
-            self, f, block=block, track=track, return_exceptions=return_exceptions
+            self, f, block=False, track=track, return_exceptions=return_exceptions
         )
-        return pf.map(*sequences)
+        with self.client._pause_results():
+            ar = pf.map(*sequences)
+        if block:
+            try:
+                return ar.get()
+            except KeyboardInterrupt:
+                return ar
+        return ar
 
     @sync_results
     @save_ids
@@ -665,11 +673,12 @@ class DirectView(View):
 
         _idents, _targets = self.client._build_targets(targets)
         futures = []
-        for ident in _idents:
-            future = self.client.send_execute_request(
-                self._socket, code, silent=silent, ident=ident
-            )
-            futures.append(future)
+        with self.client._pause_results():
+            for ident in _idents:
+                future = self.client.send_execute_request(
+                    self._socket, code, silent=silent, ident=ident
+                )
+                futures.append(future)
         if isinstance(targets, int):
             futures = futures[0]
         ar = AsyncResult(
@@ -1292,12 +1301,19 @@ class LoadBalancedView(View):
         pf = ParallelFunction(
             self,
             f,
-            block=block,
+            block=False,
             chunksize=chunksize,
             ordered=ordered,
             return_exceptions=return_exceptions,
         )
-        return pf.map(*sequences)
+        with self.client._pause_results():
+            ar = pf.map(*sequences)
+        if block:
+            try:
+                return ar.get()
+            except KeyboardInterrupt:
+                return ar
+        return ar
 
     def imap(
         self,

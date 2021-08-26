@@ -84,7 +84,7 @@ class AsyncResult(Future):
 
         self._return_exceptions = return_exceptions
 
-        if isinstance(children[0], string_types):
+        if children and isinstance(children[0], string_types):
             self.msg_ids = children
             self._children = []
         else:
@@ -95,6 +95,15 @@ class AsyncResult(Future):
         self._fname = fname
         self._targets = targets
         self.owner = owner
+
+        if not children:
+            # empty result!
+            self._ready = True
+            self._success = True
+            f = Future()
+            f.set_result([])
+            self._resolve_result(f)
+            return
 
         self._ready = False
         self._ready_event = Event()
