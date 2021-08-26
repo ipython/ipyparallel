@@ -29,10 +29,6 @@ from IPython.paths import get_ipython_dir
 from IPython.utils.capture import RichOutput
 from IPython.utils.coloransi import TermColors
 from IPython.utils.path import compress_user
-from ipython_genutils.py3compat import cast_bytes
-from ipython_genutils.py3compat import iteritems
-from ipython_genutils.py3compat import string_types
-from ipython_genutils.py3compat import xrange
 from jupyter_client.localinterfaces import is_local_ip
 from jupyter_client.localinterfaces import localhost
 from jupyter_client.session import Session
@@ -544,7 +540,7 @@ class Client(HasTraits):
         try:
             extra_args['packer'] = cfg['pack']
             extra_args['unpacker'] = cfg['unpack']
-            extra_args['key'] = cast_bytes(cfg['key'])
+            extra_args['key'] = cfg['key'].encode("utf8")
             extra_args['signature_scheme'] = cfg['signature_scheme']
         except KeyError as exc:
             msg = '\n'.join(
@@ -639,7 +635,7 @@ class Client(HasTraits):
 
     def _update_engines(self, engines):
         """Update our engines dict and _ids from a dict of the form: {id:uuid}."""
-        for k, v in iteritems(engines):
+        for k, v in engines.items():
             eid = int(k)
             if eid not in self._engines:
                 self._ids.append(eid)
@@ -682,7 +678,7 @@ class Client(HasTraits):
 
         if targets is None:
             targets = self._ids
-        elif isinstance(targets, string_types):
+        elif isinstance(targets, str):
             if targets.lower() == 'all':
                 targets = self._ids
             else:
@@ -699,12 +695,12 @@ class Client(HasTraits):
             ids = self.ids
             targets = [ids[i] for i in indices]
 
-        if not isinstance(targets, (tuple, list, xrange)):
+        if not isinstance(targets, (tuple, list, range)):
             raise TypeError(
                 "targets by int/slice/collection of ints only, not %s" % (type(targets))
             )
 
-        return [cast_bytes(self._engines[t]) for t in targets], list(targets)
+        return [self._engines[t].encode("utf8") for t in targets], list(targets)
 
     def _connect(self, sshserver, ssh_kwargs, timeout):
         """setup all our socket connections to the cluster. This is called from
@@ -1213,8 +1209,8 @@ class Client(HasTraits):
     def __getitem__(self, key):
         """index access returns DirectView multiplexer objects
 
-        Must be int, slice, or list/tuple/xrange of ints"""
-        if not isinstance(key, (int, slice, tuple, list, xrange)):
+        Must be int, slice, or list/tuple/range of ints"""
+        if not isinstance(key, (int, slice, tuple, list, range)):
             raise TypeError(
                 "key by int/slice/iterable of ints only, not %s" % (type(key))
             )
@@ -1458,7 +1454,7 @@ class Client(HasTraits):
             # make a copy, so that we aren't passing a mutable collection to _futures_for_msgs
             theids = set(self.outstanding)
         else:
-            if isinstance(jobs, string_types + (int, AsyncResult)) or not isinstance(
+            if isinstance(jobs, (str, int, AsyncResult)) or not isinstance(
                 jobs, Iterable
             ):
                 jobs = [jobs]
@@ -1565,11 +1561,9 @@ class Client(HasTraits):
         jobs = jobs if jobs is not None else list(self.outstanding)
 
         msg_ids = []
-        if isinstance(jobs, string_types + (AsyncResult,)):
+        if isinstance(jobs, (str, AsyncResult)):
             jobs = [jobs]
-        bad_ids = [
-            obj for obj in jobs if not isinstance(obj, string_types + (AsyncResult,))
-        ]
+        bad_ids = [obj for obj in jobs if not isinstance(obj, (str, AsyncResult))]
         if bad_ids:
             raise TypeError(
                 "Invalid msg_id type %r, expected str or AsyncResult" % bad_ids[0]
@@ -1818,7 +1812,7 @@ class Client(HasTraits):
         metadata = metadata if metadata is not None else {}
 
         # validate arguments
-        if not isinstance(code, string_types):
+        if not isinstance(code, str):
             raise TypeError("code must be text, not %s" % type(code))
         if not isinstance(metadata, dict):
             raise TypeError("metadata must be dict, not %s" % type(metadata))
@@ -2171,7 +2165,7 @@ class Client(HasTraits):
         for job in jobs:
             if isinstance(job, int):
                 msg_ids.append(self.history[job])
-            elif isinstance(job, string_types):
+            elif isinstance(job, str):
                 msg_ids.append(job)
             elif isinstance(job, AsyncResult):
                 msg_ids.extend(job.msg_ids)
@@ -2191,7 +2185,7 @@ class Client(HasTraits):
         for job in jobs:
             if isinstance(job, int):
                 job = self.history[job]
-            if isinstance(job, string_types):
+            if isinstance(job, str):
                 if job in self._futures:
                     futures.append(job)
                 elif job in self.results:
@@ -2377,7 +2371,7 @@ class Client(HasTraits):
             The subset of keys to be returned.  The default is to fetch everything but buffers.
             'msg_id' will *always* be included.
         """
-        if isinstance(keys, string_types):
+        if isinstance(keys, str):
             keys = [keys]
         content = dict(query=query, keys=keys)
         reply = self._send_recv(self._query_stream, "db_request", content=content)

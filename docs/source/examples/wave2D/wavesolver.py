@@ -13,7 +13,6 @@ Authors
 import time
 
 from numpy import arange
-from numpy import exp
 from numpy import newaxis
 from numpy import sqrt
 from numpy import zeros
@@ -32,7 +31,7 @@ def iseq(start=0, stop=None, inc=1):
     return arange(start, stop + inc, inc)
 
 
-class WaveSolver(object):
+class WaveSolver:
     """
     Solve the 2D wave equation u_tt = u_xx + u_yy + f(x,y,t) with
     u = bc(x,y,t) on the boundary and initial condition du/dt = 0.

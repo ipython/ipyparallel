@@ -2,10 +2,6 @@
 import sys
 
 from ipykernel.ipkernel import IPythonKernel
-from ipython_genutils.py3compat import cast_bytes
-from ipython_genutils.py3compat import safe_unicode
-from ipython_genutils.py3compat import string_types
-from ipython_genutils.py3compat import unicode_type
 from traitlets import Integer
 from traitlets import Type
 
@@ -31,7 +27,7 @@ class IPythonParallelKernel(IPythonKernel):
         """prefixed topic for IOPub messages"""
         base = "engine.%s" % self.engine_id
 
-        return cast_bytes("%s.%s" % (base, topic))
+        return f"{base}.{topic}".encode("utf8")
 
     def __init__(self, **kwargs):
         super(IPythonParallelKernel, self).__init__(**kwargs)
@@ -154,10 +150,14 @@ class IPythonParallelKernel(IPythonKernel):
         except BaseException as e:
             # invoke IPython traceback formatting
             shell.showtraceback()
+            try:
+                str_evalue = str(e)
+            except Exception as str_error:
+                str_evalue = f"Failed to cast exception to string: {str_error}"
             reply_content = {
                 'traceback': [],
-                'ename': unicode_type(type(e).__name__),
-                'evalue': safe_unicode(e),
+                'ename': str(type(e).__name__),
+                'evalue': str_evalue,
             }
             # get formatted traceback, which ipykernel recorded
             if hasattr(shell, '_last_traceback'):
@@ -191,7 +191,7 @@ class IPythonParallelKernel(IPythonKernel):
     def abort_request(self, stream, ident, parent):
         """abort a specific msg by id"""
         msg_ids = parent['content'].get('msg_ids', None)
-        if isinstance(msg_ids, string_types):
+        if isinstance(msg_ids, str):
             msg_ids = [msg_ids]
         if not msg_ids:
             self._abort_queues()

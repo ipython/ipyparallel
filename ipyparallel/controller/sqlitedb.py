@@ -19,8 +19,7 @@ from dateutil.parser import parse as dateutil_parse
 from tornado import ioloop
 
 from traitlets import Unicode, Instance, List, Dict
-from jupyter_client.jsonutil import date_default, squash_dates
-from ipython_genutils.py3compat import iteritems, buffer_to_bytes
+from jupyter_client.jsonutil import date_default
 
 from .dictdb import BaseDB
 from ..util import ensure_timezone, extract_dates
@@ -28,12 +27,6 @@ from ..util import ensure_timezone, extract_dates
 # -----------------------------------------------------------------------------
 # SQLite operators, adapters, and converters
 # -----------------------------------------------------------------------------
-
-try:
-    buffer
-except NameError:
-    # py3k
-    buffer = memoryview
 
 operators = {
     '$lt': "<",
@@ -72,8 +65,10 @@ def _convert_dict(ds):
 def _adapt_bufs(bufs):
     # this is *horrible*
     # copy buffers into single list and pickle it:
-    if bufs and isinstance(bufs[0], (bytes, buffer, memoryview)):
-        return sqlite3.Binary(pickle.dumps(list(map(buffer_to_bytes, bufs)), -1))
+    if bufs and isinstance(bufs[0], (bytes, memoryview)):
+        return sqlite3.Binary(
+            pickle.dumps([memoryview(buf).tobytes() for buf in bufs], -1)
+        )
     elif bufs:
         return bufs
     else:
@@ -334,9 +329,9 @@ class SQLiteDB(BaseDB):
         if skeys:
             raise KeyError("Illegal testing key(s): %s" % skeys)
 
-        for name, sub_check in iteritems(check):
+        for name, sub_check in check.items():
             if isinstance(sub_check, dict):
-                for test, value in iteritems(sub_check):
+                for test, value in sub_check.items():
                     try:
                         op = operators[test]
                     except KeyError:

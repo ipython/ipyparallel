@@ -10,12 +10,11 @@ Authors
 * MinRK
 """
 import random
-import time
 
-import ipyparallel as parallel
+import ipyparallel as ipp
 
 # create client & views
-rc = parallel.Client()
+rc = ipp.Client()
 dv = rc[:]
 v = rc.load_balanced_view()
 
@@ -41,7 +40,7 @@ pending = set(amr.msg_ids)
 while pending:
     try:
         rc.wait(pending, 1e-3)
-    except parallel.TimeoutError:
+    except TimeoutError:
         # ignore timeouterrors, since they only mean that at least one isn't done
         pass
     # finished is the set of msg_ids that are complete

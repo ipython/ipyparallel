@@ -1,1 +1,1 @@
-from .engine.datapub import publish_data
+from .engine.datapub import publish_data  # noqa: F401

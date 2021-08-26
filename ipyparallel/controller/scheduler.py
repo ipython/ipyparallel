@@ -12,7 +12,6 @@ import jupyter_client.session
 import traitlets.log
 import zmq
 from decorator import decorator
-from ipython_genutils.py3compat import cast_bytes
 from tornado import ioloop
 from traitlets import Bytes
 from traitlets import default
@@ -100,7 +99,9 @@ class Scheduler(LoggingConfigurable):
         raise NotImplementedError("Implement in subclasses")
 
     def append_new_msg_id_to_msg(self, new_id, target_id, idents, msg):
-        new_idents = [cast_bytes(target_id)] + idents
+        if isinstance(target_id, str):
+            target_id = target_id.encode("utf8")
+        new_idents = [target_id] + idents
         msg['header']['msg_id'] = new_id
         new_msg_list = self.session.serialize(msg, ident=new_idents)
         new_msg_list.extend(msg['buffers'])

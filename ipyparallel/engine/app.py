@@ -19,7 +19,6 @@ import zmq
 from ipykernel.kernelapp import IPKernelApp
 from ipykernel.zmqshell import ZMQInteractiveShell
 from IPython.core.profiledir import ProfileDir
-from ipython_genutils.py3compat import cast_bytes
 from jupyter_client.localinterfaces import localhost
 from jupyter_client.session import Session
 from jupyter_client.session import session_aliases
@@ -330,7 +329,7 @@ class IPEngine(BaseParallelApplication):
 
         # DO NOT allow override of basic URLs, serialization, or key
         # JSON file takes top priority there
-        config.Session.key = cast_bytes(d['key'])
+        config.Session.key = d['key'].encode('utf8')
         config.Session.signature_scheme = d['signature_scheme']
 
         self.registration_url = d['interface'] + ':%i' % d['registration']
@@ -551,11 +550,11 @@ class IPEngine(BaseParallelApplication):
                 sys.stdout = self.out_stream_factory(
                     self.session, iopub_socket, u'stdout'
                 )
-                sys.stdout.topic = cast_bytes('engine.%i.stdout' % self.id)
+                sys.stdout.topic = f"engine.{self.id}.stdout".encode("ascii")
                 sys.stderr = self.out_stream_factory(
                     self.session, iopub_socket, u'stderr'
                 )
-                sys.stderr.topic = cast_bytes('engine.%i.stderr' % self.id)
+                sys.stderr.topic = f"engine.{self.id}.stderr".encode("ascii")
 
                 # copied from ipykernel 6, which captures sys.__stderr__ at the FD-level
                 if getattr(sys.stderr, "_original_stdstream_copy", None) is not None:
@@ -572,7 +571,9 @@ class IPEngine(BaseParallelApplication):
                             )
             if self.display_hook_factory:
                 sys.displayhook = self.display_hook_factory(self.session, iopub_socket)
-                sys.displayhook.topic = cast_bytes('engine.%i.execute_result' % self.id)
+                sys.displayhook.topic = f"engine.{self.id}.execute_result".encode(
+                    "ascii"
+                )
 
             self.kernel = Kernel(
                 parent=self,
@@ -587,8 +588,8 @@ class IPEngine(BaseParallelApplication):
                 log=self.log,
             )
 
-            self.kernel.shell.display_pub.topic = cast_bytes(
-                'engine.%i.displaypub' % self.id
+            self.kernel.shell.display_pub.topic = f"engine.{self.id}.displaypub".encode(
+                "ascii"
             )
 
             # FIXME: This is a hack until IPKernelApp and IPEngineApp can be fully merged

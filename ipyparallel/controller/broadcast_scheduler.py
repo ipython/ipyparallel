@@ -1,10 +1,8 @@
 import logging
-import os
 
 import zmq
 from traitlets import Bool
 from traitlets import Bytes
-from traitlets import Integer
 from traitlets import List
 
 from ipyparallel import util

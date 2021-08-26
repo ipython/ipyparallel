@@ -7,7 +7,6 @@ Authors
 * MinRK
 """
 from random import randint
-from random import random
 
 import networkx as nx
 

@@ -1,9 +1,3 @@
-from logging import DEBUG
-from logging import ERROR
-from logging import FATAL
-from logging import INFO
-from logging import WARN
-
 from zmq.log.handlers import PUBHandler
 
 

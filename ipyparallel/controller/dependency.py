@@ -1,28 +1,14 @@
 """Dependency utilities
-
-Authors:
-
-* Min RK
 """
-# -----------------------------------------------------------------------------
-#  Copyright (C) 2013  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-# -----------------------------------------------------------------------------
 from types import ModuleType
-
-from ipython_genutils import py3compat
-from ipython_genutils.py3compat import string_types
 
 from ipyparallel.client.asyncresult import AsyncResult
 from ipyparallel.error import UnmetDependency
 from ipyparallel.serialize import can
-from ipyparallel.serialize import uncan
 from ipyparallel.util import interactive
 
 
-class depend(object):
+class depend:
     """Dependency decorator, for use with tasks.
 
     `@depend` lets you define a function for engine dependencies
@@ -52,7 +38,7 @@ class depend(object):
         return dependent(f, self.f, *self.args, **self.kwargs)
 
 
-class dependent(object):
+class dependent:
     """A function that depends on another function.
     This is an object to prevent the closure used
     in traditional decorators, which are not picklable.
@@ -61,10 +47,7 @@ class dependent(object):
     def __init__(self, _wrapped_f, _wrapped_df, *dargs, **dkwargs):
         self.f = _wrapped_f
         name = getattr(_wrapped_f, '__name__', 'f')
-        if py3compat.PY3:
-            self.__name__ = name
-        else:
-            self.func_name = name
+        self.__name__ = name
         self.df = _wrapped_df
         self.dargs = dargs
         self.dkwargs = dkwargs
@@ -75,12 +58,6 @@ class dependent(object):
 
     def __call__(self, *args, **kwargs):
         return self.f(*args, **kwargs)
-
-    if not py3compat.PY3:
-
-        @property
-        def __name__(self):
-            return self.func_name
 
 
 @interactive
@@ -133,7 +110,7 @@ def require(*objects, **mapping):
         if isinstance(obj, ModuleType):
             obj = obj.__name__
 
-        if isinstance(obj, string_types):
+        if isinstance(obj, str):
             names.append(obj)
         elif hasattr(obj, '__name__'):
             mapping[obj.__name__] = obj
@@ -183,10 +160,10 @@ class Dependency(set):
         ids = []
 
         # extract ids from various sources:
-        if isinstance(dependencies, string_types + (AsyncResult,)):
+        if isinstance(dependencies, (str, AsyncResult)):
             dependencies = [dependencies]
         for d in dependencies:
-            if isinstance(d, string_types):
+            if isinstance(d, str):
                 ids.append(d)
             elif isinstance(d, AsyncResult):
                 ids.extend(d.msg_ids)

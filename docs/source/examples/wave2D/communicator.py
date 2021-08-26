@@ -7,7 +7,7 @@ import zmq
 from ipyparallel.util import disambiguate_url
 
 
-class EngineCommunicator(object):
+class EngineCommunicator:
     """An object that connects Engines to each other.
     north and east sockets listen, while south and west sockets connect.
 

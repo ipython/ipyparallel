@@ -1,6 +1,7 @@
 """Views of remote engines."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
+import builtins
 import concurrent.futures
 import inspect
 import warnings
@@ -9,8 +10,6 @@ from contextlib import contextmanager
 
 from decorator import decorator
 from IPython import get_ipython
-from ipython_genutils.py3compat import iteritems
-from ipython_genutils.py3compat import string_types
 from traitlets import Any
 from traitlets import Bool
 from traitlets import CFloat
@@ -157,7 +156,7 @@ class View(HasTraits):
             safely edit after arrays and buffers during non-copying
             sends.
         """
-        for name, value in iteritems(kwargs):
+        for name, value in kwargs.items():
             if name not in self._flag_names:
                 raise KeyError("Invalid name: %r" % name)
             else:
@@ -428,9 +427,8 @@ class DirectView(View):
         importing recarray from numpy on engine(s)
 
         """
-        from ipython_genutils.py3compat import builtin_mod
 
-        local_import = builtin_mod.__import__
+        local_import = builtins.__import__
         modules = set()
         results = []
 
@@ -458,8 +456,8 @@ class DirectView(View):
             locally as well.
             """
             # don't override nested imports
-            save_import = builtin_mod.__import__
-            builtin_mod.__import__ = local_import
+            save_import = builtins.__import__
+            builtins.__import__ = local_import
 
             import_frame = inspect.getouterframes(inspect.currentframe())[1].frame
             if import_frame is not context_frame:
@@ -486,12 +484,12 @@ class DirectView(View):
                         print("importing %s on engine(s)" % name)
                 results.append(self.apply_async(remote_import, name, fromlist, level))
             # restore override
-            builtin_mod.__import__ = save_import
+            builtins.__import__ = save_import
 
             return mod
 
         # override __import__
-        builtin_mod.__import__ = view_import
+        builtins.__import__ = view_import
         try:
             # enter the block
             yield
@@ -503,7 +501,7 @@ class DirectView(View):
                 pass
         finally:
             # always restore __import__
-            builtin_mod.__import__ = local_import
+            builtins.__import__ = local_import
 
         for r in results:
             # raise possible remote ImportErrors here
@@ -751,11 +749,11 @@ class DirectView(View):
         """
         block = block if block is not None else self.block
         targets = targets if targets is not None else self.targets
-        if isinstance(names, string_types):
+        if isinstance(names, str):
             pass
         elif isinstance(names, (list, tuple, set)):
             for key in names:
-                if not isinstance(key, string_types):
+                if not isinstance(key, str):
                     raise TypeError("keys must be str, not type %r" % type(key))
         else:
             raise TypeError("names must be strs, not %r" % names)
@@ -1045,11 +1043,11 @@ class LoadBalancedView(View):
 
         For use in `set_flags`.
         """
-        if dep is None or isinstance(dep, string_types + (AsyncResult, Dependency)):
+        if dep is None or isinstance(dep, (str, AsyncResult, Dependency)):
             return True
         elif isinstance(dep, (list, set, tuple)):
             for d in dep:
-                if not isinstance(d, string_types + (AsyncResult,)):
+                if not isinstance(d, (str, AsyncResult)):
                     return False
         elif isinstance(dep, dict):
             if set(dep.keys()) != set(Dependency().as_dict().keys()):
@@ -1057,7 +1055,7 @@ class LoadBalancedView(View):
             if not isinstance(dep['msg_ids'], list):
                 return False
             for d in dep['msg_ids']:
-                if not isinstance(d, string_types):
+                if not isinstance(d, str):
                     return False
         else:
             return False

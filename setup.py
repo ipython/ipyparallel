@@ -6,7 +6,6 @@ from __future__ import print_function
 
 import os
 import sys
-from glob import glob
 
 import setuptools
 from setuptools.command.bdist_egg import bdist_egg
@@ -115,7 +114,6 @@ setup_args = dict(
     include_package_data=True,
     install_requires=[
         "entrypoints",
-        "ipython_genutils",
         "decorator",
         "pyzmq>=18",
         "traitlets>=4.3",

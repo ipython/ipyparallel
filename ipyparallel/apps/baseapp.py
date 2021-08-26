@@ -11,9 +11,6 @@ from IPython.core.application import base_aliases as base_ip_aliases
 from IPython.core.application import base_flags as base_ip_flags
 from IPython.core.application import BaseIPythonApplication
 from IPython.utils.path import expand_path
-from IPython.utils.process import check_pid
-from ipython_genutils import py3compat
-from ipython_genutils.py3compat import unicode_type
 from jupyter_client.session import Session
 from tornado.ioloop import IOLoop
 from traitlets import Bool
@@ -87,12 +84,12 @@ class BaseParallelApplication(BaseIPythonApplication):
         return u"%(asctime)s.%(msecs).03d [%(name)s]%(highlevel)s %(message)s"
 
     work_dir = Unicode(
-        py3compat.getcwd(), config=True, help='Set the working dir for the process.'
+        os.getcwd(), config=True, help='Set the working dir for the process.'
     )
 
     @observe('work_dir')
     def _work_dir_changed(self, change):
-        self.work_dir = unicode_type(expand_path(change['new']))
+        self.work_dir = str(expand_path(change['new']))
 
     log_to_file = Bool(config=True, help="whether to log to a file")
 
@@ -170,7 +167,7 @@ class BaseParallelApplication(BaseIPythonApplication):
 
     def to_work_dir(self):
         wd = self.work_dir
-        if unicode_type(wd) != py3compat.getcwd():
+        if wd != os.getcwd():
             os.chdir(wd)
             self.log.info("Changing to working dir: %s" % wd)
         # This is the working dir by now.

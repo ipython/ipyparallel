@@ -29,7 +29,7 @@ def is_array(obj):
     return isinstance(obj, numpy.ndarray)
 
 
-class Map(object):
+class Map:
     """A class for partitioning a sequence using a map."""
 
     def getPartition(self, seq, p, q, n=None):

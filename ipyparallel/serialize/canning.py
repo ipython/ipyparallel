@@ -7,23 +7,10 @@ import functools
 import sys
 from types import FunctionType
 
-from ipython_genutils import py3compat
-from ipython_genutils.importstring import import_item
-from ipython_genutils.py3compat import buffer_to_bytes
-from ipython_genutils.py3compat import buffer_to_bytes_py2
-from ipython_genutils.py3compat import iteritems
-from ipython_genutils.py3compat import string_types
+from traitlets import import_item
 from traitlets.log import get_logger
 
-from . import codeutil  # This registers a hook when it's imported
-
-if py3compat.PY3:
-    buffer = memoryview
-    class_type = type
-else:
-    from types import ClassType
-
-    class_type = (type, ClassType)
+from . import codeutil  # noqa This registers a hook when it's imported
 
 
 def _get_cell_type(a=None):
@@ -34,7 +21,7 @@ def _get_cell_type(a=None):
     def inner():
         return a
 
-    return type(py3compat.get_closure(inner)[0])
+    return type(inner.__closure__[0])
 
 
 cell_type = _get_cell_type()
@@ -113,7 +100,7 @@ def use_pickle():
 # -------------------------------------------------------------------------------
 
 
-class CannedObject(object):
+class CannedObject:
     def __init__(self, obj, keys=[], hook=None):
         """can an object for safe pickling
 
@@ -154,7 +141,7 @@ class Reference(CannedObject):
     """object for wrapping a remote reference by name."""
 
     def __init__(self, name):
-        if not isinstance(name, string_types):
+        if not isinstance(name, str):
             raise TypeError("illegal name: %r" % name)
         self.name = name
         self.buffers = []
@@ -181,7 +168,7 @@ class CannedCell(CannedObject):
         def inner():
             return cell_contents
 
-        return py3compat.get_closure(inner)[0]
+        return inner.__closure__[0]
 
 
 class CannedFunction(CannedObject):
@@ -203,7 +190,7 @@ class CannedFunction(CannedObject):
         else:
             self.annotations = None
 
-        closure = py3compat.get_closure(f)
+        closure = f.__closure__
         if closure:
             self.closure = tuple(can(cell) for cell in closure)
         else:
@@ -320,7 +307,7 @@ class CannedClass(CannedObject):
         self.buffers = []
 
     def _check_type(self, obj):
-        assert isinstance(obj, class_type), "Not a class type"
+        assert isinstance(obj, type), "Not a class type"
 
     def get_object(self, g=None):
         parents = tuple(uncan(p, g) for p in self.parents)
@@ -351,7 +338,7 @@ class CannedArray(CannedObject):
         else:
             # ensure contiguous
             obj = ascontiguousarray(obj, dtype=None)
-            self.buffers = [buffer(obj)]
+            self.buffers = [memoryview(obj)]
 
     def get_object(self, g=None):
         from numpy import frombuffer
@@ -361,18 +348,12 @@ class CannedArray(CannedObject):
             from . import serialize
 
             # we just pickled it
-            return serialize.pickle.loads(buffer_to_bytes_py2(data))
+            return serialize.pickle.loads(data)
         else:
-            if not py3compat.PY3 and isinstance(data, memoryview):
-                # frombuffer doesn't accept memoryviews on Python 2,
-                # so cast to old-style buffer
-                data = buffer(data.tobytes())
             return frombuffer(data, dtype=self.dtype).reshape(self.shape)
 
 
 class CannedBytes(CannedObject):
-    wrap = staticmethod(buffer_to_bytes)
-
     def __init__(self, obj):
         self.buffers = [obj]
 
@@ -380,15 +361,19 @@ class CannedBytes(CannedObject):
         data = self.buffers[0]
         return self.wrap(data)
 
-
-class CannedBuffer(CannedBytes):
-    wrap = buffer
+    @staticmethod
+    def wrap(data):
+        if isinstance(data, bytes):
+            return data
+        else:
+            return memoryview(data).tobytes()
 
 
 class CannedMemoryView(CannedBytes):
     wrap = memoryview
 
 
+CannedBuffer = CannedMemoryView
 # -------------------------------------------------------------------------------
 # Functions
 # -------------------------------------------------------------------------------
@@ -399,7 +384,7 @@ def _import_mapping(mapping, original=None):
     log = get_logger()
     log.debug("Importing canning map")
     for key, value in list(mapping.items()):
-        if isinstance(key, string_types):
+        if isinstance(key, str):
             try:
                 cls = import_item(key)
             except Exception:
@@ -430,8 +415,8 @@ def can(obj):
 
     import_needed = False
 
-    for cls, canner in iteritems(can_map):
-        if isinstance(cls, string_types):
+    for cls, canner in can_map.items():
+        if isinstance(cls, str):
             import_needed = True
             break
         elif istype(obj, cls):
@@ -447,7 +432,7 @@ def can(obj):
 
 
 def can_class(obj):
-    if isinstance(obj, class_type) and obj.__module__ == '__main__':
+    if isinstance(obj, type) and obj.__module__ == '__main__':
         return CannedClass(obj)
     else:
         return obj
@@ -457,7 +442,7 @@ def can_dict(obj):
     """can the *values* of a dict"""
     if istype(obj, dict):
         newobj = {}
-        for k, v in iteritems(obj):
+        for k, v in obj.items():
             newobj[k] = can(v)
         return newobj
     else:
@@ -480,8 +465,8 @@ def uncan(obj, g=None):
     """invert canning"""
 
     import_needed = False
-    for cls, uncanner in iteritems(uncan_map):
-        if isinstance(cls, string_types):
+    for cls, uncanner in uncan_map.items():
+        if isinstance(cls, str):
             import_needed = True
             break
         elif isinstance(obj, cls):
@@ -499,7 +484,7 @@ def uncan(obj, g=None):
 def uncan_dict(obj, g=None):
     if istype(obj, dict):
         newobj = {}
-        for k, v in iteritems(obj):
+        for k, v in obj.items():
             newobj[k] = uncan(v, g)
         return newobj
     else:
@@ -535,11 +520,9 @@ can_map = {
     bytes: CannedBytes,
     memoryview: CannedMemoryView,
     cell_type: CannedCell,
-    class_type: can_class,
+    type: can_class,
     'ipyparallel.dependent': can_dependent,
 }
-if buffer is not memoryview:
-    can_map[buffer] = CannedBuffer
 
 uncan_map = {
     CannedObject: lambda obj, g: obj.get_object(g),

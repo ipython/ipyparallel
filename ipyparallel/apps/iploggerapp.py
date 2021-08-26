@@ -2,29 +2,9 @@
 # encoding: utf-8
 """
 A simple IPython logger application
-
-Authors:
-
-* MinRK
-
 """
-# -----------------------------------------------------------------------------
-#  Copyright (C) 2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# Imports
-# -----------------------------------------------------------------------------
-import os
-import sys
-
-import zmq
 from IPython.core.profiledir import ProfileDir
-from traitlets import Bool
 from traitlets import Dict
-from traitlets import Unicode
 
 from ipyparallel.apps.baseapp import base_aliases
 from ipyparallel.apps.baseapp import BaseParallelApplication

@@ -11,7 +11,6 @@ from datetime import datetime
 from datetime import timedelta
 from unittest import TestCase
 
-import pytest
 from jupyter_client.session import Session
 from tornado.ioloop import IOLoop
 

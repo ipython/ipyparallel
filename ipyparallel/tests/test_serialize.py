@@ -151,7 +151,7 @@ def test_numpy_in_dict():
 
 def test_class():
     @interactive
-    class C(object):
+    class C:
         a = 5
 
     bufs = serialize_object(dict(C=C))
@@ -208,7 +208,7 @@ def test_list():
 
 def test_class_inheritance():
     @interactive
-    class C(object):
+    class C:
         a = 5
 
     @interactive

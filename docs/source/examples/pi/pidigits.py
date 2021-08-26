@@ -14,17 +14,11 @@ all 1, 2, n digits sequences occur in the digits of pi.
 If the digits of pi are truly random, these frequencies
 should be equal.
 """
-# Import statements
-from __future__ import division
-from __future__ import with_statement
+import os
+from urllib.request import urlretrieve
 
 import numpy as np
 from matplotlib import pyplot as plt
-
-try:  # python2
-    from urllib import urlretrieve
-except ImportError:  # python3
-    from urllib.request import urlretrieve
 
 # Top-level functions
 
@@ -33,7 +27,6 @@ def fetch_pi_file(filename):
     """This will download a segment of pi from super-computing.org
     if the file is not already present.
     """
-    import os, urllib
 
     ftpdir = "ftp://pi.super-computing.org/.2/pi200m/"
     if os.path.exists(filename):
