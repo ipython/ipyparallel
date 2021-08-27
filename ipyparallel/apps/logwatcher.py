@@ -1,36 +1,16 @@
 """
-A simple logger object that consolidates messages incoming from ipcluster processes.
-
-Authors:
-
-* MinRK
-
+A logger object that consolidates messages incoming from ipcluster processes.
 """
-# -----------------------------------------------------------------------------
-#  Copyright (C) 2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# Imports
-# -----------------------------------------------------------------------------
 import logging
-import sys
 
 import zmq
 from jupyter_client.localinterfaces import localhost
 from traitlets import Instance
-from traitlets import Int
 from traitlets import List
 from traitlets import Unicode
 from traitlets.config.configurable import LoggingConfigurable
 from zmq.eventloop import ioloop
 from zmq.eventloop import zmqstream
-
-# -----------------------------------------------------------------------------
-# Classes
-# -----------------------------------------------------------------------------
 
 
 class LogWatcher(LoggingConfigurable):

@@ -19,7 +19,6 @@ from __future__ import print_function
 
 from timeit import default_timer as clock
 
-import numpy as np
 from matplotlib import pyplot as plt
 from pidigits import compute_two_digit_freqs
 from pidigits import fetch_pi_file

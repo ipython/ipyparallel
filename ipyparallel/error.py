@@ -5,34 +5,15 @@ Inheritance diagram:
 
 .. inheritance-diagram:: ipyparallel.error
    :parts: 3
-
-Authors:
-
-* Brian Granger
-* Min RK
 """
 from __future__ import print_function
 
 import sys
 import traceback
 
-from ipython_genutils.py3compat import unicode_type
-
 __docformat__ = "restructuredtext en"
 
-# Tell nose to skip this module
-__test__ = {}
 
-# -------------------------------------------------------------------------------
-#  Copyright (C) 2008-2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-# -------------------------------------------------------------------------------
-
-# -------------------------------------------------------------------------------
-# Error classes
-# -------------------------------------------------------------------------------
 class IPythonError(Exception):
     """Base exception that all of our exceptions inherit from.
 
@@ -255,8 +236,8 @@ def wrap_exception(engine_info={}):
     exc_content = {
         'status': 'error',
         'traceback': stb,
-        'ename': unicode_type(etype.__name__),
-        'evalue': unicode_type(evalue),
+        'ename': etype.__name__,
+        'evalue': str(evalue),
         'engine_info': engine_info,
     }
     return exc_content

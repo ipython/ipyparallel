@@ -8,7 +8,6 @@ from __future__ import division
 import io
 import os
 import time
-import urllib
 from itertools import repeat
 
 import requests

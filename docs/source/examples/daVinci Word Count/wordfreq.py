@@ -1,8 +1,4 @@
 """Count the frequencies of words in a string"""
-from __future__ import division
-from __future__ import print_function
-
-import cmath as math
 
 
 def wordfreq(text, is_filename=False):

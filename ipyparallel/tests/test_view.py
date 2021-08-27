@@ -13,7 +13,6 @@ import pytest
 import zmq
 from IPython import get_ipython
 from IPython.utils.io import capture_output
-from ipython_genutils.py3compat import unicode_type
 
 import ipyparallel as ipp
 from .clienttest import ClusterTestCase
@@ -419,13 +418,13 @@ class TestView(ClusterTestCase):
         view = self.client[-1]
         view.clear(block=True)
         with view.importer:
-            import re
+            import re  # noqa: F401
 
         @interactive
         def findall(pat, s):
             # this globals() step isn't necessary in real code
             # only to prevent a closure in the test
-            re = globals()['re']
+            re = globals()['re']  # noqa: F811
             return re.findall(pat, s)
 
         self.assertEqual(
@@ -596,7 +595,7 @@ class TestView(ClusterTestCase):
         view.execute("from IPython.core.display import *")
         ar = view.execute("[ display(i) for i in range(5) ]", block=True)
 
-        expected = [{u'text/plain': unicode_type(j)} for j in range(5)]
+        expected = [{u'text/plain': str(j)} for j in range(5)]
         for outputs in ar.outputs:
             mimes = [out['data'] for out in outputs]
             self.assertEqual(mimes, expected)
@@ -613,7 +612,7 @@ class TestView(ClusterTestCase):
         ar = view.apply_async(publish)
         ar.get(5)
         assert ar.wait_for_output(5)
-        expected = [{u'text/plain': unicode_type(j)} for j in range(5)]
+        expected = [{u'text/plain': str(j)} for j in range(5)]
         for outputs in ar.outputs:
             mimes = [out['data'] for out in outputs]
             self.assertEqual(mimes, expected)
@@ -795,7 +794,7 @@ class TestView(ClusterTestCase):
         view.execute(
             '\n'.join(
                 [
-                    'class A(object): pass',
+                    'class A: pass',
                     'a = A()',
                     'a.b = 128',
                 ]
@@ -835,8 +834,8 @@ class TestView(ClusterTestCase):
         view = self.client[-1]
         with capture_output() as io:
             with view.sync_imports():
-                import IPython
-        self.assertIn("IPython", io.stdout)
+                import IPython  # noqa
+        assert "IPython" in io.stdout
 
         @interactive
         def find_ipython():
@@ -848,8 +847,8 @@ class TestView(ClusterTestCase):
         view = self.client[-1]
         with capture_output() as io:
             with view.sync_imports(quiet=True):
-                import IPython
-        self.assertEqual(io.stdout, '')
+                import IPython  # noqa
+        assert io.stdout == ''
 
         @interactive
         def find_ipython():

@@ -16,10 +16,8 @@ This should show a speedup of 13-14x.  The limitation here is that the
 overhead of a single task is about 0.001-0.01 seconds.
 """
 import random
-import sys
+import time
 from optparse import OptionParser
-
-from IPython.utils.timing import time
 
 import ipyparallel as ipp
 
@@ -54,8 +52,6 @@ def main():
     print(view)
     rc.block = True
     nengines = len(rc.ids)
-    with rc[:].sync_imports():
-        from IPython.utils.timing import time
 
     # the jobs should take a random time within a range
     times = [
@@ -68,10 +64,10 @@ def main():
         % (opts.n, stime, nengines)
     )
     time.sleep(1)
-    start = time.time()
+    start = time.perf_counter()
     amr = view.map(time.sleep, times)
     amr.get()
-    stop = time.time()
+    stop = time.perf_counter()
 
     ptime = stop - start
     scale = stime / ptime

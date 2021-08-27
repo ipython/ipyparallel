@@ -5,17 +5,13 @@ from __future__ import division
 
 import sys
 import warnings
+from inspect import signature
 
 from decorator import decorator
 
 from . import map as Map
 from ..serialize import PrePickled
 from .asyncresult import AsyncMapResult
-
-try:
-    from inspect import signature
-except ImportError:  # py2
-    from IPython.utils.signatures import signature
 
 # -----------------------------------------------------------------------------
 # Functions and Decorators
@@ -99,7 +95,7 @@ def sync_view_results(f, self, *args, **kwargs):
 # --------------------------------------------------------------------------
 
 
-class RemoteFunction(object):
+class RemoteFunction:
     """Turn an existing function into a remote function.
 
     Parameters

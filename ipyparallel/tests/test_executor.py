@@ -8,7 +8,6 @@ from tornado.ioloop import IOLoop
 
 from .clienttest import ClusterTestCase
 from ipyparallel.client.view import LoadBalancedView
-from ipyparallel.tests import add_engines
 
 
 def wait(n):

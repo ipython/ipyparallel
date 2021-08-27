@@ -26,9 +26,6 @@ Usage
 {CONFIG_DOC}
 
 """
-from __future__ import print_function
-
-import ast
 from contextlib import contextmanager
 
 # Python 3.6 doesn't have nullcontext, so we define our own
@@ -46,11 +43,11 @@ def nullcontext():
 
 import inspect
 import re
+from textwrap import dedent
 
 from IPython.core.error import UsageError
 from IPython.core.magic import Magics
 from IPython.core import magic_arguments
-from ipython_genutils.text import dedent
 
 # -----------------------------------------------------------------------------
 # Definitions of magic functions for use with IPython

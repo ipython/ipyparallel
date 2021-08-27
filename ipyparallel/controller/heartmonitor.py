@@ -11,7 +11,6 @@ import time
 import uuid
 
 import zmq
-from ipython_genutils.py3compat import str_to_bytes
 from tornado import ioloop
 from traitlets import Bool
 from traitlets import Dict
@@ -26,7 +25,7 @@ from zmq.devices import ThreadMonitoredQueue
 from ipyparallel.util import log_errors
 
 
-class Heart(object):
+class Heart:
     """A basic heart object for responding to a HeartMonitor.
     This is a simple wrapper with defaults for the most common
     Device model for responding to heartbeats.
@@ -161,7 +160,7 @@ class HeartMonitor(LoggingConfigurable):
         self.responses = set()
         # print self.on_probation, self.hearts
         # self.log.debug("heartbeat::beat %.3f, %i beating hearts", self.lifetime, len(self.hearts))
-        self.pingstream.send(str_to_bytes(str(self.lifetime)))
+        self.pingstream.send(str(self.lifetime).encode('ascii'))
         # flush stream to force immediate socket send
         self.pingstream.flush()
 
@@ -204,8 +203,8 @@ class HeartMonitor(LoggingConfigurable):
     @log_errors
     def handle_pong(self, msg):
         "a heart just beat"
-        current = str_to_bytes(str(self.lifetime))
-        last = str_to_bytes(str(self.last_ping))
+        current = str(self.lifetime).encode('ascii')
+        last = str(self.last_ping).encode('ascii')
         if msg[1] == current:
             delta = time.time() - self.tic
             if self.debug:

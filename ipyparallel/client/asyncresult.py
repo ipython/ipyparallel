@@ -18,7 +18,6 @@ from decorator import decorator
 from IPython import get_ipython
 from IPython.display import display
 from IPython.display import display_pretty
-from ipython_genutils.py3compat import string_types
 
 from .futures import MessageFuture
 from .futures import multi_future
@@ -84,7 +83,7 @@ class AsyncResult(Future):
 
         self._return_exceptions = return_exceptions
 
-        if isinstance(children[0], string_types):
+        if isinstance(children[0], str):
             self.msg_ids = children
             self._children = []
         else:
@@ -459,7 +458,7 @@ class AsyncResult(Future):
         elif isinstance(key, slice):
             self._check_ready()
             return self._collect_exceptions(self.result()[key])
-        elif isinstance(key, string_types):
+        elif isinstance(key, str):
             # metadata proxy *does not* require that results are done
             self.wait(0)
             self.wait_for_output(0)

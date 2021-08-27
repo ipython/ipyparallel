@@ -14,10 +14,6 @@ import sys
 import time
 from datetime import datetime
 
-from ipython_genutils.py3compat import buffer_to_bytes_py2
-from ipython_genutils.py3compat import cast_bytes
-from ipython_genutils.py3compat import iteritems
-from ipython_genutils.py3compat import unicode_type
 from jupyter_client.jsonutil import parse_date
 from jupyter_client.session import Session
 from tornado import ioloop
@@ -277,14 +273,14 @@ class Hub(LoggingConfigurable):
             # default to all
             return self.ids
 
-        if isinstance(targets, (int, str, unicode_type)):
+        if isinstance(targets, (int, str)):
             # only one target specified
             targets = [targets]
         _targets = []
         for t in targets:
             # map raw identities to ids
-            if isinstance(t, (str, unicode_type)):
-                t = self.by_ident.get(cast_bytes(t), t)
+            if isinstance(t, str):
+                t = self.by_ident.get(t.encode("utf8", "replace"), t)
             _targets.append(t)
         targets = _targets
         bad_targets = [t for t in targets if t not in self.ids]
@@ -432,7 +428,7 @@ class Hub(LoggingConfigurable):
         try:
             # it's posible iopub arrived first:
             existing = self.db.get_record(msg_id)
-            for key, evalue in iteritems(existing):
+            for key, evalue in existing.items():
                 rvalue = record.get(key, None)
                 if evalue and rvalue and evalue != rvalue:
                     self.log.warn(
@@ -559,7 +555,7 @@ class Hub(LoggingConfigurable):
         header = msg['header']
         md = msg['metadata']
         engine_uuid = md.get('engine', u'')
-        eid = self.by_ident.get(cast_bytes(engine_uuid), None)
+        eid = self.by_ident.get(engine_uuid.encode("utf8"), None)
         status = md.get('status', None)
 
         if msg_id in self.pending:
@@ -627,7 +623,7 @@ class Hub(LoggingConfigurable):
                     # still check content,header which should not change
                     # but are not expensive to compare as buffers
 
-            for key, evalue in iteritems(existing):
+            for key, evalue in existing.items():
                 if key.endswith('buffers'):
                     # don't compare buffers
                     continue
@@ -680,7 +676,7 @@ class Hub(LoggingConfigurable):
         header = msg['header']
         md = msg['metadata']
         engine_uuid = md.get('engine', u'')
-        eid = self.by_ident.get(cast_bytes(engine_uuid), None)
+        eid = self.by_ident.get(engine_uuid.encode("utf8"), None)
 
         status = md.get('status', None)
 
@@ -725,7 +721,7 @@ class Hub(LoggingConfigurable):
         # print (content)
         msg_id = content['msg_id']
         engine_uuid = content['engine_id']
-        eid = self.by_ident[cast_bytes(engine_uuid)]
+        eid = self.by_ident[engine_uuid.encode("utf8")]
 
         self.log.info("task::task %r arrived on %r", msg_id, eid)
         if msg_id in self.unassigned:
@@ -855,14 +851,14 @@ class Hub(LoggingConfigurable):
             connection_info=self.engine_info,
         )
         # check if requesting available IDs:
-        if cast_bytes(uuid) in self.by_ident:
+        if uuid.encode("utf8") in self.by_ident:
             try:
                 raise KeyError("uuid %r in use" % uuid)
             except:
                 content = error.wrap_exception()
                 self.log.error("uuid %r in use", uuid, exc_info=True)
         else:
-            for h, ec in iteritems(self.incoming_registrations):
+            for h, ec in self.incoming_registrations.items():
                 if uuid == h:
                     try:
                         raise KeyError("heart_id %r in use" % uuid)
@@ -882,7 +878,7 @@ class Hub(LoggingConfigurable):
             self.query, "registration_reply", content=content, ident=reg
         )
 
-        heart = cast_bytes(uuid)
+        heart = uuid.encode("utf8")
 
         if content['status'] == 'ok':
             if heart in self.heartmonitor.hearts:
@@ -1062,7 +1058,7 @@ class Hub(LoggingConfigurable):
 
         save_notifier = self.notifier
         self.notifier = None
-        for eid, uuid in iteritems(state['engines']):
+        for eid, uuid in state['engines'].items():
             heart = uuid.encode('ascii')
             # start with this heart as current and beating:
             self.heartmonitor.responses.add(heart)
@@ -1298,7 +1294,7 @@ class Hub(LoggingConfigurable):
         finish(dict(status='ok', resubmitted=resubmitted))
 
         # store the new IDs in the Task DB
-        for msg_id, resubmit_id in iteritems(resubmitted):
+        for msg_id, resubmit_id in resubmitted.items():
             try:
                 self.db.update_record(msg_id, {'resubmitted': resubmit_id})
             except Exception:
@@ -1321,7 +1317,7 @@ class Hub(LoggingConfigurable):
             'io': io_dict,
         }
         if rec['result_buffers']:
-            buffers = list(map(buffer_to_bytes_py2, rec['result_buffers']))
+            buffers = list(rec['result_buffers'])
         else:
             buffers = []
 

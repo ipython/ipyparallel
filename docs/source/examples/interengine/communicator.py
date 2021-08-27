@@ -6,7 +6,7 @@ import zmq
 from ipyparallel.util import disambiguate_url
 
 
-class EngineCommunicator(object):
+class EngineCommunicator:
     def __init__(self, interface='tcp://*', identity=None):
         self._ctx = zmq.Context()
         self.socket = self._ctx.socket(zmq.XREP)

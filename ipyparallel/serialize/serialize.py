@@ -18,7 +18,6 @@ except AttributeError:
 
 from itertools import chain
 
-from ipython_genutils.py3compat import PY3, buffer_to_bytes_py2
 from .canning import (
     can,
     uncan,
@@ -31,15 +30,12 @@ from .canning import (
 from jupyter_client.session import MAX_ITEMS, MAX_BYTES
 
 
-if PY3:
-    buffer = memoryview
-
 # -----------------------------------------------------------------------------
 # Serialization Functions
 # -----------------------------------------------------------------------------
 
 
-class PrePickled(object):
+class PrePickled:
     """Wrapper for a pre-pickled object
 
     Used for pre-emptively pickling re-used objects
@@ -53,17 +49,9 @@ class PrePickled(object):
 def _nbytes(buf):
     """Return byte-size of a memoryview or buffer"""
     if isinstance(buf, memoryview):
-        if PY3:
-            # py3 introduces nbytes attribute
-            return buf.nbytes
-        else:
-            # compute nbytes on py2
-            size = buf.itemsize
-            for dim in buf.shape:
-                size *= dim
-            return size
+        return buf.nbytes
     else:
-        # not a memoryview, raw bytes/ py2 buffer
+        # not a memoryview, raw bytes
         return len(buf)
 
 
@@ -81,8 +69,6 @@ def _extract_buffers(obj, threshold=MAX_BYTES):
             # because pickling buffer objects just results in broken pointers
             elif isinstance(buf, memoryview):
                 obj.buffers[i] = buf.tobytes()
-            elif isinstance(buf, buffer):
-                obj.buffers[i] = bytes(buf)
     return buffers
 
 
@@ -147,7 +133,7 @@ def deserialize_object(buffers, g=None):
     (newobj, bufs) : unpacked object, and the list of remaining unused buffers.
     """
     bufs = list(buffers)
-    pobj = buffer_to_bytes_py2(bufs.pop(0))
+    pobj = bufs.pop(0)
     canned = pickle.loads(pobj)
     if istype(canned, sequence_types) and len(canned) < MAX_ITEMS:
         for c in canned:
@@ -213,7 +199,7 @@ def unpack_apply_message(bufs, g=None, copy=True):
     bufs = list(bufs)  # allow us to pop
     assert len(bufs) >= 2, "not enough buffers!"
     f, bufs = deserialize_object(bufs, g)
-    pinfo = buffer_to_bytes_py2(bufs.pop(0))
+    pinfo = bufs.pop(0)
     info = pickle.loads(pinfo)
     arg_bufs, kwarg_bufs = bufs[: info['narg_bufs']], bufs[info['narg_bufs'] :]
 

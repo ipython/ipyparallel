@@ -21,15 +21,10 @@ Authors
  * Min Ragan-Kelley
 
 """
-#
-import sys
+import argparse
 import time
 
-from IPython.external import argparse
-from numpy import exp
-from numpy import newaxis
 from numpy import sqrt
-from numpy import zeros
 
 import ipyparallel as ipp
 

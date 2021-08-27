@@ -1,13 +1,10 @@
 """Tests for dependency.py"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-import os
-
 import ipyparallel as ipp
 from .clienttest import ClusterTestCase
 from ipyparallel.serialize import can
 from ipyparallel.serialize import uncan
-from ipyparallel.tests import add_engines
 from ipyparallel.util import interactive
 
 

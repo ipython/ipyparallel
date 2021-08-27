@@ -31,16 +31,12 @@ import psutil
 from IPython.utils.path import ensure_dir_exists
 from IPython.utils.path import get_home_dir
 from IPython.utils.text import EvalFormatter
-from ipython_genutils.encoding import DEFAULT_ENCODING
-from ipython_genutils.py3compat import iteritems
-from ipython_genutils.py3compat import itervalues
 from tornado import ioloop
 from traitlets import Any
 from traitlets import CRegExp
 from traitlets import default
 from traitlets import Dict
 from traitlets import Float
-from traitlets import import_item
 from traitlets import Instance
 from traitlets import Integer
 from traitlets import List
@@ -867,7 +863,7 @@ class MPIEngineSetLauncher(MPILauncher, EngineLauncher):
 
 
 # deprecated MPIExec names
-class DeprecatedMPILauncher(object):
+class DeprecatedMPILauncher:
     def warn(self):
         oldname = self.__class__.__name__
         newname = oldname.replace('MPIExec', 'MPI')
@@ -1139,7 +1135,7 @@ class SSHLauncher(LocalProcessLauncher):
                 + [self.location, 'test -e', remote, "&& echo 'yes' || echo 'no'"],
                 input=None,
             )
-            check = check.decode(DEFAULT_ENCODING, 'replace').strip()
+            check = check.decode("utf8", 'replace').strip()
             if check == u'no':
                 time.sleep(1)
             elif check == u'yes':
@@ -1378,7 +1374,7 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher, SSHLauncher):
 
         requested_n = n
         started_n = 0
-        for host, n_or_config in iteritems(self.engines):
+        for host, n_or_config in self.engines.items():
             if isinstance(n_or_config, dict):
                 overrides = n_or_config
                 n = overrides.pop("n", 1)
@@ -1536,7 +1532,7 @@ class WindowsHPCLauncher(BaseLauncher):
         output = check_output(
             [self.job_cmd] + args, env=os.environ, cwd=self.work_dir, stderr=STDOUT
         )
-        output = output.decode(DEFAULT_ENCODING, 'replace')
+        output = output.decode("utf8", 'replace')
         job_id = self.parse_job_id(output)
         self.notify_start(job_id)
         return job_id
@@ -1550,7 +1546,7 @@ class WindowsHPCLauncher(BaseLauncher):
             output = check_output(
                 [self.job_cmd] + args, env=os.environ, cwd=self.work_dir, stderr=STDOUT
             )
-            output = output.decode(DEFAULT_ENCODING, 'replace')
+            output = output.decode("utf8", 'replace')
         except:
             output = u'The job already appears to be stopped: %r' % self.job_id
         self.notify_stop(
@@ -1822,7 +1818,7 @@ class BatchSystemLauncher(BaseLauncher):
         self.write_batch_script(n)
 
         output = check_output(self.args, env=os.environ)
-        output = output.decode(DEFAULT_ENCODING, 'replace')
+        output = output.decode("utf8", 'replace')
         self.log.debug(f"Submitted {shlex_join(self.args)}. Output: {output}")
 
         job_id = self.parse_job_id(output)
@@ -1834,7 +1830,7 @@ class BatchSystemLauncher(BaseLauncher):
             output = check_output(
                 self.delete_command + [self.job_id],
                 stdin=None,
-            ).decode(DEFAULT_ENCODING, 'replace')
+            ).decode("utf8", 'replace')
         except Exception:
             self.log.exception(
                 "Problem stopping cluster with command: %s"
@@ -1853,7 +1849,7 @@ class BatchSystemLauncher(BaseLauncher):
             output = check_output(
                 cmd,
                 stdin=None,
-            ).decode(DEFAULT_ENCODING, 'replace')
+            ).decode("utf8", 'replace')
         except Exception:
             self.log.exception("Problem sending signal with: {shlex_join(cmd)}")
             output = ""
@@ -2153,7 +2149,7 @@ class LSFLauncher(BatchSystemLauncher):
         self.log.debug("Starting %s: %s", self.__class__.__name__, piped_cmd)
         p = Popen(piped_cmd, shell=True, env=os.environ, stdout=PIPE)
         output, err = p.communicate()
-        output = output.decode(DEFAULT_ENCODING, 'replace')
+        output = output.decode("utf8", 'replace')
         job_id = self.parse_job_id(output)
         self.notify_start(job_id)
         return job_id

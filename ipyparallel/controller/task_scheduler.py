@@ -5,7 +5,6 @@ from random import random
 from types import FunctionType
 
 import zmq
-from ipython_genutils.py3compat import cast_bytes
 from traitlets import Dict
 from traitlets import Enum
 from traitlets import Instance
@@ -98,7 +97,7 @@ def leastload(loads):
 MET = Dependency([])
 
 
-class Job(object):
+class Job:
     """Simple container for a job"""
 
     def __init__(
@@ -153,7 +152,7 @@ class TaskScheduler(Scheduler):
         help="""specify the High Water Mark (HWM) for the downstream
         socket in the Task scheduler. This is the maximum number
         of allowed outstanding tasks on each engine.
-        
+
         The default (1) means that only one task can be outstanding on each
         engine.  Setting TaskScheduler.hwm=0 means there is no limit, and the
         engines continue to be assigned tasks while they are working,
@@ -172,11 +171,6 @@ class TaskScheduler(Scheduler):
         help="""select the task scheduler scheme  [default: Python LRU]
             Options are: 'pure', 'lru', 'plainrandom', 'weighted', 'twobin','leastload'""",
     )
-
-    @observe('scheme_name')
-    def _scheme_name_changed(self, change):
-        self.log.debug("Using scheme %r" % change['new'])
-        self.scheme = globals()[change['new']]
 
     # input arguments:
     scheme = Instance(FunctionType)  # function for determining the destination
@@ -243,7 +237,7 @@ class TaskScheduler(Scheduler):
 
         content = msg['content']
         for uuid in content.get('engines', {}).values():
-            self._register_engine(cast_bytes(uuid))
+            self._register_engine(uuid.encode("utf8"))
 
     @util.log_errors
     def dispatch_notification(self, msg):
@@ -266,7 +260,7 @@ class TaskScheduler(Scheduler):
             self.log.error("Unhandled message type: %r" % msg_type)
         else:
             try:
-                handler(cast_bytes(msg['content']['uuid']))
+                handler(msg['content']['uuid'].encode("utf8"))
             except Exception:
                 self.log.error("task::Invalid notification msg: %r", msg, exc_info=True)
 
@@ -374,7 +368,7 @@ class TaskScheduler(Scheduler):
         # get targets as a set of bytes objects
         # from a list of unicode objects
         targets = md.get('targets', [])
-        targets = set(map(cast_bytes, targets))
+        targets = set(t.encode("utf8", "replace") for t in targets)
 
         retries = md.get('retries', 0)
         self.retries[msg_id] = retries

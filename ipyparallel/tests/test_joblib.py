@@ -7,9 +7,8 @@ from .clienttest import add_engines
 from .clienttest import ClusterTestCase
 
 try:
-    import joblib
     from joblib import Parallel, delayed
-    from ipyparallel.client._joblib import IPythonParallelBackend
+    from ipyparallel.client._joblib import IPythonParallelBackend  # noqa
 except (ImportError, TypeError):
     have_joblib = False
 else:

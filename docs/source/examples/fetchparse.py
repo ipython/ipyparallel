@@ -10,29 +10,18 @@ and some engines using something like::
 
     ipcluster start -n 4
 """
-from __future__ import print_function
-
 import sys
 import time
 
-import bs4  # this isn't necessary, but it helps throw the dependency error earlier
+import bs4  # noqa this isn't necessary, but it helps throw the dependency error earlier
 
 import ipyparallel as ipp
-
-try:
-    raw_input
-except NameError:
-    raw_input = input
 
 
 def fetchAndParse(url, data=None):
     import requests
-
-    try:
-        from urllib.parse import urljoin
-    except ImportError:
-        from urlparse import urljoin
-    import bs4
+    from urllib.parse import urljoin
+    import bs4  # noqa
 
     links = []
     r = requests.get(url, data=data)
@@ -46,7 +35,7 @@ def fetchAndParse(url, data=None):
     return links
 
 
-class DistributedSpider(object):
+class DistributedSpider:
 
     # Time to wait between polling for task results.
     pollingDelay = 0.5
@@ -103,7 +92,7 @@ def main():
     if len(sys.argv) > 1:
         site = sys.argv[1]
     else:
-        site = raw_input('Enter site to crawl: ')
+        site = input('Enter site to crawl: ')
     distributedSpider = DistributedSpider(site)
     distributedSpider.run()
 

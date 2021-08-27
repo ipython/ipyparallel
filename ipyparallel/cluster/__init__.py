@@ -1,1 +1,1 @@
-from .cluster import *
+from .cluster import *  # noqa

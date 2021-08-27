@@ -4,7 +4,6 @@
 from __future__ import division
 
 import ipyparallel as ipp
-from .clienttest import add_engines
 from .clienttest import ClusterTestCase
 
 

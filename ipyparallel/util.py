@@ -30,9 +30,6 @@ from IPython import get_ipython
 from IPython.core.profiledir import ProfileDir
 from IPython.core.profiledir import ProfileDirError
 from IPython.paths import get_ipython_dir
-from ipython_genutils.py3compat import iteritems
-from ipython_genutils.py3compat import itervalues
-from ipython_genutils.py3compat import string_types
 from jupyter_client.localinterfaces import is_public_ip
 from jupyter_client.localinterfaces import localhost
 from jupyter_client.localinterfaces import public_ips
@@ -71,7 +68,7 @@ class ReverseDict(dict):
     def __init__(self, *args, **kwargs):
         dict.__init__(self, *args, **kwargs)
         self._reverse = dict()
-        for key, value in iteritems(self):
+        for key, value in self.items():
             self._reverse[value] = key
 
     def __getitem__(self, key):
@@ -114,8 +111,8 @@ def log_errors(f):
     def logs_errors(self, *args, **kwargs):
         try:
             result = f(self, *args, **kwargs)
-        except Exception:
-            self.log.error("Uncaught exception in {f}: {future.exception()}")
+        except Exception as e:
+            self.log.exception(f"Uncaught exception in {f}: {e}")
             return
 
         if inspect.isawaitable(result):
@@ -124,7 +121,7 @@ def log_errors(f):
 
             def _log_error(future):
                 if future.exception():
-                    self.log.error("Uncaught exception in {f}: {future.exception()}")
+                    self.log.error(f"Uncaught exception in {f}: {future.exception()}")
 
             future.add_done_callback(_log_error)
 
@@ -143,7 +140,7 @@ def is_url(url):
 
 def validate_url(url):
     """validate a url for zeromq"""
-    if not isinstance(url, string_types):
+    if not isinstance(url, str):
         raise TypeError("url must be a string, not %r" % type(url))
     url = url.lower()
 
@@ -180,11 +177,11 @@ def validate_url(url):
 
 def validate_url_container(container):
     """validate a potentially nested collection of urls."""
-    if isinstance(container, string_types):
+    if isinstance(container, str):
         url = container
         return validate_url(url)
     elif isinstance(container, dict):
-        container = itervalues(container)
+        container = container.values()
 
     for element in container:
         validate_url_container(element)
@@ -476,7 +473,7 @@ def int_keys(dikt):
     where there should be ints.
     """
     for k in list(dikt):
-        if isinstance(k, string_types):
+        if isinstance(k, str):
             nk = None
             try:
                 nk = int(k)
@@ -588,12 +585,12 @@ def extract_dates(obj):
     """extract ISO8601 dates from unpacked JSON"""
     if isinstance(obj, dict):
         new_obj = {}  # don't clobber
-        for k, v in iteritems(obj):
+        for k, v in obj.items():
             new_obj[k] = extract_dates(v)
         obj = new_obj
     elif isinstance(obj, (list, tuple)):
         obj = [extract_dates(o) for o in obj]
-    elif isinstance(obj, string_types):
+    elif isinstance(obj, str):
         obj = _parse_date(obj)
     return obj
 

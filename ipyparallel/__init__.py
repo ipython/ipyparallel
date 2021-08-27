@@ -2,24 +2,20 @@
 """The IPython ZMQ-based parallel computing interface."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-import os
-import warnings
-
-import zmq
 from traitlets.config.configurable import MultipleInstanceError
 
-from ._version import __version__
-from ._version import version_info
-from .client.asyncresult import *
-from .client.client import Client
-from .client.remotefunction import *
-from .client.view import *
-from .cluster import Cluster
-from .cluster import ClusterManager
-from .controller.dependency import *
-from .error import *
-from .serialize import *
-from .util import interactive
+from ._version import __version__  # noqa
+from ._version import version_info  # noqa
+from .client.asyncresult import *  # noqa
+from .client.client import Client  # noqa
+from .client.remotefunction import *  # noqa
+from .client.view import *  # noqa
+from .cluster import Cluster  # noqa
+from .cluster import ClusterManager  # noqa
+from .controller.dependency import *  # noqa
+from .error import *  # noqa
+from .serialize import *  # noqa
+from .util import interactive  # noqa
 
 # -----------------------------------------------------------------------------
 # Functions

@@ -36,19 +36,18 @@ DictDB supports a subset of mongodb operators::
 # Distributed under the terms of the Modified BSD License.
 import copy
 from copy import deepcopy
+from datetime import datetime
+
+from traitlets import Dict
+from traitlets import Float
+from traitlets import Integer
+from traitlets import Unicode
+from traitlets.config.configurable import LoggingConfigurable
+
+from ..util import ensure_timezone
 
 # Python can't copy memoryviews, but creating another memoryview works for us
 copy._deepcopy_dispatch[memoryview] = lambda x, memo: memoryview(x)
-
-
-from datetime import datetime
-
-from traitlets.config.configurable import LoggingConfigurable
-
-from ipython_genutils.py3compat import iteritems, itervalues
-from traitlets import Dict, Unicode, Integer, Float
-
-from ..util import ensure_timezone
 
 filters = {
     '$lt': lambda a, b: a < b,
@@ -71,13 +70,13 @@ def _add_tz(obj):
     return obj
 
 
-class CompositeFilter(object):
+class CompositeFilter:
     """Composite filter for matching multiple properties."""
 
     def __init__(self, dikt):
         self.tests = []
         self.values = []
-        for key, value in iteritems(dikt):
+        for key, value in dikt.items():
             self.tests.append(_add_tz(filters[key]))
             self.values.append(_add_tz(value))
 
@@ -116,7 +115,7 @@ class DictDB(BaseDB):
         1024 ** 3,
         config=True,
         help="""The maximum total size (in bytes) of the buffers stored in the db
-        
+
         When the db exceeds this size, the oldest records will be culled until
         the total size is under size_limit * (1-cull_fraction).
         default: 1 GB
@@ -126,7 +125,7 @@ class DictDB(BaseDB):
         1024,
         config=True,
         help="""The maximum number of records in the db
-        
+
         When the history exceeds this size, the first record_limit * cull_fraction
         records will be culled.
         """,
@@ -135,18 +134,18 @@ class DictDB(BaseDB):
         0.1,
         config=True,
         help="""The fraction by which the db should culled when one of the limits is exceeded
-        
+
         In general, the db size will spend most of its time with a size in the range:
-        
+
         [limit * (1-cull_fraction), limit]
-        
+
         for each of size_limit and record_limit.
         """,
     )
 
     def _match_one(self, rec, tests):
         """Check if a specific record matches tests."""
-        for key, test in iteritems(tests):
+        for key, test in tests.items():
             if not test(rec.get(key, None)):
                 return False
         return True
@@ -155,13 +154,13 @@ class DictDB(BaseDB):
         """Find all the matches for a check dict."""
         matches = []
         tests = {}
-        for k, v in iteritems(check):
+        for k, v in check.items():
             if isinstance(v, dict):
                 tests[k] = CompositeFilter(v)
             else:
                 tests[k] = lambda o: _add_tz(o) == _add_tz(v)
 
-        for rec in itervalues(self._records):
+        for rec in self._records.values():
             if self._match_one(rec, tests):
                 matches.append(deepcopy(rec))
         return matches

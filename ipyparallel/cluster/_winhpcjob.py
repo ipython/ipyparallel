@@ -2,28 +2,12 @@
 """
 Job and task components for writing .xml files that the Windows HPC Server
 2008 can use to start jobs.
-
-Authors:
-
-* Brian Granger
-* MinRK
-
 """
-# -----------------------------------------------------------------------------
-#  Copyright (C) 2008-2011  The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# Imports
-# -----------------------------------------------------------------------------
 import os
 import re
 import uuid
 from xml.etree import ElementTree as ET
 
-from ipython_genutils.py3compat import iteritems
 from traitlets import Bool
 from traitlets import Enum
 from traitlets import Instance
@@ -217,7 +201,7 @@ class WinHPCTask(Configurable):
 
     def get_env_vars(self):
         env_vars = ET.Element('EnvironmentVariables')
-        for k, v in iteritems(self.environment_variables):
+        for k, v in self.environment_variables.items():
             variable = ET.SubElement(env_vars, "Variable")
             name = ET.SubElement(variable, "Name")
             name.text = k

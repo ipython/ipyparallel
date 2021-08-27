@@ -19,10 +19,10 @@ class IPythonParallelBackend(AutoBatchingMixin, ParallelBackendBase):
             # use cloudpickle or dill for closures, if available.
             # joblib tends to create closures default pickle can't handle.
             try:
-                import cloudpickle
+                import cloudpickle  # noqa
             except ImportError:
                 try:
-                    import dill
+                    import dill  # noqa
                 except ImportError:
                     pass
                 else:
