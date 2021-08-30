@@ -59,28 +59,15 @@ with open(pjoin(here, name, '_version.py')) as f:
 with open(pjoin(here, "README.md")) as f:
     readme = f.read()
 
-try:
-    from jupyter_packaging import wrap_installers, npm_builder, get_data_files
+# import setupbase from jupyter_packaging (0.10.4)
+if '' not in sys.path:
+    sys.path.insert(0, '')
+from setupbase import wrap_installers, npm_builder, get_data_files
 
-    data_files = get_data_files(data_files_spec)
+data_files = get_data_files(data_files_spec)
 
-    builder = npm_builder()
-    cmdclass = wrap_installers(pre_develop=builder, pre_dist=builder)
-except ImportError:
-    from setuptools.command.build_py import build_py
-
-    data_files = {}  # ignored
-
-    class NeedsJupyterPackaging(build_py):
-        def run(self):
-            raise ImportError(
-                "Build requires jupyter-packaging. Make sure to build/install with pip or build."
-            )
-
-    cmdclass = {
-        'build_py': NeedsJupyterPackaging,
-    }
-
+builder = npm_builder()
+cmdclass = wrap_installers(pre_develop=builder, pre_dist=builder)
 
 if "bdist_egg" not in sys.argv:
     cmdclass["bdist_egg"] = bdist_egg_disabled
