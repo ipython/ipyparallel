@@ -2,7 +2,7 @@
 
 This uses precomputed digits of pi from the website
 of Professor Yasumasa Kanada at the University of
-Tokoyo: http://www.super-computing.org/
+Tokoyo: https://www.super-computing.org/
 
 Currently, there are only functions to read the
 .txt (non-compressed, non-binary) files, but adding

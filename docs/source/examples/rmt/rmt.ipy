@@ -103,7 +103,7 @@ ylabel('Probability $P(s)$')
 
 # <codecell>
 
-def parallel_diffs(rc, num, N):
+def parallel-diffs(rc, num, N):
     nengines = len(rc.targets)
     num_per_engine = num/nengines
     print "Running with", num_per_engine, "per engine."
@@ -121,16 +121,16 @@ view.block = False
 
 # <codecell>
 
-parallel_nmats = 40*serial_nmats
-parallel_matsize = 50
+parallel-nmats = 40*serial_nmats
+parallel-matsize = 50
 
 # <codecell>
 
-%timeit -r1 -n1 parallel_diffs(view, parallel_nmats, parallel_matsize)
+%timeit -r1 -n1 parallel-diffs(view, parallel-nmats, parallel-matsize)
 
 # <codecell>
 
-pdiffs = parallel_diffs(view, parallel_nmats, parallel_matsize)
+pdiffs = parallel-diffs(view, parallel-nmats, parallel-matsize)
 
 # <markdowncell>
 

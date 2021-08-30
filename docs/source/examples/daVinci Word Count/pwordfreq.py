@@ -16,7 +16,7 @@ from wordfreq import wordfreq
 
 import ipyparallel as ipp
 
-davinci_url = "http://www.gutenberg.org/files/5000/5000-8.txt"
+davinci_url = "https://www.gutenberg.org/files/5000/5000-8.txt"
 
 
 def pwordfreq(view, fnames):

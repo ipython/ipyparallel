@@ -1,6 +1,6 @@
-(parallelsecurity)=
+(security)=
 
-# Security details of IPython
+# Security details of IPython Parallel
 
 ```{note}
 This section is not thorough, and IPython Parallel needs a thorough security
@@ -171,7 +171,7 @@ $> ipcontroller --ip=* --ssh=login.mycluster.com
 More details of how these JSON files are used are given below.
 
 A detailed description of the security model and its implementation in IPython
-can be found {ref}`here <parallelsecurity>`.
+can be found {ref}`here <security>`.
 
 ```{warning}
 Even at its most secure, the Controller listens on ports on localhost, and
@@ -339,8 +339,8 @@ capabilities based authentication model, in conjunction with SSH tunneled
 TCP/IP channels, address the core potential vulnerabilities in the system,
 while still enabling user's to use the system in open networks.
 
-[^cite_openssh]: \<<http://www.openssh.com/>>
-[^cite_paramiko]: \<<https://www.lag.net/paramiko/>>
-[^cite_hmac]: \<<http://tools.ietf.org/html/rfc2104.html>>
+[^cite_openssh]: https://www.openssh.com
+[^cite_paramiko]: https://www.lag.net/paramiko
+[^cite_hmac]: https://tools.ietf.org/html/rfc2104
 
-[rfc5246]: http://tools.ietf.org/html/rfc5246
+[rfc5246]: https://tools.ietf.org/html/rfc5246

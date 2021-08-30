@@ -133,7 +133,7 @@ Other fixes:
 ### dask, joblib
 
 IPython Parallel 5.1 adds integration with other parallel computing tools,
-such as [dask.distributed](https://distributed.readthedocs.io) and [joblib](https://pythonhosted.org/joblib).
+such as [dask.distributed](https://distributed.readthedocs.io) and [joblib](https://joblib.readthedocs.io).
 
 To turn an IPython cluster into a dask.distributed cluster,
 call {meth}`~.Client.become_distributed`:
@@ -172,7 +172,7 @@ which does all three steps above.
 
 ### Slurm support
 
-[Slurm](https://computing.llnl.gov/tutorials/linux_clusters) support is added to ipcluster.
+[Slurm](https://hpc.llnl.gov/training/tutorials/livermore-computing-linux-commodity-clusters-overview-part-one) support is added to ipcluster.
 
 ### 5.1.0
 

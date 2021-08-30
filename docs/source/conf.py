@@ -355,6 +355,7 @@ texinfo_documents = [
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
     'ipython': ('https://ipython.readthedocs.io/en/stable/', None),
+    'pymongo': ('https://pymongo.readthedocs.io/en/stable/', None),
     'distributed': ('https://distributed.readthedocs.io/en/stable/', None),
     'jupyterclient': ('https://jupyter-client.readthedocs.io/en/stable/', None),
 }

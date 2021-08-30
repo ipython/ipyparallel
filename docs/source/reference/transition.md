@@ -19,7 +19,7 @@ TODO: fill this out after config system is updated
 ```
 
 ```{seealso}
-Detailed {ref}`Parallel Process <parallel_process>` doc for configuring and launching
+Detailed {ref}`Parallel Process <parallel-process>` doc for configuring and launching
 IPython processes.
 ```
 
@@ -65,7 +65,7 @@ The flags for execution have also changed. Previously, there was only `block` de
 to wait for results. This remains, but due to the addition of fully non-copying sends of
 arrays and buffers, there is also a `track` flag, which instructs PyZMQ to produce a {class}`MessageTracker` that will let you know when it is safe again to edit arrays in-place.
 
-The result of a non-blocking call to `apply` is now an {doc}`AsyncResult object <asyncresult>`.
+The result of a non-blocking call to `apply` is now an [AsyncResult object](asyncresult)`.
 
 ## MultiEngine to DirectView
 
@@ -107,7 +107,7 @@ argument.
   functions without issue.
 
 ```{seealso}
-{ref}`Our Direct Interface doc <parallel_direct>` for a simple tutorial with the
+{ref}`Our Direct Interface doc <parallel-direct>` for a simple tutorial with the
 DirectView.
 ```
 
@@ -175,11 +175,11 @@ code, because only those objects explicitly pushed (or set via `globals()`) will
 the engine beyond the duration of the task.
 
 ```{seealso}
-Dependencies also work very differently than in IPython.kernel. See our {ref}`doc on Dependencies<parallel_dependencies>` for details.
+Dependencies also work very differently than in IPython.kernel. See our {ref}`doc on Dependencies<parallel-dependencies>` for details.
 ```
 
 ```{seealso}
-{ref}`Our Task Interface doc <parallel_task>` for a simple tutorial with the
+{ref}`Our Task Interface doc <parallel-task>` for a simple tutorial with the
 LoadBalancedView.
 ```
 
@@ -220,8 +220,8 @@ The `.r` or `.result` property calls {meth}`get`, waiting for and returning the
 result.
 
 ```{seealso}
-{doc}`AsyncResult details <asyncresult>`
+[AsyncResult details](asyncresult)
 ```
 
-[0mq]: http://zeromq.org
+[0mq]: https://zeromq.org
 [tornado]: https://github.com/tornadoweb/tornado

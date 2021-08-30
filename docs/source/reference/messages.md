@@ -3,7 +3,7 @@
 # Messaging for Parallel Computing
 
 This is an extension of the {ref}`messaging <jupyterclient:messaging>` doc. Diagrams of the connections
-can be found in the {ref}`parallel connections <parallel_connections>` doc.
+can be found in the {ref}`parallel connections <parallel-connections>` doc.
 
 ZMQ messaging is also used in the parallel computing IPython system. All messages to/from
 kernels remain the same as the single kernel model, and are forwarded through a ZMQ Queue
@@ -86,7 +86,7 @@ content = {
 ### Heartbeat
 
 The hub uses a heartbeat system to monitor engines, and track when they become
-unresponsive. As described in {ref}`messaging <jupyterclient:messaging>`, and shown in {ref}`connections <parallel_connections>`.
+unresponsive. As described in {ref}`messaging <jupyterclient:messaging>`, and shown in {ref}`connections <parallel-connections>`.
 
 ### Notification (`PUB`)
 

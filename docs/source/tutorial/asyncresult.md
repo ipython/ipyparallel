@@ -1,4 +1,4 @@
-(parallel-asyncresult)=
+(asyncresult)=
 
 # The AsyncResult object
 

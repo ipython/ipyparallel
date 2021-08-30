@@ -39,7 +39,7 @@ No arguments are required for the default cluster (e.g. `ipcluster start` with n
 but `profile` and/or `cluster_id` would be typical arguments to specify a cluster.
 
 For more detailed information about starting the controller and engines, see
-our {ref}`introduction <parallel_overview>` to using IPython for parallel computing.
+our {ref}`introduction <parallel-overview>` to using IPython for parallel computing.
 
 ## Creating a `DirectView`
 
@@ -67,7 +67,7 @@ In [4]: dview = rc[:] # use all engines
 ```
 
 ```{seealso}
-For more information, see the in-depth explanation of {ref}`Views <parallel_details>`.
+For more information, see the in-depth explanation of {ref}`Views <parallel-details>`.
 ```
 
 ## Quick and easy parallelism
@@ -201,7 +201,7 @@ then returns a {class}`AsyncResult` object immediately. The
 time through its {meth}`get` method.
 
 ```{seealso}
-Docs on the {ref}`AsyncResult <parallel_asyncresult>` object.
+Docs on the {ref}`AsyncResult <asyncresult>` object.
 ```
 
 This allows you to quickly submit long-running commands without blocking your
@@ -308,7 +308,7 @@ The {attr}`block` and {attr}`targets` instance attributes of the
 {class}`.DirectView` also determine the behavior of the parallel magic commands.
 
 ```{seealso}
-See the documentation of the {ref}`Parallel Magics <parallel_magics>`.
+See the documentation of the {ref}`Parallel Magics <parallel-magics>`.
 ```
 
 ## Moving Python objects around

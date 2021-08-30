@@ -11,7 +11,7 @@ The default is to store recent tasks in a dictionary in memory,
 which deletes old values if it gets too big, and only survives
 as long as the controller is running.
 
-Using a real database is optional due to its potential {ref}`db_cost`.
+Using a real database is optional due to its potential {ref}`db-cost`.
 You can enable one, either at the command-line:
 
 ```
@@ -42,7 +42,7 @@ familiar. In fact, when the MongoDB backend is in use, the query is relayed dire
 When using other backends, the interface is emulated and only a subset of queries is possible.
 
 ```{seealso}
-MongoDB query docs: <https://docs.mongodb.org/manual/tutorial/query-documents/>
+MongoDB [query docs](https://docs.mongodb.com/manual/tutorial/query-documents/)
 ```
 
 {meth}`Client.db_query` takes a dictionary query object, with keys from the TaskRecord key list,

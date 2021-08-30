@@ -81,7 +81,7 @@ that it is visible from the timing out machine.
 ```
 
 ```{seealso}
-Our [notes](parallel_security) on security in the new parallel computing code.
+Our [notes](security) on security in the new parallel computing code.
 ```
 
 Let's say that you want to start the controller on `host0` and engines on
@@ -237,7 +237,7 @@ don't make any calls to MPI or call {func}`MPI_Init`. However, older MPI
 implementations require each process to call {func}`MPI_Init` upon
 starting.
 
-More details on using MPI with IPython can be found {ref}`here <parallelmpi>`.
+More details on using MPI with IPython can be found {ref}`here <parallel-mpi>`.
 
 ### Using {command}`ipcluster` in PBS mode
 
@@ -701,7 +701,7 @@ for binary data and datetime objects, and any new database backend must support 
 data types.
 
 ```{seealso}
-MongoDB [BSON doc](http://bsonspec.org/)
+MongoDB [BSON doc]( https://bsonspec.org)
 ```
 
 To use one of these backends, you must set the {attr}`IPController.db_class` trait:
@@ -736,7 +736,7 @@ c.SQLiteDB.table = 'tasks'
 ```
 
 Since MongoDB servers can be running remotely or configured to listen on a particular port,
-you can specify any arguments you may need to the PyMongo [Connection](http://api.mongodb.org/python/1.9/api/pymongo/connection.html#pymongo.connection.Connection):
+you can specify any arguments you may need to the PyMongo {pymongo:class}`~.Connection`:
 
 ```python
 # positional args to pymongo.Connection
@@ -757,7 +757,7 @@ submit, etc.). To use this backend, pass `--nodb` to
 in your {file}`ipcontroller_config.py` as described above.
 
 ```{seealso}
-For more information on the database backends, see the {ref}`db backend reference <parallel_db>`.
+For more information on the database backends, see the {ref}`db backend reference <parallel-db>`.
 ```
 
 ### Configuring `ipengine`
@@ -797,11 +797,8 @@ in some scratch directory. This can be set with:
 c.IPEngine.work_dir = u'/path/to/scratch/'
 ```
 
-[^cite_mongodb]: MongoDB database <https://www.mongodb.org/>
-[^cite_pbs]: Portable Batch System <http://www.mcs.anl.gov/research/projects/openpbs/>
+[^cite_mongodb]: MongoDB database <https://www.mongodb.com/>
+[^cite_pbs]: Portable Batch System <https://www.mcs.anl.gov/research/projects/openpbs/>
 [^cite_ssh]: SSH-Agent <https://en.wikipedia.org/wiki/Ssh-agent>
 
-[amazon ec2]: http://aws.amazon.com/ec2/
-[ipcluster plugin documentation]: http://star.mit.edu/cluster/docs/latest/plugins/ipython.html
-[pymongo]: http://api.mongodb.org/python/1.9/
-[starcluster]: http://star.mit.edu/cluster
+[pymongo]: https://pymongo.readthedocs.io

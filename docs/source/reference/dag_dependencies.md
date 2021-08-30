@@ -169,4 +169,4 @@ Time started on x, runtime on y, and color-coded by engine-id (in this case ther
 were four engines). Edges denote dependencies.
 ```
 
-[networkx]: https://networkx.github.io/
+[networkx]: https://networkx.org

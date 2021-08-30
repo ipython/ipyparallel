@@ -1,4 +1,4 @@
-(parallelmpi)=
+(parallel-mpi)=
 
 # Using MPI with IPython
 
@@ -9,7 +9,7 @@ through the controller to the client and then back through the controller, to
 its final destination.
 
 A much better way of moving data between engines is to use a message passing
-library, such as the Message Passing Interface (MPI) [^cite_mpi]. IPython's
+library, such as the Message Passing Interface ([MPI][]). IPython's
 parallel computing architecture has been designed from the ground up to
 integrate with MPI. This document describes how to use MPI with IPython.
 
@@ -17,8 +17,8 @@ integrate with MPI. This document describes how to use MPI with IPython.
 
 If you want to use MPI with IPython, you will need to install:
 
-- A standard MPI implementation such as OpenMPI [^cite_openmpi] or MPICH.
-- The mpi4py [^cite_mpi4py] package.
+- A standard MPI implementation such as [OpenMPI][] or MPICH.
+- The [mpi4py][] package.
 
 ```{note}
 The mpi4py package is not a strict requirement. However, you need to
@@ -48,7 +48,7 @@ which will first start a controller and then a set of engines using
 {command}`mpiexec`:
 
 ```
-$ ipcluster start -n 4 --engines=MPIEngineSetLauncher
+$ ipcluster start -n 4 --engines=mpi
 ```
 
 This approach is best as interrupting {command}`ipcluster` will automatically
@@ -63,26 +63,17 @@ do:
 $ mpiexec -n 4 ipengine
 ```
 
-This requires that you already have a controller running and that the FURL
-files for the engines are in place. We also have built in support for
-PyTrilinos [^cite_pytrilinos], which can be used (assuming is installed) by
-starting the engines with:
-
-```
-$ mpiexec -n 4 ipengine --mpi=pytrilinos
-```
-
 ### Automatic starting using PBS and {command}`ipcluster`
 
 The {command}`ipcluster` command also has built-in integration with PBS. For
-more information on this approach, see our documentation on {ref}`ipcluster <parallel_process>`.
+more information on this approach, see our documentation on {ref}`ipcluster <parallel-process>`.
 
 ## Actually using MPI
 
 Once the engines are running with MPI enabled, you are ready to go. You can
 now call any code that uses MPI in the IPython engines. And, all of this can
-be done interactively. Here we show a simple example that uses mpi4py
-[^cite_mpi4py] version 1.1.0 or later.
+be done interactively. Here we show a simple example that uses
+[mpi4py][] version 1.1.0 or later.
 
 First, lets define a function that uses MPI to calculate the sum of a
 distributed array. Save the following text in a file called {file}`psum.py`:
@@ -93,7 +84,7 @@ import numpy as np
 
 def psum(a):
     locsum = np.sum(a)
-    rcvBuf = np.array(0.0,'d')
+    rcvBuf = np.array(0.0, 'd')
     MPI.COMM_WORLD.Allreduce([locsum, MPI.DOUBLE],
         [rcvBuf, MPI.DOUBLE],
         op=MPI.SUM)
@@ -103,11 +94,7 @@ def psum(a):
 Now, start an IPython cluster:
 
 ```
-$ ipcluster start --profile=mpi -n 4
-```
-
-```{note}
-It is assumed here that the mpi profile has been set up, as described {ref}`here <parallel_process>`.
+$ ipcluster start --engines=mpi -n 4
 ```
 
 Finally, connect to the cluster and use this function interactively. In this
@@ -117,7 +104,7 @@ manner using our {func}`psum` function:
 ```ipython
 In [1]: import ipyparallel as ipp
 
-In [2]: c = ipp.Client(profile='mpi')
+In [2]: c = ipp.Cluster.from_file().connect_client_sync()
 
 In [3]: view = c[:]
 
@@ -144,7 +131,6 @@ Out[8]: [120.0, 120.0, 120.0, 120.0]
 Any Python code that makes calls to MPI can be used in this manner, including
 compiled C, C++ and Fortran libraries that have been exposed to Python.
 
-[^cite_mpi]: Message Passing Interface. <http://www-unix.mcs.anl.gov/research/projects/mpi/>
-[^cite_mpi4py]: MPI for Python. mpi4py: <http://mpi4py.scipy.org/>
-[^cite_openmpi]: Open MPI. <http://www.open-mpi.org/>
-[^cite_pytrilinos]: PyTrilinos. <https://trilinos.org/>
+[mpi]: https://www.mcs.anl.gov/research/projects/mpi
+[mpi4py]: https://mpi4py.readthedocs.io/
+[openmpi]: https://www.open-mpi.org

@@ -26,7 +26,7 @@ $ ipcluster start -n 4
 ```
 
 For more detailed information about starting the controller and engines, see
-our {ref}`introduction <parallel_overview>` to using IPython for parallel computing.
+our {ref}`introduction <parallel-overview>` to using IPython for parallel computing.
 
 ## Creating a `LoadBalancedView` instance
 
@@ -59,7 +59,7 @@ In [4]: lview = rc.load_balanced_view() # default load-balanced view
 ```
 
 ```{seealso}
-For more information, see the in-depth explanation of {ref}`Views <parallel_details>`.
+For more information, see the in-depth explanation of {ref}`Views <parallel-details>`.
 ```
 
 ## Quick and easy parallelism
@@ -293,7 +293,7 @@ In [18]: with lview.temp_flags(follow=[ar], timeout=2.5)
 ```
 
 ```{seealso}
-Some parallel workloads can be described as a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph), or DAG. See {ref}`DAG Dependencies <dag_dependencies>` for an example demonstrating how to use map a NetworkX DAG
+Some parallel workloads can be described as a [Directed Acyclic Graph](https://en.wikipedia.org/wiki/Directed_acyclic_graph), or DAG. See {ref}`DAG Dependencies <dag-dependencies>` for an example demonstrating how to use map a NetworkX DAG
 onto task dependencies.
 ```
 
@@ -461,5 +461,5 @@ The following is an overview of how to use these classes together:
    for and then receive the results.
 
 ```{seealso}
-A demo of {ref}`DAG Dependencies <dag_dependencies>` with NetworkX and IPython.
+A demo of {ref}`DAG Dependencies <dag-dependencies>` with NetworkX and IPython.
 ```

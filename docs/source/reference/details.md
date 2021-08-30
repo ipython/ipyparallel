@@ -266,7 +266,7 @@ low-level interface to the Hub and Engines. Most real usage will involve creatin
 
 ### DirectView
 
-The {class}`.DirectView` is the class for the IPython {ref}`Multiplexing Interface <parallel_direct>`.
+The {class}`.DirectView` is the class for the IPython {ref}`Multiplexing Interface <parallel-direct>`.
 
 #### Creating a DirectView
 
@@ -466,7 +466,7 @@ metadata. If the AsyncResult represents multiple calls (e.g. any time `targets` 
 a CompositeError, a subclass of RemoteError, will be raised.
 
 ```{seealso}
-For more information on remote exceptions, see {ref}`the section in the Direct Interface <parallel_exceptions>`.
+For more information on remote exceptions, see {ref}`the section in the Direct Interface <parallel-exceptions>`.
 ```
 
 #### Extended interface

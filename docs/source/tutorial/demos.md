@@ -39,7 +39,7 @@ In [1]: run pidigits.py
 
 ### Serial calculation
 
-For the serial calculation, we will use [SymPy](http://www.sympy.org) to
+For the serial calculation, we will use [SymPy](https://www.sympy.org) to
 calculate 10,000 digits of pi and then look at the frequencies of the digits
 0-9. Out of 10,000 digits, we expect each digit to occur 1,000 times. While
 SymPy is capable of calculating many more digits of pi, our purpose here is to
@@ -85,7 +85,7 @@ to look at many more digits of pi. That brings us to the parallel calculation.
 Calculating many digits of pi is a challenging computational problem in itself.
 Because we want to focus on the distribution of digits in this example, we
 will use pre-computed digit of pi from the website of Professor Yasumasa
-Kanada at the University of Tokyo (<http://www.super-computing.org>). These
+Kanada at the University of Tokyo (<https://super-computing.org>). These
 digits come in a set of text files (<ftp://pi.super-computing.org/.2/pi200m/>)
 that each have 10 million digits of pi.
 
