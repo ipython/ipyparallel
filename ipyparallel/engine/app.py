@@ -502,9 +502,16 @@ class IPEngine(BaseParallelApplication):
             self.log.name += f".{self.id}"
 
             # create Shell Connections (MUX, Task, etc.):
-            shell_addrs = [url('mux'), url('task')] + urls('broadcast')
 
-            self.log.info(f'ENGINE: shell_addrs: {shell_addrs}')
+            # select which broadcast endpoint to connect to
+            # use rank % len(broadcast_leaves)
+            broadcast_urls = urls('broadcast')
+            broadcast_leaves = len(broadcast_urls)
+            broadcast_index = self.id % len(broadcast_urls)
+            broadcast_url = broadcast_urls[broadcast_index]
+
+            shell_addrs = [url('mux'), url('task'), broadcast_url]
+            self.log.info(f'Shell_addrs: {shell_addrs}')
 
             # Use only one shell stream for mux and tasks
             stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)

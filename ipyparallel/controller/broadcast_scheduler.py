@@ -3,6 +3,7 @@ import logging
 import zmq
 from traitlets import Bool
 from traitlets import Bytes
+from traitlets import Integer
 from traitlets import List
 
 from ipyparallel import util
@@ -17,6 +18,8 @@ class BroadcastScheduler(Scheduler):
     is_leaf = Bool(False)
     connected_sub_scheduler_ids = List(Bytes())
     outgoing_streams = List()
+    depth = Integer()
+    max_depth = Integer()
 
     def start(self):
         self.client_stream.on_recv(self.dispatch_submission, copy=False)
@@ -46,10 +49,21 @@ class BroadcastScheduler(Scheduler):
                 scheduler_id: None for scheduler_id in self.connected_sub_scheduler_ids
             }
 
+        trunc = 2 ** self.max_depth
+        fmt = f"0{self.max_depth + 1}b"
+
+        # assign targets to sub-schedulers based on binary path
+        # compute binary '010110' representation of the engine id
+        targets_by_scheduler = [
+            [] for i in range(len(self.connected_sub_scheduler_ids))
+        ]
+        for target_tuple in targets:
+            path = format(target_tuple[1] % trunc, fmt)
+            next_idx = int(path[self.depth + 1])  # 0 or 1
+            targets_by_scheduler[next_idx].append(target_tuple)
+
         for i, scheduler_id in enumerate(self.connected_sub_scheduler_ids):
-            slice_start = i * len(targets) // len(self.connected_sub_scheduler_ids)
-            slice_end = (i + 1) * len(targets) // len(self.connected_sub_scheduler_ids)
-            targets_for_scheduler = targets[slice_start:slice_end]
+            targets_for_scheduler = targets_by_scheduler[i]
             if not targets_for_scheduler and is_coalescing:
                 del self.accumulated_replies[original_msg_id][scheduler_id]
             msg['metadata']['targets'] = targets_for_scheduler
@@ -106,7 +120,10 @@ class BroadcastScheduler(Scheduler):
 
         original_msg_id = metadata['original_msg_id']
         if self.is_leaf:
-            self.send_to_targets(msg, original_msg_id, targets, idents, is_coalescing)
+            target_idents = [t[0] for t in targets]
+            self.send_to_targets(
+                msg, original_msg_id, target_idents, idents, is_coalescing
+            )
         else:
             self.send_to_sub_schedulers(
                 msg, original_msg_id, targets, idents, is_coalescing
@@ -150,12 +167,13 @@ def launch_broadcast_scheduler(
     in_thread=False,
     outgoing_ids=None,
     depth=0,
+    max_depth=0,
 ):
     config, ctx, loop, mons, nots, querys, log = get_common_scheduler_streams(
         mon_addr, not_addr, reg_addr, config, 'scheduler', log_url, loglevel, in_thread
     )
 
-    is_root = identity == 0
+    is_root = depth == 0
     sub_scheduler_id = get_id_with_prefix(identity)
 
     incoming_stream = ZMQStream(ctx.socket(zmq.ROUTER), loop)
@@ -183,6 +201,8 @@ def launch_broadcast_scheduler(
         loop=loop,
         log=log,
         config=config,
+        depth=depth,
+        max_depth=max_depth,
     )
     if is_leaf:
         scheduler_args.update(engine_stream=outgoing_streams[0], is_leaf=True)

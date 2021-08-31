@@ -730,11 +730,16 @@ class IPController(BaseParallelApplication):
         else:
             internal_interface = self.engine_info['interface']
 
+        broadcast_ids = []  # '0', '00', '01', '001', etc.
+        # always a leading 0 for the root node
+        for d in range(1, self.broadcast_scheduler_depth + 1):
+            for i in range(2 ** d):
+                broadcast_ids.append(format(i, f"0{d + 1}b"))
         self.internal_info = {
             'interface': internal_interface,
-            BroadcastScheduler.port_name: [
-                self.next_port() for i in range(self.number_of_broadcast_schedulers - 1)
-            ],
+            BroadcastScheduler.port_name: {
+                broadcast_id: self.next_port() for broadcast_id in broadcast_ids
+            },
         }
         mon_port = self.next_port()
         self.monitor_url = f"{self.monitor_transport}://{self.monitor_ip}:{mon_port}"
@@ -903,8 +908,9 @@ class IPController(BaseParallelApplication):
                 launch_broadcast_scheduler(**scheduler_args)
 
         def recursively_start_schedulers(identity, depth):
-            outgoing_id1 = identity * 2 + 1
-            outgoing_id2 = outgoing_id1 + 1
+
+            outgoing_id1 = identity + '0'
+            outgoing_id2 = identity + '1'
             is_leaf = depth == self.broadcast_scheduler_depth
             is_root = depth == 0
 
@@ -915,9 +921,10 @@ class IPController(BaseParallelApplication):
                 in_addr = self.client_url(BroadcastScheduler.port_name)
             else:
                 # not root, use internal address
+
                 in_addr = self.internal_url(
                     BroadcastScheduler.port_name,
-                    index=identity - 1,
+                    index=identity,
                 )
 
             scheduler_args = dict(
@@ -931,6 +938,7 @@ class IPController(BaseParallelApplication):
                 log_url=self.log_url,
                 outgoing_ids=[outgoing_id1, outgoing_id2],
                 depth=depth,
+                max_depth=self.broadcast_scheduler_depth,
                 is_leaf=is_leaf,
             )
             if is_leaf:
@@ -938,7 +946,7 @@ class IPController(BaseParallelApplication):
                     out_addrs=[
                         self.engine_url(
                             BroadcastScheduler.port_name,
-                            identity - self.number_of_non_leaf_schedulers,
+                            index=int(identity, 2),
                         )
                     ],
                 )
@@ -946,10 +954,10 @@ class IPController(BaseParallelApplication):
                 scheduler_args.update(
                     out_addrs=[
                         self.internal_url(
-                            BroadcastScheduler.port_name, index=outgoing_id1 - 1
+                            BroadcastScheduler.port_name, index=outgoing_id1
                         ),
                         self.internal_url(
-                            BroadcastScheduler.port_name, index=outgoing_id2 - 1
+                            BroadcastScheduler.port_name, index=outgoing_id2
                         ),
                     ]
                 )
@@ -958,7 +966,7 @@ class IPController(BaseParallelApplication):
                 recursively_start_schedulers(outgoing_id1, depth + 1)
                 recursively_start_schedulers(outgoing_id2, depth + 1)
 
-        recursively_start_schedulers(0, 0)
+        recursively_start_schedulers(identity='0', depth=0)
 
     def init_schedulers(self):
         children = self.children

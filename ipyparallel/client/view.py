@@ -871,10 +871,10 @@ class DirectView(View):
 class BroadcastView(DirectView):
     is_coalescing = Bool(False)
 
-    def _init_metadata(self, s_idents):
+    def _init_metadata(self, target_tuples):
         """initialize request metadata"""
         return dict(
-            targets=s_idents,
+            targets=target_tuples,
             is_broadcast=True,
             is_coalescing=self.is_coalescing,
         )
@@ -931,8 +931,9 @@ class BroadcastView(DirectView):
         pkwargs = {k: PrePickled(v) for k, v in kwargs.items()}
 
         s_idents = [ident.decode("utf8") for ident in idents]
+        target_tuples = list(zip(s_idents, _targets))
 
-        metadata = self._init_metadata(s_idents)
+        metadata = self._init_metadata(target_tuples)
 
         ar = None
 
@@ -979,8 +980,9 @@ class BroadcastView(DirectView):
 
         _idents, _targets = self.client._build_targets(targets)
         s_idents = [ident.decode("utf8") for ident in _idents]
+        target_tuples = list(zip(s_idents, _targets))
 
-        metadata = self._init_metadata(s_idents)
+        metadata = self._init_metadata(target_tuples)
 
         ar = None
 
