@@ -472,7 +472,7 @@ class LocalProcessLauncher(BaseLauncher):
             raise ProcessStateError(
                 'The process was already started and has state: {self.state}'
             )
-        self.log.info(f"Sending output for {self.identifier} to {self.output_file}")
+        self.log.debug(f"Sending output for {self.identifier} to {self.output_file}")
 
         with open(self.output_file, "ab") as f:
             proc = Popen(
