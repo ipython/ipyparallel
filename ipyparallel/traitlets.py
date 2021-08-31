@@ -1,5 +1,7 @@
 """Custom ipyparallel trait types"""
 import entrypoints
+from traitlets import List
+from traitlets import TraitError
 from traitlets import Type
 
 
@@ -49,3 +51,52 @@ class Launcher(Type):
             if key in registry:
                 value = registry[key].load()
         return super().validate(obj, value)
+
+
+class PortList(List):
+    """List of ports
+
+    For use configuring a list of ports to consume
+
+    Ports will be a list of valid ports
+
+    Can be specified as a port-range string for convenience
+    (mainly for use on the command-line)
+    e.g. '10101-10105,10108'
+    """
+
+    @staticmethod
+    def parse_port_range(s):
+        """Parse a port range string in the form '1,3-5,6' into [1,3,4,5,6]"""
+        ports = []
+        ranges = s.split(",")
+        for r in ranges:
+            start, _, end = r.partition("-")
+            start = int(start)
+            if end:
+                end = int(end)
+                ports.extend(range(start, end + 1))
+            else:
+                ports.append(start)
+        return ports
+
+    def from_string_list(self, s_list):
+        ports = []
+        for s in s_list:
+            ports.extend(self.parse_port_range(s))
+        return ports
+
+    def validate(self, obj, value):
+        if isinstance(value, str):
+            value = self.parse_port_range(value)
+        value = super().validate(obj, value)
+        for item in value:
+            if not isinstance(item, int):
+                raise TraitError(
+                    f"Ports must be integers in range 1-65536, not {item!r}"
+                )
+            if not 1 <= item <= 65536:
+                raise TraitError(
+                    f"Ports must be integers in range 1-65536, not {item!r}"
+                )
+        return value
