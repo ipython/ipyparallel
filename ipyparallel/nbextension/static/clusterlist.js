@@ -131,6 +131,8 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
       } else {
         if (n === "") {
           n = null;
+        } else {
+          n = parseInt(n);
         }
         var settings = {
           cache: false,
