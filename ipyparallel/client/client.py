@@ -486,10 +486,10 @@ class Client(HasTraits):
             'iopub',
             'notification',
             'registration',
+            'broadcast',
         ):
             cfg[key] = cfg['interface'] + ':%i' % cfg[key]
 
-        cfg['broadcast'] = cfg['interface'] + ':%i' % cfg['broadcast'][0]
         url = cfg['registration']
 
         if location is not None and addr == localhost():

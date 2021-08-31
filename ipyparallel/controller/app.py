@@ -54,6 +54,7 @@ from ipyparallel.controller.heartmonitor import HeartMonitor
 from ipyparallel.controller.hub import Hub
 from ipyparallel.controller.scheduler import launch_scheduler
 from ipyparallel.controller.task_scheduler import TaskScheduler
+from ipyparallel.traitlets import PortList
 from ipyparallel.util import disambiguate_url
 
 # conditional import of SQLiteDB / MongoDB backend class
@@ -149,6 +150,7 @@ aliases = dict(
     ip='IPController.ip',
     transport='IPController.transport',
     port='IPController.regport',
+    ports='IPController.ports',
     ping='HeartMonitor.period',
     scheme='TaskScheduler.scheme_name',
     hwm='TaskScheduler.hwm',
@@ -261,37 +263,6 @@ class IPController(BaseParallelApplication):
     aliases = Dict(aliases)
     flags = Dict(flags)
 
-    # port-pairs for schedulers:
-    hb = Tuple(
-        Integer(),
-        Integer(),
-        config=True,
-        help="""PUB/ROUTER Port pair for Engine heartbeats""",
-    )
-
-    def _hb_default(self):
-        return tuple(util.select_random_ports(2))
-
-    mux = Tuple(
-        Integer(),
-        Integer(),
-        config=True,
-        help="""Client/Engine Port pair for MUX queue""",
-    )
-
-    def _mux_default(self):
-        return tuple(util.select_random_ports(2))
-
-    task = Tuple(
-        Integer(),
-        Integer(),
-        config=True,
-        help="""Client/Engine Port pair for Task queue""",
-    )
-
-    def _task_default(self):
-        return tuple(util.select_random_ports(2))
-
     broadcast_scheduler_depth = Integer(
         1,
         config=True,
@@ -313,53 +284,144 @@ class IPController(BaseParallelApplication):
     def get_number_of_non_leaf_schedulers(self):
         return self.number_of_broadcast_schedulers - self.number_of_leaf_schedulers
 
-    broadcast = List(
-        Integer(), config=True, help="List of available ports for broadcast"
+    ports = PortList(
+        Integer(min_value=1, max_value=65536),
+        config=True,
+        help="""
+        Pool of ports to use for the controller.
+
+        For example:
+
+            ipcontroller --ports 10101-10120
+
+        This list will be consumed to populate the ports
+        to be used when binding controller sockets
+        for engines, clients, or internal connections.
+
+        The number of sockets needed depends on scheduler depth,
+        but is at least 14 (16 by default)
+
+        If more ports than are defined here are needed,
+        random ports will be selected.
+
+        Can be specified as a list or string expressing a range
+
+        See also engine_ports and client_ports
+        """,
     )
 
-    def _broadcast_default(self):
-        return util.select_random_ports(
-            self.number_of_leaf_schedulers + self.number_of_broadcast_schedulers
-        )
+    engine_ports = PortList(
+        config=True,
+        help="""
+        Pool of ports to use for engine connections
 
-    regport = Integer(config=True, help="Port for engine registration")
+        This list will be consumed to populate the ports
+        to be used when binding controller sockets used for engine connections
 
-    @default("regport")
-    def _regport_default(self):
-        return util.select_random_ports(1)[0]
+        Can be specified as a list or string expressing a range
+
+        If this list is exhausted, the common `ports` pool will be consumed.
+
+        See also ports and client_ports
+        """,
+    )
+
+    client_ports = PortList(
+        config=True,
+        help="""
+        Pool of ports to use for client connections
+
+        This list will be consumed to populate the ports
+        to be used when binding controller sockets used for client connections
+
+        Can be specified as a list or string expressing a range
+
+        If this list is empty or exhausted,
+        the common `ports` pool will be consumed.
+
+        See also ports and engine_ports
+        """,
+    )
+
+    # observe consumption of pools
+    port_index = engine_port_index = client_port_index = 0
+
+    # port-pairs for schedulers:
+    hb = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""DEPRECATED: use ports""",
+    )
+
+    mux = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""DEPRECATED: use ports""",
+    )
+
+    task = Tuple(
+        Integer(),
+        Integer(),
+        config=True,
+        help="""DEPRECATED: use ports""",
+    )
 
     control = Tuple(
         Integer(),
         Integer(),
         config=True,
-        help="""Client/Engine Port pair for Control queue""",
+        help="""DEPRECATED: use ports""",
     )
-
-    def _control_default(self):
-        return tuple(util.select_random_ports(2))
 
     iopub = Tuple(
         Integer(),
         Integer(),
         config=True,
-        help="""Client/Engine Port pair for IOPub relay""",
+        help="""DEPRECATED: use ports""",
     )
 
-    def _iopub_default(self):
-        return tuple(util.select_random_ports(2))
+    @observe("iopub", "control", "task", "mux")
+    def _scheduler_ports_assigned(self, change):
+        self.log.warning(
+            f"Setting {self.__class__.__name__}.{change.name} = {change.new!r} is deprecated in IPython Parallel 7."
+            " Use IPController.ports config instead."
+        )
+        self.client_ports.append(change.new[0])
+        self.engine_ports.append(change.new[0])
+
+    @observe("hb")
+    def _hb_ports_assigned(self, change):
+        self.log.warning(
+            f"Setting {self.__class__.__name__}.{change.name} = {change.new!r} is deprecated in IPython Parallel 7."
+            " Use IPController.engine_ports config instead."
+        )
+        self.engine_ports.extend(change.new)
 
     # single ports:
-    mon_port = Integer(config=True, help="""Monitor (SUB) port for queue traffic""")
+    mon_port = Integer(config=True, help="""DEPRECATED: use ports""")
 
-    def _mon_port_default(self):
-        return util.select_random_ports(1)[0]
-
-    notifier_port = Integer(
-        config=True, help="""PUB port for sending engine status notifications"""
+    notifier_port = Integer(config=True, help="""DEPRECATED: use ports""").tag(
+        port_pool="client"
     )
 
-    def _notifier_port_default(self):
-        return util.select_random_ports(1)[0]
+    regport = Integer(config=True, help="DEPRECATED: use ports").tag(port_pool="engine")
+
+    @observe("regport", "notifier_port", "mon_port")
+    def _port_assigned(self, change):
+        self.log.warning(
+            f"Setting {self.__class__.__name__}.{change.name} = {change.new!r} is deprecated in IPython Parallel 7."
+            " Use IPController.ports config instead."
+        )
+        trait = self.traits()[change.name]
+        pool_name = trait.metadata.get("port_pool")
+        if pool_name == 'engine':
+            self.engine_ports.append(change.new)
+        elif pool_name == 'client':
+            self.client_ports.append(change.new)
+        else:
+            self.ports.append(change.new)
 
     engine_ip = Unicode(
         config=True,
@@ -392,10 +454,6 @@ class IPController(BaseParallelApplication):
     _client_ip_default = _monitor_ip_default = _engine_ip_default
 
     monitor_url = Unicode('')
-
-    @default("monitor_url")
-    def _default_monitor_url(self):
-        return f"{self.monitor_transport}://{self.monitor_ip}:{self.mon_port}"
 
     db_class = Union(
         [Unicode(), Type()],
@@ -455,10 +513,6 @@ class IPController(BaseParallelApplication):
         self.engine_ip = new
         self.client_ip = new
         self.monitor_ip = new
-        self._update_monitor_url()
-
-    def _update_monitor_url(self):
-        self.monitor_url = self._default_monitor_url()
 
     @observe('transport')
     def _transport_changed(self, change):
@@ -466,7 +520,6 @@ class IPController(BaseParallelApplication):
         self.engine_transport = new
         self.client_transport = new
         self.monitor_transport = new
-        self._update_monitor_url()
 
     context = Instance(zmq.Context)
 
@@ -474,25 +527,77 @@ class IPController(BaseParallelApplication):
     def _defaut_context(self):
         return zmq.Context.instance()
 
+    # connection file contents
+    engine_info = Dict()
+    client_info = Dict()
+
+    _logged_exhaustion = Dict()
+
+    _random_port_count = Integer(0)
+
+    def next_port(self, pool_name='common'):
+        """Consume a port from our port pools"""
+        if pool_name == 'client':
+            if len(self.client_ports) > self.client_port_index:
+                port = self.client_ports[self.client_port_index]
+                self.client_port_index += 1
+                return port
+            elif self.client_ports and not self._logged_exhaustion.get("client"):
+                self._logged_exhaustion['client'] = True
+                # only log once
+                self.log.warning(f"Exhausted {len(self.client_ports)} client ports")
+        elif pool_name == 'engine':
+            if len(self.engine_ports) > self.engine_port_index:
+                port = self.engine_ports[self.engine_port_index]
+                self.engine_port_index += 1
+                return port
+            elif self.engine_ports and not self._logged_exhaustion.get("engine"):
+                self._logged_exhaustion['engine'] = True
+                self.log.warning(f"Exhausted {len(self.engine_ports)} engine ports")
+
+        # drawing from common pool
+        if len(self.ports) > self.port_index:
+            port = self.ports[self.port_index]
+            self.port_index += 1
+            return port
+        elif self.ports and not self._logged_exhaustion.get("common"):
+            self._logged_exhaustion['common'] = True
+            self.log.warning(f"Exhausted {len(self.ports)} common ports")
+
+        self._random_port_count += 1
+        port = util.select_random_ports(1)[0]
+        return port
+
+    def construct_url(self, kind: str, channel: str, index=None):
+        if kind == 'engine':
+            info = self.engine_info
+        elif kind == 'client':
+            info = self.client_info
+        elif kind == 'internal':
+            info = self.internal_info
+        else:
+            raise ValueError(
+                "kind must be 'engine', 'client', or 'internal', not {kind!r}"
+            )
+
+        interface = info['interface']
+        sep = '-' if interface.partition("://")[0] == 'ipc' else ':'
+        port = info[channel]
+        if index is not None:
+            port = port[index]
+        return f"{interface}{sep}{port}"
+
+    def internal_url(self, channel, index=None):
+        """return full zmq url for a named internal channel"""
+        return self.construct_url('internal', channel, index)
+
     def client_url(self, channel, index=None):
         """return full zmq url for a named client channel"""
-        return "%s://%s:%i" % (
-            self.client_transport,
-            self.client_ip,
-            self.client_info[channel]
-            if index is None
-            else self.client_info[channel][index],
-        )
+        return self.construct_url('client', channel, index)
 
     def engine_url(self, channel, index=None):
         """return full zmq url for a named engine channel"""
-        return "%s://%s:%i" % (
-            self.engine_transport,
-            self.engine_ip,
-            self.engine_info[channel]
-            if index is None
-            else self.engine_info[channel][index],
-        )
+        return self.construct_url('engine', channel, index)
 
     def save_connection_dict(self, fname, cdict):
         """save a connection dict to json file."""
@@ -545,14 +650,8 @@ class IPController(BaseParallelApplication):
         if not self.ssh_server:
             self.ssh_server = ccfg['ssh']
 
-        # load port config:
-        c.IPController.regport = ecfg['registration']
-        c.IPController.hb = (ecfg['hb_ping'], ecfg['hb_pong'])
-        c.IPController.control = (ccfg['control'], ecfg['control'])
-        c.IPController.mux = (ccfg['mux'], ecfg['mux'])
-        c.IPController.task = (ccfg['task'], ecfg['task'])
-        c.IPController.iopub = (ccfg['iopub'], ecfg['iopub'])
-        c.IPController.notifier_port = ccfg['notification']
+        self.engine_info = ecfg
+        self.client_info = ccfg
 
     def cleanup_connection_files(self):
         if self.reuse_files:
@@ -577,11 +676,8 @@ class IPController(BaseParallelApplication):
                 self.log.error("Could not load config from JSON: %s" % e)
             else:
                 # successfully loaded config from JSON, and reuse=True
-                # no need to wite back the same file
+                # no need to write back the same file
                 self.write_connection_files = False
-
-        self.log.debug("Config changed")
-        self.log.debug(repr(self.config))
 
     def init_hub(self):
         c = self.config
@@ -595,50 +691,89 @@ class IPController(BaseParallelApplication):
 
             scheme = TaskScheduler.scheme_name.default_value
 
-        # build connection dicts
-        engine = self.engine_info = {
-            'interface': "%s://%s" % (self.engine_transport, self.engine_ip),
-            'registration': self.regport,
-            'control': self.control[1],
-            'mux': self.mux[1],
-            'hb_ping': self.hb[0],
-            'hb_pong': self.hb[1],
-            'task': self.task[1],
-            'iopub': self.iopub[1],
-            BroadcastScheduler.port_name: self.broadcast[
-                -self.number_of_leaf_schedulers :
-            ],
-        }
+        if self.engine_info:
+            registration_port = self.engine_info['registration']
+        else:
+            registration_port = self.next_port('engine')
 
-        client = self.client_info = {
-            'interface': "%s://%s" % (self.client_transport, self.client_ip),
-            'registration': self.regport,
-            'control': self.control[0],
-            'mux': self.mux[0],
-            'task': self.task[0],
-            'task_scheme': scheme,
-            'iopub': self.iopub[0],
-            'notification': self.notifier_port,
-            BroadcastScheduler.port_name: self.broadcast[
-                : self.number_of_broadcast_schedulers
-            ],
+        # build connection dicts
+        if not self.engine_info:
+            self.engine_info = {
+                'interface': "%s://%s" % (self.engine_transport, self.engine_ip),
+                'registration': registration_port,
+                'control': self.next_port('engine'),
+                'mux': self.next_port('engine'),
+                'task': self.next_port('engine'),
+                'iopub': self.next_port('engine'),
+                'hb_ping': self.next_port('engine'),
+                'hb_pong': self.next_port('engine'),
+                BroadcastScheduler.port_name: [
+                    self.next_port('engine')
+                    for i in range(self.number_of_leaf_schedulers)
+                ],
+            }
+
+        if not self.client_info:
+            self.client_info = {
+                'interface': "%s://%s" % (self.client_transport, self.client_ip),
+                'registration': registration_port,
+                'control': self.next_port('client'),
+                'mux': self.next_port('client'),
+                'task': self.next_port('client'),
+                'task_scheme': scheme,
+                'iopub': self.next_port('client'),
+                'notification': self.next_port('client'),
+                BroadcastScheduler.port_name: self.next_port('client'),
+            }
+        if self.engine_transport == 'tcp':
+            internal_interface = "tcp://127.0.0.1"
+        else:
+            internal_interface = self.engine_info['interface']
+
+        broadcast_ids = []  # '0', '00', '01', '001', etc.
+        # always a leading 0 for the root node
+        for d in range(1, self.broadcast_scheduler_depth + 1):
+            for i in range(2 ** d):
+                broadcast_ids.append(format(i, f"0{d + 1}b"))
+        self.internal_info = {
+            'interface': internal_interface,
+            BroadcastScheduler.port_name: {
+                broadcast_id: self.next_port() for broadcast_id in broadcast_ids
+            },
         }
+        mon_port = self.next_port()
+        self.monitor_url = f"{self.monitor_transport}://{self.monitor_ip}:{mon_port}"
+
+        # debug port pool consumption
+        if self.engine_ports:
+            self.log.debug(
+                f"Used {self.engine_port_index} / {len(self.engine_ports)} engine ports"
+            )
+        if self.client_ports:
+            self.log.debug(
+                f"Used {self.client_port_index} / {len(self.client_ports)} client ports"
+            )
+        if self.ports:
+            self.log.debug(f"Used {self.port_index} / {len(self.ports)} common ports")
+        if self._random_port_count:
+            self.log.debug(f"Used {self._random_port_count} random ports")
 
         self.log.debug("Hub engine addrs: %s", self.engine_info)
         self.log.debug("Hub client addrs: %s", self.client_info)
+        self.log.debug("Hub internal addrs: %s", self.internal_info)
 
         # Registrar socket
         q = ZMQStream(ctx.socket(zmq.ROUTER), loop)
         util.set_hwm(q, 0)
-        q.bind(self.client_url('registration'))
         self.log.info(
             "Hub listening on %s for registration.", self.client_url('registration')
         )
+        q.bind(self.client_url('registration'))
         if self.client_ip != self.engine_ip:
-            q.bind(self.engine_url('registration'))
             self.log.info(
                 "Hub listening on %s for registration.", self.engine_url('registration')
             )
+            q.bind(self.engine_url('registration'))
 
         ### Engine connections ###
 
@@ -773,18 +908,24 @@ class IPController(BaseParallelApplication):
                 launch_broadcast_scheduler(**scheduler_args)
 
         def recursively_start_schedulers(identity, depth):
-            outgoing_id1 = identity * 2 + 1
-            outgoing_id2 = outgoing_id1 + 1
+
+            outgoing_id1 = identity + '0'
+            outgoing_id2 = identity + '1'
             is_leaf = depth == self.broadcast_scheduler_depth
             is_root = depth == 0
 
             # FIXME: use localhost, not client ip for internal communication
             # this will still be localhost anyway for the most common cases
             # of localhost or */0.0.0.0
-            in_addr = self.client_url(BroadcastScheduler.port_name, identity)
-            if not is_root:
-                # non-root schedulers connect, so they need a disambiguated url
-                in_addr = disambiguate_url(in_addr)
+            if is_root:
+                in_addr = self.client_url(BroadcastScheduler.port_name)
+            else:
+                # not root, use internal address
+
+                in_addr = self.internal_url(
+                    BroadcastScheduler.port_name,
+                    index=identity,
+                )
 
             scheduler_args = dict(
                 in_addr=in_addr,
@@ -797,6 +938,7 @@ class IPController(BaseParallelApplication):
                 log_url=self.log_url,
                 outgoing_ids=[outgoing_id1, outgoing_id2],
                 depth=depth,
+                max_depth=self.broadcast_scheduler_depth,
                 is_leaf=is_leaf,
             )
             if is_leaf:
@@ -804,15 +946,19 @@ class IPController(BaseParallelApplication):
                     out_addrs=[
                         self.engine_url(
                             BroadcastScheduler.port_name,
-                            identity - self.number_of_non_leaf_schedulers,
+                            index=int(identity, 2),
                         )
                     ],
                 )
             else:
                 scheduler_args.update(
                     out_addrs=[
-                        self.client_url(BroadcastScheduler.port_name, outgoing_id1),
-                        self.client_url(BroadcastScheduler.port_name, outgoing_id2),
+                        self.internal_url(
+                            BroadcastScheduler.port_name, index=outgoing_id1
+                        ),
+                        self.internal_url(
+                            BroadcastScheduler.port_name, index=outgoing_id2
+                        ),
                     ]
                 )
             launch_in_thread_or_process(scheduler_args, depth=depth, identity=identity)
@@ -820,7 +966,7 @@ class IPController(BaseParallelApplication):
                 recursively_start_schedulers(outgoing_id1, depth + 1)
                 recursively_start_schedulers(outgoing_id2, depth + 1)
 
-        recursively_start_schedulers(0, 0)
+        recursively_start_schedulers(identity='0', depth=0)
 
     def init_schedulers(self):
         children = self.children
