@@ -495,28 +495,7 @@ class LocalProcessLauncher(BaseLauncher):
 
     async def join(self, timeout=None):
         """Wait for the process to exit"""
-        with ThreadPoolExecutor(1) as pool:
-            wait = partial(self.process.wait, timeout)
-            try:
-                try:
-                    future = pool.submit(wait)
-                except RuntimeError:
-                    # e.g. called during process shutdown,
-                    # which raises
-                    # RuntimeError: cannot schedule new futures after interpreter shutdown
-                    # Instead, do the blocking call
-                    wait()
-                else:
-                    await asyncio.wrap_future(future)
-            except psutil.TimeoutExpired:
-                raise TimeoutError(
-                    f"Process {self.pid} did not complete in {timeout} seconds."
-                )
-        if getattr(self, '_stop_waiting', None) and getattr(self, "_wait_thread", None):
-            self._stop_waiting.set()
-            # got here, should be done
-            # wait for wait_thread to cleanup
-            self._wait_thread.join()
+        self._wait_thread.join(timeout=timeout)
 
     def _stream_file(self, path):
         """Stream one file"""
