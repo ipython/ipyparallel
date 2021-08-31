@@ -474,25 +474,36 @@ class IPController(BaseParallelApplication):
     def _defaut_context(self):
         return zmq.Context.instance()
 
+    def construct_url(self, kind: str, channel: str, index=None):
+        if kind == 'engine':
+            info = self.engine_info
+        elif kind == 'client':
+            info = self.client_info
+        elif kind == 'internal':
+            info = self.internal_info
+        else:
+            raise ValueError(
+                "kind must be 'engine', 'client', or 'internal', not {kind!r}"
+            )
+
+        interface = info['interface']
+        sep = '-' if interface.partition("://")[0] == 'ipc' else ':'
+        port = info[channel]
+        if index is not None:
+            port = port[index]
+        return f"{interface}{sep}{port}"
+
+    def internal_url(self, channel, index=None):
+        """return full zmq url for a named internal channel"""
+        return self.construct_url('internal', channel, index)
+
     def client_url(self, channel, index=None):
         """return full zmq url for a named client channel"""
-        return "%s://%s:%i" % (
-            self.client_transport,
-            self.client_ip,
-            self.client_info[channel]
-            if index is None
-            else self.client_info[channel][index],
-        )
+        return self.construct_url('client', channel, index)
 
     def engine_url(self, channel, index=None):
         """return full zmq url for a named engine channel"""
-        return "%s://%s:%i" % (
-            self.engine_transport,
-            self.engine_ip,
-            self.engine_info[channel]
-            if index is None
-            else self.engine_info[channel][index],
-        )
+        return self.construct_url('engine', channel, index)
 
     def save_connection_dict(self, fname, cdict):
         """save a connection dict to json file."""
@@ -595,6 +606,13 @@ class IPController(BaseParallelApplication):
 
             scheme = TaskScheduler.scheme_name.default_value
 
+        broadcast_ports = list(self.broadcast)  # copy
+        client_broadcast_port = broadcast_ports[0]
+        broadcast_ports = broadcast_ports[1:]
+
+        engine_broadcast_ports = broadcast_ports[: self.number_of_leaf_schedulers]
+        internal_broadcast_ports = broadcast_ports[self.number_of_leaf_schedulers :]
+
         # build connection dicts
         engine = self.engine_info = {
             'interface': "%s://%s" % (self.engine_transport, self.engine_ip),
@@ -605,9 +623,7 @@ class IPController(BaseParallelApplication):
             'hb_pong': self.hb[1],
             'task': self.task[1],
             'iopub': self.iopub[1],
-            BroadcastScheduler.port_name: self.broadcast[
-                -self.number_of_leaf_schedulers :
-            ],
+            BroadcastScheduler.port_name: engine_broadcast_ports,
         }
 
         client = self.client_info = {
@@ -619,13 +635,21 @@ class IPController(BaseParallelApplication):
             'task_scheme': scheme,
             'iopub': self.iopub[0],
             'notification': self.notifier_port,
-            BroadcastScheduler.port_name: self.broadcast[
-                : self.number_of_broadcast_schedulers
-            ],
+            BroadcastScheduler.port_name: client_broadcast_port,
+        }
+        if self.engine_transport == 'tcp':
+            internal_interface = "tcp://127.0.0.1"
+        else:
+            internal_interface = engine['interface']
+
+        self.internal_info = {
+            'interface': internal_interface,
+            BroadcastScheduler.port_name: internal_broadcast_ports,
         }
 
         self.log.debug("Hub engine addrs: %s", self.engine_info)
         self.log.debug("Hub client addrs: %s", self.client_info)
+        self.log.debug("Hub internal addrs: %s", self.internal_info)
 
         # Registrar socket
         q = ZMQStream(ctx.socket(zmq.ROUTER), loop)
@@ -781,10 +805,14 @@ class IPController(BaseParallelApplication):
             # FIXME: use localhost, not client ip for internal communication
             # this will still be localhost anyway for the most common cases
             # of localhost or */0.0.0.0
-            in_addr = self.client_url(BroadcastScheduler.port_name, identity)
-            if not is_root:
-                # non-root schedulers connect, so they need a disambiguated url
-                in_addr = disambiguate_url(in_addr)
+            if is_root:
+                in_addr = self.client_url(BroadcastScheduler.port_name)
+            else:
+                # not root, use internal address
+                in_addr = self.internal_url(
+                    BroadcastScheduler.port_name,
+                    index=identity - 1,
+                )
 
             scheduler_args = dict(
                 in_addr=in_addr,
@@ -811,8 +839,12 @@ class IPController(BaseParallelApplication):
             else:
                 scheduler_args.update(
                     out_addrs=[
-                        self.client_url(BroadcastScheduler.port_name, outgoing_id1),
-                        self.client_url(BroadcastScheduler.port_name, outgoing_id2),
+                        self.internal_url(
+                            BroadcastScheduler.port_name, index=outgoing_id1 - 1
+                        ),
+                        self.internal_url(
+                            BroadcastScheduler.port_name, index=outgoing_id2 - 1
+                        ),
                     ]
                 )
             launch_in_thread_or_process(scheduler_args, depth=depth, identity=identity)
