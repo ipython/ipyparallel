@@ -21,7 +21,6 @@ from multiprocessing import cpu_count
 from weakref import WeakSet
 
 import IPython
-import traitlets.log
 from traitlets import Any
 from traitlets import Bool
 from traitlets import default
@@ -33,6 +32,7 @@ from traitlets import Integer
 from traitlets import List
 from traitlets import Unicode
 from traitlets import validate
+from traitlets.config import Application
 from traitlets.config import Config
 from traitlets.config import LoggingConfigurable
 
@@ -238,8 +238,15 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             handler = logging.StreamHandler(sys.stdout)
             log.handlers = [handler]
             return log
+        elif self.parent and getattr(self.parent, 'log', None) is not None:
+            return self.parent.log
+        elif Application.initialized():
+            return Application.instance().log
         else:
-            return traitlets.log.get_logger()
+            # set up our own logger
+            log = logging.getLogger(f"{__name__}.{self.cluster_id}")
+            log.setLevel(self.log_level)
+            return log
 
     load_profile = Bool(
         True,
@@ -584,7 +591,11 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
     def _controller_stopped(self, stop_data=None):
         """Callback when a controller stops"""
-        self.log.info(f"Controller stopped: {stop_data}")
+        if stop_data and stop_data.get("exit_code"):
+            log = self.log.warning
+        else:
+            log = self.log.info
+        log(f"Controller stopped: {stop_data}")
         self.update_cluster_file()
 
     def _new_engine_set_id(self):
@@ -627,7 +638,11 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         return engine_set_id
 
     def _engines_stopped(self, engine_set_id, stop_data=None):
-        self.log.warning(f"engine set stopped {engine_set_id}: {stop_data}")
+        if stop_data and stop_data.get("exit_code"):
+            log = self.log.warning
+        else:
+            log = self.log.info
+        log(f"engine set stopped {engine_set_id}: {stop_data}")
         self.update_cluster_file()
 
     async def start_cluster(self, n=None):
