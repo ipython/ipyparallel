@@ -662,8 +662,11 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         all engines are stopped.
         """
         if engine_set_id is None:
+            futures = []
             for engine_set_id in list(self.engines):
-                await self.stop_engines(engine_set_id)
+                futures.append(self.stop_engines(engine_set_id))
+            if futures:
+                await asyncio.gather(*futures)
             return
         self.log.info(f"Stopping engine(s): {engine_set_id}")
         engine_set = self.engines[engine_set_id]
@@ -741,8 +744,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
     async def stop_cluster(self):
         """Stop the controller and all engines"""
-        await self.stop_engines()
-        await self.stop_controller()
+        await asyncio.gather(self.stop_controller(), self.stop_engines())
 
     async def connect_client(self, **client_kwargs):
         """Return a client connected to the cluster"""
