@@ -98,7 +98,7 @@ class KernelNanny:
         except psutil.TimeoutExpired:
             try:
                 status = self.parent_process.status()
-            except psutil.NoSuchProcessError:
+            except psutil.NoSuchProcess:
                 status = "exited"
 
         self.log.critical(f"Pipe closed, parent {self.pid} has status: {status}")
