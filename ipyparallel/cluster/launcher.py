@@ -490,7 +490,7 @@ class LocalProcessLauncher(BaseLauncher):
 
         self.notify_start(self.process.pid)
         self._start_waiting()
-        if self.log.level <= logging.DEBUG:
+        if 1 <= self.log.getEffectiveLevel() <= logging.DEBUG:
             self._start_streaming()
 
     async def join(self, timeout=None):
@@ -729,10 +729,23 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
     def _notice_engine_stopped(self, data):
         identifier = data['identifier']
         launcher = self.launchers.pop(identifier)
+        engines = self.stop_data.setdefault("engines", {})
         if launcher is not None:
             self.outputs[identifier] = launcher.get_output()
-        self.stop_data[identifier] = data
+        engines[identifier] = data
         if not self.launchers:
+            # get exit code from engine exit codes
+            # set error code if any engine has an error
+            self.stop_data["exit_code"] = None
+            for engine in engines.values():
+                if 'exit_code' in engine:
+                    if self.stop_data['exit_code'] is None:
+                        self.stop_data['exit_code'] = engine['exit_code']
+                    if engine['exit_code']:
+                        # save the first nonzero exit code
+                        self.stop_data['exit_code'] = engine['exit_code']
+                        break
+
             self.notify_stop(self.stop_data)
 
     def get_output(self, remove=False):
@@ -804,6 +817,60 @@ class MPILauncher(LocalProcessLauncher):
         """Start n instances of the program using mpiexec."""
         self.n = n
         return super(MPILauncher, self).start()
+
+    def _log_output(self, stop_data):
+        """Try to log mpiexec error output, if any, at warning level"""
+        super()._log_output()
+        if self.log.getEffectiveLevel() <= logging.DEBUG:
+            return
+        output = self.get_output(remove=False)
+        mpiexec_lines = []
+
+        in_mpi = False
+        after_mpi = False
+        mpi_tail = 0
+        for line in output.splitlines(True):
+            if line.startswith("======="):
+                # mpich output looks like one block,
+                # with a few lines trailing after
+                # =========
+                # = message
+                # =
+                # =========
+                # YOUR APPLICATION TERMINATED WITH...
+                if in_mpi:
+                    after_mpi = True
+                    mpi_tail = 2
+                    in_mpi = False
+                else:
+                    in_mpi = True
+            elif not in_mpi and line.startswith("-----"):
+                # openmpi has less clear boundaries;
+                # potentially several blocks that start and end with `----`
+                # and error messages can show up after one or more blocks
+                # once we see one of these lines, capture everything after it
+                # toggle on each such line
+                if not in_mpi:
+                    in_mpi = True
+                # this would let us only capture messages inside blocks
+                # but doing so would exclude most useful error output
+                # else:
+                #     # show the trailing delimiter line
+                #     mpiexec_lines.append(line)
+                #     in_mpi = False
+                #     continue
+
+            if in_mpi:
+                mpiexec_lines.append(line)
+            elif after_mpi:
+                if mpi_tail <= 0:
+                    break
+                else:
+                    mpi_tail -= 1
+                    mpiexec_lines.append(line)
+
+        if mpiexec_lines:
+            self.log.warning("mpiexec error output:\n" + "".join(mpiexec_lines))
 
 
 class MPIControllerLauncher(MPILauncher, ControllerLauncher):
