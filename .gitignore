@@ -31,3 +31,4 @@ lib
 
 ipyparallel/labextension
 tsconfig.tsbuildinfo
+dask-worker-space
