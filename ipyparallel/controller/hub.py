@@ -15,6 +15,7 @@ import time
 from collections import deque
 from datetime import datetime
 
+import zmq
 from jupyter_client.jsonutil import parse_date
 from jupyter_client.session import Session
 from tornado import ioloop
@@ -22,6 +23,7 @@ from traitlets import Any
 from traitlets import Bytes
 from traitlets import default
 from traitlets import Dict
+from traitlets import Float
 from traitlets import HasTraits
 from traitlets import Instance
 from traitlets import Integer
@@ -118,6 +120,7 @@ class EngineConnector(HasTraits):
     uuid (unicode): engine UUID
     pending: set of msg_ids
     stallback: tornado timeout for stalled registration
+    registration_started (float): time when registration began
     """
 
     id = Integer()
@@ -125,6 +128,12 @@ class EngineConnector(HasTraits):
     ident = Bytes()
     pending = Set()
     stallback = Any()
+    registration_started = Float()
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        if not self.registration_started:
+            self.registration_started = time.monotonic()
 
 
 class Hub(LoggingConfigurable):
@@ -876,8 +885,7 @@ class Hub(LoggingConfigurable):
             return
 
         eid = self.new_engine_id(content.get('id'))
-
-        self.log.debug("registration::register_engine(%i, %r)", eid, uuid)
+        self.log.debug(f"registration::requesting registration {eid}:{uuid}")
 
         content = dict(
             id=eid,
@@ -912,10 +920,15 @@ class Hub(LoggingConfigurable):
         msg = self.session.send(
             self.query, "registration_reply", content=content, ident=reg
         )
+        # actually send replies to avoid async starvation during a registration flood
+        # it's important that this message has actually been sent
+        # before we start the stalled registration countdown
+        self.query.flush(zmq.POLLOUT)
 
         heart = uuid.encode("utf8")
 
         if content['status'] == 'ok':
+            self.log.info(f"registration::accepting registration {eid}:{uuid}")
             t = self.loop.add_timeout(
                 self.loop.time() + self.registration_timeout,
                 lambda: self._purge_stalled_registration(heart),
@@ -1009,10 +1022,14 @@ class Hub(LoggingConfigurable):
             ec = self.incoming_registrations.pop(heart)
         except KeyError:
             self.log.error(
-                "registration::tried to finish nonexistant registration", exc_info=True
+                f"registration::tried to finish nonexistant registration for {heart}",
+                exc_info=True,
             )
             return
-        self.log.info("registration::finished registering engine %i:%s", ec.id, ec.uuid)
+        duration_ms = int(1000 * (time.monotonic() - ec.registration_started))
+        self.log.info(
+            f"registration::finished registering engine {ec.id}:{ec.uuid} in {duration_ms}ms"
+        )
         if ec.stallback is not None:
             self.loop.remove_timeout(ec.stallback)
         eid = ec.id
@@ -1033,11 +1050,14 @@ class Hub(LoggingConfigurable):
         self._save_engine_state()
 
     def _purge_stalled_registration(self, heart):
+        # flush monitor messages before purging
+        # first heartbeat might be waiting to be handled
+        self.mon_stream.flush()
         if heart in self.incoming_registrations:
             ec = self.incoming_registrations.pop(heart)
-            self.log.info("registration::purging stalled registration: %i", ec.id)
-        else:
-            pass
+            self.log.warning(
+                f"registration::purging stalled registration {ec.id}:{ec.uuid}"
+            )
 
     # -------------------------------------------------------------------------
     # Engine State

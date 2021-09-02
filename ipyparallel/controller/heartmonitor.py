@@ -180,6 +180,7 @@ class HeartMonitor(LoggingConfigurable):
     def handle_new_hearts(self, hearts):
         for heart in hearts:
             self.hearts.add(heart)
+        self.log.debug(f"Notifying hub of {len(hearts)} new hearts")
         self.session.send(
             self.monitor_stream,
             "new_heart",
@@ -190,6 +191,7 @@ class HeartMonitor(LoggingConfigurable):
         )
 
     def handle_heart_failure(self, hearts):
+        self.log.debug(f"Notifying hub of {len(hearts)} stopped hearts")
         self.session.send(
             self.monitor_stream,
             "stopped_heart",

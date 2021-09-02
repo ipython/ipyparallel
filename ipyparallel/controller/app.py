@@ -789,7 +789,7 @@ class IPController(BaseParallelApplication):
             kwargs=dict(
                 ping_url=self.engine_url('hb_ping'),
                 pong_url=self.engine_url('hb_pong'),
-                monitor_url=self.monitor_url,
+                monitor_url=disambiguate_url(self.monitor_url),
                 config=hm_config,
             ),
             daemon=True,
@@ -1078,7 +1078,7 @@ class IPController(BaseParallelApplication):
     def handle_signal(self, sig, frame):
         self.log.critical("Received signal %i, shutting down", sig)
         self.terminate_children()
-        self.loop.stop()
+        self.loop.add_callback_from_signal(self.loop.stop)
 
     def init_signal(self):
         for sig in (SIGINT, SIGABRT, SIGTERM):
@@ -1118,16 +1118,17 @@ class IPController(BaseParallelApplication):
             else:
                 self.log.debug(f"Started thread {child.name}")
 
-        self.init_signal()
-
         self.heartmonitor_process.start()
         self.log.info(f"Heartmonitor beating every {self.hub.heartmonitor_period}ms")
+
+        self.init_signal()
 
         try:
             self.loop.start()
         except KeyboardInterrupt:
             self.log.critical("Interrupted, Exiting...\n")
         finally:
+            self.loop.close(all_fds=True)
             self.cleanup_connection_files()
 
 
