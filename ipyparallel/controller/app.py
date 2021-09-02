@@ -38,6 +38,7 @@ from traitlets import Type
 from traitlets import Unicode
 from traitlets import Union
 from traitlets import validate
+from traitlets.config import Config
 from zmq.devices import ProcessMonitoredQueue
 from zmq.eventloop.zmqstream import ZMQStream
 from zmq.log.handlers import PUBHandler
@@ -51,6 +52,7 @@ from ipyparallel.apps.baseapp import catch_config_error
 from ipyparallel.controller.broadcast_scheduler import launch_broadcast_scheduler
 from ipyparallel.controller.dictdb import DictDB
 from ipyparallel.controller.heartmonitor import HeartMonitor
+from ipyparallel.controller.heartmonitor import start_heartmonitor
 from ipyparallel.controller.hub import Hub
 from ipyparallel.controller.scheduler import launch_scheduler
 from ipyparallel.controller.task_scheduler import TaskScheduler
@@ -487,12 +489,10 @@ class IPController(BaseParallelApplication):
         "10*heartmonitor.period)]",
     )
 
+    @default("registration_timeout")
     def _registration_timeout_default(self):
-        if self.heartmonitor is None:
-            # early initialization, this value will be ignored
-            return 0
-            # heartmonitor period is in milliseconds, so 10x in seconds is .01
-        return max(30, int(0.01 * self.heartmonitor.period))
+        # heartmonitor period is in milliseconds, so 10x in seconds is .01
+        return max(30, int(0.01 * HeartMonitor(parent=self).period))
 
     # not configurable
     db = Instance('ipyparallel.controller.dictdb.BaseDB', allow_none=True)
@@ -778,17 +778,21 @@ class IPController(BaseParallelApplication):
         ### Engine connections ###
 
         # heartbeat
-        hpub = ctx.socket(zmq.PUB)
-        hpub.bind(self.engine_url('hb_ping'))
-        hrep = ctx.socket(zmq.ROUTER)
-        util.set_hwm(hrep, 0)
-        hrep.bind(self.engine_url('hb_pong'))
-        self.heartmonitor = HeartMonitor(
-            loop=loop,
-            parent=self,
-            log=self.log,
-            pingstream=ZMQStream(hpub, loop),
-            pongstream=ZMQStream(hrep, loop),
+        hm_config = Config()
+        for key in ("Session", "HeartMonitor"):
+            if key in self.config:
+                hm_config[key] = self.config[key]
+            hm_config.Session.key = self.session.key
+
+        self.heartmonitor_process = Process(
+            target=start_heartmonitor,
+            kwargs=dict(
+                ping_url=self.engine_url('hb_ping'),
+                pong_url=self.engine_url('hb_pong'),
+                monitor_url=self.monitor_url,
+                config=hm_config,
+            ),
+            daemon=True,
         )
 
         ### Client connections ###
@@ -821,11 +825,11 @@ class IPController(BaseParallelApplication):
             loop=loop,
             session=self.session,
             monitor=sub,
-            heartmonitor=self.heartmonitor,
             query=q,
             notifier=n,
             resubmit=r,
             db=self.db,
+            heartmonitor_period=HeartMonitor(parent=self).period,
             engine_info=self.engine_info,
             client_info=self.client_info,
             log=self.log,
@@ -1016,7 +1020,7 @@ class IPController(BaseParallelApplication):
             scheme = TaskScheduler.scheme_name.default_value
         # Task Queue (in a Process)
         if scheme == 'pure':
-            self.log.warn("task::using pure DEALER Task scheduler")
+            self.log.warning("task::using pure DEALER Task scheduler")
             q = mq(zmq.ROUTER, zmq.DEALER, zmq.PUB, b'intask', b'outtask')
             q.name = "TaskScheduler(pure)"
             # q.setsockopt_out(zmq.HWM, hub.hwm)
@@ -1057,7 +1061,7 @@ class IPController(BaseParallelApplication):
 
     def terminate_children(self):
         child_procs = []
-        for child in self.children:
+        for child in self.children + [self.heartmonitor_process]:
             if isinstance(child, ProcessMonitoredQueue):
                 child_procs.append(child.launcher)
             elif isinstance(child, Process):
@@ -1116,8 +1120,8 @@ class IPController(BaseParallelApplication):
 
         self.init_signal()
 
-        self.heartmonitor.start()
-        self.log.info("Heartmonitor started")
+        self.heartmonitor_process.start()
+        self.log.info(f"Heartmonitor beating every {self.hub.heartmonitor_period}ms")
 
         try:
             self.loop.start()

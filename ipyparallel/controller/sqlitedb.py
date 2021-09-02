@@ -236,11 +236,11 @@ class SQLiteDB(BaseDB):
             types[line[1]] = line[2]
         if self._keys != keys:
             # key mismatch
-            self.log.warn('keys mismatch')
+            self.log.warning('keys mismatch')
             return False
         for key in self._keys:
             if types[key] != self._types[key]:
-                self.log.warn(
+                self.log.warning(
                     'type mismatch: %s: %s != %s' % (key, types[key], self._types[key])
                 )
                 return False
@@ -269,7 +269,7 @@ class SQLiteDB(BaseDB):
         while not self._check_table():
             i += 1
             self.table = first_table + '_%i' % i
-            self.log.warn(
+            self.log.warning(
                 "Table %s exists and doesn't match db format, trying %s"
                 % (previous_table, self.table)
             )

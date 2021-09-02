@@ -695,7 +695,7 @@ class IPEngine(BaseParallelApplication):
         self._hb_listener.flush()
         if self._hb_last_monitored > self._hb_last_pinged:
             self._hb_missed_beats += 1
-            self.log.warn(
+            self.log.warning(
                 "No heartbeat in the last %s ms (%s time(s) in a row).",
                 self.hb_check_period,
                 self._hb_missed_beats,
@@ -725,8 +725,8 @@ class IPEngine(BaseParallelApplication):
         self.find_url_file()
 
         if self.wait_for_url_file and not os.path.exists(self.url_file):
-            self.log.warn("url_file %r not found", self.url_file)
-            self.log.warn(
+            self.log.warning("url_file %r not found", self.url_file)
+            self.log.warning(
                 "Waiting up to %.1f seconds for it to arrive.", self.wait_for_url_file
             )
             tic = time.time()

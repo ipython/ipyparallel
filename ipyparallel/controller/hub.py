@@ -12,6 +12,7 @@ import json
 import os
 import sys
 import time
+from collections import deque
 from datetime import datetime
 
 from jupyter_client.jsonutil import parse_date
@@ -19,6 +20,7 @@ from jupyter_client.session import Session
 from tornado import ioloop
 from traitlets import Any
 from traitlets import Bytes
+from traitlets import default
 from traitlets import Dict
 from traitlets import HasTraits
 from traitlets import Instance
@@ -152,6 +154,7 @@ class Hub(LoggingConfigurable):
     by_ident = Dict()  # map bytes identities : int engine id
     engines = Dict()  # map int engine id : EngineConnector
     hearts = Dict()  # map bytes identities : int engine id, only for active heartbeats
+    heartmonitor_period = Integer()
     pending = Set()
     queues = Dict()  # pending msg_ids keyed by engine_id
     tasks = Dict()  # pending msg_ids submitted as tasks, keyed by client_id
@@ -163,8 +166,18 @@ class Hub(LoggingConfigurable):
     _idcounter = Integer(0)
     distributed_scheduler = Any()
 
+    expect_stopped_hearts = Instance(deque)
+
+    @default("expect_stopped_hearts")
+    def _default_expect_stopped_hearts(self):
+        # remember the last this-many hearts
+        # silences warnings about ignoring stopped hearts for unregistered engines
+        # harmless, but noisy if they happen on every unregistration
+        return deque(maxlen=1024)
+
     loop = Instance(ioloop.IOLoop)
 
+    @default("loop")
     def _default_loop(self):
         return ioloop.IOLoop.current()
 
@@ -194,14 +207,11 @@ class Hub(LoggingConfigurable):
         client_info: zmq address/protocol dict for client connections
         """
 
-        super(Hub, self).__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # register our callbacks
         self.query.on_recv(self.dispatch_query)
         self.monitor.on_recv(self.dispatch_monitor_traffic)
-
-        self.heartmonitor.add_heart_failure_handler(self.handle_heart_failure)
-        self.heartmonitor.add_new_heart_handler(self.handle_new_heart)
 
         self.monitor_handlers = {
             b'in': self.save_queue_request,
@@ -214,6 +224,7 @@ class Hub(LoggingConfigurable):
             b'incontrol': _passer,
             b'outcontrol': _passer,
             b'iopub': self.monitor_iopub_message,
+            b'heartmonitor': self.heartmonitor_message,
         }
 
         self.query_handlers = {
@@ -366,25 +377,49 @@ class Hub(LoggingConfigurable):
 
     # ----------------------- Heartbeat --------------------------------------
 
+    @util.log_errors
+    def heartmonitor_message(self, topics, msg):
+        """Handle a message from the heart monitor"""
+        try:
+            msg = self.session.deserialize(msg)
+        except Exception:
+            self.log.error(
+                "heartmonitor::invalid message %r",
+                msg,
+                exc_info=True,
+            )
+            return
+        msg_type = msg['header']['msg_type']
+        if msg_type == 'new_heart':
+            hearts = msg['content']['hearts']
+            self.log.info(f"Registering {len(hearts)} new hearts")
+            for heart in hearts:
+                self.handle_new_heart(heart.encode("utf8"))
+        elif msg_type == 'stopped_heart':
+            hearts = msg['content']['hearts']
+            self.log.warning(f"{len(hearts)} hearts stopped")
+            for heart in hearts:
+                self.handle_stopped_heart(heart.encode("utf8"))
+
     def handle_new_heart(self, heart):
-        """handler to attach to heartbeater.
-        Called when a new heart starts to beat.
-        Triggers completion of registration."""
+        """Handle a new heart that just started beating"""
         self.log.debug("heartbeat::handle_new_heart(%r)", heart)
         if heart not in self.incoming_registrations:
             self.log.info("heartbeat::ignoring new heart: %r", heart)
         else:
             self.finish_registration(heart)
 
-    def handle_heart_failure(self, heart):
-        """handler to attach to heartbeater.
-        called when a previously registered heart fails to respond to beat request.
-        triggers unregistration"""
-        self.log.debug("heartbeat::handle_heart_failure(%r)", heart)
+    def handle_stopped_heart(self, heart):
+        """Handle notification that heart has stopped"""
+        self.log.debug("heartbeat::handle_stopped_heart(%r)", heart)
         eid = self.hearts.get(heart, None)
         if eid is None:
-            self.log.info(
-                "heartbeat::ignoring heart failure %r (not an engine or already dead)",
+            if heart in self.expect_stopped_hearts:
+                log = self.log.debug
+            else:
+                log = self.log.info
+            log(
+                "heartbeat::ignoring heart failure %r (probably unregistered already)",
                 heart,
             )
         else:
@@ -431,7 +466,7 @@ class Hub(LoggingConfigurable):
             for key, evalue in existing.items():
                 rvalue = record.get(key, None)
                 if evalue and rvalue and evalue != rvalue:
-                    self.log.warn(
+                    self.log.warning(
                         "conflicting initial state for record: %r:%r <%r> %r",
                         msg_id,
                         rvalue,
@@ -489,7 +524,7 @@ class Hub(LoggingConfigurable):
         elif msg_id not in self.all_completed:
             # it could be a result from a dead engine that died before delivering the
             # result
-            self.log.warn("queue:: unknown msg finished %r", msg_id)
+            self.log.warning("queue:: unknown msg finished %r", msg_id)
             return
         # update record anyway, because the unregistration could have been premature
         rheader = msg['header']
@@ -549,7 +584,7 @@ class Hub(LoggingConfigurable):
         # save the result of a completed broadcast
         parent = msg['parent_header']
         if not parent:
-            self.log.warn(f'Broadcast message {msg} had no parent')
+            self.log.warning(f'Broadcast message {msg} had no parent')
             return
         msg_id = parent['msg_id']
         header = msg['header']
@@ -629,7 +664,7 @@ class Hub(LoggingConfigurable):
                     continue
                 rvalue = record.get(key, None)
                 if evalue and rvalue and evalue != rvalue:
-                    self.log.warn(
+                    self.log.warning(
                         "conflicting initial state for record: %r:%r <%r> %r",
                         msg_id,
                         rvalue,
@@ -667,7 +702,7 @@ class Hub(LoggingConfigurable):
         parent = msg['parent_header']
         if not parent:
             # print msg
-            self.log.warn("Task %r had no parent!", msg)
+            self.log.warning("Task %r had no parent!", msg)
             return
         msg_id = parent['msg_id']
         if msg_id in self.unassigned:
@@ -795,7 +830,7 @@ class Hub(LoggingConfigurable):
         elif msg_type == 'data_pub':
             self.log.info("ignored data_pub message for %s" % msg_id)
         else:
-            self.log.warn("unhandled iopub msg_type: %r", msg_type)
+            self.log.warning("unhandled iopub msg_type: %r", msg_type)
 
         if not d:
             return
@@ -847,7 +882,7 @@ class Hub(LoggingConfigurable):
         content = dict(
             id=eid,
             status='ok',
-            hb_period=self.heartmonitor.period,
+            hb_period=self.heartmonitor_period,
             connection_info=self.engine_info,
         )
         # check if requesting available IDs:
@@ -881,21 +916,13 @@ class Hub(LoggingConfigurable):
         heart = uuid.encode("utf8")
 
         if content['status'] == 'ok':
-            if heart in self.heartmonitor.hearts:
-                # already beating
-                self.incoming_registrations[heart] = EngineConnector(
-                    id=eid, uuid=uuid, ident=heart
-                )
-                self.finish_registration(heart)
-            else:
-                purge = lambda: self._purge_stalled_registration(heart)
-                t = self.loop.add_timeout(
-                    self.loop.time() + self.registration_timeout,
-                    purge,
-                )
-                self.incoming_registrations[heart] = EngineConnector(
-                    id=eid, uuid=uuid, ident=heart, stallback=t
-                )
+            t = self.loop.add_timeout(
+                self.loop.time() + self.registration_timeout,
+                lambda: self._purge_stalled_registration(heart),
+            )
+            self.incoming_registrations[heart] = EngineConnector(
+                id=eid, uuid=uuid, ident=heart, stallback=t
+            )
         else:
             self.log.error(
                 "registration::registration %i failed: %r", eid, content['evalue']
@@ -924,8 +951,7 @@ class Hub(LoggingConfigurable):
 
         # stop the heartbeats
         self.hearts.pop(ec.ident, None)
-        self.heartmonitor.responses.discard(ec.ident)
-        self.heartmonitor.hearts.discard(ec.ident)
+        self.expect_stopped_hearts.append(ec.ident)
 
         self.loop.add_timeout(
             self.loop.time() + self.registration_timeout,
@@ -1060,9 +1086,6 @@ class Hub(LoggingConfigurable):
         self.notifier = None
         for eid, uuid in state['engines'].items():
             heart = uuid.encode('ascii')
-            # start with this heart as current and beating:
-            self.heartmonitor.responses.add(heart)
-            self.heartmonitor.hearts.add(heart)
 
             self.incoming_registrations[heart] = EngineConnector(
                 id=int(eid), uuid=uuid, ident=heart

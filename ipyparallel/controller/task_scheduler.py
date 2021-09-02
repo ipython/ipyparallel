@@ -227,12 +227,12 @@ class TaskScheduler(Scheduler):
         try:
             idents, msg = self.session.feed_identities(msg)
         except ValueError:
-            self.log.warn("task::Invalid Message: %r", msg)
+            self.log.warning("task::Invalid Message: %r", msg)
             return
         try:
             msg = self.session.deserialize(msg)
         except ValueError:
-            self.log.warn("task::Unauthorized message from: %r" % idents)
+            self.log.warning("task::Unauthorized message from: %r" % idents)
             return
 
         content = msg['content']
@@ -245,12 +245,12 @@ class TaskScheduler(Scheduler):
         try:
             idents, msg = self.session.feed_identities(msg)
         except ValueError:
-            self.log.warn("task::Invalid Message: %r", msg)
+            self.log.warning("task::Invalid Message: %r", msg)
             return
         try:
             msg = self.session.deserialize(msg)
         except ValueError:
-            self.log.warn("task::Unauthorized message from: %r" % idents)
+            self.log.warning("task::Unauthorized message from: %r" % idents)
             return
 
         msg_type = msg['header']['msg_type']
@@ -451,7 +451,7 @@ class TaskScheduler(Scheduler):
             return
         now = time.time()
         if job.timeout >= (now + 1):
-            self.log.warn(
+            self.log.warning(
                 "task %s timeout fired prematurely: %s > %s",
                 job.msg_id,
                 job.timeout,
