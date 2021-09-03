@@ -3,10 +3,10 @@
 # Distributed under the terms of the Modified BSD License.
 from __future__ import print_function
 
+import asyncio
 import json
 import os
 import socket
-import sys
 import time
 import types
 import warnings
@@ -964,16 +964,14 @@ class Client(HasTraits):
 
     def _make_io_loop(self):
         """Make my IOLoop. Override with IOLoop.current to return"""
-        if 'asyncio' in sys.modules:
-            # tornado 5 on asyncio requires creating a new asyncio loop
-            import asyncio
-
-            try:
-                asyncio.get_event_loop()
-            except RuntimeError:
-                # no asyncio loop, make one
-                # e.g.
-                asyncio.set_event_loop(asyncio.new_event_loop())
+        # runs first thing in the io thread
+        # always create a fresh asyncio loop for the thread
+        asyncio_loop = asyncio.new_event_loop()
+        if hasattr(asyncio, 'ProactorEventLoop') and isinstance(
+            asyncio_loop, asyncio.ProactorEventLoop
+        ):
+            asyncio_loop = asyncio.SelectorEventLoop()
+        asyncio.set_event_loop(asyncio_loop)
         loop = ioloop.IOLoop()
         loop.make_current()
         return loop
@@ -1027,8 +1025,10 @@ class Client(HasTraits):
         # so that the main thread knows that all our attributes are defined
         if start_evt:
             start_evt.set()
-        self._io_loop.start()
-        self._io_loop.close()
+        try:
+            self._io_loop.start()
+        finally:
+            self._io_loop.close(all_fds=True)
 
     @unpack_message
     def _dispatch_single_reply(self, msg):

@@ -423,6 +423,7 @@ class LocalProcessLauncher(BaseLauncher):
     stdout = None
     stderr = None
     process = None
+    _wait_thread = None
 
     def find_args(self):
         return self.cmd_and_args
@@ -495,7 +496,8 @@ class LocalProcessLauncher(BaseLauncher):
 
     async def join(self, timeout=None):
         """Wait for the process to exit"""
-        self._wait_thread.join(timeout=timeout)
+        if self._wait_thread is not None:
+            self._wait_thread.join(timeout=timeout)
 
     def _stream_file(self, path):
         """Stream one file"""
@@ -567,7 +569,7 @@ class LocalProcessLauncher(BaseLauncher):
 
     def signal(self, sig):
         if self.state == 'running':
-            if WINDOWS and sig == SIGKILL:
+            if WINDOWS and sig in {SIGTERM, SIGKILL}:
                 # use Windows tree-kill for better child cleanup
                 cmd = ['taskkill', '/pid', str(self.process.pid), '/t', '/F']
                 check_output(cmd)
@@ -1299,7 +1301,7 @@ class SSHLauncher(LocalProcessLauncher):
                 wait()
             else:
                 await asyncio.wrap_future(future)
-        if getattr(self, '_stop_waiting', None) and getattr(self, "_wait_thread", None):
+        if getattr(self, '_stop_waiting', None) and self._wait_thread:
             self._stop_waiting.set()
             # got here, should be done
             # wait for wait_thread to cleanup
