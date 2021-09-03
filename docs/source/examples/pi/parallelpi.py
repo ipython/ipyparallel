@@ -4,7 +4,7 @@ This program uses the functions in :file:`pidigits.py` to calculate
 the frequencies of 2 digit sequences in the digits of pi. The
 results are plotted using matplotlib.
 
-To run, text files from http://www.super-computing.org/
+To run, text files from https://www.super-computing.org/
 must be installed in the working directory of the IPython engines.
 The actual filenames to be used can be set with the ``filestring``
 variable below.

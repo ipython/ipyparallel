@@ -1,7 +1,7 @@
 """Example showing how to merge multiple remote data streams.
 """
 # Slightly modified version of:
-# http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/511509
+# https://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/511509
 from __future__ import print_function
 
 import heapq
