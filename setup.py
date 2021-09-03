@@ -67,7 +67,11 @@ from setupbase import wrap_installers, npm_builder, get_data_files
 data_files = get_data_files(data_files_spec)
 
 builder = npm_builder()
-cmdclass = wrap_installers(pre_develop=builder, pre_dist=builder)
+if os.environ.get("IPP_DISABLE_JS") == "1":
+    print("Skipping js installation")
+    cmdclass = {}
+else:
+    cmdclass = wrap_installers(pre_develop=builder, pre_dist=builder)
 
 if "bdist_egg" not in sys.argv:
     cmdclass["bdist_egg"] = bdist_egg_disabled

@@ -797,7 +797,7 @@ class MPILauncher(LocalProcessLauncher):
             if deprecated:
                 newname = oldname.replace('MPIExec', 'MPI')
                 config[newname].update(deprecated)
-                self.log.warn(
+                self.log.warning(
                     "WARNING: %s name has been deprecated, use %s", oldname, newname
                 )
 
@@ -913,7 +913,7 @@ class DeprecatedMPILauncher:
     def warn(self):
         oldname = self.__class__.__name__
         newname = oldname.replace('MPIExec', 'MPI')
-        self.log.warn("WARNING: %s name is deprecated, use %s", oldname, newname)
+        self.log.warning("WARNING: %s name is deprecated, use %s", oldname, newname)
 
 
 class MPIExecLauncher(MPILauncher, DeprecatedMPILauncher):

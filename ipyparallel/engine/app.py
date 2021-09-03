@@ -227,6 +227,17 @@ class IPEngine(BaseParallelApplication):
         config=True,
         help="""Code to execute in the user namespace when initializing MPI""",
     )
+    mpi_registration_delay = Float(
+        0.02,
+        config=True,
+        help="""Per-engine delay for mpiexec-launched engines
+
+        avoids flooding the controller with registrations,
+        which can stall under heavy load.
+
+        Default: .02 (50 engines/sec, or 3000 engines/minute)
+        """,
+    )
 
     # not configurable:
     user_ns = Dict()
@@ -444,6 +455,16 @@ class IPEngine(BaseParallelApplication):
 
     def register(self):
         """send the registration_request"""
+        if self.use_mpi and self.id and self.id >= 100 and self.mpi_registration_delay:
+            # Some launchres implement delay at the Launcher level,
+            # but mpiexec must implement it int he engine process itself
+            # delay based on our rank
+
+            delay = self.id * self.mpi_registration_delay
+            self.log.info(
+                f"Delaying registration for {self.id} by {int(delay * 1000)}ms"
+            )
+            time.sleep(delay)
 
         self.log.info("Registering with controller at %s" % self.registration_url)
         ctx = self.context
@@ -494,12 +515,15 @@ class IPEngine(BaseParallelApplication):
             return [f'{info["interface"]}:{port}' for port in info[key]]
 
         if content['status'] == 'ok':
-            if self.id is not None and content['id'] != self.id:
-                self.log.warning(
-                    "Did not get the requested id: %i != %i", content['id'], self.id
-                )
+            requested_id = self.id
             self.id = content['id']
-            self.log.name += f".{self.id}"
+            if requested_id is not None and self.id != requested_id:
+                self.log.warning(
+                    f"Did not get the requested id: {self.id} != {requested_id}"
+                )
+                self.log.name = self.log.name.rsplit(".", 1)[0] + f".{self.id}"
+            elif self.id is None:
+                self.log.name += f".{self.id}"
 
             # create Shell Connections (MUX, Task, etc.):
 
@@ -695,7 +719,7 @@ class IPEngine(BaseParallelApplication):
         self._hb_listener.flush()
         if self._hb_last_monitored > self._hb_last_pinged:
             self._hb_missed_beats += 1
-            self.log.warn(
+            self.log.warning(
                 "No heartbeat in the last %s ms (%s time(s) in a row).",
                 self.hb_check_period,
                 self._hb_missed_beats,
@@ -725,8 +749,8 @@ class IPEngine(BaseParallelApplication):
         self.find_url_file()
 
         if self.wait_for_url_file and not os.path.exists(self.url_file):
-            self.log.warn("url_file %r not found", self.url_file)
-            self.log.warn(
+            self.log.warning("url_file %r not found", self.url_file)
+            self.log.warning(
                 "Waiting up to %.1f seconds for it to arrive.", self.wait_for_url_file
             )
             tic = time.time()
@@ -790,6 +814,8 @@ class IPEngine(BaseParallelApplication):
         self.loop.add_callback_from_signal(self.loop.stop)
 
     def start(self):
+        if self.id is not None:
+            self.log.name += f".{self.id}"
         loop = self.loop
 
         def _start():

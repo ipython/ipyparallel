@@ -11,8 +11,10 @@ import time
 import uuid
 
 import zmq
+from jupyter_client.session import Session
 from tornado import ioloop
 from traitlets import Bool
+from traitlets import default
 from traitlets import Dict
 from traitlets import Float
 from traitlets import Instance
@@ -21,8 +23,10 @@ from traitlets import Set
 from traitlets.config.configurable import LoggingConfigurable
 from zmq.devices import ThreadDevice
 from zmq.devices import ThreadMonitoredQueue
+from zmq.eventloop.zmqstream import ZMQStream
 
 from ipyparallel.util import log_errors
+from ipyparallel.util import set_hwm
 
 
 class Heart:
@@ -76,9 +80,10 @@ class Heart:
 
 class HeartMonitor(LoggingConfigurable):
     """A basic HeartMonitor class
-    pingstream: a PUB stream
-    pongstream: an ROUTER stream
-    period: the period of the heartbeat in milliseconds"""
+    ping_stream: a PUB stream
+    pong_stream: an ROUTER stream
+    period: the period of the heartbeat in milliseconds
+    """
 
     debug = Bool(
         False,
@@ -100,10 +105,18 @@ class HeartMonitor(LoggingConfigurable):
         help='Allowed consecutive missed pings from controller Hub to engine before unregistering.',
     )
 
-    pingstream = Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
-    pongstream = Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
-    loop = Instance('tornado.ioloop.IOLoop')
+    ping_stream = Instance(ZMQStream)
+    pong_stream = Instance(ZMQStream)
+    monitor_stream = Instance(ZMQStream)
+    session = Instance(Session)
 
+    @default("session")
+    def _default_session(self):
+        return Session(parent=self)
+
+    loop = Instance(ioloop.IOLoop)
+
+    @default("loop")
     def _loop_default(self):
         return ioloop.IOLoop.current()
 
@@ -112,57 +125,44 @@ class HeartMonitor(LoggingConfigurable):
     responses = Set()
     on_probation = Dict()
     last_ping = Float(0)
-    _new_handlers = Set()
-    _failure_handlers = Set()
     lifetime = Float(0)
     tic = Float(0)
 
-    def __init__(self, **kwargs):
-        super(HeartMonitor, self).__init__(**kwargs)
-
-        self.pongstream.on_recv(self.handle_pong)
-
     def start(self):
-        self.tic = time.time()
+        self.log.debug("heartbeat::waiting for subscription")
+        msg = self.monitor_stream.socket.recv_multipart()
+        self.log.debug("heartbeat::subscription started")
+        self.pong_stream.on_recv(self.handle_pong)
+        self.tic = time.monotonic()
         self.caller = ioloop.PeriodicCallback(self.beat, self.period)
         self.caller.start()
 
-    def add_new_heart_handler(self, handler):
-        """add a new handler for new hearts"""
-        self.log.debug("heartbeat::new_heart_handler: %s", handler)
-        self._new_handlers.add(handler)
-
-    def add_heart_failure_handler(self, handler):
-        """add a new handler for heart failure"""
-        self.log.debug("heartbeat::new heart failure handler: %s", handler)
-        self._failure_handlers.add(handler)
-
     def beat(self):
-        self.pongstream.flush()
+        self.pong_stream.flush()
         self.last_ping = self.lifetime
 
-        toc = time.time()
+        toc = time.monotonic()
         self.lifetime += toc - self.tic
         self.tic = toc
         if self.debug:
             self.log.debug("heartbeat::sending %s", self.lifetime)
-        goodhearts = self.hearts.intersection(self.responses)
-        missed_beats = self.hearts.difference(goodhearts)
-        newhearts = self.responses.difference(goodhearts)
-        for heart in newhearts:
-            self.handle_new_heart(heart)
-        heartfailures, on_probation = self._check_missed(
+        good_hearts = self.hearts.intersection(self.responses)
+        missed_beats = self.hearts.difference(good_hearts)
+        new_hearts = self.responses.difference(good_hearts)
+        if new_hearts:
+            self.handle_new_hearts(new_hearts)
+        heart_failures, on_probation = self._check_missed(
             missed_beats, self.on_probation, self.hearts
         )
-        for failure in heartfailures:
-            self.handle_heart_failure(failure)
+        if heart_failures:
+            self.handle_heart_failure(heart_failures)
         self.on_probation = on_probation
         self.responses = set()
         # print self.on_probation, self.hearts
         # self.log.debug("heartbeat::beat %.3f, %i beating hearts", self.lifetime, len(self.hearts))
-        self.pingstream.send(str(self.lifetime).encode('ascii'))
+        self.ping_stream.send(str(self.lifetime).encode('ascii'))
         # flush stream to force immediate socket send
-        self.pingstream.flush()
+        self.ping_stream.flush()
 
     def _check_missed(self, missed_beats, on_probation, hearts):
         """Update heartbeats on probation, identifying any that have too many misses."""
@@ -177,52 +177,96 @@ class HeartMonitor(LoggingConfigurable):
                 new_probation[cur_heart] = miss_count
         return failures, new_probation
 
-    def handle_new_heart(self, heart):
-        if self._new_handlers:
-            for handler in self._new_handlers:
-                handler(heart)
-        else:
-            self.log.info("heartbeat::yay, got new heart %s!", heart)
-        self.hearts.add(heart)
+    def handle_new_hearts(self, hearts):
+        for heart in hearts:
+            self.hearts.add(heart)
+        self.log.debug(f"Notifying hub of {len(hearts)} new hearts")
+        self.session.send(
+            self.monitor_stream,
+            "new_heart",
+            content={
+                "hearts": [h.decode("utf8", "replace") for h in hearts],
+            },
+            ident=[b"heartmonitor", b""],
+        )
 
-    def handle_heart_failure(self, heart):
-        if self._failure_handlers:
-            for handler in self._failure_handlers:
-                try:
-                    handler(heart)
-                except Exception as e:
-                    self.log.error("heartbeat::Bad Handler! %s", handler, exc_info=True)
-                    pass
-        else:
-            self.log.info("heartbeat::Heart %s failed :(", heart)
-        try:
-            self.hearts.remove(heart)
-        except KeyError:
-            self.log.info("heartbeat:: %s has already been removed." % heart)
+    def handle_heart_failure(self, hearts):
+        self.log.debug(f"Notifying hub of {len(hearts)} stopped hearts")
+        self.session.send(
+            self.monitor_stream,
+            "stopped_heart",
+            content={
+                "hearts": [h.decode("utf8", "replace") for h in hearts],
+            },
+            ident=[b"heartmonitor", b""],
+        )
+        for heart in hearts:
+            try:
+                self.hearts.remove(heart)
+            except KeyError:
+                self.log.info("heartbeat:: %s has already been removed.", heart)
 
     @log_errors
     def handle_pong(self, msg):
-        "a heart just beat"
+        """a heart just beat"""
         current = str(self.lifetime).encode('ascii')
         last = str(self.last_ping).encode('ascii')
         if msg[1] == current:
-            delta = time.time() - self.tic
+            delta = time.monotonic() - self.tic
             if self.debug:
                 self.log.debug(
                     "heartbeat::heart %r took %.2f ms to respond", msg[0], 1000 * delta
                 )
             self.responses.add(msg[0])
         elif msg[1] == last:
-            delta = time.time() - self.tic + (self.lifetime - self.last_ping)
-            self.log.warn(
+            delta = time.monotonic() - self.tic + (self.lifetime - self.last_ping)
+            self.log.warning(
                 "heartbeat::heart %r missed a beat, and took %.2f ms to respond",
                 msg[0],
                 1000 * delta,
             )
             self.responses.add(msg[0])
         else:
-            self.log.warn(
+            self.log.warning(
                 "heartbeat::got bad heartbeat (possibly old?): %s (current=%.3f)",
                 msg[1],
                 self.lifetime,
             )
+
+
+def start_heartmonitor(ping_url, pong_url, monitor_url, **kwargs):
+    """Start a heart monitor.
+
+    For use in a background process,
+    via Process(target=start_heartmonitor)
+    """
+    loop = ioloop.IOLoop()
+    loop.make_current()
+    ctx = zmq.Context()
+
+    ping_socket = ctx.socket(zmq.PUB)
+    ping_socket.bind(ping_url)
+    ping_stream = ZMQStream(ping_socket)
+
+    pong_socket = ctx.socket(zmq.ROUTER)
+    set_hwm(pong_socket, 0)
+    pong_socket.bind(pong_url)
+    pong_stream = ZMQStream(pong_socket)
+
+    monitor_socket = ctx.socket(zmq.XPUB)
+    monitor_socket.connect(monitor_url)
+    monitor_stream = ZMQStream(monitor_socket)
+
+    heart_monitor = HeartMonitor(
+        ping_stream=ping_stream,
+        pong_stream=pong_stream,
+        monitor_stream=monitor_stream,
+        **kwargs,
+    )
+    heart_monitor.start()
+
+    try:
+        loop.start()
+    finally:
+        loop.close(all_fds=True)
+    ctx.destroy()
