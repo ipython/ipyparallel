@@ -1027,8 +1027,10 @@ class Client(HasTraits):
         # so that the main thread knows that all our attributes are defined
         if start_evt:
             start_evt.set()
-        self._io_loop.start()
-        self._io_loop.close()
+        try:
+            self._io_loop.start()
+        finally:
+            self._io_loop.close(all_fds=True)
 
     @unpack_message
     def _dispatch_single_reply(self, msg):
