@@ -567,7 +567,7 @@ class LocalProcessLauncher(BaseLauncher):
 
     def signal(self, sig):
         if self.state == 'running':
-            if WINDOWS and sig == SIGKILL:
+            if WINDOWS and sig in {SIGTERM, SIGKILL}:
                 # use Windows tree-kill for better child cleanup
                 cmd = ['taskkill', '/pid', str(self.process.pid), '/t', '/F']
                 check_output(cmd)
