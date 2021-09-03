@@ -3,6 +3,7 @@
 """The ipcluster application."""
 from __future__ import print_function
 
+import asyncio
 import errno
 import json
 import logging
@@ -27,6 +28,7 @@ from ipyparallel._version import __version__
 from ipyparallel.apps.baseapp import base_aliases
 from ipyparallel.apps.baseapp import base_flags
 from ipyparallel.apps.baseapp import BaseParallelApplication
+from ipyparallel.cluster import clean_cluster_files
 from ipyparallel.cluster import Cluster
 from ipyparallel.cluster import ClusterManager
 from ipyparallel.util import abbreviate_profile_dir
@@ -129,6 +131,13 @@ stop_aliases = dict(
     signal='IPClusterStop.signal',
 )
 stop_aliases.update(base_aliases)
+stop_flags = dict(
+    all=(
+        {'IPClusterStop': {'all_cluster_ids': True}},
+        "stop all clusters for the selected profile, instead of just one",
+    )
+)
+stop_flags.update(base_flags)
 
 
 class IPClusterStop(BaseParallelApplication):
@@ -139,22 +148,57 @@ class IPClusterStop(BaseParallelApplication):
     signal = Integer(
         signal.SIGINT, config=True, help="signal to use for stopping processes."
     )
+    all_cluster_ids = Bool(
+        False,
+        config=True,
+        help="stop all clusters for the selected profile, instead of just one",
+    )
 
-    aliases = Dict(stop_aliases)
+    aliases = stop_aliases
+    flags = stop_flags
 
     def start(self):
         """Start the app for the stop subcommand."""
-        try:
-            cluster = Cluster.from_file(
-                profile_dir=self.profile_dir.location,
-                cluster_id=self.cluster_id,
-                parent=self,
+
+        if self.all_cluster_ids:
+            clusters = list(
+                ClusterManager(parent=self)
+                .load_clusters(profile_dir=self.profile_dir.location)
+                .values()
             )
-        except FileNotFoundError as s:
-            self.log.critical(f"Could not find cluster file {s}")
-            self.exit(ALREADY_STOPPED)
-        # TODO: implement check-if-running!
-        cluster.stop_cluster_sync()
+        else:
+            if self.extra_args:
+                cluster_ids = self.extra_args
+            else:
+                cluster_ids = [self.cluster_id]
+
+            clusters = []
+
+            for cluster_id in cluster_ids:
+                try:
+                    cluster = Cluster.from_file(
+                        profile_dir=self.profile_dir.location,
+                        cluster_id=cluster_id,
+                        parent=self,
+                    )
+                except FileNotFoundError as s:
+                    self.log.critical(f"Could not find cluster file {s}")
+                    self.exit(ALREADY_STOPPED)
+                else:
+                    clusters.append(cluster)
+
+        if not clusters:
+            self.log.info("No clusters to stop")
+            self.exit(0)
+
+        async def _stop_all():
+            tasks = []
+            for cluster in clusters:
+                self.log.info(f"Stopping cluster {cluster.cluster_id}")
+                tasks.append(cluster.stop_cluster())
+            await asyncio.gather(*tasks)
+
+        asyncio.get_event_loop().run_until_complete(_stop_all())
 
 
 list_aliases = {}
@@ -209,6 +253,59 @@ class IPClusterList(BaseParallelApplication):
             )
         else:
             raise NotImplementedError(f"No such output format: {self.output_format}")
+
+
+clean_flags = {}
+for key in ('debug', 'quiet'):
+    clean_flags[key] = base_flags[key]
+clean_flags.update(
+    {
+        "force": (
+            {"IPClusterClean": {"force": True}},
+            """
+            Force removal of files, even if clusters are running.
+
+            WARNING: can leave orphan processes
+            """,
+        ),
+        "all": (
+            {"IPClusterClean": {"all_profiles": True}},
+            "Clean all IPython profiles, not just current.",
+        ),
+    }
+)
+clean_aliases = {}
+for key in ('log-level', 'ipython-dir', 'profile-dir', 'profile'):
+    clean_aliases[key] = base_aliases[key]
+
+
+class IPClusterClean(BaseParallelApplication):
+    name = 'ipcluster'
+    description = "Cleanup cluster files"
+    flags = clean_flags
+    aliases = clean_aliases
+
+    force = Bool(
+        False,
+        config=True,
+        help="""
+            Force removal of cluster files, even if clusters appear to be running.
+
+            WARNING: this can leave orphan processes.
+            """,
+    )
+    all_profiles = Bool(
+        False,
+        config=True,
+        help="Clean files in all profiles, instead of just the current profile.",
+    )
+
+    def start(self):
+        if self.all_profiles:
+            profile_dirs = None
+        else:
+            profile_dirs = [self.profile_dir.location]
+        clean_cluster_files(profile_dirs, log=self.log, force=self.force)
 
 
 engine_aliases = {}
@@ -592,7 +689,8 @@ class IPCluster(BaseParallelApplication):
         'start': (IPClusterStart, start_help),
         'stop': (IPClusterStop, stop_help),
         'engines': (IPClusterEngines, engines_help),
-        'list': (IPClusterList, stop_help),
+        'list': (IPClusterList, IPClusterList.description),
+        'clean': (IPClusterClean, IPClusterClean.description),
         'nbextension': (IPClusterNBExtension, IPClusterNBExtension.description),
     }
 

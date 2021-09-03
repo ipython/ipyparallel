@@ -64,6 +64,7 @@ def test_help_all(submod):
         "engines",
         "start",
         "stop",
+        "clean",
     ],
 )
 def test_ipcluster_help_all(subcommand):
@@ -249,3 +250,28 @@ def test_ipcluster_start_stop(request, ipython_dir, daemonize):
     # and ipcluster list should return empty
     out = ipcluster_list()
     assert len(out.splitlines()) == 1
+
+    # stop all succeeds even if there's nothing to stop
+    check_call([sys.executable, "-m", "ipyparallel.cluster", "stop", "--all"])
+
+
+def test_ipcluster_clean(ipython_dir):
+    default_profile = ProfileDir.find_profile_dir_by_name(ipython_dir)
+    default_profile_dir = default_profile.location
+    log_file = os.path.join(default_profile.log_dir, "test.log")
+    with open(log_file, "w") as f:
+        f.write("logsssss")
+    cluster_file = os.path.join(default_profile.security_dir, "cluster-abc.json")
+    c = ipp.Cluster()
+    with open(cluster_file, 'w') as f:
+        json.dump(c.to_dict(), f)
+    connection_file = os.path.join(
+        default_profile.security_dir, "ipcontroller-client.json"
+    )
+    with open(connection_file, 'w') as f:
+        f.write("{}")
+    check_call([sys.executable, "-m", "ipyparallel.cluster", "clean"])
+
+    assert not os.path.exists(log_file)
+    assert not os.path.exists(cluster_file)
+    assert not os.path.exists(connection_file)

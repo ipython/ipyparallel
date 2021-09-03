@@ -929,3 +929,59 @@ class ClusterManager(LoggingConfigurable):
         """Delete a cluster by id"""
         # TODO: check running?
         del self.clusters[cluster_id]
+
+
+def clean_cluster_files(profile_dirs=None, *, log=None, force=False):
+    """Find all files related to clusters, and remove them
+
+    Cleans up stale logs, etc.
+
+    if force: remove cluster files even for running
+    If not force, will raise if any cluster files are found,
+    because it's not safe to clean up cluster files while processes are running
+
+    """
+    if profile_dirs is None:
+        # default to all profiles
+        profile_dirs = _all_profile_dirs()
+
+    if isinstance(profile_dirs, str):
+        profile_dirs = [profile_dirs]
+
+    def _remove(f):
+        if log:
+            log.debug(f"Removing {f}")
+        try:
+            os.remove(f)
+        except OSError as e:
+            log.error(f"Error removing {f}: {e}")
+
+    for profile_dir in profile_dirs:
+        if log:
+            log.info(f"Cleaning ipython cluster files in {profile_dir}")
+        for cluster_file in ClusterManager._cluster_files_in_profile_dir(profile_dir):
+            if force:
+                _remove(cluster_file)
+            else:
+                # check if running first
+                try:
+                    cluster = Cluster.from_file(cluster_file=cluster_file)
+                except Exception as e:
+                    if log:
+                        log.error(
+                            f"Removing cluster file, which failed to load {cluster_file}: {e}"
+                        )
+                    _remove(cluster_file)
+                else:
+                    if cluster._is_running():
+                        raise ValueError(
+                            "f{cluster} is still running. Use force=True to cleanup files for running clusters (may leave orphan processes!)"
+                        )
+                    else:
+                        _remove(cluster_file)
+        for log_file in glob.glob(os.path.join(profile_dir, 'log', '*')):
+            _remove(log_file)
+        for security_file in glob.glob(
+            os.path.join(profile_dir, 'security', 'ipcontroller-*.json')
+        ):
+            _remove(security_file)
