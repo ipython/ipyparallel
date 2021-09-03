@@ -15,7 +15,6 @@ from jupyter_client.session import Session
 from tornado.ioloop import IOLoop
 from traitlets import Bool
 from traitlets import default
-from traitlets import Dict
 from traitlets import Instance
 from traitlets import observe
 from traitlets import Unicode
@@ -126,8 +125,8 @@ class BaseParallelApplication(BaseIPythonApplication):
     def _default_session(self):
         return Session(parent=self)
 
-    aliases = Dict(base_aliases)
-    flags = Dict(base_flags)
+    aliases = base_aliases
+    flags = base_flags
 
     @catch_config_error
     def initialize(self, argv=None):
