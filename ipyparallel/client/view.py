@@ -210,7 +210,7 @@ class View(HasTraits):
         """wrapper for client.send_apply_request"""
         raise NotImplementedError("Implement in subclasses")
 
-    def apply(self, f, *args, **kwargs):
+    def apply(self, __ipp_f, *args, **kwargs):
         """calls ``f(*args, **kwargs)`` on remote engines, returning the result.
 
         This method sets all apply flags via this View's attributes.
@@ -219,20 +219,20 @@ class View(HasTraits):
         instance if ``self.block`` is False, otherwise the return value of
         ``f(*args, **kwargs)``.
         """
-        return self._really_apply(f, args, kwargs)
+        return self._really_apply(__ipp_f, args, kwargs)
 
-    def apply_async(self, f, *args, **kwargs):
+    def apply_async(self, __ipp_f, *args, **kwargs):
         """calls ``f(*args, **kwargs)`` on remote engines in a nonblocking manner.
 
         Returns :class:`~ipyparallel.client.asyncresult.AsyncResult` instance.
         """
-        return self._really_apply(f, args, kwargs, block=False)
+        return self._really_apply(__ipp_f, args, kwargs, block=False)
 
-    def apply_sync(self, f, *args, **kwargs):
+    def apply_sync(self, __ipp_f, *args, **kwargs):
         """calls ``f(*args, **kwargs)`` on remote engines in a blocking manner,
         returning the result.
         """
-        return self._really_apply(f, args, kwargs, block=True)
+        return self._really_apply(__ipp_f, args, kwargs, block=True)
 
     # ----------------------------------------------------------------
     # wrappers for client and control methods
@@ -328,7 +328,7 @@ class View(HasTraits):
     @sync_results
     def map(self, f, *sequences, **kwargs):
         """override in subclasses"""
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def map_async(self, f, *sequences, **kwargs):
         """Parallel version of builtin :func:`python:map`, using this view's engines.
