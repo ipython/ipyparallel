@@ -163,6 +163,15 @@ class TestView(ClusterTestCase):
         v.run(f.name, block=True)
         self.assertEqual(v.apply_sync(lambda f: f(), ipp.Reference('g')), 5)
 
+    def test_apply_f_kwarg(self):
+        v = self.client[-1]
+
+        def echo_kwargs(**kwargs):
+            return kwargs
+
+        kwargs = v.apply_async(echo_kwargs, f=5).get(timeout=30)
+        assert kwargs == dict(f=5)
+
     def test_apply_tracked(self):
         """test tracking for apply"""
         # self.add_engines(1)
