@@ -257,6 +257,12 @@ def start_heartmonitor(ping_url, pong_url, monitor_url, **kwargs):
     monitor_socket.connect(monitor_url)
     monitor_stream = ZMQStream(monitor_socket)
 
+    # reinitialize logging after fork
+    from .app import IPController
+
+    app = IPController(log_level=kwargs.pop("log_level"))
+    kwargs['log'] = app.log
+
     heart_monitor = HeartMonitor(
         ping_stream=ping_stream,
         pong_stream=pong_stream,
