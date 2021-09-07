@@ -8,23 +8,48 @@ Changes in IPython Parallel
 
 **prerelease** there are some big things coming! This is currently a prerelease to get some things out there for testing
 
+Compatibility changes:
+
 - **Require Python 3.6**
-- Fix compatibility issues with ipykernel 6, jupyter-client 7
+- Fix compatibility issues with ipykernel 6 and jupyter-client 7
+- Remove dependency on deprecated ipython-genutils
+- New dependencies on psutil, entrypoints, tqdm
+
+New features:
+
 - New {class}`.Cluster` API for managing clusters from Python,
   including support for signaling and restarting engines.
-- New {meth}`.Client.signal_engines` for sending signals to single engines.
+  See [docs](../examples/Cluster%20API.ipynb) for more.
+- New `ipcluster list` and `ipcluster clean` commands derived from the Cluster API.
+- New {meth}`.Client.send_signal` for sending signals to single engines.
 - New KernelNanny process for signaling and monitoring engines
   for improved responsiveness of handing engine crashes.
 - New prototype {class}`.BroadcastScheduler` with vastly improved scaling in 'do-on-all' operations
   on large numbers of engines,
-  c/o Tom-Olav Bøyum's Master's thesis at University of Oslo.
-- New {meth}`.Client.wait_for_engines(n)` method to wait for engines to be available.
+  c/o Tom-Olav Bøyum's [Master's thesis][] at University of Oslo.
+  [Broadcast view documentation][].
+- New {meth}`.Client.wait_for_engines` method to wait for engines to be available.
 - Nicer progress bars for interactive waits, such as {meth}`.AsyncResult.wait_interactive`.
 - Add {meth}`.AsyncResult.stream_output` context manager for streaming output.
   Stream output by default in parallel magics.
 - Launchers registered via entrypoints for better support of third-party Launchers.
 - New JupyterLab extension (enabled by default) based on dask-labextension
   for managing clusters.
+- {meth}`.LoadBalancedView.imap` consumes inputs as-needed,
+  producing a generator of results instead of an AsyncMapResult,
+  allowing for consumption of very large or infinite mapping inputs.
+
+[broadcast view documentation]: ../examples/broadcast/Broadcast%20view.ipynb
+[master's thesis]: https://urn.nb.no/URN:NBN:no-84589
+
+Improvements and other fixes:
+
+- Greatly improved performance of heartbeat and registration with large numbers of engines,
+  tested with 5000 engines and default configuration.
+- Single `IPController.ports` configuration to specify the pool of ports for the controller to use,
+  e.g. `ipcontroller --ports 10101-10120`.
+- Allow `f` as keyword-argument to `apply`, e.g. `view.apply(myfunc, f=5)`.
+- joblib backend will start and stop a cluster by default if the default cluster is not running.
 
 The repo has been updated to use pre-commit, black, myst, and friends and GitHub Actions for CI, but this should not affect users, only making it a bit nicer for contributors.
 
