@@ -791,6 +791,7 @@ class IPController(BaseParallelApplication):
                 pong_url=self.engine_url('hb_pong'),
                 monitor_url=disambiguate_url(self.monitor_url),
                 config=hm_config,
+                log_level=self.log.getEffectiveLevel(),
             ),
             daemon=True,
         )
