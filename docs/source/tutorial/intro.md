@@ -196,7 +196,7 @@ In [3]: rc = cluster.connect_client_sync()
 ```
 
 If you have put the JSON file in a different location or it has a different name, create the
-Cluster objct like this:
+Cluster object like this:
 
 ```ipython
 In [2]: cluster = ipp.Cluster.from_file('/path/to/my/cluster-.json')
@@ -211,7 +211,7 @@ in which case you would connect with:
 In [2]: c = ipp.Client('/path/to/my/ipcontroller-client.json', sshserver='me@myhub.example.com')
 ```
 
-Where 'myhub.example.com' is the url or IP address of the machine on
+Where 'myhub.example.com' is the url or hostname of the machine on
 which the Hub process is running (or another machine that has direct access to the Hub's ports).
 
 The SSH server may already be specified in ipcontroller-client.json, if the controller was

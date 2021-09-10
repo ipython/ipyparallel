@@ -736,7 +736,7 @@ c.SQLiteDB.table = 'tasks'
 ```
 
 Since MongoDB servers can be running remotely or configured to listen on a particular port,
-you can specify any arguments you may need to the PyMongo {pymongo:class}`~.Connection`:
+you can specify any arguments you may need to the PyMongo {py:class}`~.pymongo.Connection`:
 
 ```python
 # positional args to pymongo.Connection

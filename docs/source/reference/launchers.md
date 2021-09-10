@@ -139,7 +139,7 @@ The local process case is the simplest, where the main thing that needs serializ
 
 If reconstruction of the object fails because the resource is no longer running
 (e.g. check for the PID and it's not there, or a VM / batch job are gone),
-the {exception}`.NotRunning` exception should be raised.
+the {exc}`.NotRunning` exception should be raised.
 This tells the Cluster that the object is gone and should be removed
 (handled the same as if it had stopped while we are watching).
 Raising other unhandled errors will be assumed to be a bug in the Launcher,

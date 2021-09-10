@@ -15,44 +15,23 @@ task interface is ideal. But it also has more power and flexibility, allowing
 the user to guide the distribution of jobs, without having to assign tasks to
 engines explicitly.
 
-## Starting the IPython controller and engines
+## Creating a `LoadBalancedView`
 
-To follow along with this tutorial, you will need to start the IPython
-controller and four IPython engines. The simplest way of doing this is to use
-the {command}`ipcluster` command:
-
-```
-$ ipcluster start -n 4
-```
+As always, the first step is to start a cluster and connect a {class}`.Client` instance.
 
 For more detailed information about starting the controller and engines, see
 our {ref}`introduction <parallel-overview>` to using IPython for parallel computing.
 
-## Creating a `LoadBalancedView` instance
-
-The first step is to import the IPython {mod}`ipyparallel`
-module and then create a {class}`.Client` instance, and we will also be using
-a {class}`LoadBalancedView`, here called `lview`:
-
 ```ipython
 In [1]: import ipyparallel as ipp
-
-In [2]: rc = ipp.Client()
+In [2]: cluster = ipp.Cluster()
+In [3]: cluster.start_cluster_sync()
+In [4]: rc = cluster.connect_client_sync()
+In [5]: rc.wait_for_engines(4)
 ```
 
-This form assumes that the controller was started on localhost with default
-configuration. If not, the location of the controller must be given as an
-argument to the constructor:
-
-```ipython
-# for a visible LAN controller listening on an external port:
-In [2]: rc = ipp.Client('tcp://192.168.1.16:10101')
-# or to connect with a specific profile you have set up:
-In [3]: rc = ipp.Client(profile='mpi')
-```
-
-For load-balanced execution, we will make use of a {class}`LoadBalancedView` object, which can
-be constructed via the client's {meth}`load_balanced_view` method:
+For load-balanced execution, we will make use of a {class}`.LoadBalancedView` object, which can
+be constructed via the client's {meth}`~.Client.load_balanced_view` method:
 
 ```ipython
 In [4]: lview = rc.load_balanced_view() # default load-balanced view
@@ -68,14 +47,14 @@ In many cases, you want to apply a Python function to a sequence of
 objects, but _in parallel_. Like the direct interface, these can be
 implemented via the task interface. The exact same tools can perform these
 actions in load-balanced ways as well as multiplexed ways: a parallel version
-of {func}`map` and {func}`@view.parallel` function decorator. If one specifies the
+of {py:func}`map` and {func}`@view.parallel` function decorator. If one specifies the
 argument `balanced=True`, then they are dynamically load balanced. Thus, if the
 execution time per item varies significantly, you should use the versions in
 the task interface.
 
 ### Parallel map
 
-To load-balance {meth}`map`, use a LoadBalancedView:
+To load-balance {func}`map`, use a LoadBalancedView:
 
 ```ipython
 In [62]: lview.block = True
@@ -97,11 +76,11 @@ that turns any Python function into a parallel function:
 ```ipython
 In [10]: @lview.parallel()
    ....: def f(x):
-   ....:     return 10.0*x**4
+   ....:     return 10.0 * x ** 4
    ....:
 
 In [11]: f.map(range(32))    # this is done in parallel
-Out[11]: [0.0,10.0,160.0,...]
+Out[11]: [0.0, 10.0, 160.0, ...]
 ```
 
 (parallel-dependencies)=
@@ -156,7 +135,7 @@ You can also require specific objects, not just module names:
 
 ```python
 def foo(a):
-    return a*a
+    return a * a
 
 @ipp.require(foo)
 def bar(b):
@@ -175,7 +154,7 @@ The `@ipp.depend` decorator lets you decorate any function with any _other_ func
 evaluate the dependency. The dependency function will be called at the start of the task,
 and if it returns `False`, then the dependency will be considered unmet, and the task
 will be assigned to another engine. If the dependency returns _anything other than
-\`\`False\`\`_, the rest of the task will continue.
+`False`_, the rest of the task will continue.
 
 ```ipython
 In [10]: def platform_specific(plat):
@@ -184,15 +163,15 @@ In [10]: def platform_specific(plat):
 
 In [11]: @ipp.depend(platform_specific, 'darwin')
    ....: def mactask():
-   ....:    do_mac_stuff()
+   ....:     do_mac_stuff()
 
 In [12]: @ipp.depend(platform_specific, 'nt')
    ....: def wintask():
-   ....:    do_windows_stuff()
+   ....:     do_windows_stuff()
 ```
 
-In this case, any time you apply `mactask`, it will only run on an OSX machine.
-`@ipp.depend` is like `apply`, in that it has a `@ipp.depend(f,*args,**kwargs)`
+In this case, any time you apply `mactask`, it will only run on an macOS machine.
+`@ipp.depend` is like `apply`, in that it has a `@ipp.depend(f, *args, **kwargs)`
 signature.
 
 #### dependents
@@ -201,24 +180,24 @@ You don't have to use the decorators on your tasks, if for instance you may want
 to run tasks with a single function but varying dependencies, you can directly construct
 the {class}`dependent` object that the decorators use:
 
-% sourcecode::ipython
-%
-% In [13]: def mytask(*args):
-% ....: dostuff()
-%
-% In [14]: mactask = dependent(mytask, platform_specific, 'darwin')
-% # this is the same as decorating the declaration of mytask with @ipp.depend
-% # but you can do it again:
-%
-% In [15]: wintask = dependent(mytask, platform_specific, 'nt')
-%
-% # in general:
-% In [16]: t = dependent(f, g, *dargs, **dkwargs)
-%
-% # is equivalent to:
-% In [17]: @ipp.depend(g, \*dargs, **dkwargs)
-% ....: def t(a,b,c):
-% ....: # contents of f
+```ipython
+In [13]: def mytask(*args):
+   ....: dostuff()
+
+In [14]: mactask = dependent(mytask, platform_specific, 'darwin')
+
+# this is the same as decorating the declaration of mytask with @ipp.depend
+# but you can do it again:
+In [15]: wintask = dependent(mytask, platform_specific, 'nt')
+
+# in general:
+In [16]: t = dependent(f, g, *dargs, **dkwargs)
+
+# is equivalent to:
+In [17]: @ipp.depend(g, *dargs, **dkwargs)
+   ....: def t(a, b, c):
+   ....:     # contents of f
+```
 
 ### Graph Dependencies
 
@@ -240,7 +219,7 @@ success \[default: True\]
 
 : Whether to consider tasks that succeeded as fulfilling dependencies.
 
-failure \[default
+failure \[default\]
 
 : Whether to consider tasks that failed as fulfilling dependencies.
 using `failure=True,success=False` is useful for setting up cleanup tasks, to be run
@@ -252,7 +231,7 @@ not care whether the task succeeds, and always want the second task to run, in w
 should use `success=failure=True`. The default behavior is to only use successes.
 
 There are other switches for interpretation that are made at the _task_ level. These are
-specified via keyword arguments to the client's {meth}`apply` method.
+specified via keyword arguments to the view's {meth}`~.LoadBalancedView.apply` method.
 
 after,follow
 
@@ -279,13 +258,13 @@ you can skip using Dependency objects, and pass msg_ids or AsyncResult objects a
 `follow` and `after` keywords to {meth}`client.apply`:
 
 ```ipython
-In [14]: client.block=False
+In [14]: client.block = False
 
 In [15]: ar = lview.apply(f, args, kwargs)
 
 In [16]: ar2 = lview.apply(f2)
 
-In [17]: with lview.temp_flags(after=[ar,ar2]):
+In [17]: with lview.temp_flags(after=[ar, ar2]):
    ....:    ar3 = lview.apply(f3)
 
 In [18]: with lview.temp_flags(follow=[ar], timeout=2.5)
@@ -309,8 +288,8 @@ The basic cases that are checked:
 
 - depending on nonexistent messages
 - `follow` dependencies were run on more than one machine and `all=True`
-- any dependencies failed and `all=True,success=True,failures=False`
-- all dependencies failed and `all=False,success=True,failure=False`
+- any dependencies failed and `all=True, success=True, failures=False`
+- all dependencies failed and `all=False, success=True, failure=False`
 
 ```{warning}
 This analysis has not been proven to be rigorous, so it is likely possible for tasks
