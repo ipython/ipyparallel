@@ -2,6 +2,8 @@ include COPYING.md
 include CONTRIBUTING.md
 include README.md
 
+include setupbase.py
+
 # enable-at-install config
 graft etc
 
