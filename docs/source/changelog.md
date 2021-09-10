@@ -4,6 +4,10 @@
 
 Changes in IPython Parallel
 
+## 7.0.1
+
+- Fix missing setupbase.py in tarball
+
 ## 7.0.0
 
 Compatibility changes:
