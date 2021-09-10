@@ -6,8 +6,6 @@ Changes in IPython Parallel
 
 ## 7.0.0
 
-**prerelease** there are some big things coming! This is currently a prerelease to get some things out there for testing
-
 Compatibility changes:
 
 - **Require Python 3.6**
