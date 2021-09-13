@@ -1462,10 +1462,7 @@ class LoadBalancedView(View):
         )
 
 
-from concurrent.futures import Executor
-
-
-class ViewExecutor(Executor):
+class ViewExecutor(concurrent.futures.Executor):
     """A PEP-3148 Executor API for Views
 
     Access as view.executor
@@ -1473,6 +1470,7 @@ class ViewExecutor(Executor):
 
     def __init__(self, view):
         self.view = view
+        self._max_workers = len(self.view)
 
     def submit(self, fn, *args, **kwargs):
         """Same as View.apply_async"""
