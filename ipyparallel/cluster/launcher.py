@@ -351,8 +351,16 @@ class ControllerLauncher(BaseLauncher):
         self.log.debug(f"Loading {paths}")
         connection_info = {}
         for key, path in connection_files.items():
-            with open(path) as f:
-                connection_info[key] = json.load(f)
+            try:
+                with open(path) as f:
+                    connection_info[key] = json.load(f)
+            except ValueError:
+                # possible race while controller is still writing the file
+                # give it half a second before trying again
+                time.sleep(0.5)
+                with open(path) as f:
+                    connection_info[key] = json.load(f)
+
         return connection_info
 
 
