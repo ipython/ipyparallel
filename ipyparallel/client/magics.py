@@ -26,6 +26,7 @@ Usage
 {CONFIG_DOC}
 
 """
+import time
 from contextlib import contextmanager
 
 # Python 3.6 doesn't have nullcontext, so we define our own
@@ -145,6 +146,16 @@ def exec_args(f):
             dest="set_verbose",
             help="don't print any messages",
         ),
+        magic_arguments.argument(
+            '--progress-after',
+            dest="progress_after_seconds",
+            type=float,
+            default=None,
+            help="""Wait this many seconds before showing a progress bar for task completion.
+
+            Use -1 for no progress, 0 for always showing progress immediately.
+            """,
+        ),
     ]
     for a in args:
         f = a(f)
@@ -222,6 +233,8 @@ class ParallelMagics(Magics):
     verbose = False
     # streaming output flag
     stream_ouput = True
+    # seconds to wait before showing progress bar for blocking execution
+    progress_after_seconds = 2
 
     def __init__(self, shell, view, suffix=''):
         self.view = view
@@ -267,6 +280,9 @@ class ParallelMagics(Magics):
             self.verbose = args.set_verbose
         if args.stream is not None:
             self.stream_ouput = args.stream
+
+        if args.progress_after_seconds is not None:
+            self.progress_after_seconds = args.progress_after_seconds
 
     @magic_arguments.magic_arguments()
     @output_args
@@ -316,7 +332,13 @@ class ParallelMagics(Magics):
         return self.parallel_execute(line)
 
     def parallel_execute(
-        self, cell, block=None, groupby='type', save_name=None, stream_output=None
+        self,
+        cell,
+        block=None,
+        groupby='type',
+        save_name=None,
+        stream_output=None,
+        progress_after=None,
     ):
         """implementation used by %px and %%parallel"""
 
@@ -335,16 +357,40 @@ class ParallelMagics(Magics):
             print(base + " execution on engine(s): %s" % str_targets)
 
         result = self.view.execute(cell, silent=False, block=False)
+        result._fname = "%px"
         self.last_result = result
 
         if save_name:
             self.shell.user_ns[save_name] = result
 
         if block:
+
+            if progress_after is None:
+                progress_after = self.progress_after_seconds
+
             cm = result.stream_output() if stream_output else nullcontext()
             with cm:
-                result.wait_for_output()
-                result.get()
+                finished_waiting = False
+                if progress_after > 0:
+                    # finite progress-after timeout
+                    # wait for 'quick' results before showing progress
+                    tic = time.perf_counter()
+                    deadline = tic + progress_after
+                    try:
+                        result.wait_for_output(timeout=progress_after)
+                        remaining = max(deadline - time.perf_counter(), 0)
+                        result.get(timeout=remaining)
+                    except TimeoutError:
+                        pass
+                    else:
+                        finished_waiting = True
+
+                if not finished_waiting:
+                    if progress_after >= 0:
+                        # not an immediate result, start interactive progress
+                        result.wait_interactive()
+                    result.wait_for_output()
+                    result.get()
             # Skip stdout/stderr if streaming output
             result.display_outputs(groupby, result_only=stream_output)
         else:
@@ -387,6 +433,7 @@ class ParallelMagics(Magics):
                 groupby=args.groupby,
                 save_name=args.save_name,
                 stream_output=args.stream,
+                progress_after=args.progress_after_seconds,
             )
         finally:
             if args.targets:
