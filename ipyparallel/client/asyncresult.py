@@ -43,7 +43,7 @@ def check_ready(f, self, *args, **kwargs):
     """Check ready state prior to calling the method."""
     self.wait(0)
     if not self._ready:
-        raise error.TimeoutError("result not ready")
+        raise TimeoutError("result not ready")
     return f(self, *args, **kwargs)
 
 
@@ -236,11 +236,11 @@ class AsyncResult(Future):
                 else:
                     raise e
         else:
-            raise error.TimeoutError("Result not ready.")
+            raise TimeoutError("Result not ready.")
 
     def _check_ready(self):
         if not self.ready():
-            raise error.TimeoutError("Result not ready.")
+            raise TimeoutError("Result not ready.")
 
     def ready(self):
         """Return whether the call has completed."""
@@ -430,12 +430,12 @@ class AsyncResult(Future):
                 # Event doesn't like timeout < 0
                 timeout = None
             elif timeout == 0:
-                raise error.TimeoutError("Still waiting to be sent")
+                raise TimeoutError("Still waiting to be sent")
             # wait for Future to indicate send having been called,
             # which means MessageTracker is ready.
             tic = time.time()
             if not self._sent_event.wait(timeout):
-                raise error.TimeoutError("Still waiting to be sent")
+                raise TimeoutError("Still waiting to be sent")
             if timeout:
                 timeout = max(0, timeout - (time.time() - tic))
         try:
@@ -444,7 +444,7 @@ class AsyncResult(Future):
                 timeout = -1
             return self._tracker.wait(timeout)
         except zmq.NotDone:
-            raise error.TimeoutError("Still waiting to be sent")
+            raise TimeoutError("Still waiting to be sent")
 
     # -------------------------------------
     # dict-access
@@ -477,7 +477,7 @@ class AsyncResult(Future):
         """getattr maps to getitem for convenient attr access to metadata."""
         try:
             return self.__getitem__(key)
-        except (error.TimeoutError, KeyError):
+        except (TimeoutError, KeyError):
             raise AttributeError(
                 "%r object has no attribute %r" % (self.__class__.__name__, key)
             )
@@ -497,7 +497,7 @@ class AsyncResult(Future):
             raise TypeError("AsyncResults with a single result are not iterable.")
         try:
             rlist = self.get(0)
-        except error.TimeoutError:
+        except TimeoutError:
             # wait for each result individually
             evt = Event()
             for child in self._children:
@@ -849,7 +849,7 @@ class AsyncMapResult(AsyncResult):
         """iterator for results *as they arrive*, preserving submission order."""
         try:
             rlist = self.get(0)
-        except error.TimeoutError:
+        except TimeoutError:
             # wait for each result individually
             evt = Event()
             for child in self._children:
@@ -866,7 +866,7 @@ class AsyncMapResult(AsyncResult):
         """iterator for results *as they arrive*, on FCFS basis, ignoring submission order."""
         try:
             rlist = self.get(0)
-        except error.TimeoutError:
+        except TimeoutError:
             queue = Queue()
             for child in self._children:
                 child.add_done_callback(queue.put)

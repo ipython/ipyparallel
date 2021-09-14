@@ -10,7 +10,6 @@ import ipyparallel as ipp
 from .clienttest import ClusterTestCase
 from .clienttest import raises_remote
 from ipyparallel import error
-from ipyparallel.error import TimeoutError
 
 
 def wait(n):
@@ -358,7 +357,7 @@ class AsyncResultTest(ClusterTestCase):
     def test_wait_for_send(self):
         view = self.client[-1]
         view.track = True
-        with self.assertRaises(error.TimeoutError):
+        with self.assertRaises(TimeoutError):
             # this test can fail if the send happens too quickly
             # e.g. the IO thread takes control for too long,
             # so run the test a few times

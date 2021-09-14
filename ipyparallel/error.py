@@ -8,6 +8,7 @@ Inheritance diagram:
 """
 from __future__ import print_function
 
+import builtins
 import sys
 import traceback
 
@@ -49,8 +50,8 @@ class TaskTimeout(KernelError):
     pass
 
 
-class TimeoutError(KernelError):
-    pass
+# backward-compat: use builtin TimeoutError, but preserve `error.TimeoutError` import
+TimeoutError = builtins.TimeoutError
 
 
 class UnmetDependency(KernelError):
