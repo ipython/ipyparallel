@@ -166,6 +166,14 @@ and connect to the already-running cluster with {meth}`.Cluster.from_file`
 cluster = ipp.Cluster.from_file()
 ```
 
+For a convenient one-liner to start a cluster and connect a client,
+use {meth}`~.Cluster.start_and_connect_sync`:
+
+```ipython
+In [1]: import ipyparallel as ipp
+In [2]: rc = ipp.Cluster(n=4).start_and_connect_sync()
+```
+
 More details about starting the IPython controller and engines can be found
 {ref}`here <parallel-process>`.
 

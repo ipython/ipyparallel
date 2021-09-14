@@ -645,15 +645,42 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         log(f"engine set stopped {engine_set_id}: {stop_data}")
         self.update_cluster_file()
 
+    async def start_and_connect(self, n=None):
+        """Single call to start a cluster and connect a client
+
+        Equivalent to::
+
+            await self.start_cluster(n)
+            client = await self.connect_client()
+            await client.wait_for_engines(n, block=False)
+
+        .. versionadded: 7.1
+        """
+        if n is None:
+            n = self.n
+        await self.start_cluster(n=n)
+        client = await self.connect_client()
+        if n:
+            await asyncio.wrap_future(
+                client.wait_for_engines(n, block=False, timeout=self.engine_timeout)
+            )
+        return client
+
     async def start_cluster(self, n=None):
         """Start a cluster
 
         starts one controller and n engines (default: self.n)
+
+        .. versionchanged:: 7.1
+            return self, to allow method chaining
         """
-        await self.start_controller()
+        if self.controller is None:
+            await self.start_controller()
         if self.delay:
             await asyncio.sleep(self.delay)
         await self.start_engines(n)
+        # return self to allow chaining
+        return self
 
     async def stop_engines(self, engine_set_id=None):
         """Stop an engine set
@@ -768,16 +795,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     _context_client = None
 
     async def __aenter__(self):
-        await self.start_controller()
-        await self.start_engines()
-        client = self._context_client = await self.connect_client()
-        if self.n:
-            # wait for engine registration
-            await asyncio.wrap_future(
-                client.wait_for_engines(
-                    self.n, block=False, timeout=self.engine_timeout
-                )
-            )
+        client = self._context_client = await self.start_and_connect()
         return client
 
     async def __aexit__(self, *args):
@@ -788,12 +806,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         await self.stop_controller()
 
     def __enter__(self):
-        self.start_controller_sync()
-        self.start_engines_sync()
-        client = self._context_client = self.connect_client_sync()
-        if self.n:
-            # wait for engine registration
-            client.wait_for_engines(self.n, block=True, timeout=self.engine_timeout)
+        client = self._context_client = self.start_and_connect_sync()
         return client
 
     def __exit__(self, *args):
