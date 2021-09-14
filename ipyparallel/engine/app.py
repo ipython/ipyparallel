@@ -606,7 +606,40 @@ class IPEngine(BaseParallelApplication):
                     "ascii"
                 )
 
-            self.kernel = Kernel(
+            # patch Session to always send engine uuid metadata
+            original_send = self.session.send
+
+            def send_with_metadata(
+                stream,
+                msg_or_type,
+                content=None,
+                parent=None,
+                ident=None,
+                buffers=None,
+                track=False,
+                header=None,
+                metadata=None,
+                **kwargs,
+            ):
+                """Ensure all messages set engine uuid metadata"""
+                metadata = metadata or {}
+                metadata.setdefault("engine", self.ident)
+                return original_send(
+                    stream,
+                    msg_or_type,
+                    content=content,
+                    parent=parent,
+                    ident=ident,
+                    buffers=buffers,
+                    track=track,
+                    header=header,
+                    metadata=metadata,
+                    **kwargs,
+                )
+
+            self.session.send = send_with_metadata
+
+            self.kernel = Kernel.instance(
                 parent=self,
                 engine_id=self.id,
                 ident=self.ident,
