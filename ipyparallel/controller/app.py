@@ -247,6 +247,7 @@ class IPController(BaseParallelApplication):
         self.client_json_file = f"{base}-client.json"
 
     enable_curve = Bool(
+        False,
         config=True,
         help="""Enable CurveZMQ encryption and authentication
 
@@ -256,14 +257,13 @@ class IPController(BaseParallelApplication):
 
     @default("enable_curve")
     def _default_enable_curve(self):
-        if zmq.has("curve"):
+        enabled = os.environ.get("IPP_ENABLE_CURVE", "") == "1"
+        if enabled:
             self._ensure_curve_keypair()
             # disable redundant digest-key, CurveZMQ protects against replays
             if 'key' not in self.config.Session:
                 self.config.Session.key = b''
-            return True
-        else:
-            return False
+        return enabled
 
     @observe("enable_curve")
     def _enable_curve_changed(self, change):
@@ -289,6 +289,14 @@ class IPController(BaseParallelApplication):
         Engines and clients use this for the server key.
         """,
     )
+
+    @default("curve_secretkey")
+    def _default_curve_secretkey(self):
+        return os.environ.get("IPP_CURVE_SECRETKEY", "").encode("ascii")
+
+    @default("curve_publickey")
+    def _default_curve_publickey(self):
+        return os.environ.get("IPP_CURVE_PUBLICKEY", "").encode("ascii")
 
     @validate("curve_publickey", "curve_secretkey")
     def _cast_bytes(self, proposal):

@@ -480,6 +480,10 @@ class Client(HasTraits):
 
         self._task_scheme = cfg['task_scheme']
 
+        if not cfg.get("curve_serverkey") and "IPP_CURVE_SERVERKEY" in os.environ:
+            # load from env, if not set in connection file
+            cfg["curve_serverkey"] = os.environ["IPP_CURVE_SERVERKEY"]
+
         if cfg.get("curve_serverkey"):
             self.curve_serverkey = cfg["curve_serverkey"].encode('ascii')
             if not self.curve_publickey or not self.curve_secretkey:
