@@ -12,6 +12,7 @@ import types
 import warnings
 from collections.abc import Iterable
 from concurrent.futures import Future
+from functools import partial
 from getpass import getpass
 from pprint import pprint
 from threading import current_thread
@@ -21,6 +22,7 @@ from threading import Thread
 import jupyter_client.session
 import zmq
 from decorator import decorator
+from ipykernel.comm import Comm
 from IPython import get_ipython
 from IPython.core.application import BaseIPythonApplication
 from IPython.core.profiledir import ProfileDir
@@ -726,7 +728,7 @@ class Client(HasTraits):
         # poll expects milliseconds, timeout is seconds
         evts = poller.poll(timeout * 1000)
         if not evts:
-            raise error.TimeoutError("Hub connection request timed out")
+            raise TimeoutError("Hub connection request timed out")
         idents, msg = self.session.recv(self._query_socket, mode=0)
         if self.debug:
             pprint(msg)
@@ -1077,6 +1079,8 @@ class Client(HasTraits):
         # init metadata:
         md = self.metadata[msg_id]
 
+        ip = get_ipython()
+
         if msg_type == 'stream':
             name = content['name']
             s = md[name] or ''
@@ -1099,9 +1103,54 @@ class Client(HasTraits):
                 if future and not future.done():
                     # TODO: should probably store actual outputs on the Future
                     future.set_result(None)
-        else:
-            # unhandled msg_type (status, etc.)
-            pass
+        elif msg_type.startswith("comm_") and ip is not None and ip.kernel is not None:
+            # only handle comm messages when we're in an IPython kernel
+            if msg_type == "comm_open":
+                # create proxy comm
+                engine_uuid = msg['metadata'].get('engine', '')
+                engine_ident = engine_uuid.encode("utf8", "replace")
+                # DEBUG: engine_uuid can still be missing?!
+
+                comm = Comm(
+                    comm_id=content['comm_id'],
+                    primary=False,
+                )
+
+                send_to_engine = partial(
+                    self._send,
+                    self._mux_socket,
+                    ident=engine_ident,
+                )
+
+                def relay_comm(msg):
+                    send_to_engine(
+                        msg["msg_type"],
+                        content=msg['content'],
+                        metadata=msg['metadata'],
+                        buffers=msg["buffers"],
+                    )
+
+                comm.on_msg(relay_comm)
+                comm.on_close(
+                    lambda: send_to_engine(
+                        "comm_close",
+                        content={
+                            "comm_id": comm.comm_id,
+                        },
+                    )
+                )
+                ip.kernel.comm_manager.register_comm(comm)
+
+            # relay all comm msgs
+            ip.kernel.session.send(
+                ip.kernel.iopub_socket,
+                msg_type,
+                content=msg['content'],
+                metadata=msg['metadata'],
+                buffers=msg['buffers'],
+                # different parent!
+                parent=ip.kernel.get_parent("shell"),
+            )
 
         msg_future = self._futures.get(msg_id, None)
         if msg_future:
@@ -1148,7 +1197,9 @@ class Client(HasTraits):
         )
         msg_id = msg['header']['msg_id']
 
-        if track_outstanding:
+        expect_reply = msg_type not in {"comm_msg", "comm_close", "comm_open"}
+
+        if expect_reply and track_outstanding:
             # add to outstanding, history
             self.outstanding.add(msg_id)
             self.history.append(msg_id)
@@ -1164,22 +1215,23 @@ class Client(HasTraits):
                     self._outstanding_dict[ident_str].add(msg_id)
             self.metadata['submitted'] = util.utcnow()
 
-        futures = self.create_message_futures(
-            msg_id,
-            async_result=msg_type in {'execute_request', 'apply_request'},
-            track=track,
-        )
-        if message_future_hook is not None:
-            message_future_hook(futures[0])
+        if expect_reply:
+            futures = self.create_message_futures(
+                msg_id,
+                async_result=msg_type in {'execute_request', 'apply_request'},
+                track=track,
+            )
+            if message_future_hook is not None:
+                message_future_hook(futures[0])
 
-        def cleanup(f):
-            """Purge caches on Future resolution"""
-            self.results.pop(msg_id, None)
-            self._futures.pop(msg_id, None)
-            self._output_futures.pop(msg_id, None)
-            self.metadata.pop(msg_id, None)
+            def cleanup(f):
+                """Purge caches on Future resolution"""
+                self.results.pop(msg_id, None)
+                self._futures.pop(msg_id, None)
+                self._output_futures.pop(msg_id, None)
+                self.metadata.pop(msg_id, None)
 
-        multi_future(futures).add_done_callback(cleanup)
+            multi_future(futures).add_done_callback(cleanup)
 
         def _really_send():
             sent = self.session.send(
@@ -1190,7 +1242,8 @@ class Client(HasTraits):
 
         # hand off actual send to IO thread
         self._io_loop.add_callback(_really_send)
-        return futures[0]
+        if expect_reply:
+            return futures[0]
 
     def _send_recv(self, *args, **kwargs):
         """Send a message in the IO thread and return its reply"""
