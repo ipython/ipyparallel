@@ -10,7 +10,6 @@ import os
 import re
 import shlex
 import socket
-import stat
 import sys
 import warnings
 from datetime import datetime
@@ -375,18 +374,6 @@ def signal_children(children):
 
     for sig in (SIGINT, SIGABRT, SIGTERM):
         signal(sig, terminate_children)
-
-
-def generate_exec_key(keyfile):
-    import uuid
-
-    newkey = str(uuid.uuid4())
-    with open(keyfile, 'w') as f:
-        # f.write('ipython-key ')
-        f.write(newkey + '\n')
-    # set user-only RW permissions (0600)
-    # this will have no effect on Windows
-    os.chmod(keyfile, stat.S_IRUSR | stat.S_IWUSR)
 
 
 def integer_loglevel(loglevel):
