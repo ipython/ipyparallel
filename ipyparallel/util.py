@@ -10,7 +10,6 @@ import os
 import re
 import shlex
 import socket
-import stat
 import sys
 import warnings
 from datetime import datetime
@@ -375,18 +374,6 @@ def signal_children(children):
 
     for sig in (SIGINT, SIGABRT, SIGTERM):
         signal(sig, terminate_children)
-
-
-def generate_exec_key(keyfile):
-    import uuid
-
-    newkey = str(uuid.uuid4())
-    with open(keyfile, 'w') as f:
-        # f.write('ipython-key ')
-        f.write(newkey + '\n')
-    # set user-only RW permissions (0600)
-    # this will have no effect on Windows
-    os.chmod(keyfile, stat.S_IRUSR | stat.S_IWUSR)
 
 
 def integer_loglevel(loglevel):
@@ -780,3 +767,32 @@ def _traitlet_signature(cls):
         )
     cls.__signature__ = inspect.Signature(parameters)
     return cls
+
+
+def bind(socket, url, curve_publickey=None, curve_secretkey=None):
+    """Common utility to bind with optional auth info"""
+    if curve_secretkey:
+        socket.setsockopt(zmq.CURVE_SERVER, 1)
+        socket.setsockopt(zmq.CURVE_SECRETKEY, curve_secretkey)
+    return socket.bind(url)
+
+
+def connect(
+    socket,
+    url,
+    curve_serverkey=None,
+    curve_publickey=None,
+    curve_secretkey=None,
+):
+    """Common utility to connect with optional auth info"""
+    if curve_serverkey:
+        if not curve_publickey or not curve_secretkey:
+            # unspecified, generate new client credentials
+            # we don't use client secret auth,
+            # so these are just used for encryption.
+            # any values will do.
+            curve_publickey, curve_secretkey = zmq.curve_keypair()
+        socket.setsockopt(zmq.CURVE_SERVERKEY, curve_serverkey)
+        socket.setsockopt(zmq.CURVE_SECRETKEY, curve_secretkey)
+        socket.setsockopt(zmq.CURVE_PUBLICKEY, curve_publickey)
+    return socket.connect(url)

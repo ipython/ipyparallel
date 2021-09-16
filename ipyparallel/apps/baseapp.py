@@ -132,6 +132,8 @@ class BaseParallelApplication(BaseIPythonApplication):
     def initialize(self, argv=None):
         """initialize the app"""
         super(BaseParallelApplication, self).initialize(argv)
+        if "IPP_SESSION_KEY" in os.environ:
+            self.config.Session.key = os.environ["IPP_SESSION_KEY"].encode("ascii")
         self.init_deprecated_config()
         self.to_work_dir()
         self.reinit_logging()

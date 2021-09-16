@@ -31,6 +31,7 @@ from traitlets.config import Config
 from zmq.eventloop.zmqstream import ZMQStream
 
 from ipyparallel import error
+from ipyparallel import util
 from ipyparallel.util import local_logger
 
 
@@ -50,6 +51,9 @@ class KernelNanny:
         control_url: str,
         registration_url: str,
         identity: bytes,
+        curve_serverkey: bytes,
+        curve_publickey: bytes,
+        curve_secretkey: bytes,
         config: Config,
         pipe,
         log_level: int = logging.INFO,
@@ -60,10 +64,12 @@ class KernelNanny:
         self.control_url = control_url
         self.registration_url = registration_url
         self.identity = identity
+        self.curve_serverkey = curve_serverkey
+        self.curve_publickey = curve_publickey
+        self.curve_secretkey = curve_secretkey
         self.config = config
         self.pipe = pipe
         self.session = Session(config=self.config)
-        log_level = 10
 
         self.log = local_logger(f"{self.__class__.__name__}.{engine_id}", log_level)
         self.log.propagate = False
@@ -110,7 +116,13 @@ class KernelNanny:
         s = self.context.socket(zmq.DEALER)
         # finite, nonzero LINGER to prevent hang without dropping message during exit
         s.LINGER = 3000
-        s.connect(self.registration_url)
+        util.connect(
+            s,
+            self.registration_url,
+            curve_serverkey=self.curve_serverkey,
+            curve_secretkey=self.curve_secretkey,
+            curve_publickey=self.curve_publickey,
+        )
         self.session.send(s, "unregistration_request", content={"id": self.engine_id})
         s.close()
 
@@ -194,12 +206,20 @@ class KernelNanny:
         # set up control socket (connection to Scheduler)
         self.control_socket = self.context.socket(zmq.ROUTER)
         self.control_socket.identity = self.identity
-        self.control_socket.connect(self.control_url)
+        util.connect(
+            self.control_socket,
+            self.control_url,
+            curve_serverkey=self.curve_serverkey,
+        )
         self.control_stream = ZMQStream(self.control_socket)
         self.control_stream.on_recv_stream(self.dispatch_control)
 
         # set up relay socket (connection to parent's control socket)
         self.parent_socket = self.context.socket(zmq.DEALER)
+        if self.curve_secretkey:
+            self.parent_socket.setsockopt(zmq.CURVE_SERVER, 1)
+            self.parent_socket.setsockopt(zmq.CURVE_SECRETKEY, self.curve_secretkey)
+
         port = self.parent_socket.bind_to_random_port("tcp://127.0.0.1")
 
         # now that we've bound, pass port to parent via AsyncResult

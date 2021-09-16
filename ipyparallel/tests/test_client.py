@@ -34,6 +34,14 @@ class TestClient(ClusterTestCase):
 
     engine_count = 4
 
+    def test_curve(self):
+        if os.environ.get("IPP_ENABLE_CURVE") == "1":
+            assert not self.client.session.key
+            assert self.client.curve_serverkey
+            assert self.client.curve_secretkey
+        else:
+            assert self.client.session.key
+
     def test_ids(self):
         n = len(self.client.ids)
         self.add_engines(2)

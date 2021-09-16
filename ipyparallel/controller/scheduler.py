@@ -115,7 +115,17 @@ ZMQStream = zmqstream.ZMQStream
 
 
 def get_common_scheduler_streams(
-    mon_addr, not_addr, reg_addr, config, logname, log_url, loglevel, in_thread
+    mon_addr,
+    not_addr,
+    reg_addr,
+    config,
+    logname,
+    log_url,
+    loglevel,
+    in_thread,
+    curve_serverkey,
+    curve_publickey,
+    curve_secretkey,
 ):
     if config:
         # unwrap dict back into Config
@@ -131,14 +141,24 @@ def get_common_scheduler_streams(
         ctx = zmq.Context()
         loop = ioloop.IOLoop()
         loop.make_current()
+
+    def connect(s, addr):
+        return util.connect(
+            s,
+            addr,
+            curve_serverkey=curve_serverkey,
+            curve_secretkey=curve_secretkey,
+            curve_publickey=curve_publickey,
+        )
+
     mons = zmqstream.ZMQStream(ctx.socket(zmq.PUB), loop)
-    mons.connect(mon_addr)
+    connect(mons, mon_addr)
     nots = zmqstream.ZMQStream(ctx.socket(zmq.SUB), loop)
     nots.setsockopt(zmq.SUBSCRIBE, b'')
-    nots.connect(not_addr)
+    connect(nots, not_addr)
 
     querys = ZMQStream(ctx.socket(zmq.DEALER), loop)
-    querys.connect(reg_addr)
+    connect(querys, reg_addr)
 
     # setup logging.
     if in_thread:
@@ -166,9 +186,21 @@ def launch_scheduler(
     loglevel=logging.DEBUG,
     identity=None,
     in_thread=False,
+    curve_secretkey=None,
+    curve_publickey=None,
 ):
     config, ctx, loop, mons, nots, querys, log = get_common_scheduler_streams(
-        mon_addr, not_addr, reg_addr, config, logname, log_url, loglevel, in_thread
+        mon_addr,
+        not_addr,
+        reg_addr,
+        config,
+        logname,
+        log_url,
+        loglevel,
+        in_thread,
+        curve_serverkey=curve_publickey,
+        curve_publickey=curve_publickey,
+        curve_secretkey=curve_secretkey,
     )
 
     util.set_hwm(mons, 0)
@@ -177,14 +209,14 @@ def launch_scheduler(
     if identity:
         ins.setsockopt(zmq.IDENTITY, identity + b'_in')
 
-    ins.bind(in_addr)
+    util.bind(ins, in_addr, curve_secretkey=curve_secretkey)
 
     outs = ZMQStream(ctx.socket(zmq.ROUTER), loop)
     util.set_hwm(outs, 0)
 
     if identity:
         outs.setsockopt(zmq.IDENTITY, identity + b'_out')
-    outs.bind(out_addr)
+    util.bind(outs, out_addr, curve_secretkey=curve_secretkey)
 
     scheduler = scheduler_class(
         client_stream=ins,

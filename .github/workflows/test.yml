@@ -7,6 +7,7 @@ on:
 env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
   LANG: C.UTF-8
+  IPP_DISABLE_JS: "1"
 
 jobs:
   test:
@@ -27,7 +28,11 @@ jobs:
           - python: "3.6"
             tornado: "5.1.1"
           - python: "3.7"
-            controller_ip: "*"
+            env:
+              IPP_CONTROLLER_IP: "*"
+          - python: "3.9"
+            env:
+              IPP_ENABLE_CURVE: "1"
           - python: "3.8"
             runs_on: windows-2019
           - python: "3.9"
@@ -53,9 +58,18 @@ jobs:
             ${{ runner.os }}-yarn-
 
       - name: Set environment variables
-        if: matrix.controller_ip
+        if: ${{ matrix.env }}
+        env:
+          MATRIX_ENV: ${{ toJSON(matrix.env) }}
         run: |
-          echo "IPP_CONTROLLER_IP=${{ matrix.controller_ip }}" >> $GITHUB_ENV
+          python3 <<EOF
+          import json
+          import os
+          matrix_env = json.loads(os.environ["MATRIX_ENV"])
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              for key, value in matrix_env.items():
+                  f.write(f"{key}={value}\n")
+          EOF
 
       - name: Set up docker-compose for ssh launcher
         if: ${{ matrix.cluster_type == 'ssh' }}

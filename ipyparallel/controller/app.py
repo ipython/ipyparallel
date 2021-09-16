@@ -26,6 +26,7 @@ from jupyter_client.session import Session
 from jupyter_client.session import session_aliases
 from jupyter_client.session import session_flags
 from traitlets import Bool
+from traitlets import Bytes
 from traitlets import default
 from traitlets import Dict
 from traitlets import import_item
@@ -244,6 +245,64 @@ class IPController(BaseParallelApplication):
             base = f"{base}-{change.new}"
         self.engine_json_file = f"{base}-engine.json"
         self.client_json_file = f"{base}-client.json"
+
+    enable_curve = Bool(
+        False,
+        config=True,
+        help="""Enable CurveZMQ encryption and authentication
+
+        Caution: known to have issues on platforms with getrandom
+        """,
+    )
+
+    @default("enable_curve")
+    def _default_enable_curve(self):
+        enabled = os.environ.get("IPP_ENABLE_CURVE", "") == "1"
+        if enabled:
+            self._ensure_curve_keypair()
+            # disable redundant digest-key, CurveZMQ protects against replays
+            if 'key' not in self.config.Session:
+                self.config.Session.key = b''
+        return enabled
+
+    @observe("enable_curve")
+    def _enable_curve_changed(self, change):
+        if change.new:
+            self._ensure_curve_keypair()
+            # disable redundant digest-key, CurveZMQ protects against replays
+            if 'key' not in self.config.Session:
+                self.config.Session.key = b''
+
+    def _ensure_curve_keypair(self):
+        if not self.curve_secretkey or not self.curve_publickey:
+            self.log.info("Generating new CURVE credentials")
+            self.curve_publickey, self.curve_secretkey = zmq.curve_keypair()
+
+    curve_secretkey = Bytes(
+        config=True,
+        help="The CurveZMQ secret key for the controller",
+    )
+    curve_publickey = Bytes(
+        config=True,
+        help="""The CurveZMQ public key for the controller.
+
+        Engines and clients use this for the server key.
+        """,
+    )
+
+    @default("curve_secretkey")
+    def _default_curve_secretkey(self):
+        return os.environ.get("IPP_CURVE_SECRETKEY", "").encode("ascii")
+
+    @default("curve_publickey")
+    def _default_curve_publickey(self):
+        return os.environ.get("IPP_CURVE_PUBLICKEY", "").encode("ascii")
+
+    @validate("curve_publickey", "curve_secretkey")
+    def _cast_bytes(self, proposal):
+        if isinstance(proposal.value, str):
+            return proposal.value.encode("ascii")
+        return proposal.value
 
     # internal
     children = List()
@@ -591,6 +650,24 @@ class IPController(BaseParallelApplication):
         """return full zmq url for a named internal channel"""
         return self.construct_url('internal', channel, index)
 
+    def bind(self, socket, url):
+        """Bind a socket"""
+        return util.bind(
+            socket,
+            url,
+            curve_secretkey=self.curve_secretkey if self.enable_curve else None,
+            curve_publickey=self.curve_publickey if self.enable_curve else None,
+        )
+
+    def connect(self, socket, url):
+        return util.connect(
+            socket,
+            url,
+            curve_serverkey=self.curve_publickey if self.enable_curve else None,
+            curve_publickey=self.curve_publickey if self.enable_curve else None,
+            curve_secretkey=self.curve_secretkey if self.enable_curve else None,
+        )
+
     def client_url(self, channel, index=None):
         """return full zmq url for a named client channel"""
         return self.construct_url('client', channel, index)
@@ -680,6 +757,11 @@ class IPController(BaseParallelApplication):
                 self.write_connection_files = False
 
     def init_hub(self):
+        if self.enable_curve:
+            self.log.info(
+                "Using CURVE security. Ignore warnings about disabled message signing."
+            )
+
         c = self.config
 
         ctx = self.context
@@ -763,17 +845,17 @@ class IPController(BaseParallelApplication):
         self.log.debug("Hub internal addrs: %s", self.internal_info)
 
         # Registrar socket
-        q = ZMQStream(ctx.socket(zmq.ROUTER), loop)
-        util.set_hwm(q, 0)
+        query = ZMQStream(ctx.socket(zmq.ROUTER), loop)
+        util.set_hwm(query, 0)
+        self.bind(query, self.client_url('registration'))
         self.log.info(
             "Hub listening on %s for registration.", self.client_url('registration')
         )
-        q.bind(self.client_url('registration'))
         if self.client_ip != self.engine_ip:
+            self.bind(query, self.engine_url('registration'))
             self.log.info(
                 "Hub listening on %s for registration.", self.engine_url('registration')
             )
-            q.bind(self.engine_url('registration'))
 
         ### Engine connections ###
 
@@ -792,6 +874,8 @@ class IPController(BaseParallelApplication):
                 monitor_url=disambiguate_url(self.monitor_url),
                 config=hm_config,
                 log_level=self.log.getEffectiveLevel(),
+                curve_publickey=self.curve_publickey,
+                curve_secretkey=self.curve_secretkey,
             ),
             daemon=True,
         )
@@ -799,16 +883,16 @@ class IPController(BaseParallelApplication):
         ### Client connections ###
 
         # Notifier socket
-        n = ZMQStream(ctx.socket(zmq.PUB), loop)
-        n.bind(self.client_url('notification'))
+        notifier = ZMQStream(ctx.socket(zmq.PUB), loop)
+        self.bind(notifier, self.client_url('notification'))
 
         ### build and launch the queues ###
 
         # monitor socket
         sub = ctx.socket(zmq.SUB)
         sub.setsockopt(zmq.SUBSCRIBE, b"")
-        sub.bind(self.monitor_url)
-        sub.bind('inproc://monitor')
+        self.bind(sub, self.monitor_url)
+        # self.bind(sub, 'inproc://monitor')
         sub = ZMQStream(sub, loop)
 
         # connect the db
@@ -818,17 +902,17 @@ class IPController(BaseParallelApplication):
         time.sleep(0.25)
 
         # resubmit stream
-        r = ZMQStream(ctx.socket(zmq.DEALER), loop)
+        resubmit = ZMQStream(ctx.socket(zmq.DEALER), loop)
         url = util.disambiguate_url(self.client_url('task'))
-        r.connect(url)
+        self.connect(resubmit, url)
 
         self.hub = Hub(
             loop=loop,
             session=self.session,
             monitor=sub,
-            query=q,
-            notifier=n,
-            resubmit=r,
+            query=query,
+            notifier=notifier,
+            resubmit=resubmit,
             db=self.db,
             heartmonitor_period=HeartMonitor(parent=self).period,
             engine_info=self.engine_info,
@@ -842,6 +926,9 @@ class IPController(BaseParallelApplication):
             # save to new json config files
             base = {
                 'key': self.session.key.decode('ascii'),
+                'curve_serverkey': self.curve_publickey.decode("ascii")
+                if self.enable_curve
+                else None,
                 'location': self.location,
                 'pack': self.session.packer,
                 'unpack': self.session.unpacker,
@@ -879,20 +966,30 @@ class IPController(BaseParallelApplication):
             launch_scheduler(**scheduler_args)
 
     def get_python_scheduler_args(
-        self, scheduler_name, scheduler_class, monitor_url, identity=None
+        self,
+        scheduler_name,
+        scheduler_class,
+        monitor_url,
+        identity=None,
+        in_addr=None,
+        out_addr=None,
     ):
         return {
             'scheduler_class': scheduler_class,
-            'in_addr': self.client_url(scheduler_name),
-            'out_addr': self.engine_url(scheduler_name),
+            'in_addr': in_addr or self.client_url(scheduler_name),
+            'out_addr': out_addr or self.engine_url(scheduler_name),
             'mon_addr': monitor_url,
             'not_addr': disambiguate_url(self.client_url('notification')),
             'reg_addr': disambiguate_url(self.client_url('registration')),
-            'identity': identity if identity else bytes(scheduler_name, 'utf8'),
+            'identity': identity
+            if identity is not None
+            else bytes(scheduler_name, 'utf8'),
             'logname': 'scheduler',
             'loglevel': self.log_level,
             'log_url': self.log_url,
             'config': dict(self.config),
+            'curve_secretkey': self.curve_secretkey if self.enable_curve else None,
+            'curve_publickey': self.curve_publickey if self.enable_curve else None,
         }
 
     def launch_broadcast_schedulers(self, monitor_url, children):
@@ -932,20 +1029,23 @@ class IPController(BaseParallelApplication):
                     index=identity,
                 )
 
-            scheduler_args = dict(
+            scheduler_args = self.get_python_scheduler_args(
+                BroadcastScheduler.port_name,
+                BroadcastScheduler,
+                monitor_url,
+                identity,
                 in_addr=in_addr,
-                mon_addr=monitor_url,
-                not_addr=disambiguate_url(self.client_url('notification')),
-                reg_addr=disambiguate_url(self.client_url('registration')),
-                identity=identity,
-                config=dict(self.config),
-                loglevel=self.log_level,
-                log_url=self.log_url,
+                out_addr='ignored',
+            )
+            scheduler_args.pop('out_addr')
+            # add broadcast args
+            scheduler_args.update(
                 outgoing_ids=[outgoing_id1, outgoing_id2],
                 depth=depth,
                 max_depth=self.broadcast_scheduler_depth,
                 is_leaf=is_leaf,
             )
+
             if is_leaf:
                 scheduler_args.update(
                     out_addrs=[
@@ -979,11 +1079,27 @@ class IPController(BaseParallelApplication):
         # ensure session key is shared across sessions
         self.config.Session.key = self.session.key
         ident = self.session.bsession
+
+        def add_auth(q):
+            """Add CURVE auth to a monitored queue"""
+            if not self.enable_curve:
+                return False
+            q.setsockopt_in(zmq.CURVE_SERVER, 1)
+            q.setsockopt_in(zmq.CURVE_SECRETKEY, self.curve_secretkey)
+            q.setsockopt_out(zmq.CURVE_SERVER, 1)
+            q.setsockopt_out(zmq.CURVE_SECRETKEY, self.curve_secretkey)
+            # monitor is a client
+            pub, secret = zmq.curve_keypair()
+            q.setsockopt_mon(zmq.CURVE_SERVERKEY, self.curve_publickey)
+            q.setsockopt_mon(zmq.CURVE_SECRETKEY, secret)
+            q.setsockopt_mon(zmq.CURVE_PUBLICKEY, pub)
+
         # disambiguate url, in case of *
         monitor_url = disambiguate_url(self.monitor_url)
         # maybe_inproc = 'inproc://monitor' if self.use_threads else monitor_url
         # IOPub relay (in a Process)
         q = mq(zmq.PUB, zmq.SUB, zmq.PUB, b'N/A', b'iopub')
+        add_auth(q)
         q.name = "IOPubScheduler"
         q.bind_in(self.client_url('iopub'))
         q.setsockopt_in(zmq.IDENTITY, ident + b"_iopub")
@@ -995,6 +1111,7 @@ class IPController(BaseParallelApplication):
 
         # Multiplexer Queue (in a Process)
         q = mq(zmq.ROUTER, zmq.ROUTER, zmq.PUB, b'in', b'out')
+        add_auth(q)
         q.name = "DirectScheduler"
 
         q.bind_in(self.client_url('mux'))
@@ -1007,6 +1124,7 @@ class IPController(BaseParallelApplication):
 
         # Control Queue (in a Process)
         q = mq(zmq.ROUTER, zmq.ROUTER, zmq.PUB, b'incontrol', b'outcontrol')
+        add_auth(q)
         q.name = "ControlScheduler"
         q.bind_in(self.client_url('control'))
         q.setsockopt_in(zmq.IDENTITY, b'control_in')
@@ -1023,6 +1141,7 @@ class IPController(BaseParallelApplication):
         if scheme == 'pure':
             self.log.warning("task::using pure DEALER Task scheduler")
             q = mq(zmq.ROUTER, zmq.DEALER, zmq.PUB, b'intask', b'outtask')
+            add_auth(q)
             q.name = "TaskScheduler(pure)"
             # q.setsockopt_out(zmq.HWM, hub.hwm)
             q.bind_in(self.client_url('task'))
