@@ -6,6 +6,7 @@ from __future__ import print_function
 import asyncio
 import json
 import os
+import re
 import socket
 import time
 import types
@@ -255,6 +256,10 @@ class Metadata(dict):
 def _is_future(f):
     """light duck-typing check for Futures"""
     return hasattr(f, 'add_done_callback')
+
+
+# carriage return pattern
+_cr_pat = re.compile(r'.*\r(?=[^\n])')
 
 
 class Client(HasTraits):
@@ -1115,8 +1120,10 @@ class Client(HasTraits):
 
         if msg_type == 'stream':
             name = content['name']
-            s = md[name] or ''
-            md[name] = s + content['text']
+            new_text = (md[name] or '') + content['text']
+            if '\r' in content['text']:
+                new_text = _cr_pat.sub('', new_text)
+            md[name] = new_text
         elif msg_type == 'error':
             md.update({'error': self._unwrap_exception(content)})
         elif msg_type == 'execute_input':

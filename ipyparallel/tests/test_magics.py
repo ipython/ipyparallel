@@ -226,13 +226,15 @@ class TestParallelMagics(ClusterTestCase):
         with capture_output(display=False) as io:
             ip.run_cell_magic('px', '--stream', 'generate_output()')
 
-        self.assertNotIn('\n\n', io.stdout)
+        assert '\n\n' not in io.stdout
         lines = io.stdout.splitlines()
         expected = []
         expected.extend(
             [
-                r'\[stdout:\d+\] stdout',
-                r'\[stdout:\d+\] stdout2',
+                r'\[stdout:\d+\]',
+                'stdout',
+                r'\[stdout:\d+\]',
+                'stdout2',
                 r'\[output:\d+\]',
                 r'IPython\.core\.display\.HTML',
                 r'\[output:\d+\]',
@@ -242,22 +244,24 @@ class TestParallelMagics(ClusterTestCase):
         )
         expected.extend([r'Out\[\d+:\d+\]:.*IPython\.core\.display\.Math'] * len(v))
 
-        self.assertEqual(len(lines), len(expected), io.stdout)
+        assert len(lines) == len(expected)
         # Check that all expected lines are in the output
         self._check_expected_lines_unordered(expected, lines)
 
         # Do the same for stderr
-        self.assertNotIn('\n\n', io.stderr)
+        assert '\n\n' not in io.stderr
         lines = io.stderr.splitlines()
         expected = []
         expected.extend(
             [
-                r'\[stderr:\d+\] stderr',
-                r'\[stderr:\d+\] stderr2',
+                r'\[stderr:\d+\]',
+                'stderr',
+                r'\[stderr:\d+\]',
+                'stderr2',
             ]
             * len(v)
         )
-        self.assertEqual(len(lines), len(expected), io.stderr)
+        assert len(lines) == len(expected)
         self._check_expected_lines_unordered(expected, lines)
 
     def test_px_nonblocking(self):

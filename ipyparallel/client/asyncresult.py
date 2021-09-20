@@ -18,6 +18,7 @@ from decorator import decorator
 from IPython import get_ipython
 from IPython.display import display
 from IPython.display import display_pretty
+from IPython.display import publish_display_data
 
 from .futures import MessageFuture
 from .futures import multi_future
@@ -64,6 +65,8 @@ class AsyncResult(Future):
     _tracker = None
     _single_result = False
     owner = False
+    _last_display_prefix = ""
+    _stream_trailing_newline = True
 
     def __init__(
         self,
@@ -138,20 +141,46 @@ class AsyncResult(Future):
         self._output_future.add_done_callback(self._resolve_output)
         self.add_done_callback(self._finalize_result)
 
-    def _iopub_streaming_output_callback(self, eid, msg):
+    def _iopub_streaming_output_callback(self, eid, msg_future, msg):
         """Callback registered during AsyncResult.stream_output()"""
         msg_type = msg['header']['msg_type']
+        ip = get_ipython()
+        if ip is not None:
+            in_kernel = getattr(ip, 'kernel', None) is not None
+        else:
+            in_kernel = False
+
         if msg_type == 'stream':
             msg_content = msg['content']
             stream_name = msg_content['name']
-            stream = getattr(sys, stream_name, sys.stdout)
-            self._display_stream(
-                msg_content['text'],
-                f'[{stream_name}:{eid}] ',
-                file=stream,
-            )
 
-        if get_ipython() is None:
+            if in_kernel:
+                parent_msg_id = msg['parent_header']['msg_id']
+                display_id = f"{parent_msg_id}-{stream_name}"
+                md = msg_future.output.metadata
+                full_stream = md[stream_name]
+                if display_id in self._already_streamed:
+                    update = True
+                else:
+                    self._already_streamed[display_id] = True
+                    update = False
+                publish_display_data(
+                    {
+                        "text/plain": f"[{stream_name}:{eid}] " + full_stream,
+                    },
+                    transient={"display_id": display_id},
+                    update=update,
+                )
+                return
+            else:
+                stream = getattr(sys, stream_name, sys.stdout)
+                self._display_stream(
+                    msg_content['text'],
+                    f'[{stream_name}:{eid}] ',
+                    file=stream,
+                )
+
+        if ip is None:
             return
 
         if msg_type == 'display_data':
@@ -168,14 +197,21 @@ class AsyncResult(Future):
 
         # Keep a handle on the futures so we can remove the callback later
         future_callbacks = {}
+        self._already_streamed = {}
+        self._stream_trailing_newline = True
+        self._last_display_prefix = ""
         for eid, msg_future in zip(self._targets, self._children):
-            callback_func = partial(self._iopub_streaming_output_callback, eid)
+            callback_func = partial(
+                self._iopub_streaming_output_callback, eid, msg_future
+            )
             future_callbacks[msg_future] = callback_func
             msg_future.iopub_callbacks.append(callback_func)
 
         try:
             yield
         finally:
+            # clear stream cache
+            self._already_streamed = {}
             # Remove the callback
             for msg_future, callback in future_callbacks.items():
                 msg_future.iopub_callbacks.remove(callback)
@@ -639,17 +675,34 @@ class AsyncResult(Future):
         ip.display_pub.publish(data=content['data'], metadata=md)
 
     def _display_stream(self, text, prefix='', file=None):
+        """Redisplay a stream"""
         if not text:
             # nothing to display
             return
         if file is None:
             file = sys.stdout
-        end = '' if text.endswith('\n') else '\n'
 
-        multiline = text.count('\n') > int(text.endswith('\n'))
-        if prefix and multiline and not text.startswith('\n'):
-            prefix = prefix + '\n'
-        print("%s%s" % (prefix, text), file=file, end=end)
+        end = ""
+        if prefix:
+            if prefix == self._last_display_prefix:
+                # same prefix, no need to re-display
+                prefix = ""
+            else:
+                self._last_display_prefix = prefix
+
+        if prefix and not self._stream_trailing_newline:
+            # prefix changed, no trailing newline; insert newline
+            pre = "\n"
+        else:
+            pre = ""
+
+        if prefix:
+            sep = "\n"
+        else:
+            sep = ""
+
+        self._stream_trailing_newline = text.endswith("\n")
+        print(f"{pre}{prefix}{sep}{text}", file=file, end="")
 
     def _display_single_result(self, result_only=False):
         if not result_only:
