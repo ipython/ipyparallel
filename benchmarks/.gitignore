@@ -1,0 +1,8 @@
+.DS_Store
+.idea
+ipyparallel/
+env/
+html/
+__pycache__
+
+.ipynb_checkpoints
