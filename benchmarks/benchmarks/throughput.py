@@ -1,4 +1,5 @@
 import os
+
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 import ipyparallel as ipp
 import timeit
@@ -29,6 +30,7 @@ def wait_for(condition):
 def echo(x):
     return x
 
+
 def make_benchmark(benchmark_name, get_view):
     class ThroughputSuite:
         param_names = ['Number of engines', 'Number of bytes']
@@ -57,6 +59,7 @@ def make_benchmark(benchmark_name, get_view):
 
     return ThroughputSuite
 
+
 #
 # class DirectViewBroadcast(
 #     make_benchmark(
@@ -66,6 +69,7 @@ def make_benchmark(benchmark_name, get_view):
 #     pass
 #
 
+
 class CoalescingBroadcast(
     make_benchmark(
         'CoalescingBroadcast',
@@ -73,6 +77,7 @@ class CoalescingBroadcast(
     )
 ):
     pass
+
 
 #
 # class NonCoalescingBroadcast(
@@ -89,7 +94,7 @@ class DepthTestingSuite:
     param_names = ['Number of engines', 'is_coalescing', 'depth']
     timer = timeit.default_timer
     timeout = 120
-    params = [engines, [True, False], [ 3, 4]]
+    params = [engines, [True, False], [3, 4]]
 
     view = None
     client = None
@@ -102,7 +107,7 @@ class DepthTestingSuite:
 
         wait_for(lambda: len(self.client) >= number_of_engines)
 
-    def time_broadcast(self, number_of_engines,  *args):
+    def time_broadcast(self, number_of_engines, *args):
         self.reply = self.view.apply_sync(
             echo,
             np.array([0] * 1000, dtype=np.int8),
@@ -122,8 +127,9 @@ class DepthTestingSuite:
             self.client.close()
 
 
-
 number_of_messages = [1, 5, 10, 20, 50, 75, 100]
+
+
 def make_multiple_message_benchmark(get_view):
     class AsyncMessagesSuite:
         param_names = ['Number of engines', 'number_of_messages']
@@ -145,9 +151,7 @@ def make_multiple_message_benchmark(get_view):
         def time_async_messages(self, number_of_engines, number_of_messages):
             replies = []
             for i in range(number_of_messages):
-                reply = self.view.apply_async(
-                    echo, np.array([0] * 1000, dtype=np.int8)
-                )
+                reply = self.view.apply_async(echo, np.array([0] * 1000, dtype=np.int8))
                 replies.append(reply)
             for reply in replies:
                 reply.get()
@@ -207,7 +211,6 @@ def make_push_benchmark(get_view):
                 self.client.close()
 
     return PushMessageSuite
-
 
 
 class DirectViewPush(

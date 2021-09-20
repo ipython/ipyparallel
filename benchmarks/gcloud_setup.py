@@ -1,14 +1,16 @@
 # /Users/tomo/anaconda3/envs/master_thesis/bin/python
 import atexit
+import multiprocessing as mp
+import os
 import sys
+from subprocess import check_call
+from subprocess import Popen
+from time import sleep
+from typing import List
+
+import googleapiclient.discovery as gcd
 
 from benchmarks.utils import get_time_stamp
-from subprocess import check_call, Popen
-import os
-import googleapiclient.discovery as gcd
-from typing import List
-import multiprocessing as mp
-from time import sleep
 
 CORE_NUMBERS_FOR_TEMPLATES = [64]
 # CORE_NUMBERS_FOR_TEMPLATES = [16]
@@ -151,7 +153,6 @@ def run_on_instance(template_name):
         template_name,
         block=False,
     )
-
 
 
 if __name__ == "__main__":

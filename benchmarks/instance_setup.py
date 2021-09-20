@@ -10,6 +10,7 @@ GITHUB_TOKEN = ""  # Token for machine user
 ASV_TESTS_REPO = "github.com/tomoboy/ipyparallel_master_project.git"
 IPYPARALLEL_REPO = "github.com/tomoboy/ipyparallel.git"
 
+
 def cmd_run(*args, log_filename=None, error_filename=None):
     if len(args) == 1:
         args = args[0].split(" ")

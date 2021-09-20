@@ -1,10 +1,14 @@
-import sys
-import os
 import atexit
-import time
-from subprocess import check_call, check_output, Popen
-import ipyparallel as ipp
 import datetime
+import os
+import sys
+import time
+from subprocess import check_call
+from subprocess import check_output
+from subprocess import Popen
+
+import ipyparallel as ipp
+
 
 def wait_for(condition):
     for _ in range(750):
@@ -82,26 +86,28 @@ if __name__ == "__main__":
 
     controller_pid = check_output('pgrep -f ipyparallel.controller', shell=True)
     number_of_schedulers = 15
-    scheduler_pids = sorted((int(x) for x in controller_pid.decode('utf-8').split()))[-number_of_schedulers:]
+    scheduler_pids = sorted((int(x) for x in controller_pid.decode('utf-8').split()))[
+        -number_of_schedulers:
+    ]
 
-    client_output_path = os.path.join(
-        os.getcwd(), f'spanning_tree_client.svg'
-    )
+    client_output_path = os.path.join(os.getcwd(), f'spanning_tree_client.svg')
 
     files_to_upload = [client_output_path]
     ps = []
     for i, scheduler_pid in enumerate(scheduler_pids):
         scheduler_output_path = os.path.join(
-           os.getcwd(), f'spanning_tree_{i}_scheduler.svg'
+            os.getcwd(), f'spanning_tree_{i}_scheduler.svg'
         )
         files_to_upload.append(scheduler_output_path)
-        ps.append(start_cmd(
-            f'sudo py-spy --function -d 60 --flame {scheduler_output_path} --pid {scheduler_pid}',
-            blocking=False,
-        ))
+        ps.append(
+            start_cmd(
+                f'sudo py-spy --function -d 60 --flame {scheduler_output_path} --pid {scheduler_pid}',
+                blocking=False,
+            )
+        )
 
     start_cmd(
-            f'sudo py-spy --function -d 60 --flame {client_output_path} -- python profiling_code.py tasks_with_large_data spanning_tree'
+        f'sudo py-spy --function -d 60 --flame {client_output_path} -- python profiling_code.py tasks_with_large_data spanning_tree'
     )
     print('client ended')
     for p in ps:

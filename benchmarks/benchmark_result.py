@@ -1,13 +1,14 @@
 import json
+import os
 import pickle
+import re
 from datetime import datetime
 from enum import Enum
 from itertools import product
-import os
+
+from utils import seconds_to_ms
 
 from benchmarks.constants import DEFAULT_NUMBER_OF_ENGINES
-from utils import seconds_to_ms
-import re
 
 RESULTS_DIR = "results"
 
@@ -261,7 +262,6 @@ def add_to_depth_testing_source(source, benchmark):
         source[scheduler_type]['Number of engines'].append(number_of_engines)
         source[scheduler_type]['Is coalescing'].append(is_coalescing)
         source[scheduler_type]['Depth'].append(depth)
-
 
 
 def add_to_echo_many_arguments_source(source, benchmark, number_of_cores):

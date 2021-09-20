@@ -1,8 +1,8 @@
-from subprocess import Popen
 import time
+from subprocess import Popen
 
 
-p  = Popen(['python', 'cluster_start.py', '3', 'loool', '20'])
+p = Popen(['python', 'cluster_start.py', '3', 'loool', '20'])
 
 for i in range(20):
     print('sleeping')

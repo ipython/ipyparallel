@@ -1,5 +1,6 @@
-import ipyparallel as ipp
 import numpy as np
+
+import ipyparallel as ipp
 
 
 client = ipp.Client(profile='asv')

@@ -1,13 +1,13 @@
 import atexit
 import os
-import sys
+import resource
 import socket
+import sys
 from subprocess import check_call
 
 import googleapiclient.discovery as gcd
-from google.cloud import storage
 from cluster_start import start_cluster
-import resource
+from google.cloud import storage
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
 
@@ -21,6 +21,7 @@ BUCKET_NAME = 'ipyparallel_dev'
 
 instance_name = socket.gethostname()
 compute = gcd.build("compute", "v1")
+
 
 def cmd_run(*args, log_filename=None, error_filename=None):
     if len(args) == 1:

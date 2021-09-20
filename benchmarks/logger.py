@@ -1,5 +1,6 @@
-from datetime import date
 import os
+from datetime import date
+
 from ipyparallel_master_project.benchmarks.utils import get_time_stamp
 
 LOGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')

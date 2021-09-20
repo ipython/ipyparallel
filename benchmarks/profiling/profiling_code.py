@@ -1,6 +1,9 @@
-import ipyparallel as ipp
-import numpy as np
 import sys
+
+import numpy as np
+
+import ipyparallel as ipp
+
 
 def echo(delay=0):
     def inner_echo(x, **kwargs):
@@ -33,6 +36,7 @@ def profile_tasks_with_large_data(lview, num_bytes):
         for i in range(10):
             lview.apply_sync(echo(0), np.array([0] * num_bytes, dtype=np.int8))
 
+
 def run_profiling(selected_profiling_task, selected_view):
     client = ipp.Client(profile='asv')
     # add it to path on the engines
@@ -61,6 +65,7 @@ def run_profiling(selected_profiling_task, selected_view):
     #     for i in range(100):
     #         for number_of_arguments in ((2 ** x) - 1 for x in range(1, 9)):
     #             profile_echo_many_arguments(view, number_of_arguments)
+
 
 if __name__ == "__main__":
     run_profiling(sys.argv[1], sys.argv[2])
