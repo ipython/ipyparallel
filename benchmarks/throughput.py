@@ -29,7 +29,6 @@ def wait_for(condition):
 def echo(x):
     return x
 
-
 def make_benchmark(benchmark_name, get_view):
     class ThroughputSuite:
         param_names = ['Number of engines', 'Number of bytes']
