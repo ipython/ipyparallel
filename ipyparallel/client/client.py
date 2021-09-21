@@ -847,8 +847,10 @@ class Client(HasTraits):
         eid = content['id']
         d = {eid: content['uuid']}
         self._update_engines(d)
+        event = {'event': 'register'}
+        event.update(content)
         for callback in self._registration_callbacks:
-            callback(content)
+            callback(event)
 
     def _unregister_engine(self, msg):
         """Unregister an engine that has died."""
@@ -862,6 +864,11 @@ class Client(HasTraits):
 
         if self._task_socket and self._task_scheme == 'pure':
             self._stop_scheduling_tasks()
+
+        event = {"event": "unregister"}
+        event.update(content)
+        for callback in self._registration_callbacks:
+            callback(event)
 
     def _handle_stranded_msgs(self, eid, uuid):
         """Handle messages known to be on an engine when the engine unregisters.
@@ -1475,10 +1482,47 @@ class Client(HasTraits):
                 unit='engine',
             )
 
+        # watch for engine-stop events
+
+        engine_stop_future = Future()
+        if self.cluster and self.cluster.engines:
+            # we have a parent cluster,
+            # monitor for engines stopping
+            def _signal_stopped(stop_data):
+                if not engine_stop_future.done():
+                    engine_stop_future.set_result(stop_data)
+
+            for es in self.cluster.engines.values():
+                es.on_stop(_signal_stopped)
+                engine_stop_future.add_done_callback(
+                    lambda f: es.stop_callbacks.remove(_signal_stopped)
+                )
+
         future = Future()
 
-        def notify(_):
+        def cancel_engine_stop(_):
+            if not engine_stop_future.done():
+                engine_stop_future.cancel()
+
+        future.add_done_callback(cancel_engine_stop)
+
+        def notice_engine_stop(f):
             if future.done():
+                return
+            stop_data = f.result()
+            future.set_exception(error.EngineError(f"Engine set stopped: {stop_data}"))
+
+        engine_stop_future.add_done_callback(notice_engine_stop)
+
+        def notify(event):
+            if future.done():
+                return
+            if event["event"] == "unregister":
+                future.set_exception(
+                    error.EngineError(
+                        f"Engine {event['id']} unregistered while waiting for engines."
+                    )
+                )
                 return
             current_n = len(self.ids)
             if interactive:
@@ -1489,8 +1533,8 @@ class Client(HasTraits):
                     progress_bar.close()
                 future.set_result(None)
 
-        future.add_done_callback(lambda f: self._registration_callbacks.remove(notify))
         self._registration_callbacks.append(notify)
+        future.add_done_callback(lambda f: self._registration_callbacks.remove(notify))
 
         def on_timeout():
             """Called when timeout is reached"""
