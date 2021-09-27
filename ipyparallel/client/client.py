@@ -896,7 +896,11 @@ class Client(HasTraits):
         """
 
         parent = msg['parent_header']
-        msg_id = parent['msg_id']
+        if self._should_use_metadata_msg_id(msg):
+            msg_id = msg['metadata']['original_msg_id']
+        else:
+            msg_id = parent['msg_id']
+
         future = self._futures.get(msg_id, None)
         if msg_id not in self.outstanding:
             if msg_id in self.history:

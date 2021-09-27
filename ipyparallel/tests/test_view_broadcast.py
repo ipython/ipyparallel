@@ -9,6 +9,8 @@ needs_map = pytest.mark.xfail(reason="map not yet implemented")
 
 @pytest.mark.usefixtures('ipython')
 class TestBroadcastView(test_view.TestView):
+    is_coalescing = False
+
     def setUp(self):
         super().setUp()
         self._broadcast_view_used = False
@@ -20,7 +22,9 @@ class TestBroadcastView(test_view.TestView):
                 return real_direct_view(targets)
             else:
                 self._broadcast_view_used = True
-                return self.client.broadcast_view(targets)
+                return self.client.broadcast_view(
+                    targets, is_coalescing=self.is_coalescing
+                )
 
         self.client.direct_view = broadcast_or_direct
 
@@ -57,3 +61,7 @@ class TestBroadcastView(test_view.TestView):
     @pytest.mark.xfail(reason="Tracking gets disconnected from original message")
     def test_scatter_tracked(self):
         pass
+
+
+class TestBroadcastViewCoalescing(TestBroadcastView):
+    is_coalescing = True
