@@ -974,6 +974,10 @@ class IPController(BaseParallelApplication):
         in_addr=None,
         out_addr=None,
     ):
+        if identity is not None:
+            logname = f"{scheduler_name}-{identity}"
+        else:
+            logname = scheduler_name
         return {
             'scheduler_class': scheduler_class,
             'in_addr': in_addr or self.client_url(scheduler_name),
@@ -984,7 +988,7 @@ class IPController(BaseParallelApplication):
             'identity': identity
             if identity is not None
             else bytes(scheduler_name, 'utf8'),
-            'logname': 'scheduler',
+            'logname': logname,
             'loglevel': self.log_level,
             'log_url': self.log_url,
             'config': dict(self.config),
