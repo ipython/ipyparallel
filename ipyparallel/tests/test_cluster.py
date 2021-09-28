@@ -5,6 +5,8 @@ import os
 import signal
 import sys
 import time
+from pathlib import Path
+from unittest import mock
 
 import pytest
 from traitlets.config import Config
@@ -332,3 +334,14 @@ async def test_cluster_manager_notice_stop(Cluster):
         await asyncio.sleep(0.2)
         cm.load_clusters()
     assert key not in cm.clusters
+
+
+async def test_wait_for_engines_crash(Cluster):
+    """wait_for_engines is cancelled when the engines stop"""
+    c = Cluster(n=2, log_level=10)
+    crash_on_startup = str(Path(__file__).parent.joinpath("_test_startup_crash.py"))
+    with mock.patch.dict(os.environ, {"PYTHONSTARTUP": crash_on_startup}):
+        c.start_cluster_sync()
+        rc = c.connect_client_sync()
+        with pytest.raises(ipp.error.EngineError):
+            rc.wait_for_engines(3, timeout=20)
