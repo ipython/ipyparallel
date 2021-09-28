@@ -55,7 +55,7 @@ else:
         return ' '.join(map(pipes.quote, cmd_list))
 
 
-__version__ = '0.10.4'
+__version__ = '0.10.6'
 
 # ---------------------------------------------------------------------------
 # Top Level Variables
@@ -142,7 +142,8 @@ def wrap_installers(pre_develop=None, pre_dist=None, post_develop=None, post_dis
 
     if pre_dist or post_dist or ensured_targets:
         _make_wrapper(sdist, pre_dist, post_dist)
-        _make_wrapper(bdist_wheel, pre_dist, post_dist)
+        if bdist_wheel:
+            _make_wrapper(bdist_wheel, pre_dist, post_dist)
 
     return cmdclass
 
@@ -262,13 +263,15 @@ def run(cmd, **kwargs):
     log.info('> ' + list2cmdline(cmd))
     kwargs.setdefault('shell', os.name == 'nt')
     if not isinstance(cmd, (list, tuple)):
-        cmd = shlex.split(cmd)
-    cmd_path = which(cmd[0])
-    if not cmd_path:
-        raise ValueError("Aborting. Could not find cmd (%s) in path. "
-                 "If command is not expected to be in user's path, "
-                 "use an absolute path." % cmd[0])
-    cmd[0] = cmd_path
+        cmd = shlex.split(cmd, posix=os.name!='nt')
+    if not os.path.isabs(cmd[0]):
+        # If a command is not an absolute path find it first.
+        cmd_path = which(cmd[0])
+        if not cmd_path:
+            raise ValueError("Aborting. Could not find cmd (%s) in path. "
+                    "If command is not expected to be in user's path, "
+                    "use an absolute path." % cmd[0])
+        cmd[0] = cmd_path
     return subprocess.check_call(cmd, **kwargs)
 
 
