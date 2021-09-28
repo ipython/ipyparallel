@@ -215,7 +215,7 @@ class TaskScheduler(Scheduler):
             registration_notification=self._register_engine,
             unregistration_notification=self._unregister_engine,
         )
-        self.log.info("Scheduler started [%s]" % self.scheme_name)
+        self.log.info("Task scheduler started [%s]" % self.scheme_name)
         self.notifier_stream.on_recv(self.dispatch_notification)
 
     # -----------------------------------------------------------------------

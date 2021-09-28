@@ -868,6 +868,17 @@ class DirectView(View):
         ip.magics_manager.register(M)
 
 
+@decorator
+def _not_coalescing(method, self, *args, **kwargs):
+    """Decorator for broadcast methods that can't use reply coalescing"""
+    is_coalescing = self.is_coalescing
+    try:
+        self.is_coalescing = False
+        return method(self, *args, **kwargs)
+    finally:
+        self.is_coalescing = is_coalescing
+
+
 class BroadcastView(DirectView):
     is_coalescing = Bool(False)
 
@@ -962,6 +973,7 @@ class BroadcastView(DirectView):
 
     @sync_results
     @save_ids
+    @_not_coalescing
     def execute(self, code, silent=True, targets=None, block=None):
         """Executes `code` on `targets` in blocking or nonblocking manner.
 
@@ -1009,6 +1021,10 @@ class BroadcastView(DirectView):
 
     def map(self, f, *sequences, **kwargs):
         raise NotImplementedError("BroadcastView.map not yet implemented")
+
+    # scatter/gather cannot be coalescing yet
+    scatter = _not_coalescing(DirectView.scatter)
+    gather = _not_coalescing(DirectView.gather)
 
 
 class LoadBalancedView(View):

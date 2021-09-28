@@ -833,6 +833,12 @@ class Client(HasTraits):
 
         if md['engine_uuid'] is not None:
             md['engine_id'] = self._engines.get(md['engine_uuid'], None)
+
+        if md['is_coalescing']:
+            # get destinations from target metadata
+            targets = msg_meta.get("broadcast_targets", [])
+            md['engine_uuid'], md['engine_id'] = map(list, zip(*targets))
+
         if 'date' in parent:
             md['submitted'] = parent['date']
         if 'started' in msg_meta:
@@ -903,7 +909,11 @@ class Client(HasTraits):
         """
 
         parent = msg['parent_header']
-        msg_id = parent['msg_id']
+        if self._should_use_metadata_msg_id(msg):
+            msg_id = msg['metadata']['original_msg_id']
+        else:
+            msg_id = parent['msg_id']
+
         future = self._futures.get(msg_id, None)
         if msg_id not in self.outstanding:
             if msg_id in self.history:
@@ -920,9 +930,16 @@ class Client(HasTraits):
         md = self.metadata[msg_id]
         md.update(self._extract_metadata(msg))
 
-        e_outstanding = self._outstanding_dict[md['engine_uuid']]
-        if msg_id in e_outstanding:
-            e_outstanding.remove(msg_id)
+        if md['is_coalescing']:
+            engine_uuids = md['engine_uuid'] or []
+        else:
+            engine_uuids = [md['engine_uuid']]
+
+        for engine_uuid in engine_uuids:
+            if engine_uuid is not None:
+                e_outstanding = self._outstanding_dict[engine_uuid]
+                if msg_id in e_outstanding:
+                    e_outstanding.remove(msg_id)
 
         # construct result:
         if content['status'] == 'ok':
@@ -975,9 +992,16 @@ class Client(HasTraits):
         md = self.metadata[msg_id]
         md.update(self._extract_metadata(msg))
 
-        e_outstanding = self._outstanding_dict[md['engine_uuid']]
-        if msg_id in e_outstanding:
-            e_outstanding.remove(msg_id)
+        if md['is_coalescing']:
+            engine_uuids = md['engine_uuid'] or []
+        else:
+            engine_uuids = [md['engine_uuid']]
+
+        for engine_uuid in engine_uuids:
+            if engine_uuid is not None:
+                e_outstanding = self._outstanding_dict[engine_uuid]
+                if msg_id in e_outstanding:
+                    e_outstanding.remove(msg_id)
 
         # construct result:
         if content['status'] == 'ok':

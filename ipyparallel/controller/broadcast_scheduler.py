@@ -5,6 +5,7 @@ from traitlets import Bool
 from traitlets import Bytes
 from traitlets import Integer
 from traitlets import List
+from traitlets import Unicode
 
 from ipyparallel import util
 from ipyparallel.controller.scheduler import get_common_scheduler_streams
@@ -15,11 +16,13 @@ from ipyparallel.controller.scheduler import ZMQStream
 class BroadcastScheduler(Scheduler):
     port_name = 'broadcast'
     accumulated_replies = {}
+    accumulated_targets = {}
     is_leaf = Bool(False)
     connected_sub_scheduler_ids = List(Bytes())
     outgoing_streams = List()
     depth = Integer()
     max_depth = Integer()
+    name = Unicode()
 
     def start(self):
         self.client_stream.on_recv(self.dispatch_submission, copy=False)
@@ -28,12 +31,14 @@ class BroadcastScheduler(Scheduler):
         else:
             for outgoing_stream in self.outgoing_streams:
                 outgoing_stream.on_recv(self.dispatch_result, copy=False)
+        self.log.info(f"BroadcastScheduler {self.name} started")
 
     def send_to_targets(self, msg, original_msg_id, targets, idents, is_coalescing):
         if is_coalescing:
             self.accumulated_replies[original_msg_id] = {
-                bytes(target, 'utf8'): None for target in targets
+                target.encode('utf8'): None for target in targets
             }
+            self.accumulated_targets[original_msg_id] = targets
 
         for target in targets:
             new_msg = self.append_new_msg_id_to_msg(
@@ -44,11 +49,6 @@ class BroadcastScheduler(Scheduler):
     def send_to_sub_schedulers(
         self, msg, original_msg_id, targets, idents, is_coalescing
     ):
-        if is_coalescing:
-            self.accumulated_replies[original_msg_id] = {
-                scheduler_id: None for scheduler_id in self.connected_sub_scheduler_ids
-            }
-
         trunc = 2 ** self.max_depth
         fmt = f"0{self.max_depth + 1}b"
 
@@ -62,10 +62,21 @@ class BroadcastScheduler(Scheduler):
             next_idx = int(path[self.depth + 1])  # 0 or 1
             targets_by_scheduler[next_idx].append(target_tuple)
 
+        if is_coalescing:
+            self.accumulated_replies[original_msg_id] = {
+                scheduler_id: None for scheduler_id in self.connected_sub_scheduler_ids
+            }
+            self.accumulated_targets[original_msg_id] = {}
+
         for i, scheduler_id in enumerate(self.connected_sub_scheduler_ids):
             targets_for_scheduler = targets_by_scheduler[i]
-            if not targets_for_scheduler and is_coalescing:
-                del self.accumulated_replies[original_msg_id][scheduler_id]
+            if is_coalescing:
+                if targets_for_scheduler:
+                    self.accumulated_targets[original_msg_id][
+                        scheduler_id
+                    ] = targets_for_scheduler
+                else:
+                    del self.accumulated_replies[original_msg_id][scheduler_id]
             msg['metadata']['targets'] = targets_for_scheduler
 
             new_msg = self.append_new_msg_id_to_msg(
@@ -76,28 +87,36 @@ class BroadcastScheduler(Scheduler):
             )
             self.outgoing_streams[i].send_multipart(new_msg, copy=False)
 
-    def coalescing_reply(self, raw_msg, msg, original_msg_id, outgoing_id):
+    def coalescing_reply(self, raw_msg, msg, original_msg_id, outgoing_id, idents):
+        # accumulate buffers
+        self.accumulated_replies[original_msg_id][outgoing_id] = msg['buffers']
         if all(
-            msg is not None or stored_outgoing_id == outgoing_id
-            for stored_outgoing_id, msg in self.accumulated_replies[
-                original_msg_id
-            ].items()
+            msg_buffers is not None
+            for msg_buffers in self.accumulated_replies[original_msg_id].values()
         ):
-            new_msg = raw_msg[1:]
-            new_msg.extend(
-                [
-                    buffer
-                    for msg_buffers in self.accumulated_replies[
-                        original_msg_id
-                    ].values()
-                    if msg_buffers
-                    for buffer in msg_buffers
-                ]
+            replies = self.accumulated_replies.pop(original_msg_id)
+            self.log.debug(f"Coalescing {len(replies)} reply to {original_msg_id}")
+            targets = self.accumulated_targets.pop(original_msg_id)
+
+            new_msg = msg.copy()
+            # begin rebuilding message
+            # metadata['targets']
+            if self.is_leaf:
+                new_msg['metadata']['broadcast_targets'] = targets
+            else:
+                new_msg['metadata']['broadcast_targets'] = []
+
+            # avoid duplicated msg buffers
+            buffers = []
+            for sub_target, msg_buffers in replies.items():
+                buffers.extend(msg_buffers)
+                if not self.is_leaf:
+                    new_msg['metadata']['broadcast_targets'].extend(targets[sub_target])
+
+            new_raw_msg = self.session.serialize(new_msg)
+            self.client_stream.send_multipart(
+                idents + new_raw_msg + buffers, copy=False
             )
-            self.client_stream.send_multipart(new_msg, copy=False)
-            del self.accumulated_replies[original_msg_id]
-        else:
-            self.accumulated_replies[original_msg_id][outgoing_id] = msg['buffers']
 
     @util.log_errors
     def dispatch_submission(self, raw_msg):
@@ -144,7 +163,9 @@ class BroadcastScheduler(Scheduler):
         original_msg_id = msg['metadata']['original_msg_id']
         is_coalescing = msg['metadata']['is_coalescing']
         if is_coalescing:
-            self.coalescing_reply(raw_msg, msg, original_msg_id, outgoing_id)
+            self.coalescing_reply(
+                raw_msg, msg, original_msg_id, outgoing_id, idents[1:]
+            )
         else:
             self.client_stream.send_multipart(raw_msg[1:], copy=False)
 
@@ -223,6 +244,7 @@ def launch_broadcast_scheduler(
         config=config,
         depth=depth,
         max_depth=max_depth,
+        name=identity,
     )
     if is_leaf:
         scheduler_args.update(engine_stream=outgoing_streams[0], is_leaf=True)
