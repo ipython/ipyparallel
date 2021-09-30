@@ -4,6 +4,7 @@ import logging
 import os
 import signal
 import sys
+import tempfile
 import time
 from pathlib import Path
 from unittest import mock
@@ -233,25 +234,27 @@ def test_cluster_abbreviations(classname, expected_class):
 
 
 async def test_cluster_repr(Cluster):
-    c = Cluster(cluster_id="test", profile_dir='/tmp')
-    assert repr(c) == "<Cluster(cluster_id='test', profile_dir='/tmp')>"
+    tmp = tempfile.gettempdir()
+    c = Cluster(cluster_id="test", profile_dir=tmp)
+    assert repr(c) == f"<Cluster(cluster_id='test', profile_dir={repr(tmp)})>"
     await c.start_controller()
     assert (
         repr(c)
-        == "<Cluster(cluster_id='test', profile_dir='/tmp', controller=<running>)>"
+        == f"<Cluster(cluster_id='test', profile_dir={repr(tmp)}, controller=<running>)>"
     )
     await c.start_engines(1, 'engineid')
     assert (
         repr(c)
-        == "<Cluster(cluster_id='test', profile_dir='/tmp', controller=<running>, engine_sets=['engineid'])>"
+        == f"<Cluster(cluster_id='test', profile_dir={repr(tmp)}, controller=<running>, engine_sets=['engineid'])>"
     )
 
 
 async def test_cluster_manager():
     m = cluster.ClusterManager()
     assert m.clusters == {}
-    key, c = m.new_cluster(profile_dir="/tmp")
-    assert c.profile_dir == "/tmp"
+    tmp = tempfile.gettempdir()
+    key, c = m.new_cluster(profile_dir=tmp)
+    assert c.profile_dir == tmp
     assert m.get_cluster(key) is c
     with pytest.raises(KeyError):
         m.get_cluster("nosuchcluster")

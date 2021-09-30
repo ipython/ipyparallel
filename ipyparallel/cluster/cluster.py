@@ -117,6 +117,13 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     def _default_profile_dir(self):
         return _default_profile_dir(profile=self.profile)
 
+    @validate("profile_dir")
+    def _validate_profile_dir(self, proposal):
+        path = proposal.value
+        if path:
+            return os.path.abspath(path)
+        return path
+
     profile = Unicode(
         "",
         help="""The profile name,

@@ -1056,12 +1056,16 @@ class SSHLauncher(LocalProcessLauncher):
 
     @default("remote_output_file")
     def _default_remote_output_file(self):
-        if 'engine' in ' '.join(self.program):
+        full_program = ' '.join(self.program)
+        if 'engine' in full_program:
             name = 'ipengine'
+        elif 'controller' in full_program:
+            name = 'ipcontroller'
         else:
             name = self.program[0]
         return os.path.join(
             self.remote_profile_dir,
+            'log',
             os.path.basename(name) + f"-{time.time():.4f}.out",
         )
 
@@ -1117,6 +1121,13 @@ class SSHLauncher(LocalProcessLauncher):
         # override from LocalProcessLauncher which invokes psutil.Process
         if 'pid' in d and d['pid'] > 0:
             self._start_waiting()
+
+    def poll(self):
+        """Override poll"""
+        if self.state == 'running':
+            return None
+        else:
+            return 0
 
     def get_output(self, remove=False):
         """Retrieve engine output from the remote file"""
