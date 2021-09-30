@@ -216,8 +216,16 @@ class IPClusterList(BaseParallelApplication):
     )
 
     def start(self):
+        profile_dirs = None
+        if (
+            self.profile != "default"
+            or "ProfileDir" in self.config
+            and "location" in self.config.ProfileDir
+        ):
+            # profile-directory specified, only consider
+            profile_dirs = [self.profile_dir.location]
         cluster_manager = ClusterManager(parent=self)
-        clusters = cluster_manager.load_clusters()
+        clusters = cluster_manager.load_clusters(profile_dirs=profile_dirs)
         if self.output_format == "text":
             # TODO: measure needed profile/cluster id width
             print(

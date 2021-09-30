@@ -1056,12 +1056,16 @@ class SSHLauncher(LocalProcessLauncher):
 
     @default("remote_output_file")
     def _default_remote_output_file(self):
-        if 'engine' in ' '.join(self.program):
+        full_program = ' '.join(self.program)
+        if 'engine' in full_program:
             name = 'ipengine'
+        elif 'controller' in full_program:
+            name = 'ipcontroller'
         else:
             name = self.program[0]
         return os.path.join(
             self.remote_profile_dir,
+            'log',
             os.path.basename(name) + f"-{time.time():.4f}.out",
         )
 
