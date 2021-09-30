@@ -167,6 +167,8 @@ $> ipcontroller --ip=* --ssh=login.mycluster.com
 
 More details of how these JSON files are used are given below.
 
+(secure-network)=
+
 ## Secure network connections
 
 ### Overview
