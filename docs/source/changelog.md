@@ -4,11 +4,47 @@
 
 Changes in IPython Parallel
 
-## 7.0.1
+## 7.1
+
+New:
+
+- New {meth}`.Client.start_and_connect` method
+  for starting a cluster and returning a connected client in one call.
+- Support [CurveZMQ][] for transport-level encryption and authentication.
+  See [security docs][] for more info.
+- Define `_max_workers` attribute on {attr}`view.executor` for better consistency
+  with standard library Executors.
+
+[security docs]: secure-network
+[curvezmq]: https://rfc.zeromq.org/spec/26/
+
+Improvements:
+
+- {meth}`.Client.wait_for_engines` will raise an informative error
+  if the parent Cluster object notices that its engines have halted while waiting,
+  or any engine unregisters,
+  rather than continuing to wait for engines that will never come
+- Show progress if `%px` is taking significant time
+- Improved support for streaming output, e.g. with `%px`,
+  including support for updating output in-place
+  with standard terminal carriage-return progress bars.
+
+Fixes:
+
+- Fix dropped IOPub messages when using large numbers of engines,
+  causing {meth}`.AsyncResult.wait_for_output` to hang.
+- Use absolute paths for {attr}`.Cluster.profile_dir`,
+  fixing issues with {meth}`.Cluster.from_file` when run against a profile created with a relative location,
+  e.g. `Cluster(profile_dir="./profile")`
+- Fix error waiting for connection files when controller is started over ssh.
+
+## 7.0
+
+### 7.0.1
 
 - Fix missing setupbase.py in tarball
 
-## 7.0.0
+### 7.0.0
 
 Compatibility changes:
 
