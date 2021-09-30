@@ -1118,6 +1118,13 @@ class SSHLauncher(LocalProcessLauncher):
         if 'pid' in d and d['pid'] > 0:
             self._start_waiting()
 
+    def poll(self):
+        """Override poll"""
+        if self.state == 'running':
+            return None
+        else:
+            return 0
+
     def get_output(self, remove=False):
         """Retrieve engine output from the remote file"""
         if self._output is None:
