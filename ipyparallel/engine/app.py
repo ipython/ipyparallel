@@ -623,6 +623,7 @@ class IPEngine(BaseParallelApplication):
             # create iopub stream:
             iopub_addr = url('iopub')
             iopub_socket = ctx.socket(zmq.PUB)
+            iopub_socket.SNDHWM = 0
             iopub_socket.setsockopt(zmq.IDENTITY, identity)
             connect(iopub_socket, iopub_addr)
             try:

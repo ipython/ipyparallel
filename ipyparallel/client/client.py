@@ -783,6 +783,7 @@ class Client(HasTraits):
             connect_socket(self._broadcast_socket, cfg['broadcast'])
 
             self._notification_socket = self._context.socket(zmq.SUB)
+            self._notification_socket.RCVHWM = 0
             self._notification_socket.setsockopt(zmq.SUBSCRIBE, b'')
             connect_socket(self._notification_socket, cfg['notification'])
 
@@ -790,6 +791,7 @@ class Client(HasTraits):
             connect_socket(self._control_socket, cfg['control'])
 
             self._iopub_socket = self._context.socket(zmq.SUB)
+            self._iopub_socket.RCVHWM = 0
             self._iopub_socket.setsockopt(zmq.SUBSCRIBE, b'')
             connect_socket(self._iopub_socket, cfg['iopub'])
 

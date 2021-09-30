@@ -884,12 +884,14 @@ class IPController(BaseParallelApplication):
 
         # Notifier socket
         notifier = ZMQStream(ctx.socket(zmq.PUB), loop)
+        notifier.socket.SNDHWM = 0
         self.bind(notifier, self.client_url('notification'))
 
         ### build and launch the queues ###
 
         # monitor socket
         sub = ctx.socket(zmq.SUB)
+        sub.RCVHWM = 0
         sub.setsockopt(zmq.SUBSCRIBE, b"")
         self.bind(sub, self.monitor_url)
         # self.bind(sub, 'inproc://monitor')
@@ -1102,13 +1104,14 @@ class IPController(BaseParallelApplication):
         monitor_url = disambiguate_url(self.monitor_url)
         # maybe_inproc = 'inproc://monitor' if self.use_threads else monitor_url
         # IOPub relay (in a Process)
-        q = mq(zmq.PUB, zmq.SUB, zmq.PUB, b'N/A', b'iopub')
+        q = mq(zmq.SUB, zmq.PUB, zmq.PUB, b'iopub', b'N/A')
         add_auth(q)
         q.name = "IOPubScheduler"
-        q.bind_in(self.client_url('iopub'))
-        q.setsockopt_in(zmq.IDENTITY, ident + b"_iopub")
-        q.bind_out(self.engine_url('iopub'))
-        q.setsockopt_out(zmq.SUBSCRIBE, b'')
+
+        q.bind_in(self.engine_url('iopub'))
+        q.setsockopt_in(zmq.SUBSCRIBE, b'')
+        q.bind_out(self.client_url('iopub'))
+        q.setsockopt_out(zmq.IDENTITY, ident + b"_iopub")
         q.connect_mon(monitor_url)
         q.daemon = True
         children.append(q)
