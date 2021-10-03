@@ -1,11 +1,10 @@
 import time
 from subprocess import check_call
-from subprocess import Popen
 
+from subprocess import check_call
 import ipyparallel as ipp
 
 n = 20
-# controller = Popen(['ipcontroller', '--debug', 'profile=asv'])
 
 
 check_call(f'ipcluster start -n {n} --daemon --profile=asv --debug', shell=True)
@@ -21,4 +20,4 @@ while running_engines < n:
     running_engines = len(c)
     time.sleep(0.1)
 
-check_call(f'ipcluster stop --profile=asv', shell=True)
+check_call('ipcluster stop --profile=asv', shell=True)

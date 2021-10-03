@@ -1,7 +1,4 @@
-# /Users/tomo/anaconda3/envs/master_thesis/bin/python
-import atexit
-import multiprocessing as mp
-import os
+#!/usr/bin/env python3
 import sys
 from subprocess import check_call
 from subprocess import Popen
@@ -13,7 +10,6 @@ import googleapiclient.discovery as gcd
 from benchmarks.utils import get_time_stamp
 
 CORE_NUMBERS_FOR_TEMPLATES = [64]
-# CORE_NUMBERS_FOR_TEMPLATES = [16]
 
 ZONE = "europe-west1-b"
 PROJECT_NAME = "jupyter-simula"

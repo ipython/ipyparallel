@@ -19,10 +19,10 @@ def start_cluster(depth, number_of_engines, path='', log_output_to_file=False):
     ps = [
         Popen(
             ipcontroller_cmd.split(),
-            stdout=open(f'ipcontroller_output.log', 'a+')
+            stdout=open('ipcontroller_output.log', 'a+')
             if log_output_to_file
             else sys.stdout,
-            stderr=open(f'ipcontroller_error_output.log', 'a+')
+            stderr=open('ipcontroller_error_output.log', 'a+')
             if log_output_to_file
             else sys.stdout,
             stdin=sys.stdin,
@@ -35,10 +35,10 @@ def start_cluster(depth, number_of_engines, path='', log_output_to_file=False):
         ps.append(
             Popen(
                 ipengine_cmd.split(),
-                stdout=open(f'ipengine_output.log', 'a+')
+                stdout=open('ipengine_output.log', 'a+')
                 if log_output_to_file
                 else sys.stdout,
-                stderr=open(f'ipengine_error_output.log', 'a+')
+                stderr=open('ipengine_error_output.log', 'a+')
                 if log_output_to_file
                 else sys.stdout,
                 stdin=sys.stdin,

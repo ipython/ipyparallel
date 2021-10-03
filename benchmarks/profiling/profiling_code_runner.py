@@ -1,7 +1,5 @@
-import atexit
-import datetime
-import os
 import sys
+import os
 import time
 from subprocess import check_call
 from subprocess import check_output
@@ -32,14 +30,14 @@ def start_cmd(cmd, blocking=True):
         check_call(
             cmd,
             stdout=sys.__stdout__,
-            stderr=open(f'spanning_tree_error.out', 'a+'),
+            stderr=open('spanning_tree_error.out', 'a+'),
             shell=True,
         )
         if blocking
         else Popen(
             cmd,
             stdout=sys.__stdout__,
-            stderr=open(f'spanning_tree_error.out', 'a+'),
+            stderr=open('spanning_tree_error.out', 'a+'),
             shell=True,
         )
     )
