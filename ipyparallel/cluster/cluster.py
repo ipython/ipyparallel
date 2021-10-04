@@ -142,6 +142,25 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         config=True,
     )
 
+    send_engines_connection_env = Bool(
+        True,
+        config=True,
+        help="""
+        Wait for controller's connection info before passing to engines
+        via $IPP_CONNECTION_INFO environment variable.
+
+        Set to False to start engines immediately
+        without waiting for the controller's connection info to be available.
+
+        When True, no connection file movement is required.
+        False is mainly useful when submitting the controller may
+        take a long time in a job queue,
+        and the engines should enter the queue before the controller is running.
+
+        .. versionadded: 7.2
+        """,
+    )
+
     controller_launcher_class = Launcher(
         default_value=launcher.LocalControllerLauncher,
         entry_point_group='ipyparallel.controller_launchers',
@@ -624,6 +643,12 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             engine_set_id=engine_set_id,
             **kwargs,
         )
+        if self.send_engines_connection_env and self.controller:
+            self.log.debug("Setting $IPP_CONNECTION_INFO environment")
+            connection_info = await self.controller.get_connection_info()
+            connection_info_json = json.dumps(connection_info["engine"])
+            engine_set.environment["IPP_CONNECTION_INFO"] = connection_info_json
+
         if n is None:
             n = self.n
         n = getattr(engine_set, 'engine_count', n)

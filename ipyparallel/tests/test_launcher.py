@@ -97,18 +97,16 @@ def winhpc_launcher(request, build_launcher):
     return build_launcher(Launcher=request.param)
 
 
-def test_profile_dir_arg(launcher, profile_dir):
-    assert "--profile-dir" in launcher.cluster_args
-    arg_idx = launcher.cluster_args.index("--profile-dir")
-    assert profile_dir in launcher.cluster_args
-    assert launcher.cluster_args[arg_idx + 1] == profile_dir
+def test_profile_dir_env(launcher, profile_dir):
+    env = launcher.get_env()
+    assert "IPP_PROFILE_DIR" in env
+    assert env["IPP_PROFILE_DIR"] == profile_dir
 
 
-def test_cluster_id_arg(launcher, cluster_id):
-    assert "--cluster-id" in launcher.cluster_args
-    arg_idx = launcher.cluster_args.index("--cluster-id")
-    assert cluster_id in launcher.cluster_args
-    assert launcher.cluster_args[arg_idx + 1] == cluster_id
+def test_cluster_id_env(launcher, cluster_id):
+    env = launcher.get_env()
+    assert "IPP_CLUSTER_ID" in env
+    assert env["IPP_CLUSTER_ID"] == cluster_id
 
 
 def test_batch_template(batch_launcher, work_dir):
