@@ -1,6 +1,7 @@
-import sys
 import os
+import sys
 import time
+import datetime
 from subprocess import check_call
 from subprocess import check_output
 from subprocess import Popen
@@ -45,7 +46,7 @@ def start_cmd(cmd, blocking=True):
 
 def stop_cluster():
     if '-s' not in sys.argv:
-        start_cmd(f'ipcluster stop --profile=asv')
+        start_cmd('ipcluster stop --profile=asv')
 
 
 # atexit.register(stop_cluster)
@@ -88,7 +89,7 @@ if __name__ == "__main__":
         -number_of_schedulers:
     ]
 
-    client_output_path = os.path.join(os.getcwd(), f'spanning_tree_client.svg')
+    client_output_path = os.path.join(os.getcwd(), 'spanning_tree_client.svg')
 
     files_to_upload = [client_output_path]
     ps = []
