@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-import sys
-import os
-from subprocess import check_call, Popen
 import multiprocessing as mp
+import os
+import sys
+from subprocess import check_call
+from subprocess import Popen
 from time import sleep
 from typing import List
 
