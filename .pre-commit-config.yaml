@@ -14,7 +14,7 @@ repos:
     hooks:
       - id: prettier
   - repo: https://github.com/PyCQA/flake8
-    rev: "3.9.2"
+    rev: "4.0.1"
     hooks:
       - id: flake8
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -25,7 +25,7 @@ repos:
       - id: check-executables-have-shebangs
       - id: requirements-txt-fixer
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.0.0-rc.0
+    rev: v8.0.0-1
     hooks:
       - id: eslint
         files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
