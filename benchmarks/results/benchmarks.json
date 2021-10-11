@@ -1,0 +1,174 @@
+{
+  "throughput.CoalescingAsync.time_async_messages": {
+    "code": "class AsyncMessagesSuite:\n    def time_async_messages(self, number_of_engines, number_of_messages):\n        replies = []\n        for i in range(number_of_messages):\n            reply = self.view.apply_async(\n                echo, np.array([0] * 1000, dtype=np.int8)\n            )\n            replies.append(reply)\n        for reply in replies:\n            reply.get()\n\n    def setup(self, number_of_engines, number_of_messages):\n        self.client = ipp.Client(profile='asv')\n        self.view = get_view(self)\n        self.view.targets = list(range(number_of_engines))\n    \n        wait_for(lambda: len(self.client) >= number_of_engines)",
+    "min_run_count": 2,
+    "name": "throughput.CoalescingAsync.time_async_messages",
+    "number": 0,
+    "param_names": ["Number of engines", "number_of_messages"],
+    "params": [
+      ["1", "2", "16", "64", "128", "256", "512", "1024"],
+      ["1", "5", "10", "20", "50", "75", "100"]
+    ],
+    "processes": 2,
+    "repeat": 0,
+    "sample_time": 0.01,
+    "timeout": 60,
+    "type": "time",
+    "unit": "seconds",
+    "version": "7d58edbe3c5f17d8c8b9f56b07e36103b6aac63113a081844b4c8ae47c8f9912",
+    "warmup_time": -1
+  },
+  "throughput.CoalescingBroadcast.time_broadcast": {
+    "code": "class ThroughputSuite:\n    def time_broadcast(self, engines, number_of_bytes):\n        self.reply = self.view.apply_sync(\n            echo, np.array([0] * number_of_bytes, dtype=np.int8)\n        )\n\n    def setup(self, number_of_engines, number_of_bytes):\n        self.client = ipp.Client(profile='asv')\n        self.view = get_view(self)\n        self.view.targets = list(range(number_of_engines))\n        wait_for(lambda: len(self.client) >= number_of_engines)",
+    "min_run_count": 2,
+    "name": "throughput.CoalescingBroadcast.time_broadcast",
+    "number": 0,
+    "param_names": ["Number of engines", "Number of bytes"],
+    "params": [
+      ["1", "2", "16", "64", "128", "256", "512", "1024"],
+      ["1000", "10000", "100000", "1000000", "2000000"]
+    ],
+    "processes": 2,
+    "repeat": 0,
+    "sample_time": 0.01,
+    "timeout": 120,
+    "type": "time",
+    "unit": "seconds",
+    "version": "bb46d525dc8242ec0b309ba7667c82bdca00f5c739fbd6e655a6642432442d25",
+    "warmup_time": -1
+  },
+  "throughput.CoalescingPush.time_broadcast": {
+    "code": "class PushMessageSuite:\n    def time_broadcast(self, engines, number_of_bytes):\n        reply = self.view.apply_sync(\n            lambda x: None, np.array([0] * number_of_bytes, dtype=np.int8)\n        )\n\n    def setup(self, number_of_engines, number_of_bytes):\n        self.client = ipp.Client(profile='asv')\n        self.view = get_view(self)\n        self.view.targets = list(range(number_of_engines))\n        wait_for(lambda: len(self.client) >= number_of_engines)",
+    "min_run_count": 2,
+    "name": "throughput.CoalescingPush.time_broadcast",
+    "number": 0,
+    "param_names": ["Number of engines", "Number of bytes"],
+    "params": [
+      ["1", "2", "16", "64", "128", "256", "512", "1024"],
+      ["1000", "10000", "100000", "1000000", "2000000"]
+    ],
+    "processes": 2,
+    "repeat": 0,
+    "sample_time": 0.01,
+    "timeout": 120,
+    "type": "time",
+    "unit": "seconds",
+    "version": "d53ef539a1ba7dda53fcdfdd810c23bcde346a6e936436ffd5a03e8254a38640",
+    "warmup_time": -1
+  },
+  "throughput.DirectViewAsync.time_async_messages": {
+    "code": "class AsyncMessagesSuite:\n    def time_async_messages(self, number_of_engines, number_of_messages):\n        replies = []\n        for i in range(number_of_messages):\n            reply = self.view.apply_async(\n                echo, np.array([0] * 1000, dtype=np.int8)\n            )\n            replies.append(reply)\n        for reply in replies:\n            reply.get()\n\n    def setup(self, number_of_engines, number_of_messages):\n        self.client = ipp.Client(profile='asv')\n        self.view = get_view(self)\n        self.view.targets = list(range(number_of_engines))\n    \n        wait_for(lambda: len(self.client) >= number_of_engines)",
+    "min_run_count": 2,
+    "name": "throughput.DirectViewAsync.time_async_messages",
+    "number": 0,
+    "param_names": ["Number of engines", "number_of_messages"],
+    "params": [
+      ["1", "2", "16", "64", "128", "256", "512", "1024"],
+      ["1", "5", "10", "20", "50", "75", "100"]
+    ],
+    "processes": 2,
+    "repeat": 0,
+    "sample_time": 0.01,
+    "timeout": 60,
+    "type": "time",
+    "unit": "seconds",
+    "version": "7d58edbe3c5f17d8c8b9f56b07e36103b6aac63113a081844b4c8ae47c8f9912",
+    "warmup_time": -1
+  },
+  "throughput.DirectViewBroadcast.time_broadcast": {
+    "code": "class ThroughputSuite:\n    def time_broadcast(self, engines, number_of_bytes):\n        self.reply = self.view.apply_sync(\n            echo, np.array([0] * number_of_bytes, dtype=np.int8)\n        )\n\n    def setup(self, number_of_engines, number_of_bytes):\n        self.client = ipp.Client(profile='asv')\n        self.view = get_view(self)\n        self.view.targets = list(range(number_of_engines))\n        wait_for(lambda: len(self.client) >= number_of_engines)",
+    "min_run_count": 2,
+    "name": "throughput.DirectViewBroadcast.time_broadcast",
+    "number": 0,
+    "param_names": ["Number of engines", "Number of bytes"],
+    "params": [
+      ["1", "2", "16", "64", "128", "256", "512", "1024"],
+      ["1000", "10000", "100000", "1000000", "2000000"]
+    ],
+    "processes": 2,
+    "repeat": 0,
+    "sample_time": 0.01,
+    "timeout": 120,
+    "type": "time",
+    "unit": "seconds",
+    "version": "bb46d525dc8242ec0b309ba7667c82bdca00f5c739fbd6e655a6642432442d25",
+    "warmup_time": -1
+  },
+  "throughput.DirectViewPush.time_broadcast": {
+    "code": "class PushMessageSuite:\n    def time_broadcast(self, engines, number_of_bytes):\n        reply = self.view.apply_sync(\n            lambda x: None, np.array([0] * number_of_bytes, dtype=np.int8)\n        )\n\n    def setup(self, number_of_engines, number_of_bytes):\n        self.client = ipp.Client(profile='asv')\n        self.view = get_view(self)\n        self.view.targets = list(range(number_of_engines))\n        wait_for(lambda: len(self.client) >= number_of_engines)",
+    "min_run_count": 2,
+    "name": "throughput.DirectViewPush.time_broadcast",
+    "number": 0,
+    "param_names": ["Number of engines", "Number of bytes"],
+    "params": [
+      ["1", "2", "16", "64", "128", "256", "512", "1024"],
+      ["1000", "10000", "100000", "1000000", "2000000"]
+    ],
+    "processes": 2,
+    "repeat": 0,
+    "sample_time": 0.01,
+    "timeout": 120,
+    "type": "time",
+    "unit": "seconds",
+    "version": "d53ef539a1ba7dda53fcdfdd810c23bcde346a6e936436ffd5a03e8254a38640",
+    "warmup_time": -1
+  },
+  "throughput.NonCoalescingAsync.time_async_messages": {
+    "code": "class AsyncMessagesSuite:\n    def time_async_messages(self, number_of_engines, number_of_messages):\n        replies = []\n        for i in range(number_of_messages):\n            reply = self.view.apply_async(\n                echo, np.array([0] * 1000, dtype=np.int8)\n            )\n            replies.append(reply)\n        for reply in replies:\n            reply.get()\n\n    def setup(self, number_of_engines, number_of_messages):\n        self.client = ipp.Client(profile='asv')\n        self.view = get_view(self)\n        self.view.targets = list(range(number_of_engines))\n    \n        wait_for(lambda: len(self.client) >= number_of_engines)",
+    "min_run_count": 2,
+    "name": "throughput.NonCoalescingAsync.time_async_messages",
+    "number": 0,
+    "param_names": ["Number of engines", "number_of_messages"],
+    "params": [
+      ["1", "2", "16", "64", "128", "256", "512", "1024"],
+      ["1", "5", "10", "20", "50", "75", "100"]
+    ],
+    "processes": 2,
+    "repeat": 0,
+    "sample_time": 0.01,
+    "timeout": 60,
+    "type": "time",
+    "unit": "seconds",
+    "version": "7d58edbe3c5f17d8c8b9f56b07e36103b6aac63113a081844b4c8ae47c8f9912",
+    "warmup_time": -1
+  },
+  "throughput.NonCoalescingBroadcast.time_broadcast": {
+    "code": "class ThroughputSuite:\n    def time_broadcast(self, engines, number_of_bytes):\n        self.reply = self.view.apply_sync(\n            echo, np.array([0] * number_of_bytes, dtype=np.int8)\n        )\n\n    def setup(self, number_of_engines, number_of_bytes):\n        self.client = ipp.Client(profile='asv')\n        self.view = get_view(self)\n        self.view.targets = list(range(number_of_engines))\n        wait_for(lambda: len(self.client) >= number_of_engines)",
+    "min_run_count": 2,
+    "name": "throughput.NonCoalescingBroadcast.time_broadcast",
+    "number": 0,
+    "param_names": ["Number of engines", "Number of bytes"],
+    "params": [
+      ["1", "2", "16", "64", "128", "256", "512", "1024"],
+      ["1000", "10000", "100000", "1000000", "2000000"]
+    ],
+    "processes": 2,
+    "repeat": 0,
+    "sample_time": 0.01,
+    "timeout": 120,
+    "type": "time",
+    "unit": "seconds",
+    "version": "bb46d525dc8242ec0b309ba7667c82bdca00f5c739fbd6e655a6642432442d25",
+    "warmup_time": -1
+  },
+  "throughput.NonCoalescingPush.time_broadcast": {
+    "code": "class PushMessageSuite:\n    def time_broadcast(self, engines, number_of_bytes):\n        reply = self.view.apply_sync(\n            lambda x: None, np.array([0] * number_of_bytes, dtype=np.int8)\n        )\n\n    def setup(self, number_of_engines, number_of_bytes):\n        self.client = ipp.Client(profile='asv')\n        self.view = get_view(self)\n        self.view.targets = list(range(number_of_engines))\n        wait_for(lambda: len(self.client) >= number_of_engines)",
+    "min_run_count": 2,
+    "name": "throughput.NonCoalescingPush.time_broadcast",
+    "number": 0,
+    "param_names": ["Number of engines", "Number of bytes"],
+    "params": [
+      ["1", "2", "16", "64", "128", "256", "512", "1024"],
+      ["1000", "10000", "100000", "1000000", "2000000"]
+    ],
+    "processes": 2,
+    "repeat": 0,
+    "sample_time": 0.01,
+    "timeout": 120,
+    "type": "time",
+    "unit": "seconds",
+    "version": "d53ef539a1ba7dda53fcdfdd810c23bcde346a6e936436ffd5a03e8254a38640",
+    "warmup_time": -1
+  },
+  "version": 2
+}

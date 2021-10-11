@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "project": "ipyparallel",
+  "project_url": "https://github.com/ipython/ipyparallel/",
+  "repo": "https://github.com/ipython/ipyparallel.git",
+  "environment_type": "conda",
+  "matrix": {
+    "numpy": []
+  }
+}

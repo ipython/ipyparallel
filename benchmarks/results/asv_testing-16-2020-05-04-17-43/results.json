@@ -1,0 +1,72 @@
+{
+  "results": {
+    "throughput.CoalescingBroadcast.time_broadcast": {
+      "result": null,
+      "params": [
+        ["0", "0.1"],
+        ["1", "10", "50", "100", "200"],
+        ["10", "100", "1000", "10000", "100000", "1000000"]
+      ]
+    },
+    "throughput.DirectViewBroadCast.time_broadcast": {
+      "result": null,
+      "params": [
+        ["0", "0.1"],
+        ["1", "10", "50", "100", "200"],
+        ["10", "100", "1000", "10000", "100000", "1000000"]
+      ]
+    },
+    "throughput.NonCoalescingBroadcast.time_broadcast": {
+      "result": null,
+      "params": [
+        ["0", "0.1"],
+        ["1", "10", "50", "100", "200"],
+        ["10", "100", "1000", "10000", "100000", "1000000"]
+      ]
+    },
+    "throughput.SpanningTreeBroadCast.time_broadcast": {
+      "result": null,
+      "params": [
+        ["0", "0.1"],
+        ["1", "10", "50", "100", "200"],
+        ["10", "100", "1000", "10000", "100000", "1000000"]
+      ]
+    }
+  },
+  "params": {
+    "arch": "x86_64",
+    "cpu": "Intel(R) Xeon(R) CPU @ 2.30GHz",
+    "machine": "asv-testing-16",
+    "os": "Linux 4.15.0-1029-gcp",
+    "ram": "16423396",
+    "python": "3.7",
+    "numpy": ""
+  },
+  "requirements": {
+    "numpy": ""
+  },
+  "commit_hash": "766bdabf611694c8bf1807677ed3a501bf0b87f2",
+  "date": 1588108958000,
+  "env_name": "conda-py3.7-numpy",
+  "python": "3.7",
+  "profiles": {},
+  "started_at": {
+    "throughput.CoalescingBroadcast.time_broadcast": 1588607341576,
+    "throughput.DirectViewBroadCast.time_broadcast": 1588607371588,
+    "throughput.NonCoalescingBroadcast.time_broadcast": 1588607401077,
+    "throughput.SpanningTreeBroadCast.time_broadcast": 1588607436141
+  },
+  "ended_at": {
+    "throughput.CoalescingBroadcast.time_broadcast": 1588607371588,
+    "throughput.DirectViewBroadCast.time_broadcast": 1588607401077,
+    "throughput.NonCoalescingBroadcast.time_broadcast": 1588607436140,
+    "throughput.SpanningTreeBroadCast.time_broadcast": 1588607459984
+  },
+  "benchmark_version": {
+    "throughput.CoalescingBroadcast.time_broadcast": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
+    "throughput.DirectViewBroadCast.time_broadcast": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
+    "throughput.NonCoalescingBroadcast.time_broadcast": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e",
+    "throughput.SpanningTreeBroadCast.time_broadcast": "fa34b3be29f11e8e92ff3f69ee3db3cef435c17dc271602df2b926f774e93a8e"
+  },
+  "version": 1
+}

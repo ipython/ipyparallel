@@ -1,0 +1,10 @@
+{
+  "asv-testing-64": {
+    "arch": "x86_64",
+    "cpu": "Intel(R) Xeon(R) CPU @ 2.30GHz",
+    "machine": "asv-testing-64",
+    "os": "Linux 4.15.0-1029-gcp",
+    "ram": "64423396"
+  },
+  "version": 1
+}
