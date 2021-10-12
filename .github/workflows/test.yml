@@ -3,6 +3,8 @@ name: Test
 on:
   pull_request:
   push:
+    branches-ignore:
+      - "pre-commit-ci*"
 
 env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
