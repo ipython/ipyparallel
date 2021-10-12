@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import shlex
 import shutil
 import signal
 import stat
@@ -170,7 +171,7 @@ class BaseLauncher(LoggingConfigurable):
     @property
     def cluster_args(self):
         """Common cluster arguments"""
-        return ['--profile-dir', self.profile_dir, '--cluster-id', self.cluster_id]
+        return []
 
     @property
     def connection_files(self):
@@ -204,6 +205,32 @@ class BaseLauncher(LoggingConfigurable):
     def arg_str(self):
         """The string form of the program arguments."""
         return ' '.join(self.args)
+
+    @property
+    def cluster_env(self):
+        """Cluster-related env variables"""
+        return {
+            "IPP_CLUSTER_ID": self.cluster_id,
+            "IPP_PROFILE_DIR": self.profile_dir,
+        }
+
+    environment = Dict(
+        help="""Set environment variables for the launched process
+
+        .. versionadded: 7.2
+        """,
+        config=True,
+    )
+
+    def get_env(self):
+        """Get the full environment for the process
+
+        merges different sources for environment variables
+        """
+        env = {}
+        env.update(self.cluster_env)
+        env.update(self.environment)
+        return env
 
     @property
     def running(self):
@@ -328,18 +355,27 @@ class ControllerLauncher(BaseLauncher):
         help="""command-line args to pass to ipcontroller""",
     )
 
-    async def get_connection_info(self):
+    async def get_connection_info(self, timeout=60):
         """Retrieve connection info for the controller
 
         Default implementation assumes profile_dir and cluster_id are local.
         """
         connection_files = self.connection_files
         paths = list(connection_files.values())
-        first_run = True
-        while not all(os.path.isfile(f) for f in paths):
-            if first_run:
-                first_run = False
-                self.log.debug(f"Waiting for {paths}")
+        start_time = time.monotonic()
+        if timeout >= 0:
+            deadline = start_time + timeout
+        else:
+            deadline = None
+
+        if not all(os.path.exists(f) for f in paths):
+            self.log.debug(f"Waiting for {paths}")
+        while not all(os.path.exists(f) for f in paths):
+            if deadline is not None and time.monotonic() > deadline:
+                missing_files = [f for f in paths if not os.path.exists(f)]
+                raise TimeoutError(
+                    f"Connection files {missing_files} did not arrive in {timeout}s"
+                )
             await asyncio.sleep(0.1)
             status = self.poll()
             if inspect.isawaitable(status):
@@ -374,7 +410,7 @@ class EngineLauncher(BaseLauncher):
     )
     # Command line arguments for ipengine.
     engine_args = List(
-        ['--log-level=%i' % logging.INFO],
+        Unicode(),
         config=True,
         help="command-line arguments to pass to ipengine",
     )
@@ -483,13 +519,17 @@ class LocalProcessLauncher(BaseLauncher):
             )
         self.log.debug(f"Sending output for {self.identifier} to {self.output_file}")
 
+        env = os.environ.copy()
+        env.update(self.get_env())
+        self.log.debug(f"Setting environment: {','.join(self.get_env())}")
+
         with open(self.output_file, "ab") as f:
             proc = Popen(
                 self.args,
                 stdout=f.fileno(),
                 stderr=STDOUT,
                 stdin=PIPE,
-                env=os.environ,
+                env=env,
                 cwd=self.work_dir,
                 start_new_session=True,  # don't forward signals
             )
@@ -702,6 +742,7 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
                 log=self.log,
                 profile_dir=self.profile_dir,
                 cluster_id=self.cluster_id,
+                environment=self.environment,
                 identifier=identifier,
                 output_file=os.path.join(
                     self.profile_dir,
@@ -962,20 +1003,29 @@ def _ssh_outputs(out):
     return dict(ssh_output_pattern.findall(out))
 
 
-def sshx(ssh_cmd, cmd, remote_output_file, log=None):
+def sshx(ssh_cmd, cmd, env, remote_output_file, log=None):
     """Launch a remote process, returning its remote pid
 
     Uses nohup and pipes to put it in the background
     """
     remote_cmd = shlex_join(cmd)
 
-    full_remote_cmd = [
-        f"nohup {remote_cmd} > {remote_output_file} 2>&1 </dev/null & echo __remote_pid=$!__"
-    ]
-    full_cmd = ssh_cmd + full_remote_cmd
+    nohup_start = f"nohup {remote_cmd} > {remote_output_file} 2>&1 </dev/null & echo __remote_pid=$!__"
+    full_cmd = ssh_cmd + ["--", "sh -"]
+
+    input_script = "\n".join(
+        [
+            "set -eu",
+        ]
+        + [f"export {key}={shlex.quote(value)}" for key, value in env.items()]
+        + ["", f"exec {nohup_start}"]
+    )
     if log:
-        log.info(f"Running `{shlex_join(full_cmd)}`")
-    out = check_output(full_cmd, input=None).decode("utf8", "replace")
+        log.info(f"Running `{remote_cmd}`")
+        log.debug("Running script via ssh:\n%s", input_script)
+    out = check_output(full_cmd, input=input_script.encode("utf8")).decode(
+        "utf8", "replace"
+    )
     values = _ssh_outputs(out)
     if 'remote_pid' in values:
         return int(values['remote_pid'])
@@ -1106,13 +1156,11 @@ class SSHLauncher(LocalProcessLauncher):
         return self._strip_home(self.profile_dir)
 
     @property
-    def cluster_args(self):
-        return [
-            '--profile-dir',
-            self.remote_profile_dir,
-            '--cluster-id',
-            self.cluster_id,
-        ]
+    def cluster_env(self):
+        # use remote profile dir in env
+        env = super().cluster_env
+        env['IPP_PROFILE_DIR'] = self.remote_profile_dir
+        return env
 
     _output = None
 
@@ -1255,7 +1303,8 @@ class SSHLauncher(LocalProcessLauncher):
         self.pid = sshx(
             self.ssh_cmd + self.ssh_args + [self.location],
             self.program + self.program_args,
-            self.remote_output_file,
+            env=self.get_env(),
+            remote_output_file=self.remote_output_file,
             log=self.log,
         )
         self.notify_start({'host': self.location, 'pid': self.pid})
@@ -1651,7 +1700,7 @@ class WindowsHPCEngineSetLauncher(WindowsHPCLauncher):
     job_file_name = Unicode(
         u'ipengineset_job.xml', config=True, help="jobfile for ipengines job"
     )
-    engine_args = List([], config=False, help="extra args to pas to ipengine")
+    engine_args = List(Unicode(), config=False, help="extra args to pas to ipengine")
 
     def write_job_file(self, n):
         job = IPEngineSetJob(parent=self)
@@ -1773,6 +1822,27 @@ class BatchSystemLauncher(BaseLauncher):
     # Queue regex
     queue_regexp = CRegExp('')
     queue_template = Unicode('')
+
+    env_keep = List(
+        Unicode(),
+        config=True,
+        help="""
+        Names of environment variables to inherit from the parent process.
+        Default: all IPython and IPP environment variables.
+        """,
+    )
+
+    @default("env_keep")
+    def _default_env_keep(self):
+        to_keep = []
+        for key in os.environ:
+            if key.startswith(("IPYTHON", "IPP_")):
+                to_keep.append(key)
+        return to_keep
+
+    # environment regex
+    envkeep_regexp = CRegExp('')
+    envkeep_template = Unicode('')
     # The default batch template, override in subclasses
     default_template = Unicode('')
     # The full path to the instantiated batch script.
@@ -1839,6 +1909,10 @@ class BatchSystemLauncher(BaseLauncher):
     def write_batch_script(self, n=1):
         """Instantiate and write the batch script to the work_dir."""
         self.n = n
+        env_keys = set(self.env_keep)
+        env_keys.update(set(self.get_env()))
+        self.context['envkeep'] = ",".join(sorted(env_keys))
+        self.context['environment_json'] = json.dumps(self.environment)
 
         # first priority is batch_template if set
         if self.batch_template_file and not self.batch_template:
@@ -1865,10 +1939,24 @@ class BatchSystemLauncher(BaseLauncher):
 
     def _insert_options_in_script(self):
         """Inserts a queue if required into the batch script."""
+        inserts = []
         if self.queue and not self.queue_regexp.search(self.batch_template):
-            self.log.debug("adding queue settings to batch script")
+            self.log.debug(f"Adding queue={self.queue} to {self.batch_file}")
+            inserts.append(self.queue_template)
+
+        if self.environment and self.envkeep_template:
+            match = self.envkeep_regexp.search(self.batch_template)
+            if match:
+                self.log.warning(
+                    f"Existing envkeep line, environment may be missing: {match.group()}"
+                )
+            else:
+                self.log.debug(f"adding envkeep to {self.batch_file}")
+                inserts.append(self.envkeep_template)
+
+        if inserts:
             firstline, rest = self.batch_template.split('\n', 1)
-            self.batch_template = u'\n'.join([firstline, self.queue_template, rest])
+            self.batch_template = '\n'.join([firstline] + inserts + [rest])
 
     def _insert_job_array_in_script(self):
         """Inserts a job array if required into the batch script."""
@@ -1884,7 +1972,9 @@ class BatchSystemLauncher(BaseLauncher):
         # can be used in the batch script template as {profile_dir}
         self.write_batch_script(n)
 
-        output = check_output(self.args, env=os.environ)
+        env = os.environ.copy()
+        env.update(self.get_env())
+        output = check_output(self.args, env=env)
         output = output.decode("utf8", 'replace')
         self.log.debug(f"Submitted {shlex_join(self.args)}. Output: {output}")
 
@@ -1980,6 +2070,8 @@ class PBSLauncher(BatchSystemLauncher):
     job_array_template = Unicode('#PBS -t 1-{n}')
     queue_regexp = CRegExp(r'#PBS\W+-q\W+\$?\w+')
     queue_template = Unicode('#PBS -q {queue}')
+    envkeep_regexp = CRegExp(r'#PBS\W+(?:-v)\W+\$?\w+')
+    envkeep_template = Unicode('#PBS - v{envkeep}')
 
 
 class PBSControllerLauncher(PBSLauncher, BatchControllerLauncher):
@@ -2080,27 +2172,29 @@ class SlurmLauncher(BatchSystemLauncher):
     timelimit_regexp = CRegExp(r'#SBATCH\W+(?:--time|-t)\W+\$?\w+')
     timelimit_template = Unicode('#SBATCH --time={timelimit}')
 
+    envkeep_regexp = CRegExp(r'#SBATCH\W+(?:--export)\W+\$?\w+')
+    envkeep_template = Unicode('#SBATCH --export={envkeep}')
+
     def _insert_options_in_script(self):
         """Insert 'partition' (slurm name for queue), 'account', 'time' and other options if necessary"""
-        if self.queue and not self.queue_regexp.search(self.batch_template):
-            self.log.debug("adding slurm queue settings to batch script")
-            firstline, rest = self.batch_template.split('\n', 1)
-            self.batch_template = u'\n'.join([firstline, self.queue_template, rest])
-
+        super()._insert_options_in_script()
+        inserts = []
         if self.account and not self.account_regexp.search(self.batch_template):
             self.log.debug("adding slurm account settings to batch script")
-            firstline, rest = self.batch_template.split('\n', 1)
-            self.batch_template = u'\n'.join([firstline, self.account_template, rest])
+            inserts.append(self.account_template)
 
         if self.qos and not self.qos_regexp.search(self.batch_template):
             self.log.debug("adding Slurm qos settings to batch script")
             firstline, rest = self.batch_template.split('\n', 1)
-            self.batch_template = u'\n'.join([firstline, self.qos_template, rest])
+            inserts.append(self.qos_template)
 
         if self.timelimit and not self.timelimit_regexp.search(self.batch_template):
             self.log.debug("adding slurm time limit settings to batch script")
+            inserts.append(self.timelimit_template)
+
+        if inserts:
             firstline, rest = self.batch_template.split('\n', 1)
-            self.batch_template = u'\n'.join([firstline, self.timelimit_template, rest])
+            self.batch_template = '\n'.join([firstline] + inserts + [rest])
 
 
 class SlurmControllerLauncher(SlurmLauncher, BatchControllerLauncher):
@@ -2146,6 +2240,8 @@ class SGELauncher(PBSLauncher):
     job_array_template = Unicode('#$ -t 1-{n}')
     queue_regexp = CRegExp(r'#\$\W+-q\W+\$?\w+')
     queue_template = Unicode('#$ -q {queue}')
+    envkeep_regexp = CRegExp(r'#\$\W+-v\W+\$?\w+')
+    envkeep_template = Unicode('#$ -v {envkeep}')
 
 
 class SGEControllerLauncher(SGELauncher, BatchControllerLauncher):
@@ -2308,7 +2404,7 @@ class HTCondorLauncher(BatchSystemLauncher):
         """AFAIK, HTCondor doesn't have a concept of multiple queues that can be
         specified in the script.
         """
-        pass
+        super()._insert_options_in_script()
 
 
 class HTCondorControllerLauncher(HTCondorLauncher, BatchControllerLauncher):

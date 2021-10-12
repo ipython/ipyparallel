@@ -141,12 +141,20 @@ class BaseParallelApplication(BaseIPythonApplication):
     @catch_config_error
     def initialize(self, argv=None):
         """initialize the app"""
+        self.init_config_from_env()
         super(BaseParallelApplication, self).initialize(argv)
-        if "IPP_SESSION_KEY" in os.environ:
-            self.config.Session.key = os.environ["IPP_SESSION_KEY"].encode("ascii")
         self.init_deprecated_config()
         self.to_work_dir()
         self.reinit_logging()
+
+    def init_config_from_env(self):
+        """Load any configuration from environment variables"""
+        if "IPP_SESSION_KEY" in os.environ:
+            self.config.Session.key = os.environ["IPP_SESSION_KEY"].encode("ascii")
+        if "IPP_CLUSTER_ID" in os.environ:
+            self.cluster_id = os.environ["IPP_CLUSTER_ID"]
+        if "IPP_PROFILE_DIR" in os.environ:
+            self.config.ProfileDir.location = os.environ["IPP_PROFILE_DIR"]
 
     def init_deprecated_config(self):
         if not self._deprecated_classes:
