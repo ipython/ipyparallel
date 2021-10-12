@@ -172,6 +172,19 @@ async def test_restart_engines(Cluster, engine_launcher_class):
         assert set(after_pids).intersection(before_pids) == set()
 
 
+async def test_get_output(Cluster, engine_launcher_class):
+    n = 2
+    async with Cluster(engine_launcher_class=engine_launcher_class, n=n) as rc:
+        cluster = rc.cluster
+        engine_set_id = next(iter(cluster.engines))
+        engine_set = cluster.engines[engine_set_id]
+    out = engine_set.get_output()
+    print(f"---engine output---\n{out}\n---end engine output---")
+    assert out
+    assert 'Completed registration with id 0' in out
+    assert 'Completed registration with id 1' in out
+
+
 async def test_async_with(Cluster):
     async with Cluster(n=5) as rc:
         assert sorted(rc.ids) == list(range(5))
