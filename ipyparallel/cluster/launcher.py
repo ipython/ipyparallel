@@ -1814,26 +1814,6 @@ class BatchSystemLauncher(BaseLauncher):
     output_regexp = CRegExp('')
     output_template = Unicode('')
 
-    env_keep = List(
-        Unicode(),
-        config=True,
-        help="""
-        Names of environment variables to inherit from the parent process.
-        Default: all IPython and IPP environment variables.
-        """,
-    )
-
-    @default("env_keep")
-    def _default_env_keep(self):
-        to_keep = []
-        for key in os.environ:
-            if key.startswith(("IPYTHON", "IPP_")):
-                to_keep.append(key)
-        return to_keep
-
-    # environment regex
-    envkeep_regexp = CRegExp('')
-    envkeep_template = Unicode('')
     # The default batch template, override in subclasses
     default_template = Unicode('')
     # The full path to the instantiated batch script.
@@ -1904,10 +1884,7 @@ class BatchSystemLauncher(BaseLauncher):
     def write_batch_script(self, n=1):
         """Instantiate and write the batch script to the work_dir."""
         self.n = n
-        env_keys = set(self.env_keep)
-        env_keys.update(set(self.get_env()))
-        self.context['envkeep'] = ",".join(sorted(env_keys))
-        self.context['environment_json'] = json.dumps(self.environment)
+        self.context['environment_json'] = json.dumps(self.get_env())
 
         # first priority is batch_template if set
         if self.batch_template_file and not self.batch_template:
@@ -1946,16 +1923,6 @@ class BatchSystemLauncher(BaseLauncher):
         ):
             self.log.debug(f"Adding output={self.output_file} to {self.batch_file}")
             inserts.append(self.output_template)
-
-        if self.environment and self.envkeep_template:
-            match = self.envkeep_regexp.search(self.batch_template)
-            if match:
-                self.log.warning(
-                    f"Existing envkeep line, environment may be missing: {match.group()}"
-                )
-            else:
-                self.log.debug(f"adding envkeep to {self.batch_file}")
-                inserts.append(self.envkeep_template)
 
         if inserts:
             firstline, rest = self.batch_template.split('\n', 1)
@@ -2080,8 +2047,6 @@ class PBSLauncher(BatchSystemLauncher):
     job_array_template = Unicode('#PBS -t 1-{n}')
     queue_regexp = CRegExp(r'#PBS\W+-q\W+\$?\w+')
     queue_template = Unicode('#PBS -q {queue}')
-    envkeep_regexp = CRegExp(r'#PBS\W+(?:-v)\W+\$?\w+')
-    envkeep_template = Unicode('#PBS -v{envkeep}')
     output_regexp = CRegExp(r'#PBS\W+(?:-o)\W+\$?\w+')
     output_template = Unicode('#PBS -j oe\n#PBS -o {output_file}')
 
@@ -2184,9 +2149,6 @@ class SlurmLauncher(BatchSystemLauncher):
     timelimit_regexp = CRegExp(r'#SBATCH\W+(?:--time|-t)\W+\$?\w+')
     timelimit_template = Unicode('#SBATCH --time={timelimit}')
 
-    envkeep_regexp = CRegExp(r'#SBATCH\W+(?:--export)\W+\$?\w+')
-    envkeep_template = Unicode('#SBATCH --export={envkeep}')
-
     output_regexp = CRegExp(r'#SBATCH\W+(?:--output)\W+\$?\w+')
     output_template = Unicode('#SBATCH --output={output_file}')
 
@@ -2222,6 +2184,7 @@ class SlurmControllerLauncher(SlurmLauncher, BatchControllerLauncher):
     )
     default_template = Unicode(
         """#!/bin/sh
+#SBATCH --export=ALL
 #SBATCH --job-name=ipcontroller-{cluster_id}
 #SBATCH --ntasks=1
 {program_and_args}
@@ -2239,6 +2202,7 @@ class SlurmEngineSetLauncher(SlurmLauncher, BatchEngineSetLauncher):
     )
     default_template = Unicode(
         """#!/bin/sh
+#SBATCH --export=ALL
 #SBATCH --job-name=ipengine-{cluster_id}
 srun {program_and_args}
 """
@@ -2255,8 +2219,6 @@ class SGELauncher(PBSLauncher):
     job_array_template = Unicode('#$ -t 1-{n}')
     queue_regexp = CRegExp(r'#\$\W+-q\W+\$?\w+')
     queue_template = Unicode('#$ -q {queue}')
-    envkeep_regexp = CRegExp(r'#\$\W+-v\W+\$?\w+')
-    envkeep_template = Unicode('#$ -v {envkeep}')
 
 
 class SGEControllerLauncher(SGELauncher, BatchControllerLauncher):
@@ -2309,10 +2271,12 @@ class LSFLauncher(BatchSystemLauncher):
     )
 
     batch_file = Unicode(u'')
-    job_array_regexp = CRegExp(r'#BSUB[ \t]-J+\w+\[\d+-\d+\]')
+    job_array_regexp = CRegExp(r'#BSUB\s+-J+\w+\[\d+-\d+\]')
     job_array_template = Unicode('#BSUB -J ipengine[1-{n}]')
-    queue_regexp = CRegExp(r'#BSUB[ \t]+-q[ \t]+\w+')
+    queue_regexp = CRegExp(r'#BSUB\s+-q\s+\w+')
     queue_template = Unicode('#BSUB -q {queue}')
+    output_regexp = CRegExp(r'#BSUB\s+-oo?\s+\w+')
+    output_template = Unicode('#BSUB -o {output_file}\n#BSUB -e {output_file}\n')
 
     def start(self, n=1):
         """Start n copies of the process using LSF batch system.
@@ -2341,9 +2305,8 @@ class LSFControllerLauncher(LSFLauncher, BatchControllerLauncher):
     )
     default_template = Unicode(
         """#!/bin/sh
-    #BSUB -J ipcontroller
-    #BSUB -oo ipcontroller.o.%%J
-    #BSUB -eo ipcontroller.e.%%J
+    #BSUB -env all
+    #BSUB -J ipcontroller-{cluster_id}
     {program_and_args}
     """
     )
@@ -2357,11 +2320,18 @@ class LSFEngineSetLauncher(LSFLauncher, BatchEngineSetLauncher):
     )
     default_template = Unicode(
         """#!/bin/sh
-    #BSUB -oo ipengine.o.%%J
-    #BSUB -eo ipengine.e.%%J
+    #BSUB -J ipengine-{cluster_id}
+    #BSUB -env all
     {program_and_args}
     """
     )
+
+    def get_env(self):
+        # write directly to output files
+        # otherwise, will copy and clobber merged stdout/err
+        env = {"LSB_STDOUT_DIRECT": "Y"}
+        env.update(super().get_env())
+        return env
 
 
 class HTCondorLauncher(BatchSystemLauncher):
