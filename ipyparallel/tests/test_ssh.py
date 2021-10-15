@@ -4,6 +4,7 @@ import pytest
 from traitlets.config import Config
 
 from .conftest import Cluster as BaseCluster  # noqa: F401
+from .test_cluster import test_get_output  # noqa: F401
 from .test_cluster import test_restart_engines  # noqa: F401
 from .test_cluster import test_signal_engines  # noqa: F401
 from .test_cluster import test_start_stop_cluster  # noqa: F401

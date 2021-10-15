@@ -1464,10 +1464,6 @@ class SSHEngineSetLauncher(LocalEngineSetLauncher, SSHLauncher):
     # unset some traits we inherit but don't use
     remote_output_file = ""
 
-    def get_output(self, remove=True):
-        # no-op in EngineSet, EngineLaunchers take care of this
-        return ''
-
     def start(self, n):
         """Start engines by profile or profile_dir.
         `n` is an *upper limit* of engines.
@@ -1745,21 +1741,15 @@ class BatchSystemLauncher(BaseLauncher):
 
     # load cluster args into context instead of cli
 
-    @observe('profile_dir')
-    def _profile_dir_changed(self, change):
-        self._update_context(change)
+    output_file = Unicode(
+        config=True, help="File in which to store stdout/err of processes"
+    ).tag(to_dict=True)
 
-    @observe('cluster_id')
-    def _cluster_id_changed(self, change):
-        self._update_context(change)
-
-    def _profile_dir_default(self):
-        self.context['profile_dir'] = ''
-        return ''
-
-    def _cluster_id_default(self):
-        self.context['cluster_id'] = ''
-        return ''
+    @default("output_file")
+    def _default_output_file(self):
+        log_dir = os.path.join(self.profile_dir, "log")
+        os.makedirs(log_dir, exist_ok=True)
+        return os.path.join(log_dir, f'{self.identifier}.log')
 
     # Subclasses must fill these in.  See PBSEngineSet
     submit_command = List(
@@ -1805,23 +1795,24 @@ class BatchSystemLauncher(BaseLauncher):
     ).tag(to_dict=True)
     queue = Unicode(u'', config=True, help="The batch queue.").tag(to_dict=True)
 
-    @observe('queue')
-    def _queue_changed(self, change):
-        self._update_context(change)
-
     n = Integer(1).tag(to_dict=True)
 
-    @observe('n')
-    def _n_changed(self, change):
+    @observe('queue', 'n', 'cluster_id', 'profile_dir', 'output_file')
+    def _context_field_changed(self, change):
         self._update_context(change)
 
     # not configurable, override in subclasses
     # Job Array regex
     job_array_regexp = CRegExp('')
     job_array_template = Unicode('')
+
     # Queue regex
     queue_regexp = CRegExp('')
     queue_template = Unicode('')
+
+    # Output file
+    output_regexp = CRegExp('')
+    output_template = Unicode('')
 
     env_keep = List(
         Unicode(),
@@ -1866,7 +1857,13 @@ class BatchSystemLauncher(BaseLauncher):
         because the _trait_changed methods only load the context if they
         are set to something other than the default value.
         """
-        return dict(n=1, queue=u'', profile_dir=u'', cluster_id=u'')
+        return dict(
+            n=self.n,
+            queue=self.queue,
+            profile_dir=self.profile_dir,
+            cluster_id=self.cluster_id,
+            output_file=self.output_file,
+        )
 
     program = List(Unicode())
     program_args = List(Unicode())
@@ -1888,9 +1885,7 @@ class BatchSystemLauncher(BaseLauncher):
         return self.submit_command + [self.batch_file]
 
     def __init__(self, work_dir=u'.', config=None, **kwargs):
-        super(BatchSystemLauncher, self).__init__(
-            work_dir=work_dir, config=config, **kwargs
-        )
+        super().__init__(work_dir=work_dir, config=config, **kwargs)
         self.batch_file = os.path.join(self.work_dir, self.batch_file_name)
         # trigger program_changed to populate default context arguments
         self._program_changed()
@@ -1943,6 +1938,14 @@ class BatchSystemLauncher(BaseLauncher):
         if self.queue and not self.queue_regexp.search(self.batch_template):
             self.log.debug(f"Adding queue={self.queue} to {self.batch_file}")
             inserts.append(self.queue_template)
+
+        if (
+            self.output_file
+            and self.output_template
+            and not self.output_regexp.search(self.batch_template)
+        ):
+            self.log.debug(f"Adding output={self.output_file} to {self.batch_file}")
+            inserts.append(self.output_template)
 
         if self.environment and self.envkeep_template:
             match = self.envkeep_regexp.search(self.batch_template)
@@ -2011,6 +2014,13 @@ class BatchSystemLauncher(BaseLauncher):
             self.log.exception("Problem sending signal with: {shlex_join(cmd)}")
             output = ""
 
+    # same local-file implementation as LocalProcess
+    # should this be on the base class?
+    _output = None
+
+    def get_output(self, remove=True):
+        return LocalProcessLauncher.get_output(self, remove=remove)
+
 
 class BatchControllerLauncher(BatchSystemLauncher, ControllerLauncher):
     @default("program")
@@ -2071,7 +2081,9 @@ class PBSLauncher(BatchSystemLauncher):
     queue_regexp = CRegExp(r'#PBS\W+-q\W+\$?\w+')
     queue_template = Unicode('#PBS -q {queue}')
     envkeep_regexp = CRegExp(r'#PBS\W+(?:-v)\W+\$?\w+')
-    envkeep_template = Unicode('#PBS - v{envkeep}')
+    envkeep_template = Unicode('#PBS -v{envkeep}')
+    output_regexp = CRegExp(r'#PBS\W+(?:-o)\W+\$?\w+')
+    output_template = Unicode('#PBS -j oe\n#PBS -o {output_file}')
 
 
 class PBSControllerLauncher(PBSLauncher, BatchControllerLauncher):
@@ -2175,6 +2187,9 @@ class SlurmLauncher(BatchSystemLauncher):
     envkeep_regexp = CRegExp(r'#SBATCH\W+(?:--export)\W+\$?\w+')
     envkeep_template = Unicode('#SBATCH --export={envkeep}')
 
+    output_regexp = CRegExp(r'#SBATCH\W+(?:--output)\W+\$?\w+')
+    output_template = Unicode('#SBATCH --output={output_file}')
+
     def _insert_options_in_script(self):
         """Insert 'partition' (slurm name for queue), 'account', 'time' and other options if necessary"""
         super()._insert_options_in_script()
@@ -2207,7 +2222,7 @@ class SlurmControllerLauncher(SlurmLauncher, BatchControllerLauncher):
     )
     default_template = Unicode(
         """#!/bin/sh
-#SBATCH --job-name=ipy-controller-{cluster_id}
+#SBATCH --job-name=ipcontroller-{cluster_id}
 #SBATCH --ntasks=1
 {program_and_args}
 """
@@ -2224,7 +2239,7 @@ class SlurmEngineSetLauncher(SlurmLauncher, BatchEngineSetLauncher):
     )
     default_template = Unicode(
         """#!/bin/sh
-#SBATCH --job-name=ipy-engine-{cluster_id}
+#SBATCH --job-name=ipengine-{cluster_id}
 srun {program_and_args}
 """
     )
