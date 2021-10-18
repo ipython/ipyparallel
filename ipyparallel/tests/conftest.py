@@ -23,11 +23,11 @@ from . import teardown
 
 
 @contextmanager
-def temporary_ipython_dir():
+def temporary_ipython_dir(prefix=None):
     # FIXME: cleanup has issues on Windows
     # this is *probably* a real bug of holding open files,
     # but it is preventing feedback about test failures
-    td_obj = TemporaryDirectory(suffix=".ipython")
+    td_obj = TemporaryDirectory(suffix=".ipython", prefix=prefix)
     td = td_obj.name
 
     with mock.patch.dict(os.environ, {"IPYTHONDIR": td}):
@@ -103,7 +103,32 @@ def Context():
 
 
 @pytest.fixture
-def Cluster(request, ipython_dir, io_loop):
+def engine_launcher_class():
+    """override to test an alternate launcher"""
+    return 'local'
+
+
+@pytest.fixture
+def controller_launcher_class():
+    """override to test an alternate launcher"""
+    return 'local'
+
+
+@pytest.fixture
+def cluster_config():
+    """Override to set default cluster config"""
+    return Config()
+
+
+@pytest.fixture
+def Cluster(
+    request,
+    ipython_dir,
+    io_loop,
+    controller_launcher_class,
+    engine_launcher_class,
+    cluster_config,
+):
     """Fixture for instantiating Clusters"""
 
     def ClusterConstructor(**kwargs):
@@ -111,9 +136,10 @@ def Cluster(request, ipython_dir, io_loop):
         log.setLevel(logging.DEBUG)
         log.handlers = [logging.StreamHandler(sys.stdout)]
         kwargs['log'] = log
-        engine_launcher_class = kwargs.get("engine_launcher_class")
 
-        cfg = kwargs.setdefault("config", Config())
+        kwargs.setdefault("controller_launcher_class", controller_launcher_class)
+        kwargs.setdefault("engine_launcher_class", engine_launcher_class)
+        cfg = kwargs.setdefault("config", cluster_config)
         cfg.EngineLauncher.engine_args = ['--log-level=10']
         cfg.ControllerLauncher.controller_args = ['--log-level=10']
         kwargs.setdefault("controller_args", ['--ping=250'])

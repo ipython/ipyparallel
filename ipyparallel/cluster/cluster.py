@@ -596,7 +596,10 @@ class Cluster(AsyncFirst, LoggingConfigurable):
                 )
 
         else:
+            # copy to make sure change events fire
+            controller_args = list(controller_args)
             add_args = controller_args.extend
+
         if self.controller_ip:
             add_args(['--ip=%s' % self.controller_ip])
         if self.controller_location:

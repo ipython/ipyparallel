@@ -59,11 +59,6 @@ async def test_ipython_log(ipython):
     assert c.log.handlers[0].stream is sys.stdout
 
 
-@pytest.fixture
-def engine_launcher_class():
-    return 'Local'
-
-
 async def test_start_stop_controller(Cluster):
     cluster = Cluster()
     await cluster.start_controller()
@@ -86,7 +81,7 @@ async def test_start_stop_controller(Cluster):
 
 
 async def test_start_stop_engines(Cluster, engine_launcher_class):
-    cluster = Cluster(engine_launcher_class=engine_launcher_class)
+    cluster = Cluster()
     await cluster.start_controller()
 
     n = 2
@@ -107,9 +102,9 @@ async def test_start_stop_engines(Cluster, engine_launcher_class):
     await cluster.stop_controller()
 
 
-async def test_start_stop_cluster(Cluster, engine_launcher_class):
+async def test_start_stop_cluster(Cluster):
     n = 2
-    cluster = Cluster(engine_launcher_class=engine_launcher_class, n=n)
+    cluster = Cluster(n=n)
     await cluster.start_cluster()
     controller = cluster.controller
     assert controller is not None
@@ -125,8 +120,8 @@ async def test_start_stop_cluster(Cluster, engine_launcher_class):
 @pytest.mark.skipif(
     sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
 )
-async def test_signal_engines(request, Cluster, engine_launcher_class):
-    cluster = Cluster(engine_launcher_class=engine_launcher_class)
+async def test_signal_engines(request, Cluster):
+    cluster = Cluster()
     await cluster.start_controller()
     engine_set_id = await cluster.start_engines(n=2)
     rc = await cluster.connect_client()
@@ -157,9 +152,9 @@ async def test_signal_engines(request, Cluster, engine_launcher_class):
     await cluster.stop_controller()
 
 
-async def test_restart_engines(Cluster, engine_launcher_class):
+async def test_restart_engines(Cluster):
     n = 2
-    async with Cluster(engine_launcher_class=engine_launcher_class, n=n) as rc:
+    async with Cluster(n=n) as rc:
         cluster = rc.cluster
         engine_set_id = next(iter(cluster.engines))
         engine_set = cluster.engines[engine_set_id]
@@ -175,9 +170,9 @@ async def test_restart_engines(Cluster, engine_launcher_class):
         assert set(after_pids).intersection(before_pids) == set()
 
 
-async def test_get_output(Cluster, engine_launcher_class):
+async def test_get_output(Cluster):
     n = 2
-    async with Cluster(engine_launcher_class=engine_launcher_class, n=n) as rc:
+    async with Cluster(n=n) as rc:
         cluster = rc.cluster
         engine_set_id = next(iter(cluster.engines))
         engine_set = cluster.engines[engine_set_id]
@@ -281,15 +276,18 @@ async def test_cluster_manager():
         m.remove_cluster("nosuchcluster")
 
 
-async def test_to_from_dict(Cluster, engine_launcher_class):
-    cluster = Cluster(engine_launcher_class=engine_launcher_class, n=2)
+async def test_to_from_dict(
+    Cluster,
+):
+    cluster = Cluster(n=2)
     print(cluster.config, cluster.controller_args)
     async with cluster as rc:
         d = cluster.to_dict()
         cluster2 = ipp.Cluster.from_dict(d)
         assert not cluster2.shutdown_atexit
         assert cluster2.controller is not None
-        assert cluster2.controller.process.pid == cluster.controller.process.pid
+        if isinstance(cluster2.controller, ipp.cluster.launcher.LocalProcessLauncher):
+            assert cluster2.controller.process.pid == cluster.controller.process.pid
         assert list(cluster2.engines) == list(cluster.engines)
 
         es1 = next(iter(cluster.engines.values()))

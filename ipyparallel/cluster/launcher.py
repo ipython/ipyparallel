@@ -1988,6 +1988,13 @@ class BatchSystemLauncher(BaseLauncher):
     def get_output(self, remove=True):
         return LocalProcessLauncher.get_output(self, remove=remove)
 
+    def poll(self):
+        """Poll not implemented
+
+        Need to use `squeue` and friends to check job status
+        """
+        return None
+
 
 class BatchControllerLauncher(BatchSystemLauncher, ControllerLauncher):
     @default("program")

@@ -27,6 +27,7 @@ jobs:
             cluster_type: mpi
           - python: "3.7"
             cluster_type: slurm
+            container: slurmctld
           - python: "3.6"
             tornado: "5.1.1"
           - python: "3.7"
@@ -84,14 +85,10 @@ jobs:
       - name: Set up slurm
         if: ${{ matrix.cluster_type == 'slurm' }}
         run: |
-          sudo rm -rf /var/lib/apt/lists
-          sudo apt-get update && sudo apt-get -f -y install && sudo apt-get -y install slurm-wlm
-          sudo cp ci/slurm/slurm.conf /etc/slurm-llnl/
-          sudo mkdir /var/spool/slurmctl
-          sudo mkdir /var/spool/slurmd
-          sudo service munge start
-          sudo service slurmd start
-          sudo service slurmctld start
+          export DOCKER_BUILDKIT=1
+          export COMPOSE_DOCKER_CLI_BUILD=1
+          cd ci/slurm
+          docker-compose up -d --build
 
       - name: Install Python (conda) ${{ matrix.python }}
         if: ${{ matrix.cluster_type == 'mpi' }}
@@ -124,10 +121,14 @@ jobs:
       - name: Show environment
         run: pip freeze
 
+      - name: Run tests in container ${{ matrix.container }}
+        if: ${{ matrix.container }}
+        run: echo "EXEC=docker exec -i ${{ matrix.container }}" >> $GITHUB_ENV
+
       - name: Run ${{ matrix.cluster_type }} tests
         if: ${{ matrix.cluster_type }}
         run: |
-          pytest -ra -v --maxfail=2 --color=yes --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
+          ${EXEC:-} pytest -ra -v --maxfail=2 --color=yes --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
 
       - name: Run tests
         if: ${{ ! matrix.cluster_type }}
@@ -135,6 +136,12 @@ jobs:
         #        https://github.com/actions/runner/issues/241
         run: |
           pytest -ra -v --maxfail=3 --color=yes --cov=ipyparallel ipyparallel/tests
+
+      - name: Fixup coverage permissions ${{ matrix.container }}
+        if: ${{ matrix.container }}
+        run: |
+          ls -l .coverage*
+          ${EXEC} chmod -R a+rw .coverage*
 
       - name: Submit codecov report
         run: |
@@ -144,9 +151,9 @@ jobs:
         if: ${{ matrix.cluster_type == 'slurm' && failure() }}
         run: |
           set -x
-          slurmd -C
-          ls -l
-          squeue
-          sinfo
-          scontrol show node=localhost
-          sudo cat /var/log/slurm-llnl/*
+          docker ps -a
+          docker logs slurmctld
+          docker exec -i slurmctld squeue --states=all
+          docker exec -i slurmctld sinfo
+          docker logs c1
+          docker logs c2

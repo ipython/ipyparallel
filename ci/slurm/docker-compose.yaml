@@ -1,0 +1,84 @@
+version: "2.2"
+
+services:
+  slurmctld:
+    image: ipp-cluster:slurm
+    build: .
+    container_name: slurmctld
+    hostname: slurmctld
+    command:
+      - tail
+      - "-f"
+      - /var/log/slurm-llnl/slurmctld.log
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm
+      - ../..:/io
+    expose:
+      - "6817"
+    networks:
+      common-network:
+        ipv4_address: 10.1.1.10
+
+  c1:
+    image: ipp-cluster:slurm
+    build: .
+    hostname: c1
+    command:
+      - tail
+      - "-f"
+      - /var/log/slurm-llnl/slurmd.log
+    container_name: c1
+
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm
+      - ../..:/io
+    expose:
+      - "6818"
+    depends_on:
+      - "slurmctld"
+    networks:
+      common-network:
+        ipv4_address: 10.1.1.11
+
+  c2:
+    image: ipp-cluster:slurm
+    build: .
+    command:
+      - tail
+      - "-f"
+      - /var/log/slurm-llnl/slurmd.log
+    hostname: c2
+    container_name: c2
+    volumes:
+      - etc_munge:/etc/munge
+      - etc_slurm:/etc/slurm
+      - slurm_jobdir:/data
+      - var_log_slurm:/var/log/slurm
+      - ../..:/io
+    expose:
+      - "6818"
+    depends_on:
+      - "slurmctld"
+    networks:
+      common-network:
+        ipv4_address: 10.1.1.12
+
+volumes:
+  etc_munge:
+  etc_slurm:
+  slurm_jobdir:
+  var_log_slurm:
+
+networks:
+  common-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.1.1.0/24
