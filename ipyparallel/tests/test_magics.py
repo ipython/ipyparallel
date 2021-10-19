@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Test Parallel magics"""
 import re
+import sys
 import time
 
 import pytest
@@ -57,7 +58,7 @@ class TestParallelMagics(ClusterTestCase):
                 found = found | (re.search(expect, line) is not None)
                 if found:
                     break
-            assert found, "Expected %r in output" % (expect,)
+            assert found, f"Expected {expect!r} in output: {lines}"
 
     def test_cellpx_block_args(self):
         """%%px --[no]block flags work"""
@@ -227,6 +228,7 @@ class TestParallelMagics(ClusterTestCase):
             ip.run_cell_magic('px', '--stream', 'generate_output()')
 
         assert '\n\n' not in io.stdout
+        print(io.stdout)
         lines = io.stdout.splitlines()
         expected = []
         expected.extend(
@@ -244,11 +246,15 @@ class TestParallelMagics(ClusterTestCase):
         )
         expected.extend([r'Out\[\d+:\d+\]:.*IPython\.core\.display\.Math'] * len(v))
 
-        assert len(lines) == len(expected)
         # Check that all expected lines are in the output
         self._check_expected_lines_unordered(expected, lines)
 
+        assert len(lines) == len(
+            expected
+        ), f"expected {len(expected)} lines, got: {io.stdout}"
+
         # Do the same for stderr
+        print(io.stderr, file=sys.stderr)
         assert '\n\n' not in io.stderr
         lines = io.stderr.splitlines()
         expected = []
@@ -261,8 +267,10 @@ class TestParallelMagics(ClusterTestCase):
             ]
             * len(v)
         )
-        assert len(lines) == len(expected)
         self._check_expected_lines_unordered(expected, lines)
+        assert len(lines) == len(
+            expected
+        ), f"expected {len(expected)} lines, got: {io.stderr}"
 
     def test_px_nonblocking(self):
         ip = get_ipython()
