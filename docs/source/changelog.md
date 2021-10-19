@@ -4,6 +4,29 @@
 
 Changes in IPython Parallel
 
+## 7.2
+
+New:
+
+- More convenient `Cluster(engines="mpi")` signature for setting the engine (or controller) launcher class.
+- The first (and usually only) engine set can be accessed as {attr}`.Cluster.engine_set`,
+  rather than digging through the {attr}`Cluster.engines` dict.
+- Add `environment` configuration to
+- Support more configuration via environment variables,
+  including passing connection info to engines via `$IPP_CONNECTION_INFO`,
+  which is used by default, avoiding the need to send connection files to engines in
+  cases of non-shared filesystems.
+- Send connection info to engines via $ by default
+- Support {meth}`EngineLauncher.get_output` via output files in batch system launchers
+
+Fixed:
+
+- Various bugs preventing use of non-default Controller launchers
+
+Maintenance:
+
+- Add BroadcastView benchmark code
+
 ## 7.1
 
 New:
