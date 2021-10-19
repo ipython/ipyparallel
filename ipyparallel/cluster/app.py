@@ -467,8 +467,7 @@ class IPClusterEngines(BaseParallelApplication):
 
     def watch_engines(self):
         """Watch for early engine shutdown"""
-        # FIXME: public API to get launcher instances?
-        self.engine_launcher = next(iter(self.cluster.engines.values()))
+        self.engine_launcher = self.cluster.engine_set
 
         if not self.early_shutdown:
             self.engine_launcher.on_stop(self.engines_stopped)

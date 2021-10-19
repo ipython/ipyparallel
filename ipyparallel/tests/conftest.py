@@ -137,8 +137,8 @@ def Cluster(
         log.handlers = [logging.StreamHandler(sys.stdout)]
         kwargs['log'] = log
 
-        kwargs.setdefault("controller_launcher_class", controller_launcher_class)
-        kwargs.setdefault("engine_launcher_class", engine_launcher_class)
+        kwargs.setdefault("controller", controller_launcher_class)
+        kwargs.setdefault("engines", engine_launcher_class)
         cfg = kwargs.setdefault("config", cluster_config)
         cfg.EngineLauncher.engine_args = ['--log-level=10']
         cfg.ControllerLauncher.controller_args = ['--log-level=10']

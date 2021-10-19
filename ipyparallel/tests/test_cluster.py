@@ -237,7 +237,7 @@ def test_load_profile(tmpdir):
     ],
 )
 def test_cluster_abbreviations(classname, expected_class):
-    c = cluster.Cluster(engine_launcher_class=classname)
+    c = cluster.Cluster(engines=classname)
     assert c.engine_launcher_class is expected_class
 
 
@@ -290,8 +290,8 @@ async def test_to_from_dict(
             assert cluster2.controller.process.pid == cluster.controller.process.pid
         assert list(cluster2.engines) == list(cluster.engines)
 
-        es1 = next(iter(cluster.engines.values()))
-        es2 = next(iter(cluster2.engines.values()))
+        es1 = cluster.engine_set
+        es2 = cluster2.engine_set
         # ensure responsive
         rc[:].apply_async(lambda: None).get(timeout=_timeout)
         if not sys.platform.startswith("win"):
