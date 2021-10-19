@@ -43,30 +43,37 @@ these things to happen.
 
 ### Automatic starting using {command}`mpiexec` and {command}`ipcluster`
 
-The easiest approach is to use the `MPI` Launchers in {command}`ipcluster`,
+The easiest approach is to use the `MPI` Launcher,
 which will first start a controller and then a set of engines using
 {command}`mpiexec`:
+
+```python
+cluster = ipp.Cluster(engines="mpi")
+cluster.start_cluster_sync()
+```
+
+or on the command-line
 
 ```
 $ ipcluster start -n 4 --engines=mpi
 ```
 
-This approach is best as interrupting {command}`ipcluster` will automatically
-stop and clean up the controller and engines.
+### Automatic starting using batch systems such as PBS or Slurm
 
-### Manual starting using {command}`mpiexec`
+IPython Parallel also has launchers for several batch systems,
+including PBS, Slurm, SGE, LSF, HTCondor.
+Just like `mpi`, you can specify these as the controller
 
-If you want to start the IPython engines using the {command}`mpiexec`:
-do:
-
-```
-$ mpiexec -n 4 ipengine
+```python
+cluster = ipp.Cluster(engines="slurm", controller="slurm")
 ```
 
-### Automatic starting using PBS and {command}`ipcluster`
+:::{versionadded} 7.2
 
-The {command}`ipcluster` command also has built-in integration with PBS. For
-more information on this approach, see our documentation on {ref}`ipcluster <parallel-process>`.
+The `controller` and `engines` arguments are new in IPython Parallel 7.2.
+In 7.0-7.1, these arguments had to be called `controller_launcher_class`
+and `engine_launcher_class`, respectively.
+:::
 
 ## Actually using MPI
 
@@ -91,29 +98,26 @@ def psum(a):
     return rcvBuf
 ```
 
-Now, start an IPython cluster:
-
-```
-$ ipcluster start --engines=mpi -n 4
-```
-
-Finally, connect to the cluster and use this function interactively. In this
-case, we create a distributed array and sum up all its elements in a distributed
-manner using our {func}`psum` function:
+Now, we can start an IPython cluster and use this function interactively.
+In this case,
+we create a distributed array and sum up all its elements in a distributed manner
+using our {func}`psum` function:
 
 ```ipython
 In [1]: import ipyparallel as ipp
 
-In [2]: c = ipp.Cluster.from_file().connect_client_sync()
+In [2]: cluster = ipp.Cluster(engines="mpi", n=4)
 
-In [3]: view = c[:]
+In [3]: rc = cluster.start_and_connect_sync()
 
-In [4]: view.activate() # enable magics
+In [4]: view = rc[:]
+
+In [5]: view.activate() # enable magics
 
 # run the contents of the file on each engine:
-In [5]: view.run('psum.py')
+In [6]: view.run('psum.py')
 
-In [6]: view.scatter('a',np.arange(16,dtype='float'))
+In [6]: view.scatter('a', np.arange(16,dtype='float'))
 
 In [7]: view['a']
 Out[7]: [array([ 0.,  1.,  2.,  3.]),
@@ -121,11 +125,11 @@ Out[7]: [array([ 0.,  1.,  2.,  3.]),
          array([  8.,   9.,  10.,  11.]),
          array([ 12.,  13.,  14.,  15.])]
 
-In [7]: %px totalsum = psum(a)
+In [8]: %px totalsum = psum(a)
 Parallel execution on engines: [0,1,2,3]
 
-In [8]: view['totalsum']
-Out[8]: [120.0, 120.0, 120.0, 120.0]
+In [9]: view['totalsum']
+Out[9]: [120.0, 120.0, 120.0, 120.0]
 ```
 
 Any Python code that makes calls to MPI can be used in this manner, including

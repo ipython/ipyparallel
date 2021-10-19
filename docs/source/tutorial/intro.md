@@ -134,11 +134,8 @@ views:
 
 To use IPython for parallel computing, you need to start one instance of the
 controller and one or more instances of the engine. Initially, it is best to
-start a controller and engines on a single host using the
-{command}`ipcluster` command. To start a controller and 4 engines on your
-local machine:
-
-To launch a cluster:
+start a controller and engines on a single host.
+To start a controller and 4 engines on your local machine:
 
 ```ipython
 In [1]: import ipyparallel as ipp
@@ -158,7 +155,7 @@ You can also launch clusters at the command-line with:
 $ ipcluster start -n 4
 ```
 
-which is equivalent to `ipp.Cluster(n=4, cluster_id="")`
+which is equivalent to `ipp.Cluster(n=4, cluster_id="").start_cluster()`
 
 and connect to the already-running cluster with {meth}`.Cluster.from_file`
 
