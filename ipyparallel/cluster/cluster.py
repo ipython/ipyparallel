@@ -73,12 +73,17 @@ _atexit_cleanup_clusters.registered = False
 class Cluster(AsyncFirst, LoggingConfigurable):
     """Class representing an IPP cluster
 
-    i.e. one controller and a groups of engines
+    i.e. one controller and one or more groups of engines
 
     Can start/stop/monitor/poll cluster resources
 
     All async methods can be called synchronously with a `_sync` suffix,
     e.g. `cluster.start_cluster_sync()`
+
+    .. versionchanged:: 7.2
+        controller and engine launcher classes can be specified via
+        `Cluster(controller='ssh', engines='mpi')`
+        without the `_launcher_class` suffix.
     """
 
     # general configuration
@@ -192,7 +197,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         """,
         config=True,
-    )
+    ).tag(alias="controller")
 
     engine_launcher_class = Launcher(
         default_value=launcher.LocalEngineSetLauncher,
@@ -214,7 +219,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
         """,
         config=True,
-    )
+    ).tag(alias="engines")
 
     # controller configuration
 
@@ -282,10 +287,23 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         """,
     )
     # private state
-    controller = Any()
-    engines = Dict()
+    controller = Any().tag(nosignature=True)
+    engines = Dict().tag(nosignature=True)
 
-    profile_config = Instance(Config, allow_none=False)
+    @property
+    def engine_set(self):
+        """Return the first engine set
+
+        Most clusters have only one engine set,
+        which is tedious to get to via the `engines` dict
+        with random engine set ids.
+
+        ..versionadded: 7.2
+        """
+        if self.engines:
+            return next(iter(self.engines.values()))
+
+    profile_config = Instance(Config, allow_none=False).tag(nosignature=True)
 
     @default("profile_config")
     def _profile_config_default(self):
@@ -350,8 +368,21 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         config.merge(direct_config)
         return config
 
-    def __init__(self, **kwargs):
+    def __init__(self, *, engines=None, controller=None, **kwargs):
         """Construct a Cluster"""
+        # handle more intuitive aliases, which match ipcluster cli args, etc.
+        if engines is not None:
+            if 'engine_launcher_class' in kwargs:
+                raise TypeError(
+                    "Only specify one of 'engines' or 'engine_launcher_class', not both"
+                )
+            kwargs['engine_launcher_class'] = engines
+        if controller is not None:
+            if 'controller_launcher_class' in kwargs:
+                raise TypeError(
+                    "Only specify one of 'controller' or 'controller_launcher_class', not both"
+                )
+            kwargs['controller_launcher_class'] = controller
         if 'parent' not in kwargs and 'config' not in kwargs:
             kwargs['parent'] = self._default_parent()
 

@@ -57,7 +57,7 @@ c.IPController.ip = '*'
 # c.IPController.location = 'controllerhost.tld'
 ```
 
-```{note}
+:::{note}
 `--ip=*` instructs ZeroMQ to listen on all interfaces,
 but it does not contain the IP needed for engines / clients
 to know where the controller is.
@@ -67,7 +67,7 @@ the specific IP address or hostname of the controller, as seen from engines and/
 IPython uses `socket.gethostname()` for this value by default,
 but it may not always be the right value.
 Check the `location` field in your connection files if you are having connection trouble.
-```
+:::
 
 ```{versionchanged} 6.1
 Support hostnames in location, in addition to ip addresses.
@@ -167,7 +167,7 @@ $> ipcluster list
 
 {command}`ipcluster` has a notion of {class}`Launcher` that can start controllers
 and engines via some mechanism. Currently supported
-models include {command}`ssh`, {command}`mpiexec`, and PBS-style (Torque, SGE, LSF).
+models include {command}`ssh`, {command}`mpiexec`, and PBS-style (Torque, SGE, LSF, Slurm).
 
 In general, these are configured by the {attr}`Cluster.engine_set_launcher_class`,
 and {attr}`Cluster.controller_launcher_class` configurables, which can be the
@@ -175,9 +175,9 @@ fully specified object name (e.g. `'ipyparallel.cluster.launcher.LocalController
 but if you are using IPython's builtin launchers, you can specify a launcher by its short name, e.g:
 
 ```python
-c.IPClusterEngines.engine_launcher_class = 'ssh'
+c.Cluster.engine_launcher_class = 'ssh'
 # which is equivalent to
-c.IPClusterEngines.engine_launcher_class = 'ipyparallel.cluster.launcher.SSHEngineSetLauncher'
+c.Cluster.engine_launcher_class = 'ipyparallel.cluster.launcher.SSHEngineSetLauncher'
 ```
 
 The shortest form being of particular use on the command line, where all you need to do to
@@ -199,32 +199,19 @@ have not yet supported
 
 TODO: example writing custom Launchers
 
-### Using {command}`ipcluster` in mpiexec/mpirun mode
+### Using IPython Parallel with MPI
 
-The mpiexec/mpirun mode is useful if you:
+The mpiexec/mpirun mode is useful if:
 
-1. Have MPI installed.
+1. You have MPI installed.
 2. Your systems are configured to use the {command}`mpiexec` or
    {command}`mpirun` commands to start MPI processes.
 
-If these are satisfied, you can create a new profile:
-
-```
-$ ipython profile create --parallel --profile=mpi
-```
-
-and edit the file {file}`IPYTHONDIR/profile_mpi/ipcluster_config.py`.
-
-There, instruct ipcluster to use the MPI launchers by adding the lines:
+you can usually start with MPI pretty readily without creating a profile.
 
 ```python
-c.Cluster.engine_launcher_class = 'mpi'
-```
-
-If the default MPI configuration is correct, then you can now start your cluster, with:
-
-```
-$ ipcluster start -n 4 --profile=mpi
+cluster = ipp.Cluster(engines="mpi", n=4)
+client = cluster.start_and_connect_sync()
 ```
 
 This does the following:
@@ -232,21 +219,26 @@ This does the following:
 1. Starts the IPython controller on current host.
 2. Uses {command}`mpiexec` to start 4 engines.
 
-On newer MPI implementations (such as OpenMPI), this will work even if you
-don't make any calls to MPI or call {func}`MPI_Init`. However, older MPI
-implementations require each process to call {func}`MPI_Init` upon
-starting.
-
 More details on using MPI with IPython can be found {ref}`here <parallel-mpi>`.
 
-### Using {command}`ipcluster` in PBS mode
+### Starting IPython Parallel on a traditional cluster
 
-The PBS mode uses the Portable Batch System (PBS) to start the engines.
+For cases that require more extensive configuration,
+IPython can use "profiles" to collect related configuration.
+These profiles have names, and are located by default in your .ipython directory.
 
-As usual, we will start by creating a fresh profile:
+IPython supports several batch systems, including PBS, LSF, Slurm, SGE, and HTCondor.
+Many "PBS-like" systems can be supported by configuring the PBSLauncher.
+Additional configuration options can be found in the BatchSystemLauncher section of {file}`ipcluster_config`.
+
+We'll use PBS as our example here, but all batch system launchers are configured the same way.
+
+We will start by creating a fresh profile:
 
 ```
+
 $ ipython profile create --parallel --profile=pbs
+
 ```
 
 And in {file}`ipcluster_config.py`, we will select the PBS launchers for the controller
@@ -257,19 +249,25 @@ c.Cluster.controller_launcher_class = 'pbs'
 c.Cluster.engine_launcher_class = 'pbs'
 ```
 
-IPython does provide simple default batch templates for PBS and SGE, but you may need
+IPython does provide simple default batch templates for supported batch systems, but you may need
 to specify your own. Here is a sample PBS script template:
 
 ```bash
-#PBS -N ipython
-#PBS -j oe
-#PBS -l walltime=00:10:00
-#PBS -l nodes={n//4}:ppn=4
-#PBS -q {queue}
+#!/bin/bash
+#PBS -N ipython-parallel  # set the name of the job (convenient)
+#PBS -V  # export environment variables, required
+#PBS -j oe  # merge stdout and error
+#PBS -o {output_file}  # send output to a file
+#PBS -l walltime=00:10:00  # max runtime 10 minutes
+#PBS -l nodes={n//4}:ppn=4  # 4 processes per node
+#PBS -q {queue}  # run on the specified queue
 
 cd $PBS_O_WORKDIR
 export PATH=$HOME/usr/local/bin
-/usr/local/bin/mpiexec -n {n} ipengine --profile-dir={profile_dir}
+/usr/local/bin/mpiexec -n {n} {program_and_args}  # start the configured program
+# program_and_args is populated via `engine_args` and other configuration
+# or you can ignore that and configure the full program in the template
+/usr/local/bin/mpiexec -n {n} ipengine --debug
 ```
 
 There are a few important points about this template:
@@ -292,15 +290,19 @@ There are a few important points about this template:
 The controller template should be similar, but simpler:
 
 ```bash
+#!/bin/bash
 #PBS -N ipython
+#PBS -V
 #PBS -j oe
+#PBS -o {output_file}
 #PBS -l walltime=00:10:00
 #PBS -l nodes=1:ppn=1
 #PBS -q {queue}
+#PBS -V
 
 cd $PBS_O_WORKDIR
 export PATH=$HOME/usr/local/bin
-ipcontroller --profile-dir={profile_dir}
+{program_and_args} # or ipcontroller --ip=*
 ```
 
 Once you have created these scripts, save them with names like
@@ -321,7 +323,7 @@ submitted (`{queue}`)). These are configurables, and can be specified in
 
 ```python
 c.PBSLauncher.queue = 'veryshort.q'
-c.IPClusterEngines.n = 64
+c.Cluster.n = 64
 ```
 
 Note that assuming you are running PBS on a multi-node cluster, the Controller's default behavior
@@ -335,19 +337,12 @@ c.IPController.ip = '*'
 
 You can now run the cluster with:
 
-```
+```python
+cluster = Cluster(profile="pbs")
 $ ipcluster start --profile=pbs -n 128
 ```
 
-Additional configuration options can be found in the PBS section of {file}`ipcluster_config`.
-
-```{note}
-Due to the flexibility of configuration, the PBS launchers work with simple changes
-to the template for other {command}`qsub`-using systems, such as Sun Grid Engine,
-and with further configuration in similar batch systems like Condor.
-```
-
-### Using {command}`ipcluster` in SSH mode
+### Starting a cluster with SSH
 
 The SSH mode uses {command}`ssh` to execute {command}`ipengine` on remote
 nodes and {command}`ipcontroller` can be run remotely as well, or on localhost.
@@ -366,9 +361,9 @@ $ ipython profile create --parallel --profile=ssh
 To use this mode, select the SSH launchers in {file}`ipcluster_config.py`:
 
 ```python
-c.IPClusterEngines.engine_launcher_class = 'ssh' # or 'sshproxy'
+c.Cluster.engine_launcher_class = 'ssh' # or 'sshproxy'
 # and if the Controller is also to be remote:
-c.IPClusterStart.controller_launcher_class = 'ssh'
+c.Cluster.controller_launcher_class = 'ssh'
 ```
 
 The controller's remote location and configuration can be specified:
@@ -492,20 +487,8 @@ highly inconvenient. Support for manual tunnels will be improved.
 ```
 
 You can instruct all engines to use ssh, by specifying the ssh server in
-{file}`ipcontroller-engine.json`:
-
-% I know this is really JSON, but the example is a subset of Python:
-
-```python
-{
-  "url":"tcp://192.168.1.123:56951",
-  "exec_key":"26f4c040-587d-4a4e-b58b-030b96399584",
-  "ssh":"user@example.com",
-  "location":"192.168.1.123"
-}
-```
-
-This will be specified if you give the `--enginessh=use@example.com` argument when
+{file}`ipcontroller-engine.json`
+This will be specified if you give the `--enginessh=user@example.com` argument when
 starting {command}`ipcontroller`.
 
 Or you can specify an ssh server on the command-line when starting an engine:

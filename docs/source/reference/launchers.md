@@ -22,7 +22,7 @@ and can be selected via short lowercase string naming the kind of launcher, e.g.
 
 ```python
 import ipyparallel as ipp
-c = ipp.Cluster(engine_launcher_class="mpi")
+c = ipp.Cluster(engines="mpi")
 ```
 
 For the most part, Launchers are not interacted-with directly,
@@ -178,13 +178,13 @@ setup(
 This allows clusters created to use the shortcut:
 
 ```python
-Cluster(enginge_launcher_class="mine")
+Cluster(engines="mine")
 ```
 
 instead of the full import string
 
 ```
-Cluster(enginge_launcher_class="mypackage.MyEngineSetLauncher")
+Cluster(engines="mypackage.MyEngineSetLauncher")
 ```
 
 though the long form will always still work.

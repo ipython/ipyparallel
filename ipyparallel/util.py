@@ -747,6 +747,10 @@ def _traitlet_signature(cls):
         if name.startswith("_"):
             # omit private traits
             continue
+        if trait.metadata.get("nosignature"):
+            continue
+        if "alias" in trait.metadata:
+            name = trait.metadata["alias"]
         if hasattr(trait, 'default'):
             # traitlets 5
             default = trait.default()
