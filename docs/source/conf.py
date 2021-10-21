@@ -90,7 +90,7 @@ from datetime import date
 
 today = date.today()
 project = u'ipyparallel'
-copyright = u'%04d, The IPython Development Team' % date.year
+copyright = u'%04d, The IPython Development Team' % today.year
 author = u'The IPython Development Team'
 
 # The version info for the project you're documenting, acts as replacement for
