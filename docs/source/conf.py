@@ -87,6 +87,7 @@ master_doc = 'index'
 
 # General information about the project.
 from datetime import date
+
 today = date.today()
 project = u'ipyparallel'
 copyright = u'%04d, The IPython Development Team' % date.year
