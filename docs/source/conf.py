@@ -86,8 +86,11 @@ if iprelease['version_info'][-1] == 'dev':
 master_doc = 'index'
 
 # General information about the project.
+from datetime import date
+
+today = date.today()
 project = u'ipyparallel'
-copyright = u'2015, The IPython Development Team'
+copyright = u'%04d, The IPython Development Team' % today.year
 author = u'The IPython Development Team'
 
 # The version info for the project you're documenting, acts as replacement for
