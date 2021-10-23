@@ -17,6 +17,7 @@ from datetime import datetime
 from functools import lru_cache
 from functools import partial
 from itertools import chain
+from itertools import repeat
 from threading import Event
 
 import zmq
@@ -148,7 +149,7 @@ class AsyncResult(Future):
         self.add_done_callback(self._finalize_result)
 
     def _iopub_streaming_output_callback(self, eid, msg_future, msg):
-        """Callback registered during AsyncResult.stream_output()"""
+        """Callback for iopub messages registered during AsyncResult.stream_output()"""
         msg_type = msg['header']['msg_type']
         ip = get_ipython()
         if ip is not None:
@@ -185,6 +186,33 @@ class AsyncResult(Future):
                     f'[{stream_name}:{eid}] ',
                     file=stream,
                 )
+        elif msg_type == "error":
+            content = msg['content']
+            if 'engine_info' not in content:
+                content['engine_info'] = {
+                    "engine_id": msg_future.output.metadata.engine_id,
+                    "engine_uuid": msg_future.output.metadata.engine_uuid,
+                    # always execute?
+                    "method": msg_future.header["msg_type"].partition("_")[0],
+                }
+
+            err = self._client._unwrap_exception(msg['content'])
+            self._streamed_errors += 1
+            if self._streamed_errors <= error.CompositeError.tb_limit:
+                print("\n".join(err.render_traceback()), file=sys.stderr)
+            else:
+                # single-line error after we hit the limit
+                print(err, file=sys.stderr)
+        elif msg_type == "execute_result":
+            # mock ExecuteReply from execute_result on iopub
+            from .client import ExecuteReply
+
+            er = ExecuteReply(
+                msg_id=msg_future.msg_id,
+                content=msg['content'],
+                metadata=msg_future.output.metadata,
+            )
+            display(er)
 
         if ip is None:
             return
@@ -206,21 +234,24 @@ class AsyncResult(Future):
         self._already_streamed = {}
         self._stream_trailing_newline = True
         self._last_display_prefix = ""
+        self._streamed_errors = 0
+
         for eid, msg_future in zip(self._targets, self._children):
-            callback_func = partial(
+            iopub_callback = partial(
                 self._iopub_streaming_output_callback, eid, msg_future
             )
-            future_callbacks[msg_future] = callback_func
-            msg_future.iopub_callbacks.append(callback_func)
+            future_callbacks[msg_future] = iopub_callback
+            msg_future.iopub_callbacks.append(iopub_callback)
 
         try:
             yield
         finally:
             # clear stream cache
             self._already_streamed = {}
-            # Remove the callback
-            for msg_future, callback in future_callbacks.items():
-                msg_future.iopub_callbacks.remove(callback)
+
+            # Remove the callbacks
+            for msg_future, iopub_callback in future_callbacks.items():
+                msg_future.iopub_callbacks.remove(iopub_callback)
 
     def __repr__(self):
         if self._ready:
@@ -384,16 +415,23 @@ class AsyncResult(Future):
             # nothing to do if we're already representing a single message
             return (self,)
             self.owner = False
+
+        if self._targets is None:
+            _targets = repeat(None)
+        else:
+            _targets = self._targets
+
+        flatten = not isinstance(self, AsyncMapResult)
         return tuple(
-            self.__class__(
+            AsyncResult(
                 client=self._client,
-                children=[msg_future],
+                children=msg_future if flatten else [msg_future],
                 targets=[engine_id],
                 fname=self._fname,
                 owner=False,
                 return_exceptions=self._return_exceptions,
             )
-            for engine_id, msg_future in zip(self._targets, self._children)
+            for engine_id, msg_future in zip(_targets, self._children)
         )
 
     def wait(self, timeout=-1, return_when=None):

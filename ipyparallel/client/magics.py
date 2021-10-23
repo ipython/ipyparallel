@@ -49,6 +49,7 @@ from textwrap import dedent
 from IPython.core.error import UsageError
 from IPython.core.magic import Magics
 from IPython.core import magic_arguments
+from .. import error
 
 # -----------------------------------------------------------------------------
 # Definitions of magic functions for use with IPython
@@ -377,11 +378,17 @@ class ParallelMagics(Magics):
                     tic = time.perf_counter()
                     deadline = tic + progress_after
                     try:
-                        result.wait_for_output(timeout=progress_after)
+                        result.get(timeout=progress_after)
                         remaining = max(deadline - time.perf_counter(), 0)
-                        result.get(timeout=remaining)
+                        result.wait_for_output(timeout=remaining)
                     except TimeoutError:
                         pass
+                    except error.CompositeError as e:
+                        if stream_output:
+                            # already streamed, show an abbreviated result
+                            raise error.AlreadyDisplayedError(e) from None
+                        else:
+                            raise
                     else:
                         finished_waiting = True
 
@@ -390,9 +397,17 @@ class ParallelMagics(Magics):
                         # not an immediate result, start interactive progress
                         result.wait_interactive()
                     result.wait_for_output()
-                    result.get()
-            # Skip stdout/stderr if streaming output
-            result.display_outputs(groupby, result_only=stream_output)
+                    try:
+                        result.get()
+                    except error.CompositeError as e:
+                        if stream_output:
+                            # already streamed, show an abbreviated result
+                            raise error.AlreadyDisplayedError(e) from None
+                        else:
+                            raise
+            # Skip redisplay if streaming output
+            if not stream_output:
+                result.display_outputs(groupby)
         else:
             # return AsyncResult only on non-blocking submission
             return result

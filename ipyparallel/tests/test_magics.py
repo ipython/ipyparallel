@@ -215,8 +215,55 @@ class TestParallelMagics(ClusterTestCase):
 
         self._check_generated_stderr(io.stderr, len(v))
 
+    def test_cellpx_error_stream(self):
+        self.minimum_engines(6)
+        ip = get_ipython()
+        v = self.client[:]
+        v.block = True
+        v.activate()
+        v.scatter("rank", range(len(v)), flatten=True, block=True)
+
+        with capture_output(display=False) as io:
+            with pytest.raises(ipp.error.AlreadyDisplayedError) as exc_info:
+                ip.run_cell_magic(
+                    "px",
+                    "--stream",
+                    "import time; time.sleep(rank); raise RuntimeError(f'oops! {rank}')",
+                )
+
+        print(io.stdout)
+        print(io.stderr, file=sys.stderr)
+        assert 'RuntimeError' in io.stderr
+        assert len(v) <= io.stderr.count("RuntimeError:") < len(v) * 2
+        printed_tb = "\n".join(exc_info.value.render_traceback())
+        assert printed_tb == f"{len(v)} errors"
+
+    def test_cellpx_error_no_stream(self):
+        self.minimum_engines(6)
+        ip = get_ipython()
+        v = self.client[:]
+        v.block = True
+        v.activate()
+        v.scatter("rank", range(len(v)), flatten=True, block=True)
+
+        with capture_output(display=False) as io:
+            with pytest.raises(ipp.error.CompositeError) as exc_info:
+                ip.run_cell_magic(
+                    "px",
+                    "--no-stream",
+                    "import time; time.sleep(rank); raise RuntimeError(f'oops! {rank}')",
+                )
+
+        print(io.stdout)
+        print(io.stderr, file=sys.stderr)
+        assert 'RuntimeError' not in io.stderr
+        assert io.stderr.strip() == ""
+        printed_tb = "\n".join(exc_info.value.render_traceback())
+        assert printed_tb.count("RuntimeError:") >= ipp.error.CompositeError.tb_limit
+
     def test_cellpx_stream(self):
         """%%px --stream"""
+        self.minimum_engines(6)
         ip = get_ipython()
         v = self.client[:]
         v.block = True
@@ -227,6 +274,8 @@ class TestParallelMagics(ClusterTestCase):
         with capture_output(display=False) as io:
             ip.run_cell_magic('px', '--stream', 'generate_output()')
 
+        print(io.stdout)
+        print(io.stderr, file=sys.stderr)
         assert '\n\n' not in io.stdout
         print(io.stdout)
         lines = io.stdout.splitlines()

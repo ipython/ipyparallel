@@ -811,7 +811,7 @@ class Client(HasTraits):
         """unwrap exception, and remap engine_id to int."""
         e = error.unwrap_exception(content)
         # print e.traceback
-        if e.engine_info:
+        if e.engine_info and 'engine_id' not in e.engine_info:
             e_uuid = e.engine_info['engine_uuid']
             eid = self._engines[e_uuid]
             e.engine_info['engine_id'] = eid
@@ -1149,6 +1149,14 @@ class Client(HasTraits):
         # init metadata:
         md = self.metadata[msg_id]
 
+        if md['engine_id'] is None and 'engine' in msg['metadata']:
+            e_uuid = msg['metadata']['engine']
+            try:
+                md['engine_uuid'] = e_uuid
+                md['engine_id'] = self._engines[e_uuid]
+            except KeyError:
+                pass
+
         ip = get_ipython()
 
         if msg_type == 'stream':
@@ -1230,12 +1238,12 @@ class Client(HasTraits):
             for callback in msg_future.iopub_callbacks:
                 callback(msg)
 
-    def create_message_futures(self, msg_id, async_result=False, track=False):
-        msg_future = MessageFuture(msg_id, track=track)
+    def create_message_futures(self, msg_id, header, async_result=False, track=False):
+        msg_future = MessageFuture(msg_id, header=header, track=track)
         futures = [msg_future]
         self._futures[msg_id] = msg_future
         if async_result:
-            output = MessageFuture(msg_id)
+            output = MessageFuture(msg_id, header=header)
             # add future for output
             self._output_futures[msg_id] = output
             # hook up metadata
@@ -1290,6 +1298,7 @@ class Client(HasTraits):
         if expect_reply:
             futures = self.create_message_futures(
                 msg_id,
+                msg['header'],
                 async_result=msg_type in {'execute_request', 'apply_request'},
                 track=track,
             )

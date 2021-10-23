@@ -101,6 +101,8 @@ def raises_remote(etype):
     try:
         try:
             yield
+        except error.AlreadyDisplayedError as e:
+            e.original_error.raise_exception()
         except error.CompositeError as e:
             e.raise_exception()
     except error.RemoteError as e:
