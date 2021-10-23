@@ -3,14 +3,20 @@
 # Distributed under the terms of the Modified BSD License.
 from __future__ import print_function
 
+import concurrent.futures
 import sys
 import threading
 import time
+import warnings
+from concurrent.futures import ALL_COMPLETED
+from concurrent.futures import FIRST_COMPLETED
+from concurrent.futures import FIRST_EXCEPTION
 from concurrent.futures import Future
 from contextlib import contextmanager
 from datetime import datetime
+from functools import lru_cache
 from functools import partial
-from queue import Queue
+from itertools import chain
 from threading import Event
 
 import zmq
@@ -246,7 +252,7 @@ class AsyncResult(Future):
         else:
             return res
 
-    def get(self, timeout=None, return_exceptions=None):
+    def get(self, timeout=None, return_exceptions=None, return_when=None):
         """Return the result when it arrives.
 
         Arguments:
@@ -258,9 +264,31 @@ class AsyncResult(Future):
             by get() inside a `RemoteError`.
         return_exceptions : bool [default False]
             If True, return Exceptions instead of raising them.
+        return_when : None, ALL_COMPLETED, or FIRST_EXCEPTION
+
+            FIRST_COMPLETED is not supported, and treated the same as ALL_COMPLETED.
+            See :py:func:`concurrent.futures.wait` for documentation.
+
+            When return_when=FIRST_EXCEPTION, will raise immediately on the first exception,
+            rather than waiting for all results to finish before reporting errors.
+
+        .. versionchanged:: 7.2
+            Added `return_when` argument.
         """
+        if return_when == FIRST_COMPLETED:
+            # FIRST_COMPLETED unsupported, same as ALL_COMPLETED
+            warnings.warn(
+                "Ignoring unsupported AsyncResult.get(return_when=FIRST_COMPLETED)",
+                UserWarning,
+                stacklevel=2,
+            )
+            return_when = None
+        elif return_when == ALL_COMPLETED:
+            # None avoids call to .split() and is a tiny bit more efficient
+            return_when = None
+
         if not self.ready():
-            self.wait(timeout)
+            wait_result = self.wait(timeout, return_when=return_when)
 
         if return_exceptions is None:
             # default to attribute, if AsyncResult was created with return_exceptions=True
@@ -276,6 +304,14 @@ class AsyncResult(Future):
                 else:
                     raise e
         else:
+            if return_when == FIRST_EXCEPTION:
+                # this should only occur if there was an exception
+                # any other situation should have triggered the ready branch above
+
+                done, pending = wait_result
+                for ar in done:
+                    if not ar._success:
+                        return ar.get(return_exceptions=return_exceptions)
             raise TimeoutError("Result not ready.")
 
     def _check_ready(self):
@@ -308,19 +344,112 @@ class AsyncResult(Future):
         self._output_ready = True
         self._output_event.set()
 
-    def wait(self, timeout=-1):
+    @classmethod
+    def join(cls, *async_results):
+        """Join multiple AsyncResults into one
+
+        Inverse of .split(),
+        used for rejoining split results in wait.
+
+        .. versionadded: 7.2
+        """
+        if not async_results:
+            raise ValueError("Must specify at least one AsyncResult to join")
+        first = async_results[0]
+        if len(async_results) == 1:
+            # only one AsyncResult, nothing to join
+            return first
+
+        return cls(
+            client=first._client,
+            fname=first._fname,
+            return_exceptions=first._return_exceptions,
+            children=list(chain(ar._children for ar in async_results)),
+            targets=list(chain(ar._targets for ar in async_results)),
+            owner=False,
+        )
+
+    @lru_cache()
+    def split(self):
+        """Split an AsyncResult
+
+        An AsyncResult object that represents multiple messages
+        can be split to wait for individual results
+        This can be passed to `concurrent.futures.wait` and friends
+        to get partial results.
+
+        .. versionadded: 7.2
+        """
+        if len(self._children) == 1:
+            # nothing to do if we're already representing a single message
+            return (self,)
+            self.owner = False
+        return tuple(
+            self.__class__(
+                client=self._client,
+                children=[msg_future],
+                targets=[engine_id],
+                fname=self._fname,
+                owner=False,
+                return_exceptions=self._return_exceptions,
+            )
+            for engine_id, msg_future in zip(self._targets, self._children)
+        )
+
+    def wait(self, timeout=-1, return_when=None):
         """Wait until the result is available or until `timeout` seconds pass.
 
-        This method always returns None.
+        Arguments:
+
+        timeout (int):
+            The timeout in seconds. `-1` or None indicate an infinite timeout.
+        return_when (enum):
+            None, ALL_COMPLETED, FIRST_COMPLETED, or FIRST_EXCEPTION.
+            Passed to :py:func:`concurrent.futures.wait`.
+            If specified and not-None,
+
+        Returns:
+            ready (bool):
+                For backward-compatibility.
+                If `return_when` is None or unspecified,
+                returns True if all tasks are done, False otherwise
+
+            (done, pending):
+                If `return_when` is any of the constants for :py:func:`concurrent.futures.wait`,
+                will return two sets of AsyncResult objects
+                representing the completed and still-pending subsets of results,
+                matching the return value of `wait` itself.
+
+        .. versionchanged:: 7.2
+            Added `return_when`.
         """
-        if self._ready:
-            return True
         if timeout and timeout < 0:
             timeout = None
+        if return_when is None:
+            if self._ready:
+                return True
+            self._ready_event.wait(timeout)
+            self.wait_for_output(0)
+            return self._ready
+        else:
+            futures = self.split()
+            done, pending = concurrent.futures.wait(
+                futures, timeout=timeout, return_when=return_when
+            )
+            if done:
+                self.wait_for_output(0)
 
-        self._ready_event.wait(timeout)
-        self.wait_for_output(0)
-        return self._ready
+            return done, pending
+
+            # # simple cases: all done, or all pending
+            # if not pending:
+            #     return (None, self)
+            # if not done:
+            #     return (self, None)
+
+    #
+    # # neither set is empty, rejoin two subsets
+    # return (self.__class__.join(*done), self.__class__.join(*pending))
 
     def _resolve_result(self, f=None):
         if self.done():
@@ -444,7 +573,7 @@ class AsyncResult(Future):
 
         Only tasks that have not started yet can be aborted.
 
-        Raises RuntimeError if already done
+        Raises RuntimeError if already done.
         """
         if self.ready():
             raise RuntimeError("Can't abort, I am already done!")
@@ -477,11 +606,11 @@ class AsyncResult(Future):
                 raise TimeoutError("Still waiting to be sent")
             # wait for Future to indicate send having been called,
             # which means MessageTracker is ready.
-            tic = time.time()
+            tic = time.perf_counter()
             if not self._sent_event.wait(timeout):
                 raise TimeoutError("Still waiting to be sent")
             if timeout:
-                timeout = max(0, timeout - (time.time() - tic))
+                timeout = max(0, timeout - (time.perf_counter() - tic))
         try:
             if timeout is None:
                 # MessageTracker doesn't like timeout=None
@@ -642,7 +771,9 @@ class AsyncResult(Future):
         """
         return self.timedelta(self.submitted, self.received)
 
-    def wait_interactive(self, interval=0.1, timeout=-1, widget=None):
+    def wait_interactive(
+        self, interval=0.1, timeout=-1, widget=None, return_when=ALL_COMPLETED
+    ):
         """interactive wait, printing progress at regular intervals.
 
         Parameters
@@ -656,18 +787,32 @@ class AsyncResult(Future):
             default: True if in an IPython kernel (notebook), False otherwise.
             Override default context-detection behavior for whether a widget-based progress bar
             should be used.
+        return_when : concurrent.futures.ALL_COMPLETED | FIRST_EXCEPTION | FIRST_COMPLETED
         """
         if timeout and timeout < 0:
             timeout = None
+        if return_when == ALL_COMPLETED:
+            return_when = None
         N = len(self)
         tic = time.perf_counter()
         progress_bar = progress(widget=widget, total=N, unit='tasks', desc=self._fname)
 
-        while not self.ready() and (
+        finished = self.ready()
+        while not finished and (
             timeout is None or time.perf_counter() - tic <= timeout
         ):
-            self.wait(interval)
+            wait_result = self.wait(interval, return_when=return_when)
             progress_bar.update(self.progress - progress_bar.n)
+            if return_when is None:
+                finished = wait_result
+            else:
+                done, pending = wait_result
+                if return_when == FIRST_COMPLETED:
+                    finished = bool(done)
+                elif return_when == FIRST_EXCEPTION:
+                    finished = any(not ar._success for ar in done)
+                else:
+                    raise ValueError(f"Unrecognized return_when={return_when!r}")
 
         progress_bar.update(self.progress - progress_bar.n)
         progress_bar.close()
@@ -928,14 +1073,14 @@ class AsyncMapResult(AsyncResult):
         try:
             rlist = self.get(0)
         except TimeoutError:
-            queue = Queue()
-            for child in self._children:
-                child.add_done_callback(queue.put)
-            for i in range(len(self)):
-                # use very-large timeout because no-timeout is not interruptible
-                child = queue.get(timeout=_FOREVER)
-                for r in self._yield_child_results(child):
-                    yield r
+            pending = self._children
+            while pending:
+                done, pending = concurrent.futures.wait(
+                    pending, return_when=FIRST_COMPLETED
+                )
+                for child in done:
+                    for r in self._yield_child_results(child):
+                        yield r
         else:
             # already done
             for r in rlist:
@@ -953,13 +1098,13 @@ class AsyncHubResult(AsyncResult):
         """disable Future-based resolution of Hub results"""
         pass
 
-    def wait(self, timeout=-1):
+    def wait(self, timeout=-1, return_when=None):
         """wait for result to complete."""
-        start = time.time()
+        start = time.perf_counter()
         if timeout and timeout < 0:
             timeout = None
         if self._ready:
-            return
+            return True
         local_ids = [m for m in self.msg_ids if m in self._client.outstanding]
         local_ready = self._client.wait(local_ids, timeout)
         if local_ready:
@@ -969,7 +1114,9 @@ class AsyncHubResult(AsyncResult):
             else:
                 rdict = self._client.result_status(remote_ids, status_only=False)
                 pending = rdict['pending']
-                while pending and (timeout is None or time.time() < start + timeout):
+                while pending and (
+                    timeout is None or time.perf_counter() < start + timeout
+                ):
                     rdict = self._client.result_status(remote_ids, status_only=False)
                     pending = rdict['pending']
                     if pending:
@@ -995,6 +1142,8 @@ class AsyncHubResult(AsyncResult):
                 if self.owner:
                     [self._client.metadata.pop(mid) for mid in self.msg_ids]
                     [self._client.results.pop(mid) for mid in self.msg_ids]
+
+        return self._ready
 
 
 __all__ = ['AsyncResult', 'AsyncMapResult', 'AsyncHubResult']
