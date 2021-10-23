@@ -218,9 +218,13 @@ class AsyncResult(Future):
 
     def __repr__(self):
         if self._ready:
-            return "<%s: %s:finished>" % (self.__class__.__name__, self._fname)
+            if self._success:
+                state = "finished"
+            else:
+                state = "failed"
         else:
-            return "<%s: %s>" % (self.__class__.__name__, self._fname)
+            state = "pending"
+        return f"<{self.__class__.__name__}({self._fname}): {state}>"
 
     def __dir__(self):
         keys = dir(self.__class__)
@@ -362,9 +366,10 @@ class AsyncResult(Future):
     def successful(self):
         """Return whether the call completed without raising an exception.
 
-        Will raise ``AssertionError`` if the result is not ready.
+        Will raise ``RuntimeError`` if the result is not ready.
         """
-        assert self.ready()
+        if not self.ready():
+            raise RuntimeError("Cannot check successful() if not done.")
         return self._success
 
     # ----------------------------------------------------------------
@@ -438,8 +443,11 @@ class AsyncResult(Future):
         """Abort my tasks, if possible.
 
         Only tasks that have not started yet can be aborted.
+
+        Raises RuntimeError if already done
         """
-        assert not self.ready(), "Can't abort, I am already done!"
+        if self.ready():
+            raise RuntimeError("Can't abort, I am already done!")
         return self._client.abort(self.msg_ids, targets=self._targets, block=True)
 
     def _handle_sent(self, f):
