@@ -241,7 +241,37 @@ class AsyncResult(Future):
                 self._iopub_streaming_output_callback, eid, msg_future
             )
             future_callbacks[msg_future] = iopub_callback
+            md = msg_future.output.metadata
+
             msg_future.iopub_callbacks.append(iopub_callback)
+            # FIXME: there's still a race here
+            # registering before publishing means possible duplicates,
+            # while after means lost output
+
+            # publish already-captured output immediately
+            for name in ("stdout", "stderr"):
+                text = md[name]
+                if text:
+                    iopub_callback(
+                        {
+                            "header": {"msg_type": "stream"},
+                            "content": {"name": name, "text": text},
+                        }
+                    )
+            for output in md["outputs"]:
+                iopub_callback(
+                    {
+                        "header": {"msg_type": "display_data"},
+                        "content": output,
+                    }
+                )
+            if md["execute_result"]:
+                iopub_callback(
+                    {
+                        "header": {"msg_type": "execute_result"},
+                        "content": md["execute_result"],
+                    }
+                )
 
         try:
             yield
