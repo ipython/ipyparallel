@@ -39,16 +39,17 @@ class TestProcessLauncher(LocalProcessLauncher):
             raise ProcessStateError(s)
 
 
+# show tracebacks for RemoteErrors
+class RemoteErrorWithTB(error.RemoteError):
+    def __str__(self):
+        s = super(RemoteErrorWithTB, self).__str__()
+        return '\n'.join([s, self.traceback or ''])
+
+
 # global setup/teardown
 
 
 def setup():
-
-    # show tracebacks for RemoteErrors
-    class RemoteErrorWithTB(error.RemoteError):
-        def __str__(self):
-            s = super(RemoteErrorWithTB, self).__str__()
-            return '\n'.join([s, self.traceback or ''])
 
     error.RemoteError = RemoteErrorWithTB
 

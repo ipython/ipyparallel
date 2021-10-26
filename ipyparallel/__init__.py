@@ -1,7 +1,11 @@
-# coding: utf-8
 """The IPython ZMQ-based parallel computing interface."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
+# export return_when constants
+from concurrent.futures import ALL_COMPLETED  # noqa
+from concurrent.futures import FIRST_COMPLETED  # noqa
+from concurrent.futures import FIRST_EXCEPTION  # noqa
+
 from traitlets.config.configurable import MultipleInstanceError
 
 from ._version import __version__  # noqa

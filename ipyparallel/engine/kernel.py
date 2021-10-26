@@ -149,7 +149,9 @@ class IPythonParallelKernel(IPythonKernel):
 
         except BaseException as e:
             # invoke IPython traceback formatting
+            # this sends the 'error' message
             shell.showtraceback()
+
             try:
                 str_evalue = str(e)
             except Exception as str_error:
@@ -163,19 +165,12 @@ class IPythonParallelKernel(IPythonKernel):
             if hasattr(shell, '_last_traceback'):
                 # ipykernel 4.4
                 reply_content['traceback'] = shell._last_traceback or []
-            elif hasattr(shell, '_reply_content'):
-                # ipykernel <= 4.3
-                if shell._reply_content and 'traceback' in shell._reply_content:
-                    reply_content['traceback'] = shell._reply_content['traceback']
             else:
                 self.log.warning("Didn't find a traceback where I expected to")
             shell._last_traceback = None
             e_info = dict(engine_uuid=self.ident, engine_id=self.int_id, method='apply')
             reply_content['engine_info'] = e_info
 
-            self.send_response(
-                self.iopub_socket, u'error', reply_content, ident=self._topic('error')
-            )
             self.log.info(
                 "Exception in apply request:\n%s", '\n'.join(reply_content['traceback'])
             )

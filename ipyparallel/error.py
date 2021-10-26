@@ -4,7 +4,7 @@
 Inheritance diagram:
 
 .. inheritance-diagram:: ipyparallel.error
-   :parts: 3
+    :parts: 3
 """
 from __future__ import print_function
 
@@ -87,14 +87,25 @@ class RemoteError(KernelError):
 
     def __repr__(self):
         engineid = self.engine_info.get('engine_id', ' ')
-        return "<Remote[%s]:%s(%s)>" % (engineid, self.ename, self.evalue)
+        return f"<{self.__class__.__name__}[{engineid}]:{self.ename}({self.evalue})>"
 
     def __str__(self):
-        return "%s(%s)" % (self.ename, self.evalue)
+        label = self._get_engine_str(self.engine_info)
+        engineid = self.engine_info.get('engine_id', ' ')
+        return f"{label} {self.ename}: {self.evalue}"
+
+    @staticmethod
+    def _get_engine_str(engine_info):
+        if not engine_info:
+            return '[Engine Exception]'
+        else:
+            return f"[{engine_info['engine_id']}:{engine_info['method']}]"
 
     def render_traceback(self):
         """render traceback to a list of lines"""
-        return (self.traceback or "No traceback available").splitlines()
+        return [self._get_engine_str(self.engine_info)] + (
+            self.traceback or "No traceback available"
+        ).splitlines()
 
     def _render_traceback_(self):
         """Special method for custom tracebacks within IPython.
@@ -138,12 +149,6 @@ class CompositeError(RemoteError):
         self.elist = elist
         self.args = [e[0] for e in elist]
 
-    def _get_engine_str(self, ei):
-        if not ei:
-            return '[Engine Exception]'
-        else:
-            return '[%s:%s]: ' % (ei['engine_id'], ei['method'])
-
     def _get_traceback(self, ev):
         try:
             tb = ev._ipython_traceback_text
@@ -169,7 +174,7 @@ class CompositeError(RemoteError):
         lines = []
         if excid is None:
             for (en, ev, etb, ei) in self.elist[: self.tb_limit]:
-                lines.append(self._get_engine_str(ei))
+                lines.append(self._get_engine_str(ei) + ":")
                 lines.extend((etb or 'No traceback available').splitlines())
                 lines.append('')
             if len(self.elist) > self.tb_limit:
@@ -182,7 +187,7 @@ class CompositeError(RemoteError):
             except:
                 raise IndexError("an exception with index %i does not exist" % excid)
             else:
-                lines.append(self._get_engine_str(ei))
+                lines.append(self._get_engine_str(ei) + ":")
                 lines.extend((etb or 'No traceback available').splitlines())
 
         return lines
@@ -197,6 +202,25 @@ class CompositeError(RemoteError):
             raise IndexError("an exception with index %i does not exist" % excid)
         else:
             raise RemoteError(en, ev, etb, ei)
+
+
+class AlreadyDisplayedError(RemoteError):
+    def __init__(self, original_error):
+        self.original_error = original_error
+        self.n = len(self.original_error.elist)
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__}({self.n} errors)>"
+
+    def __str__(self):
+        return f"{self.n} errors"
+
+    def render_traceback(self):
+        """IPython special method, short-circuit traceback display
+
+        for raising when streaming output has already displayed errors
+        """
+        return [str(self)]
 
 
 def collect_exceptions(rdict_or_list, method='unspecified'):
@@ -222,13 +246,9 @@ def collect_exceptions(rdict_or_list, method='unspecified'):
     if len(elist) == 0:
         return rdict_or_list
     else:
-        msg = "one or more exceptions from call to method: %s" % (method)
-        # This silliness is needed so the debugger has access to the exception
-        # instance (e in this case)
-        try:
-            raise CompositeError(msg, elist)
-        except CompositeError as e:
-            raise e
+        msg = "one or more exceptions raised in: %s" % (method)
+        err = CompositeError(msg, elist)
+        raise err
 
 
 def wrap_exception(engine_info={}):

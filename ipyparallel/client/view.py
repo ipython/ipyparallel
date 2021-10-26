@@ -897,7 +897,10 @@ class BroadcastView(DirectView):
             for ident in s_idents:
                 msg_and_target_id = f'{original_msg_id}_{ident}'
                 future = self.client.create_message_futures(
-                    msg_and_target_id, async_result=True, track=True
+                    msg_and_target_id,
+                    message_future.header,
+                    async_result=True,
+                    track=True,
                 )
                 self.client.outstanding.add(msg_and_target_id)
                 self.client._outstanding_dict[ident].add(msg_and_target_id)

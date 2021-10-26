@@ -405,3 +405,76 @@ class AsyncResultTest(ClusterTestCase):
         assert result[:1] == dv.targets[:1]
         assert result[2:] == dv.targets[2:]
         assert isinstance(result[1], ipp.RemoteError)
+
+    def test_split(self):
+        self.minimum_engines(3)
+        dv = self.client[:]
+        parent = dv.apply_async(os.getpid)
+        children = parent.split()
+        for child in children:
+            assert len(child.msg_ids) == 1
+        # split is identity when only one message
+        assert children[0].split() == (children[0],)
+        result = parent.get(timeout=10)
+        # get doubly-nested lists because these are
+        split_results = [ar.get(timeout=10) for ar in children]
+        assert split_results == result
+
+    def test_split_map_result(self):
+        v = self.client.load_balanced_view()
+        amr = v.map_async(lambda x: x, range(5))
+        splits = amr.split()
+        amr.get(timeout=10)
+        for i, ar in zip(range(5), splits):
+            assert type(ar) is ipp.AsyncResult  # not a MapResult!
+            assert ar.done()
+            assert ar.get() == [[i]]
+
+    def test_wait_first_exception(self):
+        dv = self.client[:]
+
+        def fail(i):
+            print(i)
+            import time
+
+            if i == 0:
+                print(1 / i)
+            time.sleep(1)
+            return i
+
+        dv.scatter('rank', range(len(dv)), flatten=True, block=True)
+        amr = dv.apply_async(fail, ipp.Reference("rank"))
+        tic = time.perf_counter()
+        done, pending = amr.wait(timeout=5, return_when=ipp.FIRST_EXCEPTION)
+        assert done
+        assert len(done) == 1
+        first_done = done.pop()
+        assert first_done.msg_ids == amr.msg_ids[:1]
+        assert amr.wait(timeout=10) == True
+        done, pending = amr.wait(timeout=0, return_when=ipp.FIRST_EXCEPTION)
+        assert pending == set()
+        assert len(done) == len(amr)
+
+    def test_map_wait_first_exception(self):
+        dv = self.client[:]
+
+        def fail(i):
+            print(i)
+            import time
+
+            if i == 0:
+                print(1 / i)
+            time.sleep(1)
+            return i
+
+        amr = dv.map_async(fail, range(len(dv)))
+        tic = time.perf_counter()
+        done, pending = amr.wait(timeout=5, return_when=ipp.FIRST_EXCEPTION)
+        assert done
+        assert len(done) == 1
+        first_done = done.pop()
+        assert first_done.msg_ids == amr.msg_ids[:1]
+        assert amr.wait(timeout=10) == True
+        done, pending = amr.wait(timeout=0, return_when=ipp.FIRST_EXCEPTION)
+        assert pending == set()
+        assert len(done) == len(amr)
