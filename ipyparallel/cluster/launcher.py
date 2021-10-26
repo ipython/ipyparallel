@@ -864,7 +864,7 @@ class MPILauncher(LocalProcessLauncher):
             + self.program_args
         )
 
-    def start(self, n):
+    def start(self, n=1):
         """Start n instances of the program using mpiexec."""
         self.n = n
         return super(MPILauncher, self).start()

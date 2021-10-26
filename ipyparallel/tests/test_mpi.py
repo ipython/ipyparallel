@@ -15,4 +15,11 @@ from .test_cluster import test_to_from_dict  # noqa: F401
 def engine_launcher_class():
     if shutil.which("mpiexec") is None:
         pytest.skip("Requires mpiexec")
-    return 'MPI'
+    return 'mpi'
+
+
+@pytest.fixture
+def controller_launcher_class():
+    if shutil.which("mpiexec") is None:
+        pytest.skip("Requires mpiexec")
+    return 'mpi'
