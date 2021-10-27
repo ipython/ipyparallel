@@ -290,16 +290,16 @@ class TestParallelMagics(ClusterTestCase):
                 r'IPython\.core\.display\.HTML',
                 r'\[output:\d+\]',
                 r'IPython\.core\.display\.Math',
+                r'Out\[\d+:\d+\]:.*IPython\.core\.display\.Math',
             ]
             * len(v)
         )
-        expected.extend([r'Out\[\d+:\d+\]:.*IPython\.core\.display\.Math'] * len(v))
 
         # Check that all expected lines are in the output
         self._check_expected_lines_unordered(expected, lines)
 
-        assert len(lines) == len(
-            expected
+        assert (
+            len(expected) - len(v) <= len(lines) <= len(expected)
         ), f"expected {len(expected)} lines, got: {io.stdout}"
 
         # Do the same for stderr
@@ -317,8 +317,8 @@ class TestParallelMagics(ClusterTestCase):
             * len(v)
         )
         self._check_expected_lines_unordered(expected, lines)
-        assert len(lines) == len(
-            expected
+        assert (
+            len(expected) - len(v) <= len(lines) <= len(expected)
         ), f"expected {len(expected)} lines, got: {io.stderr}"
 
     def test_px_nonblocking(self):
