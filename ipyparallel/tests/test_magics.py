@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Test Parallel magics"""
 import re
 import sys
@@ -49,7 +48,7 @@ class TestParallelMagics(ClusterTestCase):
             if isinstance(expect, str):
                 expect = [expect]
             for ex in expect:
-                assert re.search(ex, line) is not None, "Expected %r in %r" % (ex, line)
+                assert re.search(ex, line) is not None, f"Expected {ex!r} in {line!r}"
 
     def _check_expected_lines_unordered(self, expected, lines):
         for expect in expected:
@@ -116,7 +115,7 @@ class TestParallelMagics(ClusterTestCase):
             if isinstance(expect, str):
                 expect = [expect]
             for ex in expect:
-                assert re.search(ex, line) is not None, "Expected %r in %r" % (ex, line)
+                assert re.search(ex, line) is not None, f"Expected {ex!r} in {line!r}"
 
         self._check_generated_stderr(io.stderr, len(v))
 
@@ -166,7 +165,7 @@ class TestParallelMagics(ClusterTestCase):
             if isinstance(expect, str):
                 expect = [expect]
             for ex in expect:
-                assert re.search(ex, line) is not None, "Expected %r in %r" % (ex, line)
+                assert re.search(ex, line) is not None, f"Expected {ex!r} in {line!r}"
 
         self._check_generated_stderr(io.stderr, len(v))
 
@@ -211,7 +210,7 @@ class TestParallelMagics(ClusterTestCase):
             if isinstance(expect, str):
                 expect = [expect]
             for ex in expect:
-                assert re.search(ex, line) is not None, "Expected %r in %r" % (ex, line)
+                assert re.search(ex, line) is not None, f"Expected {ex!r} in {line!r}"
 
         self._check_generated_stderr(io.stderr, len(v))
 

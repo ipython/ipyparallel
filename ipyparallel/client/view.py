@@ -118,7 +118,7 @@ class View(HasTraits):
     _idents = Any()
 
     def __init__(self, client=None, socket=None, **flags):
-        super(View, self).__init__(client=client, _socket=socket)
+        super().__init__(client=client, _socket=socket)
         self.results = client.results
         self.block = client.block
         self.executor = ViewExecutor(self)
@@ -131,7 +131,7 @@ class View(HasTraits):
         strtargets = str(self.targets)
         if len(strtargets) > 16:
             strtargets = strtargets[:12] + '...]'
-        return "<%s %s>" % (self.__class__.__name__, strtargets)
+        return f"<{self.__class__.__name__} {strtargets}>"
 
     def __len__(self):
         if isinstance(self.targets, list):
@@ -398,7 +398,7 @@ class DirectView(View):
     """
 
     def __init__(self, client=None, socket=None, targets=None):
-        super(DirectView, self).__init__(client=client, socket=socket, targets=targets)
+        super().__init__(client=client, socket=socket, targets=targets)
 
     @property
     def importer(self):
@@ -698,7 +698,7 @@ class DirectView(View):
             default: self.block
 
         """
-        with open(filename, 'r') as f:
+        with open(filename) as f:
             # add newline in case of trailing indented whitespace
             # which will cause SyntaxError
             code = f.read() + '\n'
@@ -1056,7 +1056,7 @@ class LoadBalancedView(View):
     )
 
     def __init__(self, client=None, socket=None, **flags):
-        super(LoadBalancedView, self).__init__(client=client, socket=socket, **flags)
+        super().__init__(client=client, socket=socket, **flags)
         self._task_scheme = client._task_scheme
 
     def _validate_dependency(self, dep):
@@ -1129,7 +1129,7 @@ class LoadBalancedView(View):
             Number of times a task will be retried on failure.
         """
 
-        super(LoadBalancedView, self).set_flags(**kwargs)
+        super().set_flags(**kwargs)
         for name in ('follow', 'after'):
             if name in kwargs:
                 value = kwargs[name]
@@ -1500,8 +1500,7 @@ class ViewExecutor(concurrent.futures.Executor):
         if 'timeout' in kwargs:
             warnings.warn("timeout unsupported in ViewExecutor.map")
             kwargs.pop('timeout')
-        for r in self.view.imap(func, *iterables, **kwargs):
-            yield r
+        yield from self.view.imap(func, *iterables, **kwargs)
 
     def shutdown(self, wait=True):
         """ViewExecutor does *not* shutdown engines

@@ -87,7 +87,7 @@ if __name__ == '__main__':
     paa(
         '--profile',
         type=str,
-        default=u'default',
+        default='default',
         help="Specify the ipcluster profile for the client to connect to.",
     )
     paa(
@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     # construct the View:
     view = rc[:num_procs]
-    print("Running %s system on %s processes until %f" % (grid, partition, tstop))
+    print(f"Running {grid} system on {partition} processes until {tstop:f}")
 
     # functions defining initial/boundary/source conditions
     def I(x, y):
@@ -226,7 +226,7 @@ if __name__ == '__main__':
         else:
             norm = -1
         t1 = time.time()
-        print('scalar inner-version, Wtime=%g, norm=%g' % (t1 - t0, norm))
+        print(f'scalar inner-version, Wtime={t1 - t0:g}, norm={norm:g}')
 
     # run again with faster numpy-vectorized inner implementation:
     impl['inner'] = 'vectorized'
@@ -262,7 +262,7 @@ if __name__ == '__main__':
     else:
         norm = -1
     t1 = time.time()
-    print('vector inner-version, Wtime=%g, norm=%g' % (t1 - t0, norm))
+    print(f'vector inner-version, Wtime={t1 - t0:g}, norm={norm:g}')
 
     # if ns.save is True, then u_hist stores the history of u as a list
     # If the partion scheme is Nx1, then u can be reconstructed via 'gather':

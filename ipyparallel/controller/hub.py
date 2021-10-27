@@ -5,8 +5,6 @@ and monitors traffic through the various queues.
 """
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import print_function
-
 import inspect
 import json
 import os
@@ -598,7 +596,7 @@ class Hub(LoggingConfigurable):
         msg_id = parent['msg_id']
         header = msg['header']
         md = msg['metadata']
-        engine_uuid = md.get('engine', u'')
+        engine_uuid = md.get('engine', '')
         eid = self.by_ident.get(engine_uuid.encode("utf8"), None)
         status = md.get('status', None)
 
@@ -719,7 +717,7 @@ class Hub(LoggingConfigurable):
 
         header = msg['header']
         md = msg['metadata']
-        engine_uuid = md.get('engine', u'')
+        engine_uuid = md.get('engine', '')
         eid = self.by_ident.get(engine_uuid.encode("utf8"), None)
 
         status = md.get('status', None)
@@ -997,7 +995,7 @@ class Hub(LoggingConfigurable):
             self.all_completed.add(msg_id)
             try:
                 raise error.EngineError(
-                    "Engine %r died while running task %r" % (eid, msg_id)
+                    f"Engine {eid!r} died while running task {msg_id!r}"
                 )
             except:
                 content = error.wrap_exception()
@@ -1070,7 +1068,7 @@ class Hub(LoggingConfigurable):
             self.log.debug("cleaning up engine state: %s", self.engine_state_file)
             try:
                 os.remove(self.engine_state_file)
-            except IOError:
+            except OSError:
                 self.log.error(
                     "Couldn't cleanup file: %s", self.engine_state_file, exc_info=True
                 )

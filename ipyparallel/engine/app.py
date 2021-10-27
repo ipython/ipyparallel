@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
 """
 The IPython engine application
 """
@@ -124,14 +123,14 @@ class IPEngine(BaseParallelApplication):
     )
 
     startup_script = Unicode(
-        u'', config=True, help='specify a script to be run at startup'
+        '', config=True, help='specify a script to be run at startup'
     )
     startup_command = Unicode(
         '', config=True, help='specify a command to be run at startup'
     )
 
     url_file = Unicode(
-        u'',
+        '',
         config=True,
         help="""The full location of the file containing the connection information for
         the controller. If this is not given, the file must be in the
@@ -147,7 +146,7 @@ class IPEngine(BaseParallelApplication):
         may take a moment for the controller to write the connector files.""",
     )
 
-    url_file_name = Unicode(u'ipcontroller-engine.json', config=True)
+    url_file_name = Unicode('ipcontroller-engine.json', config=True)
 
     connection_info_env = Unicode()
 
@@ -385,7 +384,7 @@ class IPEngine(BaseParallelApplication):
 
         proto, ip = d['interface'].split('://')
         ip = disambiguate_ip_address(ip, self.location)
-        d['interface'] = '%s://%s' % (proto, ip)
+        d['interface'] = f'{proto}://{ip}'
 
         if d.get('curve_serverkey'):
             # connection file takes precedence over env, if present and defined
@@ -651,11 +650,11 @@ class IPEngine(BaseParallelApplication):
             # Redirect input streams and set a display hook.
             if self.out_stream_factory:
                 sys.stdout = self.out_stream_factory(
-                    self.session, iopub_socket, u'stdout'
+                    self.session, iopub_socket, 'stdout'
                 )
                 sys.stdout.topic = f"engine.{self.id}.stdout".encode("ascii")
                 sys.stderr = self.out_stream_factory(
-                    self.session, iopub_socket, u'stderr'
+                    self.session, iopub_socket, 'stderr'
                 )
                 sys.stderr.topic = f"engine.{self.id}.stderr".encode("ascii")
 

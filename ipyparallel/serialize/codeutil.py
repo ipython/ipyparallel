@@ -1,4 +1,3 @@
-# encoding: utf-8
 """Utilities to enable code objects to be pickled.
 
 Any process that import this module will be able to pickle code objects.  This

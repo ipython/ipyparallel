@@ -48,7 +48,7 @@ class MongoDB(BaseDB):
     _connection = Instance(MongoClient, allow_none=True)  # pymongo connection
 
     def __init__(self, **kwargs):
-        super(MongoDB, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         if self._connection is None:
             self._connection = MongoClient(
                 *self.connection_args, **self.connection_kwargs

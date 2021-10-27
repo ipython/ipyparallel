@@ -16,8 +16,6 @@ impose the aggregation function to be commutative and distributive. It might
 not be the case if you implement the naive gather / reduce / broadcast strategy 
 where you can reorder the partial data before performing the reduce.
 """
-from __future__ import print_function
-
 import ipyparallel as ipp
 
 

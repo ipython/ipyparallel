@@ -15,8 +15,6 @@ Authors
  * Min Ragan-Kelley
 
 """
-from __future__ import print_function
-
 from numpy import ascontiguousarray
 from numpy import frombuffer
 from numpy import zeros

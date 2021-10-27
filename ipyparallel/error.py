@@ -1,4 +1,3 @@
-# encoding: utf-8
 """Classes and functions for kernel related errors and exceptions.
 
 Inheritance diagram:
@@ -6,8 +5,6 @@ Inheritance diagram:
 .. inheritance-diagram:: ipyparallel.error
     :parts: 3
 """
-from __future__ import print_function
-
 import builtins
 import sys
 import traceback

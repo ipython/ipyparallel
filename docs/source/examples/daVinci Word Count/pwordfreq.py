@@ -3,9 +3,6 @@
 
 This only works for a local cluster, because the filenames are local paths.
 """
-from __future__ import division
-
-import io
 import os
 import time
 from itertools import repeat
@@ -50,12 +47,12 @@ if __name__ == '__main__':
         # download from project gutenberg
         print("Downloading Da Vinci's notebooks from Project Gutenberg")
         r = requests.get(davinci_url)
-        with io.open('davinci.txt', 'w', encoding='utf8') as f:
+        with open('davinci.txt', 'w', encoding='utf8') as f:
             f.write(r.text)
 
     # Run the serial version
     print("Serial word frequency count:")
-    text = io.open('davinci.txt', encoding='latin1').read()
+    text = open('davinci.txt', encoding='latin1').read()
     tic = time.time()
     freqs = wordfreq(text)
     toc = time.time()
@@ -71,7 +68,7 @@ if __name__ == '__main__':
     block = nlines // n
     for i in range(n):
         chunk = lines[i * block : i * (block + 1)]
-        with io.open('davinci%i.txt' % i, 'w', encoding='utf8') as f:
+        with open('davinci%i.txt' % i, 'w', encoding='utf8') as f:
             f.write('\n'.join(chunk))
 
     try:  # python2

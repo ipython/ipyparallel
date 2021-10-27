@@ -12,7 +12,7 @@ class MessageFuture(Future):
     """Future class to wrap async messages"""
 
     def __init__(self, msg_id, header=None, *, track=False):
-        super(MessageFuture, self).__init__()
+        super().__init__()
         self.msg_id = msg_id
         self.header = header or {"msg_type": "unknown_request"}
         self._evt = Event()

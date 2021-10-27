@@ -75,7 +75,7 @@ def validate_tree(G, results):
         started = results[node].metadata.started
         for parent in G.predecessors(node):
             finished = results[parent].metadata.completed
-            assert started > finished, "%s should have happened after %s" % (
+            assert started > finished, "{} should have happened after {}".format(
                 node,
                 parent,
             )

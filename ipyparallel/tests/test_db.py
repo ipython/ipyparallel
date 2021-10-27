@@ -1,8 +1,6 @@
 """Tests for db backends"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import division
-
 import logging
 import os
 import tempfile
@@ -103,7 +101,7 @@ class TaskDBTest:
             {'msg_id': {'$ne': ''}}, keys=['submitted', 'completed']
         )
         for rec in found:
-            self.assertEqual(set(rec.keys()), set(['msg_id', 'submitted', 'completed']))
+            self.assertEqual(set(rec.keys()), {'msg_id', 'submitted', 'completed'})
 
     def test_find_records_msg_id(self):
         """ensure msg_id is always in found records"""
@@ -277,7 +275,7 @@ class TestSQLiteBackend(TaskDBTest, TestCase):
         # make a new IOLoop
         IOLoop().make_current()
         self.temp_db = tempfile.NamedTemporaryFile(suffix='.db').name
-        super(TestSQLiteBackend, self).setUp()
+        super().setUp()
 
     def create_db(self):
         location, fname = os.path.split(self.temp_db)

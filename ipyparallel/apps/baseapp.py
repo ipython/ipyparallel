@@ -1,4 +1,3 @@
-# encoding: utf-8
 """
 The Base Application class for ipyparallel apps
 """
@@ -90,7 +89,7 @@ class BaseParallelApplication(BaseIPythonApplication):
 
     def _log_format_default(self):
         """override default log format to include time"""
-        return u"%(asctime)s.%(msecs).03d [%(name)s]%(highlevel)s %(message)s"
+        return "%(asctime)s.%(msecs).03d [%(name)s]%(highlevel)s %(message)s"
 
     work_dir = Unicode(
         os.getcwd(), config=True, help='Set the working dir for the process.'
@@ -142,7 +141,7 @@ class BaseParallelApplication(BaseIPythonApplication):
     def initialize(self, argv=None):
         """initialize the app"""
         self.init_config_from_env()
-        super(BaseParallelApplication, self).initialize(argv)
+        super().initialize(argv)
         self.init_deprecated_config()
         self.to_work_dir()
         self.reinit_logging()
@@ -200,7 +199,7 @@ class BaseParallelApplication(BaseIPythonApplication):
                 if re.match(r'%s-\d+\.(log|err|out)' % self.name, f):
                     try:
                         os.remove(os.path.join(log_dir, f))
-                    except (OSError, IOError):
+                    except OSError:
                         # probably just conflict from sibling process
                         # already removing it
                         pass

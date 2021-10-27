@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test View objects"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
@@ -35,7 +34,7 @@ class TestView(ClusterTestCase):
         if platform.system() == "Windows" and platform.win32_ver()[0] == "XP":
             # 1 sec fails. 1.5 sec seems ok. Using 2 sec for margin of safety
             time.sleep(2)
-        super(TestView, self).setUp()
+        super().setUp()
 
     def test_z_crash_mux(self):
         """test graceful handling of engine death (direct)"""
@@ -447,15 +446,15 @@ class TestView(ClusterTestCase):
         if sys.version_info[0] >= 3:
             code = "a='é'"
         else:
-            code = u"a=u'é'"
+            code = "a=u'é'"
         v.execute(code)
-        self.assertEqual(v['a'], u'é')
+        self.assertEqual(v['a'], 'é')
 
     def test_unicode_apply_result(self):
         """test unicode apply results"""
         v = self.client[-1]
-        r = v.apply_sync(lambda: u'é')
-        self.assertEqual(r, u'é')
+        r = v.apply_sync(lambda: 'é')
+        self.assertEqual(r, 'é')
 
     def test_unicode_apply_arg(self):
         """test passing unicode arguments to apply"""
@@ -465,9 +464,9 @@ class TestView(ClusterTestCase):
         def check_unicode(a, check):
             assert not isinstance(a, bytes), "%r is bytes, not unicode" % a
             assert isinstance(check, bytes), "%r is not bytes" % check
-            assert a.encode('utf8') == check, "%s != %s" % (a, check)
+            assert a.encode('utf8') == check, f"{a} != {check}"
 
-        for s in [u'é', u'ßø®∫', u'asdf']:
+        for s in ['é', 'ßø®∫', 'asdf']:
             try:
                 v.apply_sync(check_unicode, s, s.encode('utf8'))
             except error.RemoteError as e:
@@ -604,7 +603,7 @@ class TestView(ClusterTestCase):
         view.execute("from IPython.core.display import *")
         ar = view.execute("[ display(i) for i in range(5) ]", block=True)
 
-        expected = [{u'text/plain': str(j)} for j in range(5)]
+        expected = [{'text/plain': str(j)} for j in range(5)]
         for outputs in ar.outputs:
             mimes = [out['data'] for out in outputs]
             self.assertEqual(mimes, expected)
@@ -621,7 +620,7 @@ class TestView(ClusterTestCase):
         ar = view.apply_async(publish)
         ar.get(5)
         assert ar.wait_for_output(5)
-        expected = [{u'text/plain': str(j)} for j in range(5)]
+        expected = [{'text/plain': str(j)} for j in range(5)]
         for outputs in ar.outputs:
             mimes = [out['data'] for out in outputs]
             self.assertEqual(mimes, expected)

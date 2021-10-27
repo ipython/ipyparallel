@@ -1,8 +1,6 @@
 """Tests for remote functions"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import division
-
 import ipyparallel as ipp
 from .clienttest import ClusterTestCase
 

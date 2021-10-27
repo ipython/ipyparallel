@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # ipyparallel documentation build configuration file, created by
 # sphinx-quickstart on Mon Apr 13 12:53:58 2015.
@@ -89,9 +88,9 @@ master_doc = 'index'
 from datetime import date
 
 today = date.today()
-project = u'ipyparallel'
-copyright = u'%04d, The IPython Development Team' % today.year
-author = u'The IPython Development Team'
+project = 'ipyparallel'
+copyright = '%04d, The IPython Development Team' % today.year
+author = 'The IPython Development Team'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -285,8 +284,8 @@ latex_documents = [
     (
         master_doc,
         'ipythonparallel.tex',
-        u'IPython Parallel Documentation',
-        u'The IPython Development Team',
+        'IPython Parallel Documentation',
+        'The IPython Development Team',
         'manual',
     ),
 ]
@@ -317,7 +316,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'ipythonparallel', u'IPython Parallel Documentation', [author], 1)
+    (master_doc, 'ipythonparallel', 'IPython Parallel Documentation', [author], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -333,7 +332,7 @@ texinfo_documents = [
     (
         master_doc,
         'ipythonparallel',
-        u'IPython Parallel Documentation',
+        'IPython Parallel Documentation',
         author,
         'ipythonparallel',
         'One line description of project.',

@@ -85,7 +85,7 @@ if __name__ == "__main__":
 
     controller_pid = check_output('pgrep -f ipyparallel.controller', shell=True)
     number_of_schedulers = 15
-    scheduler_pids = sorted((int(x) for x in controller_pid.decode('utf-8').split()))[
+    scheduler_pids = sorted(int(x) for x in controller_pid.decode('utf-8').split())[
         -number_of_schedulers:
     ]
 

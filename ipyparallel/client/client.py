@@ -1,8 +1,6 @@
 """A semi-synchronous Client for IPython parallel"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import print_function
-
 import asyncio
 import json
 import os
@@ -185,10 +183,10 @@ class ExecuteReply(RichOutput):
             # add newline for multiline reprs
             text_out = '\n' + text_out
 
-        return u''.join(
+        return ''.join(
             [
                 out,
-                u'Out[%i:%i]: ' % (self.metadata['engine_id'], self.execution_count),
+                'Out[%i:%i]: ' % (self.metadata['engine_id'], self.execution_count),
                 normal,
                 text_out,
             ]
@@ -357,9 +355,9 @@ class Client(HasTraits):
             except (AttributeError, MultipleInstanceError):
                 # could be a *different* subclass of config.Application,
                 # which would raise one of these two errors.
-                return u'default'
+                return 'default'
         else:
-            return u'default'
+            return 'default'
 
     _outstanding_dict = Instance('collections.defaultdict', (set,))
     _ids = List()
@@ -416,7 +414,7 @@ class Client(HasTraits):
         super_kwargs = {'debug': debug, 'cluster': cluster}
         if profile:
             super_kwargs['profile'] = profile
-        super(Client, self).__init__(**super_kwargs)
+        super().__init__(**super_kwargs)
         if context is not None:
             self._context = context
 
@@ -461,13 +459,13 @@ class Client(HasTraits):
                         break
             if not os.path.exists(connection_file):
                 msg = '\n'.join([f"Connection file {short!r} not found.", no_file_msg])
-                raise IOError(msg)
+                raise OSError(msg)
 
             with open(connection_file) as f:
                 connection_info = json.load(f)
 
         if connection_info is None:
-            raise IOError(no_file_msg)
+            raise OSError(no_file_msg)
 
         if isinstance(connection_info, dict):
             cfg = connection_info.copy()
@@ -476,7 +474,7 @@ class Client(HasTraits):
             connection_file = connection_info
             if not os.path.exists(connection_file):
                 # Connection file explicitly specified, but not found
-                raise IOError(
+                raise OSError(
                     f"Connection file {compress_user(connection_file)} not found. Is a controller running?"
                 )
 
@@ -505,7 +503,7 @@ class Client(HasTraits):
 
         proto, addr = cfg['interface'].split('://')
         addr = util.disambiguate_ip_address(addr, location)
-        cfg['interface'] = "%s://%s" % (proto, addr)
+        cfg['interface'] = f"{proto}://{addr}"
 
         # turn interface,port into full urls:
         for key in (
@@ -894,7 +892,7 @@ class Client(HasTraits):
                 continue
             try:
                 raise error.EngineError(
-                    "Engine %r died while running task %r" % (eid, msg_id)
+                    f"Engine {eid!r} died while running task {msg_id!r}"
                 )
             except:
                 content = error.wrap_exception()
@@ -1271,7 +1269,7 @@ class Client(HasTraits):
 
         returns msg object"""
         if self._closed:
-            raise IOError("Connections have been closed.")
+            raise OSError("Connections have been closed.")
         msg = self.session.msg(
             msg_type, content=content, parent=parent, header=header, metadata=metadata
         )

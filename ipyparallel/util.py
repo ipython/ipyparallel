@@ -1,4 +1,3 @@
-# coding: utf-8
 """Some generic utilities for dealing with classes, urls, and serialization."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
@@ -163,7 +162,7 @@ def validate_url(url):
         try:
             port = int(s_port)
         except ValueError:
-            raise AssertionError("Invalid port %r in url: %r" % (port, url))
+            raise AssertionError(f"Invalid port {port!r} in url: {url!r}")
 
         assert addr == '*' or pat.match(addr) is not None, 'Invalid url: %r' % url
 
@@ -216,7 +215,7 @@ def ip_for_host(host):
         return socket.gethostbyname_ex(host)[2][0]
     except Exception as e:
         warnings.warn(
-            "IPython could not determine IPs for %s: %s" % (host, e), RuntimeWarning
+            f"IPython could not determine IPs for {host}: {e}", RuntimeWarning
         )
         return host
 
@@ -276,7 +275,7 @@ def disambiguate_url(url, location=None):
 
     ip = disambiguate_ip_address(ip, location)
 
-    return "%s://%s:%s" % (proto, ip, port)
+    return f"{proto}://{ip}:{port}"
 
 
 # --------------------------------------------------------------------------
@@ -314,7 +313,7 @@ def _push(**ns):
     try:
         for name, value in ns.items():
             user_ns[tmp] = value
-            exec("%s = %s" % (name, tmp), user_ns)
+            exec(f"{name} = {tmp}", user_ns)
     finally:
         user_ns.pop(tmp, None)
 
@@ -543,7 +542,7 @@ def _ensure_tzinfo(dt):
     if not dt.tzinfo:
         # No more naïve datetime objects!
         warnings.warn(
-            u"Interpreting naïve datetime as local %s. Please add timezone info to timestamps."
+            "Interpreting naïve datetime as local %s. Please add timezone info to timestamps."
             % dt,
             DeprecationWarning,
             stacklevel=4,

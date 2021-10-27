@@ -1,8 +1,5 @@
 #!/usr/bin/env python
-# encoding: utf-8
 """The ipcluster application."""
-from __future__ import print_function
-
 import asyncio
 import errno
 import json
@@ -141,7 +138,7 @@ stop_flags.update(base_flags)
 
 
 class IPClusterStop(BaseParallelApplication):
-    name = u'ipcluster'
+    name = 'ipcluster'
     description = stop_help
     examples = _stop_examples
 
@@ -340,7 +337,7 @@ engine_flags.update(
 
 class IPClusterEngines(BaseParallelApplication):
 
-    name = u'ipcluster'
+    name = 'ipcluster'
     description = engines_help
     examples = _engines_examples
     usage = None
@@ -387,7 +384,7 @@ class IPClusterEngines(BaseParallelApplication):
 
     @catch_config_error
     def initialize(self, argv=None):
-        super(IPClusterEngines, self).initialize(argv)
+        super().initialize(argv)
         self.init_signal()
         self.init_cluster()
 
@@ -559,7 +556,7 @@ start_aliases['clean-logs'] = 'IPClusterStart.clean_logs'
 
 class IPClusterStart(IPClusterEngines):
 
-    name = u'ipcluster'
+    name = 'ipcluster'
     description = start_help
     examples = _start_examples
     default_log_level = logging.INFO
@@ -685,7 +682,7 @@ class IPClusterNBExtension(BaseParallelApplication):
 
 
 class IPCluster(BaseParallelApplication):
-    name = u'ipcluster'
+    name = 'ipcluster'
     description = _description
     examples = _main_examples
     version = __version__
@@ -707,7 +704,7 @@ class IPCluster(BaseParallelApplication):
 
     def start(self):
         if self.subapp is None:
-            keys = ', '.join("'{}'".format(key) for key in self.subcommands.keys())
+            keys = ', '.join(f"'{key}'" for key in self.subcommands.keys())
             print("No subcommand specified. Must specify one of: %s" % keys)
             print()
             self.print_description()

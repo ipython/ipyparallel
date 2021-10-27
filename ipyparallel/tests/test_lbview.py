@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """test LoadBalancedView objects"""
 import time
 from itertools import count
@@ -304,5 +303,5 @@ class TestLoadBalancedView(ClusterTestCase):
         ar.wait()
         ar2.wait()
         self.assertTrue(
-            ar2.started >= ar.completed, "%s not >= %s" % (ar.started, ar.completed)
+            ar2.started >= ar.completed, f"{ar.started} not >= {ar.completed}"
         )

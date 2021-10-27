@@ -1,8 +1,6 @@
 """AsyncResult objects for the client"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import print_function
-
 import concurrent.futures
 import sys
 import threading
@@ -84,7 +82,7 @@ class AsyncResult(Future):
         owner=False,
         return_exceptions=False,
     ):
-        super(AsyncResult, self).__init__()
+        super().__init__()
         if not isinstance(children, list):
             children = [children]
             self._single_result = True
@@ -720,7 +718,7 @@ class AsyncResult(Future):
             return self.__getitem__(key)
         except (TimeoutError, KeyError):
             raise AttributeError(
-                "%r object has no attribute %r" % (self.__class__.__name__, key)
+                f"{self.__class__.__name__!r} object has no attribute {key!r}"
             )
 
     @staticmethod
@@ -748,8 +746,7 @@ class AsyncResult(Future):
                 yield result
         else:
             # already done
-            for r in rlist:
-                yield r
+            yield from rlist
 
     def __len__(self):
         return len(self.msg_ids)
@@ -1024,9 +1021,9 @@ class AsyncResult(Future):
 
             if not result_only:
                 if groupby == 'order':
-                    output_dict = dict(
-                        (eid, outputs) for eid, outputs in zip(targets, output_lists)
-                    )
+                    output_dict = {
+                        eid: outputs for eid, outputs in zip(targets, output_lists)
+                    }
                     N = max(len(outputs) for outputs in output_lists)
                     for i in range(N):
                         for eid in targets:
@@ -1103,8 +1100,7 @@ class AsyncMapResult(AsyncResult):
     # asynchronous iterator:
     def __iter__(self):
         it = self._ordered_iter if self.ordered else self._unordered_iter
-        for r in it():
-            yield r
+        yield from it()
 
     def _yield_child_results(self, child):
         """Yield results from a child
@@ -1115,8 +1111,7 @@ class AsyncMapResult(AsyncResult):
         if not isinstance(rlist, list):
             rlist = [rlist]
         self._collect_exceptions(rlist)
-        for r in rlist:
-            yield r
+        yield from rlist
 
     # asynchronous ordered iterator:
     def _ordered_iter(self):
@@ -1128,12 +1123,10 @@ class AsyncMapResult(AsyncResult):
             evt = Event()
             for child in self._children:
                 self._wait_for_child(child, evt=evt)
-                for r in self._yield_child_results(child):
-                    yield r
+                yield from self._yield_child_results(child)
         else:
             # already done
-            for r in rlist:
-                yield r
+            yield from rlist
 
     # asynchronous unordered iterator:
     def _unordered_iter(self):
@@ -1147,12 +1140,10 @@ class AsyncMapResult(AsyncResult):
                     pending, return_when=FIRST_COMPLETED
                 )
                 for child in done:
-                    for r in self._yield_child_results(child):
-                        yield r
+                    yield from self._yield_child_results(child)
         else:
             # already done
-            for r in rlist:
-                yield r
+            yield from rlist
 
 
 class AsyncHubResult(AsyncResult):
