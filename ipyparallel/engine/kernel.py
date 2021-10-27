@@ -27,10 +27,10 @@ class IPythonParallelKernel(IPythonKernel):
         """prefixed topic for IOPub messages"""
         base = "engine.%s" % self.engine_id
 
-        return f"{base}.{topic}".encode("utf8")
+        return f"{base}.{topic}".encode()
 
     def __init__(self, **kwargs):
-        super(IPythonParallelKernel, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         # add apply_request, in anticipation of upstream deprecation
         self.shell_handlers['apply_request'] = self.apply_request
         # set up data pub
@@ -45,7 +45,7 @@ class IPythonParallelKernel(IPythonKernel):
 
         Allows subclasses to prevent handling of certain messages (e.g. aborted requests).
         """
-        if not super(IPythonParallelKernel, self).should_handle(stream, msg, idents):
+        if not super().should_handle(stream, msg, idents):
             return False
         msg_id = msg['header']['msg_id']
         msg_type = msg['header']['msg_type']
@@ -87,8 +87,8 @@ class IPythonParallelKernel(IPythonKernel):
 
     def apply_request(self, stream, ident, parent):
         try:
-            content = parent[u'content']
-            bufs = parent[u'buffers']
+            content = parent['content']
+            bufs = parent['buffers']
             msg_id = parent['header']['msg_id']
         except:
             self.log.error("Got bad msg: %s", parent, exc_info=True)
@@ -106,7 +106,7 @@ class IPythonParallelKernel(IPythonKernel):
         self.log.debug(f'Sending apply_reply: {msg_id}')
         self.session.send(
             stream,
-            u'apply_reply',
+            'apply_reply',
             reply_content,
             parent=parent,
             ident=ident,
@@ -133,7 +133,7 @@ class IPythonParallelKernel(IPythonKernel):
             ns = {fname: f, argname: args, kwargname: kwargs, resultname: None}
             # print ns
             working.update(ns)
-            code = "%s = %s(*%s,**%s)" % (resultname, fname, argname, kwargname)
+            code = f"{resultname} = {fname}(*{argname},**{kwargname})"
             try:
                 exec(code, shell.user_global_ns, shell.user_ns)
                 result = working.get(resultname)

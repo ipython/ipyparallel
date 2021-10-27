@@ -6,8 +6,6 @@ use from bintree_script.py
 Provides parallel [all]reduce functionality
 
 """
-from __future__ import print_function
-
 import re
 import socket
 from functools import reduce
@@ -97,7 +95,7 @@ def depth(n, tree):
 def print_bintree(tree, indent='  '):
     """print a binary tree"""
     for n in sorted(tree.keys()):
-        print("%s%s" % (indent * depth(n, tree), n))
+        print(f"{indent * depth(n, tree)}{n}")
 
 
 # ----------------------------------------------------------------------------

@@ -52,7 +52,7 @@ def get_scheduler_type(benchmark_name):
 
 class BenchmarkResult:
     def __init__(self, benchmark_results_file_name):
-        with open(benchmark_results_file_name, "r") as results_file:
+        with open(benchmark_results_file_name) as results_file:
             results_data = json.load(results_file)
 
         self.results_file_name = benchmark_results_file_name
@@ -287,7 +287,7 @@ def add_to_echo_many_arguments_source(source, benchmark, number_of_cores):
 
 
 def get_number_of_cores(machine_name):
-    return int(re.findall('\d+', machine_name)[0])
+    return int(re.findall(r'\d+', machine_name)[0])
 
 
 def make_source(benchmark_type, add_to_source_f, benchmark_results=None):

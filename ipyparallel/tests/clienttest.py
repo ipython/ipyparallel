@@ -1,6 +1,4 @@
 """base class for parallel client tests"""
-from __future__ import print_function
-
 import os
 import signal
 import sys

@@ -322,14 +322,12 @@ class TaskScheduler(Scheduler):
             # build fake error reply
             try:
                 raise error.EngineError(
-                    "Engine %r died while running task %r" % (engine, msg_id)
+                    f"Engine {engine!r} died while running task {msg_id!r}"
                 )
             except:
                 content = error.wrap_exception()
             # build fake metadata
-            md = dict(
-                status=u'error', engine=engine.decode('ascii'), date=util.utcnow()
-            )
+            md = dict(status='error', engine=engine.decode('ascii'), date=util.utcnow())
             msg = self.session.msg('apply_reply', content, parent=parent, metadata=md)
             raw_reply = list(
                 map(zmq.Message, self.session.serialize(msg, ident=idents))
@@ -368,7 +366,7 @@ class TaskScheduler(Scheduler):
         # get targets as a set of bytes objects
         # from a list of unicode objects
         targets = md.get('targets', [])
-        targets = set(t.encode("utf8", "replace") for t in targets)
+        targets = {t.encode("utf8", "replace") for t in targets}
 
         retries = md.get('retries', 0)
         self.retries[msg_id] = retries

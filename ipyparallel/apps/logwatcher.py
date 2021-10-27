@@ -45,7 +45,7 @@ class LogWatcher(LoggingConfigurable):
         return ioloop.IOLoop.current()
 
     def __init__(self, **kwargs):
-        super(LogWatcher, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         s = self.context.socket(zmq.SUB)
         s.bind(self.url)
         self.stream = zmqstream.ZMQStream(s, self.loop)
@@ -96,4 +96,4 @@ class LogWatcher(LoggingConfigurable):
             level, topic = self._extract_level(topic)
             if msg[-1] == '\n':
                 msg = msg[:-1]
-            self.log.log(level, "[%s] %s" % (topic, msg))
+            self.log.log(level, f"[{topic}] {msg}")

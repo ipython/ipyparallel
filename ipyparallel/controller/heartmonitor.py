@@ -5,8 +5,6 @@ and hearts are tracked based on their DEALER identities.
 """
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import print_function
-
 import logging
 import time
 import uuid
@@ -189,7 +187,7 @@ class HeartMonitor(LoggingConfigurable):
         new_probation = {}
         for cur_heart in (b for b in missed_beats if b in hearts):
             miss_count = on_probation.get(cur_heart, 0) + 1
-            self.log.info("heartbeat::missed %s : %s" % (cur_heart, miss_count))
+            self.log.info(f"heartbeat::missed {cur_heart} : {miss_count}")
             if miss_count > self.max_heartmonitor_misses:
                 failures.append(cur_heart)
             else:

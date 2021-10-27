@@ -1,12 +1,9 @@
 #!/usr/bin/env python
-# encoding: utf-8
 """
 The IPython controller application.
 """
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import with_statement
-
 import json
 import os
 import socket
@@ -171,7 +168,7 @@ _db_shortcuts = {
 
 class IPController(BaseParallelApplication):
 
-    name = u'ipcontroller'
+    name = 'ipcontroller'
     description = _description
     examples = _examples
     classes = [
@@ -203,14 +200,14 @@ class IPController(BaseParallelApplication):
         """,
     )
     ssh_server = Unicode(
-        u'',
+        '',
         config=True,
         help="""ssh url for clients to use when connecting to the Controller
         processes. It should be of the form: [user@]server[:port]. The
         Controller's listening addresses must be accessible from the ssh server""",
     )
     engine_ssh_server = Unicode(
-        u'',
+        '',
         config=True,
         help="""ssh url for engines to use when connecting to the Controller
         processes. It should be of the form: [user@]server[:port]. The
@@ -742,14 +739,14 @@ class IPController(BaseParallelApplication):
             except Exception as e:
                 self.log.error("Failed to cleanup connection file: %s", e)
             else:
-                self.log.debug(u"removed %s", f)
+                self.log.debug("removed %s", f)
 
     def load_secondary_config(self):
         """secondary config, loading from JSON and setting defaults"""
         if self.reuse_files:
             try:
                 self.load_config_from_json()
-            except (AssertionError, IOError) as e:
+            except (AssertionError, OSError) as e:
                 self.log.error("Could not load config from JSON: %s" % e)
             else:
                 # successfully loaded config from JSON, and reuse=True
@@ -781,7 +778,7 @@ class IPController(BaseParallelApplication):
         # build connection dicts
         if not self.engine_info:
             self.engine_info = {
-                'interface': "%s://%s" % (self.engine_transport, self.engine_ip),
+                'interface': f"{self.engine_transport}://{self.engine_ip}",
                 'registration': registration_port,
                 'control': self.next_port('engine'),
                 'mux': self.next_port('engine'),
@@ -797,7 +794,7 @@ class IPController(BaseParallelApplication):
 
         if not self.client_info:
             self.client_info = {
-                'interface': "%s://%s" % (self.client_transport, self.client_ip),
+                'interface': f"{self.client_transport}://{self.client_ip}",
                 'registration': registration_port,
                 'control': self.next_port('client'),
                 'mux': self.next_port('client'),
@@ -1224,7 +1221,7 @@ class IPController(BaseParallelApplication):
 
     @catch_config_error
     def initialize(self, argv=None):
-        super(IPController, self).initialize(argv)
+        super().initialize(argv)
         self.forward_logging()
         self.load_secondary_config()
         self.init_hub()

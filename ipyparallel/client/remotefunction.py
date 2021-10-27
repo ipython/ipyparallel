@@ -1,8 +1,6 @@
 """Remote Functions and decorators for Views."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import division
-
 import sys
 import warnings
 from inspect import signature
@@ -202,7 +200,7 @@ class ParallelFunction(RemoteFunction):
         return_exceptions=False,
         **flags,
     ):
-        super(ParallelFunction, self).__init__(view, f, block=block, **flags)
+        super().__init__(view, f, block=block, **flags)
         self.chunksize = chunksize
         self.ordered = ordered
         self.return_exceptions = return_exceptions
@@ -279,7 +277,7 @@ class ParallelFunction(RemoteFunction):
                 part = self.mapObject.getPartition(seq, index, nparts, maxlen)
                 args.append(part)
 
-            if sum([len(arg) for arg in args]) == 0:
+            if sum(len(arg) for arg in args) == 0:
                 continue
             args = [PrePickled(arg) for arg in args]
 

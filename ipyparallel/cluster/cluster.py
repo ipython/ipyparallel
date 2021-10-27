@@ -606,7 +606,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
                 atexit.register(_atexit_cleanup_clusters)
 
         self.controller = controller = self.controller_launcher_class(
-            work_dir=u'.',
+            work_dir='.',
             parent=self,
             log=self.log,
             profile_dir=self.profile_dir,
@@ -676,7 +676,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         if engine_set_id is None:
             engine_set_id = self._new_engine_set_id()
         engine_set = self.engines[engine_set_id] = self.engine_launcher_class(
-            work_dir=u'.',
+            work_dir='.',
             parent=self,
             log=self.log,
             profile_dir=self.profile_dir,

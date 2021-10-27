@@ -1,4 +1,3 @@
-# encoding: utf-8
 """
 Job and task components for writing .xml files that the Windows HPC Server
 2008 can use to start jobs.
@@ -57,7 +56,7 @@ def find_username():
     if domain is None:
         return username
     else:
-        return '%s\\%s' % (domain, username)
+        return f'{domain}\\{username}'
 
 
 class WinHPCJob(Configurable):
@@ -257,7 +256,7 @@ class IPControllerTask(WinHPCTask):
     work_directory = Unicode('', config=False)
 
     def __init__(self, **kwargs):
-        super(IPControllerTask, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         the_uuid = uuid.uuid1()
         self.std_out_file_path = os.path.join('log', 'ipcontroller-%s.out' % the_uuid)
         self.std_err_file_path = os.path.join('log', 'ipcontroller-%s.err' % the_uuid)
@@ -285,7 +284,7 @@ class IPEngineTask(WinHPCTask):
     work_directory = Unicode('', config=False)
 
     def __init__(self, **kwargs):
-        super(IPEngineTask, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         the_uuid = uuid.uuid1()
         self.std_out_file_path = os.path.join('log', 'ipengine-%s.out' % the_uuid)
         self.std_err_file_path = os.path.join('log', 'ipengine-%s.err' % the_uuid)

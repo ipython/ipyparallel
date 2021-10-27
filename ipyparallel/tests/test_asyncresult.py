@@ -218,7 +218,7 @@ class AsyncResultTest(ClusterTestCase):
             hr.get(1)
             self.assertTrue(
                 hr.wall_time < ar.wall_time + 0.2,
-                "got bad wall_time: %s > %s" % (hr.wall_time, ar.wall_time),
+                f"got bad wall_time: {hr.wall_time} > {ar.wall_time}",
             )
             self.assertEqual(hr.serial_time, ar.serial_time)
         finally:

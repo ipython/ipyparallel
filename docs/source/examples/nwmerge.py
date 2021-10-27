@@ -2,8 +2,6 @@
 """
 # Slightly modified version of:
 # https://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/511509
-from __future__ import print_function
-
 import heapq
 
 import ipyparallel as ipp
@@ -80,7 +78,7 @@ def mergesort(list_of_lists, key=None):
 
 def remote_iterator(view, name):
     """Return an iterator on an object living on a remote engine."""
-    view.execute('it%s=iter(%s)' % (name, name), block=True)
+    view.execute(f'it{name}=iter({name})', block=True)
     while True:
         try:
             result = view.apply_sync(next, ipp.Reference('it' + name))

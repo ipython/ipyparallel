@@ -23,7 +23,7 @@ class TestJobLib(ClusterTestCase):
     def setUp(self):
         if not have_joblib:
             pytest.skip("Requires joblib >= 0.10")
-        super(TestJobLib, self).setUp()
+        super().setUp()
         add_engines(1, total=True)
 
     def test_default_backend(self):

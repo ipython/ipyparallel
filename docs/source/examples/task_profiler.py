@@ -72,7 +72,7 @@ def main():
     ptime = stop - start
     scale = stime / ptime
 
-    print("executed %.1f secs in %.1f secs" % (stime, ptime))
+    print(f"executed {stime:.1f} secs in {ptime:.1f} secs")
     print("%.3fx parallel performance on %i engines" % (scale, nengines))
     print("%.1f%% of theoretical max" % (100 * scale / nengines))
 

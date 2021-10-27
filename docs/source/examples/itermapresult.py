@@ -17,8 +17,6 @@ Authors
 -------
 * MinRK
 """
-from __future__ import print_function
-
 import time
 
 import ipyparallel as ipp

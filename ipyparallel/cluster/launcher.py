@@ -1,4 +1,3 @@
-# encoding: utf-8
 """Facilities for launching IPython Parallel processes asynchronously."""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
@@ -103,7 +102,7 @@ class BaseLauncher(LoggingConfigurable):
     # and controller. Instead, use their own config files or the
     # controller_args, engine_args attributes of the launchers to add
     # the work_dir option.
-    work_dir = Unicode(u'.')
+    work_dir = Unicode('.')
 
     # used in various places for labeling. often 'ipengine' or 'ipcontroller'
     name = Unicode("process")
@@ -549,7 +548,7 @@ class LocalProcessLauncher(BaseLauncher):
 
     def _stream_file(self, path):
         """Stream one file"""
-        with open(path, 'r') as f:
+        with open(path) as f:
             while self.state == 'running' and not self._stop_waiting.is_set():
                 line = f.readline()
                 # log prefix?
@@ -669,7 +668,7 @@ class LocalControllerLauncher(LocalProcessLauncher, ControllerLauncher):
 
     def start(self):
         """Start the controller by profile_dir."""
-        return super(LocalControllerLauncher, self).start()
+        return super().start()
 
 
 class LocalEngineLauncher(LocalProcessLauncher, EngineLauncher):
@@ -698,10 +697,8 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
     outputs = Dict()
     output_file = ""  # no output file for me
 
-    def __init__(self, work_dir=u'.', config=None, **kwargs):
-        super(LocalEngineSetLauncher, self).__init__(
-            work_dir=work_dir, config=config, **kwargs
-        )
+    def __init__(self, work_dir='.', config=None, **kwargs):
+        super().__init__(work_dir=work_dir, config=config, **kwargs)
 
     def to_dict(self):
         d = super().to_dict()
@@ -852,7 +849,7 @@ class MPILauncher(LocalProcessLauncher):
                     "WARNING: %s name has been deprecated, use %s", oldname, newname
                 )
 
-        super(MPILauncher, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def find_args(self):
         """Build self.args using all the fields."""
@@ -867,7 +864,7 @@ class MPILauncher(LocalProcessLauncher):
     def start(self, n=1):
         """Start n instances of the program using mpiexec."""
         self.n = n
-        return super(MPILauncher, self).start()
+        return super().start()
 
     def _log_output(self, stop_data):
         """Try to log mpiexec error output, if any, at warning level"""
@@ -956,7 +953,7 @@ class MPIEngineSetLauncher(MPILauncher, EngineLauncher):
     def start(self, n):
         """Start n engines by profile or profile_dir."""
         self.n = n
-        return super(MPIEngineSetLauncher, self).start(n)
+        return super().start(n)
 
 
 # deprecated MPIExec names
@@ -971,7 +968,7 @@ class MPIExecLauncher(MPILauncher, DeprecatedMPILauncher):
     """Deprecated, use MPILauncher"""
 
     def __init__(self, *args, **kwargs):
-        super(MPIExecLauncher, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.warn()
 
 
@@ -979,7 +976,7 @@ class MPIExecControllerLauncher(MPIControllerLauncher, DeprecatedMPILauncher):
     """Deprecated, use MPIControllerLauncher"""
 
     def __init__(self, *args, **kwargs):
-        super(MPIExecControllerLauncher, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.warn()
 
 
@@ -987,7 +984,7 @@ class MPIExecEngineSetLauncher(MPIEngineSetLauncher, DeprecatedMPILauncher):
     """Deprecated, use MPIEngineSetLauncher"""
 
     def __init__(self, *args, **kwargs):
-        super(MPIExecEngineSetLauncher, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.warn()
 
 
@@ -1088,13 +1085,13 @@ class SSHLauncher(LocalProcessLauncher):
     @observe('hostname')
     def _hostname_changed(self, change):
         if self.user:
-            self.location = u'%s@%s' % (self.user, change['new'])
+            self.location = '{}@{}'.format(self.user, change['new'])
         else:
             self.location = change['new']
 
     @observe('user')
     def _user_changed(self, change):
-        self.location = u'%s@%s' % (change['new'], self.hostname)
+        self.location = '{}@{}'.format(change['new'], self.hostname)
 
     def find_args(self):
         # not really used except in logging
@@ -1213,7 +1210,7 @@ class SSHLauncher(LocalProcessLauncher):
 
     def _send_file(self, local, remote, wait=True):
         """send a single file"""
-        full_remote = "%s:%s" % (self.location, remote)
+        full_remote = f"{self.location}:{remote}"
         for i in range(10 if wait else 0):
             if not os.path.exists(local):
                 self.log.debug("waiting for %s" % local)
@@ -1240,7 +1237,7 @@ class SSHLauncher(LocalProcessLauncher):
 
     def _fetch_file(self, remote, local, wait=True):
         """fetch a single file"""
-        full_remote = "%s:%s" % (self.location, remote)
+        full_remote = f"{self.location}:{remote}"
         self.log.info("fetching %s from %s", local, full_remote)
         for i in range(10 if wait else 0):
             # wait up to 10s for remote file to exist
@@ -1251,9 +1248,9 @@ class SSHLauncher(LocalProcessLauncher):
                 input=None,
             )
             check = check.decode("utf8", 'replace').strip()
-            if check == u'no':
+            if check == 'no':
                 time.sleep(1)
-            elif check == u'yes':
+            elif check == 'yes':
                 break
         local_dir = os.path.dirname(local)
         ensure_dir_exists(local_dir, 700)
@@ -1575,7 +1572,7 @@ class SSHProxyEngineSetLauncher(SSHLauncher, EngineLauncher):
 
     def start(self, n):
         self.n = n
-        super(SSHProxyEngineSetLauncher, self).start()
+        super().start()
 
 
 # -----------------------------------------------------------------------------
@@ -1592,13 +1589,13 @@ class WindowsHPCLauncher(BaseLauncher):
         submit_command. """,
     )
     job_file_name = Unicode(
-        u'ipython_job.xml',
+        'ipython_job.xml',
         config=True,
         help="The filename of the instantiated job script.",
     )
     # The full path to the instantiated job script. This gets made dynamically
     # by combining the work_dir with the job_file_name.
-    job_file = Unicode(u'')
+    job_file = Unicode('')
     scheduler = Unicode(
         '', config=True, help="The hostname of the scheduler to submit the job to."
     )
@@ -1616,7 +1613,7 @@ class WindowsHPCLauncher(BaseLauncher):
         raise NotImplementedError("Implement write_job_file in a subclass.")
 
     def find_args(self):
-        return [u'job.exe']
+        return ['job.exe']
 
     def parse_job_id(self, output):
         """Take the output of the submit command and return the job id."""
@@ -1638,7 +1635,7 @@ class WindowsHPCLauncher(BaseLauncher):
             '/scheduler:%s' % self.scheduler,
         ]
         self.log.debug(
-            "Starting Win HPC Job: %s" % (self.job_cmd + ' ' + ' '.join(args),)
+            "Starting Win HPC Job: {}".format(self.job_cmd + ' ' + ' '.join(args))
         )
 
         output = check_output(
@@ -1652,7 +1649,7 @@ class WindowsHPCLauncher(BaseLauncher):
     def stop(self):
         args = ['cancel', self.job_id, '/scheduler:%s' % self.scheduler]
         self.log.info(
-            "Stopping Win HPC Job: %s" % (self.job_cmd + ' ' + ' '.join(args),)
+            "Stopping Win HPC Job: {}".format(self.job_cmd + ' ' + ' '.join(args))
         )
         try:
             output = check_output(
@@ -1660,7 +1657,7 @@ class WindowsHPCLauncher(BaseLauncher):
             )
             output = output.decode("utf8", 'replace')
         except:
-            output = u'The job already appears to be stopped: %r' % self.job_id
+            output = 'The job already appears to be stopped: %r' % self.job_id
         self.notify_stop(
             dict(job_id=self.job_id, output=output)
         )  # Pass the output of the kill cmd
@@ -1670,7 +1667,7 @@ class WindowsHPCLauncher(BaseLauncher):
 class WindowsHPCControllerLauncher(WindowsHPCLauncher):
 
     job_file_name = Unicode(
-        u'ipcontroller_job.xml', config=True, help="WinHPC xml job file."
+        'ipcontroller_job.xml', config=True, help="WinHPC xml job file."
     )
     controller_args = List([], config=False, help="extra args to pass to ipcontroller")
 
@@ -1694,7 +1691,7 @@ class WindowsHPCControllerLauncher(WindowsHPCLauncher):
 class WindowsHPCEngineSetLauncher(WindowsHPCLauncher):
 
     job_file_name = Unicode(
-        u'ipengineset_job.xml', config=True, help="jobfile for ipengines job"
+        'ipengineset_job.xml', config=True, help="jobfile for ipengines job"
     )
     engine_args = List(Unicode(), config=False, help="extra args to pas to ipengine")
 
@@ -1717,7 +1714,7 @@ class WindowsHPCEngineSetLauncher(WindowsHPCLauncher):
 
     def start(self, n):
         """Start the controller by profile_dir."""
-        return super(WindowsHPCEngineSetLauncher, self).start(n)
+        return super().start(n)
 
 
 # -----------------------------------------------------------------------------
@@ -1786,14 +1783,14 @@ class BatchSystemLauncher(BaseLauncher):
         '', config=True, help="The string that is the batch script template itself."
     ).tag(to_dict=True)
     batch_template_file = Unicode(
-        u'', config=True, help="The file that contains the batch template."
+        '', config=True, help="The file that contains the batch template."
     )
     batch_file_name = Unicode(
-        u'batch_script',
+        'batch_script',
         config=True,
         help="The filename of the instantiated batch script.",
     ).tag(to_dict=True)
-    queue = Unicode(u'', config=True, help="The batch queue.").tag(to_dict=True)
+    queue = Unicode('', config=True, help="The batch queue.").tag(to_dict=True)
 
     n = Integer(1).tag(to_dict=True)
 
@@ -1817,7 +1814,7 @@ class BatchSystemLauncher(BaseLauncher):
     # The default batch template, override in subclasses
     default_template = Unicode('')
     # The full path to the instantiated batch script.
-    batch_file = Unicode(u'')
+    batch_file = Unicode('')
     # the format dict used with batch_template:
     context = Dict()
 
@@ -1864,7 +1861,7 @@ class BatchSystemLauncher(BaseLauncher):
     def find_args(self):
         return self.submit_command + [self.batch_file]
 
-    def __init__(self, work_dir=u'.', config=None, **kwargs):
+    def __init__(self, work_dir='.', config=None, **kwargs):
         super().__init__(work_dir=work_dir, config=config, **kwargs)
         self.batch_file = os.path.join(self.work_dir, self.batch_file_name)
         # trigger program_changed to populate default context arguments
@@ -1933,7 +1930,7 @@ class BatchSystemLauncher(BaseLauncher):
         if not self.job_array_regexp.search(self.batch_template):
             self.log.debug("adding job array settings to batch script")
             firstline, rest = self.batch_template.split('\n', 1)
-            self.batch_template = u'\n'.join([firstline, self.job_array_template, rest])
+            self.batch_template = '\n'.join([firstline, self.job_array_template, rest])
 
     def start(self, n=1):
         """Start n copies of the process using a batch system."""
@@ -2049,7 +2046,7 @@ class PBSLauncher(BatchSystemLauncher):
         help=r"Regular expresion for identifying the job ID [r'\d+']",
     )
 
-    batch_file = Unicode(u'')
+    batch_file = Unicode('')
     job_array_regexp = CRegExp(r'#PBS\W+-t\W+[\w\d\-\$]+')
     job_array_template = Unicode('#PBS -t 1-{n}')
     queue_regexp = CRegExp(r'#PBS\W+-q\W+\$?\w+')
@@ -2062,7 +2059,7 @@ class PBSControllerLauncher(PBSLauncher, BatchControllerLauncher):
     """Launch a controller using PBS."""
 
     batch_file_name = Unicode(
-        u'pbs_controller', config=True, help="batch file name for the controller job."
+        'pbs_controller', config=True, help="batch file name for the controller job."
     )
     default_template = Unicode(
         """#!/bin/sh
@@ -2077,10 +2074,10 @@ class PBSEngineSetLauncher(PBSLauncher, BatchEngineSetLauncher):
     """Launch Engines using PBS"""
 
     batch_file_name = Unicode(
-        u'pbs_engines', config=True, help="batch file name for the engine(s) job."
+        'pbs_engines', config=True, help="batch file name for the engine(s) job."
     )
     default_template = Unicode(
-        u"""#!/bin/sh
+        """#!/bin/sh
 #PBS -V
 #PBS -N ipengine
 {program_and_args}
@@ -2111,17 +2108,17 @@ class SlurmLauncher(BatchSystemLauncher):
         help=r"Regular expresion for identifying the job ID [r'\d+']",
     )
 
-    account = Unicode(u"", config=True, help="Slurm account to be used")
+    account = Unicode("", config=True, help="Slurm account to be used")
 
-    qos = Unicode(u"", config=True, help="Slurm QoS to be used")
+    qos = Unicode("", config=True, help="Slurm QoS to be used")
 
     # Note: from the man page:
     #'Acceptable time formats include "minutes", "minutes:seconds",
     # "hours:minutes:seconds", "days-hours", "days-hours:minutes"
     # and "days-hours:minutes:seconds".
-    timelimit = Any(u"", config=True, help="Slurm timelimit to be used")
+    timelimit = Any("", config=True, help="Slurm timelimit to be used")
 
-    options = Unicode(u"", config=True, help="Extra Slurm options")
+    options = Unicode("", config=True, help="Extra Slurm options")
 
     @observe('account')
     def _account_changed(self, change):
@@ -2139,7 +2136,7 @@ class SlurmLauncher(BatchSystemLauncher):
     def _options_changed(self, change):
         self._update_context(change)
 
-    batch_file = Unicode(u'')
+    batch_file = Unicode('')
 
     job_array_regexp = CRegExp(r'#SBATCH\W+(?:--ntasks|-n)[\w\d\-\$]+')
     job_array_template = Unicode('''#SBATCH --ntasks={n}''')
@@ -2185,7 +2182,7 @@ class SlurmControllerLauncher(SlurmLauncher, BatchControllerLauncher):
     """Launch a controller using Slurm."""
 
     batch_file_name = Unicode(
-        u'slurm_controller.sbatch',
+        'slurm_controller.sbatch',
         config=True,
         help="batch file name for the controller job.",
     )
@@ -2203,7 +2200,7 @@ class SlurmEngineSetLauncher(SlurmLauncher, BatchEngineSetLauncher):
     """Launch Engines using Slurm"""
 
     batch_file_name = Unicode(
-        u'slurm_engine.sbatch',
+        'slurm_engine.sbatch',
         config=True,
         help="batch file name for the engine(s) job.",
     )
@@ -2232,7 +2229,7 @@ class SGEControllerLauncher(SGELauncher, BatchControllerLauncher):
     """Launch a controller using SGE."""
 
     batch_file_name = Unicode(
-        u'sge_controller', config=True, help="batch file name for the ipontroller job."
+        'sge_controller', config=True, help="batch file name for the ipontroller job."
     )
     default_template = Unicode(
         """#$ -V
@@ -2247,7 +2244,7 @@ class SGEEngineSetLauncher(SGELauncher, BatchEngineSetLauncher):
     """Launch Engines with SGE"""
 
     batch_file_name = Unicode(
-        u'sge_engines', config=True, help="batch file name for the engine(s) job."
+        'sge_engines', config=True, help="batch file name for the engine(s) job."
     )
     default_template = Unicode(
         """#$ -V
@@ -2277,7 +2274,7 @@ class LSFLauncher(BatchSystemLauncher):
         help=r"Regular expresion for identifying the job ID [r'\d+']",
     )
 
-    batch_file = Unicode(u'')
+    batch_file = Unicode('')
     job_array_regexp = CRegExp(r'#BSUB\s+-J+\w+\[\d+-\d+\]')
     job_array_template = Unicode('#BSUB -J ipengine[1-{n}]')
     queue_regexp = CRegExp(r'#BSUB\s+-q\s+\w+')
@@ -2308,7 +2305,7 @@ class LSFControllerLauncher(LSFLauncher, BatchControllerLauncher):
     """Launch a controller using LSF."""
 
     batch_file_name = Unicode(
-        u'lsf_controller', config=True, help="batch file name for the controller job."
+        'lsf_controller', config=True, help="batch file name for the controller job."
     )
     default_template = Unicode(
         """#!/bin/sh
@@ -2323,7 +2320,7 @@ class LSFEngineSetLauncher(LSFLauncher, BatchEngineSetLauncher):
     """Launch Engines using LSF"""
 
     batch_file_name = Unicode(
-        u'lsf_engines', config=True, help="batch file name for the engine(s) job."
+        'lsf_engines', config=True, help="batch file name for the engine(s) job."
     )
     default_template = Unicode(
         """#!/bin/sh
@@ -2403,7 +2400,7 @@ class HTCondorControllerLauncher(HTCondorLauncher, BatchControllerLauncher):
     """Launch a controller using HTCondor."""
 
     batch_file_name = Unicode(
-        u'htcondor_controller',
+        'htcondor_controller',
         config=True,
         help="batch file name for the controller job.",
     )
@@ -2422,7 +2419,7 @@ class HTCondorEngineSetLauncher(HTCondorLauncher, BatchEngineSetLauncher):
     """Launch Engines using HTCondor"""
 
     batch_file_name = Unicode(
-        u'htcondor_engines', config=True, help="batch file name for the engine(s) job."
+        'htcondor_engines', config=True, help="batch file name for the engine(s) job."
     )
     default_template = Unicode(
         """

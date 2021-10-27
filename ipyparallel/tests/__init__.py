@@ -1,6 +1,4 @@
 """toplevel setup/teardown for parallel tests."""
-from __future__ import print_function
-
 import asyncio
 import os
 import time
@@ -42,7 +40,7 @@ class TestProcessLauncher(LocalProcessLauncher):
 # show tracebacks for RemoteErrors
 class RemoteErrorWithTB(error.RemoteError):
     def __str__(self):
-        s = super(RemoteErrorWithTB, self).__str__()
+        s = super().__str__()
         return '\n'.join([s, self.traceback or ''])
 
 

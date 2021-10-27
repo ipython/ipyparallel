@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# encoding: utf-8
 """
 A simple IPython logger application
 """
@@ -37,14 +36,14 @@ aliases.update(dict(url='LogWatcher.url', topics='LogWatcher.topics'))
 
 class IPLoggerApp(BaseParallelApplication):
 
-    name = u'iplogger'
+    name = 'iplogger'
     description = _description
     classes = [LogWatcher, ProfileDir]
     aliases = Dict(aliases)
 
     @catch_config_error
     def initialize(self, argv=None):
-        super(IPLoggerApp, self).initialize(argv)
+        super().initialize(argv)
         self.init_watcher()
 
     def init_watcher(self):

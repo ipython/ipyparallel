@@ -83,7 +83,7 @@ class DistributedSpider:
             except Exception as e:
                 self.linksDone[url] = None
                 del self.linksWorking[url]
-                print('%s: %s' % (url, e))
+                print(f'{url}: {e}')
             else:
                 self.onVisitDone(links, url)
 

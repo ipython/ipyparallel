@@ -229,7 +229,7 @@ class DictDB(BaseDB):
         for key in ('submitted', 'started', 'completed', 'received'):
             value = rec.get(key, None)
             if value is not None and not isinstance(value, datetime):
-                raise ValueError("%s must be None or datetime, not %r" % (key, value))
+                raise ValueError(f"{key} must be None or datetime, not {value!r}")
             if isinstance(value, datetime) and value.tzinfo is None:
                 self.log.warning(
                     "Timestamps should always have timezones: %s=%s", key, value

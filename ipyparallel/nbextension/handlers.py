@@ -79,10 +79,10 @@ class ClusterListHandler(ClusterHandler):
         self.write(
             json.dumps(
                 sorted(
-                    [
+                    (
                         self.cluster_model(key, cluster)
                         for key, cluster in clusters.items()
-                    ],
+                    ),
                     key=sort_key,
                 )
             )

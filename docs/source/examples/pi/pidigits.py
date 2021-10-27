@@ -81,7 +81,7 @@ def txt_file_to_digits(filename, the_type=str):
     """
     Yield the digits of pi read from a .txt file.
     """
-    with open(filename, 'r') as f:
+    with open(filename) as f:
         for line in f.readlines():
             for c in line:
                 if c != '\n' and c != ' ':

@@ -1,4 +1,3 @@
-# encoding: utf-8
 """
 =============
 parallelmagic
@@ -257,7 +256,7 @@ class ParallelMagics(Magics):
 
         self.magics['cell'][px] = self.cell_px
 
-        super(ParallelMagics, self).__init__(shell=shell)
+        super().__init__(shell=shell)
 
     def _eval_target_str(self, ts):
         if ':' in ts:

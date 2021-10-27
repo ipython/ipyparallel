@@ -233,7 +233,9 @@ class WaveSolver:
             t_old = t
             t += dt
             if verbose:
-                print('solving (%s version) at t=%g' % (implementation['inner'], t))
+                print(
+                    'solving ({} version) at t={:g}'.format(implementation['inner'], t)
+                )
             # update all inner points:
             if implementation['inner'] == 'scalar':
                 for i in range(1, nx):

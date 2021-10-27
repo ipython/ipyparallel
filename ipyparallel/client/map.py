@@ -1,4 +1,3 @@
-# encoding: utf-8
 """Classes used in scattering and gathering sequences.
 
 Scattering consists of partitioning a sequence and sending the various
@@ -6,8 +5,6 @@ pieces to individual nodes in a cluster.
 """
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import division
-
 import sys
 from itertools import chain
 from itertools import islice
@@ -41,7 +38,7 @@ class Map:
         n = len(seq) if n is None else n
         # Test for error conditions here
         if p < 0 or p >= q:
-            raise ValueError("must have 0 <= p <= q, but have p=%s,q=%s" % (p, q))
+            raise ValueError(f"must have 0 <= p <= q, but have p={p},q={q}")
 
         remainder = n % q
         basesize = n // q
@@ -99,7 +96,7 @@ class RoundRobinMap(Map):
     def flatten_array(self, listOfPartitions):
         test = listOfPartitions[0]
         shape = list(test.shape)
-        shape[0] = sum([p.shape[0] for p in listOfPartitions])
+        shape[0] = sum(p.shape[0] for p in listOfPartitions)
         A = numpy.ndarray(shape)
         N = shape[0]
         q = len(listOfPartitions)

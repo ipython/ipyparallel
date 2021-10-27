@@ -1,8 +1,6 @@
 """Tests for parallel client.py"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from __future__ import division
-
 import os
 import signal
 import socket
@@ -274,7 +272,7 @@ class TestClient(ClusterTestCase):
             {'msg_id': {'$ne': ''}}, keys=['submitted', 'completed']
         )
         for rec in found:
-            self.assertEqual(set(rec.keys()), set(['msg_id', 'submitted', 'completed']))
+            self.assertEqual(set(rec.keys()), {'msg_id', 'submitted', 'completed'})
 
     def test_db_query_default_keys(self):
         """default db_query excludes buffers"""
@@ -430,7 +428,7 @@ class TestClient(ClusterTestCase):
         records = self.client.db_query(
             {'msg_id': {'$in': ar.msg_ids + ahr.msg_ids}}, keys='header'
         )
-        h1, h2 = [r['header'] for r in records]
+        h1, h2 = (r['header'] for r in records)
         for key in set(h1.keys()).union(set(h2.keys())):
             if key in ('msg_id', 'date'):
                 self.assertNotEqual(h1[key], h2[key])
