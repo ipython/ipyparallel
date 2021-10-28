@@ -533,19 +533,11 @@ class ParallelMagics(Magics):
             return False
         else:
             try:
-                result = self.view.execute(cell, silent=False, block=False)
+                self.parallel_execute(cell)
             except:
                 self.shell.showtraceback()
                 return True
             else:
-                if self.view.block:
-                    try:
-                        result.get()
-                    except:
-                        self.shell.showtraceback()
-                        return True
-                    else:
-                        result.display_outputs()
                 return False
 
     def pxrun_cell(self, raw_cell, *args, **kwargs):
