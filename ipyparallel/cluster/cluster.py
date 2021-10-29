@@ -80,7 +80,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
     All async methods can be called synchronously with a `_sync` suffix,
     e.g. `cluster.start_cluster_sync()`
 
-    .. versionchanged:: 7.2
+    .. versionchanged:: 8.0
         controller and engine launcher classes can be specified via
         `Cluster(controller='ssh', engines='mpi')`
         without the `_launcher_class` suffix.
@@ -169,7 +169,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         take a long time in a job queue,
         and the engines should enter the queue before the controller is running.
 
-        .. versionadded: 7.2
+        .. versionadded:: 8.0
         """,
     )
 
@@ -298,7 +298,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         which is tedious to get to via the `engines` dict
         with random engine set ids.
 
-        ..versionadded: 7.2
+        ..versionadded:: 8.0
         """
         if self.engines:
             return next(iter(self.engines.values()))

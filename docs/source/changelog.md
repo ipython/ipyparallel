@@ -4,24 +4,44 @@
 
 Changes in IPython Parallel
 
-## 7.2
+## 8.0
+
+This is marked as a major revision because of the change to pass connection information via environment variables.
+BatchSystem launchers with a custom template will need to make sure to set flags that inherit environment variables,
+such as `#PBS -V` or `#SBATCH --export=ALL`.
 
 New:
 
 - More convenient `Cluster(engines="mpi")` signature for setting the engine (or controller) launcher class.
 - The first (and usually only) engine set can be accessed as {attr}`.Cluster.engine_set`,
   rather than digging through the {attr}`Cluster.engines` dict.
-- Add `environment` configuration to
+- Add `environment` configuration to all Launchers.
 - Support more configuration via environment variables,
   including passing connection info to engines via `$IPP_CONNECTION_INFO`,
   which is used by default, avoiding the need to send connection files to engines in
   cases of non-shared filesystems.
-- Send connection info to engines via $ by default
+- Launchers send connection info to engines via `$IPP_CONNECTION_INFO` by default.
+  This is governed by `Cluster.send_engines_connection_env`, which is True by default.
 - Support {meth}`EngineLauncher.get_output` via output files in batch system launchers
+- Capture output in Batch launchers by setting output file options in the default templates.
+- {meth}`LoadBalancedView.imap` returns a `LazyMapIterator` which has a `.cancel()` method,
+  for stopping consumption of the map input.
+- Support for `return_when` argument in {meth}`.AsyncResult.wait` and {meth}`~.AsyncResult.wait_interactive`,
+  to allow returning on the first error, first completed, or (default) all completed.
+
+Improved:
+
+- {meth}`LoadBalancedView.imap(max_outstanding=n)` limits the number of tasks submitted to the cluster,
+  instead of limiting the number not-yet-consumed.
+  Prior to this, the cluster could be idle if several results were waiting to be consumed.
+- output streamed by `%%px` includes errors and results, for immediate feedback when only one engine fails.
 
 Fixed:
 
 - Various bugs preventing use of non-default Controller launchers
+- Fixed crash in jupyterlab extension when IPython directory does not exist
+- `ViewExecutor.shutdown()` waits for `imap` results, like Executors in the standard library
+- `%autopx` streams output just like `%%px`
 
 Maintenance:
 

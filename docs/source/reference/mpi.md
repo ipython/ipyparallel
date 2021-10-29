@@ -68,10 +68,10 @@ Just like `mpi`, you can specify these as the controller
 cluster = ipp.Cluster(engines="slurm", controller="slurm")
 ```
 
-:::{versionadded} 7.2
+:::{versionadded} 8.0
 
-The `controller` and `engines` arguments are new in IPython Parallel 7.2.
-In 7.0-7.1, these arguments had to be called `controller_launcher_class`
+The `controller` and `engines` arguments are new in IPython Parallel 8.0.
+In 7.x, these arguments had to be called `controller_launcher_class`
 and `engine_launcher_class`, respectively.
 :::
 

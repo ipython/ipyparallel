@@ -1038,7 +1038,7 @@ class LazyMapIterator:
 
     Has a `.cancel()` method to stop consuming new inputs.
 
-    .. versionadded:: 7.2
+    .. versionadded:: 8.0
     """
 
     def __init__(self, gen, signal_done):

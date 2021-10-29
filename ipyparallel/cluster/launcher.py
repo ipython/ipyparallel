@@ -216,7 +216,7 @@ class BaseLauncher(LoggingConfigurable):
     environment = Dict(
         help="""Set environment variables for the launched process
 
-        .. versionadded: 7.2
+        .. versionadded:: 8.0
         """,
         config=True,
     )
