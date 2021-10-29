@@ -2,11 +2,11 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import time
-import types
 
 from tornado.ioloop import IOLoop
 
 from .clienttest import ClusterTestCase
+from ipyparallel.client.view import LazyMapIterator
 from ipyparallel.client.view import LoadBalancedView
 
 
@@ -48,7 +48,7 @@ class AsyncResultTest(ClusterTestCase):
         view = self.client.load_balanced_view()
         executor = view.executor
         gen = executor.map(lambda x: x, range(5))
-        assert isinstance(gen, types.GeneratorType)
+        assert isinstance(gen, LazyMapIterator)
         for i, r in enumerate(gen):
             assert i == r
 
@@ -58,7 +58,13 @@ class AsyncResultTest(ClusterTestCase):
         with executor:
             f = executor.submit(time.sleep, 0.5)
             assert not f.done()
+            m = executor.map(lambda x: x, range(10))
+        assert len(view.history) == 11
         # Executor context calls shutdown
         # shutdown doesn't shutdown engines,
         # but it should at least wait for results to finish
         assert f.done()
+        tic = time.perf_counter()
+        list(m)
+        toc = time.perf_counter()
+        assert toc - tic < 0.5

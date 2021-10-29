@@ -138,10 +138,10 @@ class TestLoadBalancedView(ClusterTestCase):
         gen = view.imap(task, source, max_outstanding=5)
         # should submit at least max_outstanding
         first_result = next(gen)
-        assert len(view.history) == 5
+        assert len(view.history) >= 5
         # retrieving results should first result
         second_result = next(gen)
-        assert 6 <= len(view.history) <= 8
+        assert 6 <= len(view.history) <= 10
         self.client.wait(timeout=self.timeout)
 
     def test_imap_infinite(self):
@@ -161,13 +161,15 @@ class TestLoadBalancedView(ClusterTestCase):
             results.append(i)
             if i >= 3:
                 break
+        # stop consuming the iterator
+        gen.cancel()
 
         assert len(results) == 4
 
         # wait
         self.client.wait(timeout=self.timeout)
         # verify that max_outstanding wasn't exceeded
-        assert 5 <= len(self.view.history) < 8
+        assert 5 <= len(self.view.history) < 10
 
     def test_imap_unordered(self):
         self.minimum_engines(4)
@@ -194,12 +196,18 @@ class TestLoadBalancedView(ClusterTestCase):
             results.append(t)
             if i >= 2:
                 break
+
+        # stop consuming
+        gen.cancel()
+
         assert len(results) == 3
         print(results)
         assert all([r < 1 for r in results])
 
         # wait
         self.client.wait(timeout=self.timeout)
+        # verify that max_outstanding wasn't exceeded
+        assert 4 <= len(self.view.history) <= 6
 
     def test_imap_return_exceptions(self):
         view = self.view

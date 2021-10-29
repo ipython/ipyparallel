@@ -1033,6 +1033,33 @@ class BroadcastView(DirectView):
     gather = _not_coalescing(DirectView.gather)
 
 
+class LazyMapIterator:
+    """Iterable representation of a lazy map (imap)
+
+    Has a `.cancel()` method to stop consuming new inputs.
+
+    .. versionadded:: 7.2
+    """
+
+    def __init__(self, gen, signal_done):
+        self._gen = gen
+        self._signal_done = signal_done
+
+    def __iter__(self):
+        return self._gen
+
+    def __next__(self):
+        return next(self._gen)
+
+    def cancel(self):
+        """Stop consuming the input to the map.
+
+        Useful to e.g. stop consuming an infinite (or just large) input
+        when you've arrived at the result (or error) you needed.
+        """
+        self._signal_done()
+
+
 class LoadBalancedView(View):
     """An load-balancing View that only executes via the Task scheduler.
 
@@ -1392,7 +1419,7 @@ class LoadBalancedView(View):
         def signal_done():
             nonlocal iterator_done
             iterator_done = True
-            self._outstanding_maps.remove(map_id)
+            self._outstanding_maps.discard(map_id)
 
         outstanding_lock = threading.Lock()
 
@@ -1454,6 +1481,7 @@ class LoadBalancedView(View):
 
             try:
                 args = next(arg_iterator)
+                ar = self.apply_async(pf, *args)
             except StopIteration:
                 signal_done()
                 return
@@ -1468,7 +1496,6 @@ class LoadBalancedView(View):
                 signal_done()
                 return
 
-            ar = self.apply_async(pf, *args)
             with outstanding_lock:
                 add_outstanding(ar)
             if max_outstanding:
@@ -1517,7 +1544,7 @@ class LoadBalancedView(View):
                     for ar in done:
                         yield ar.get(return_exceptions=return_exceptions)
 
-        return iter_results()
+        return LazyMapIterator(iter_results(), signal_done)
 
     def register_joblib_backend(self, name='ipyparallel', make_default=False):
         """Register this View as a joblib parallel backend
