@@ -331,7 +331,7 @@ class AsyncResult(Future):
             When return_when=FIRST_EXCEPTION, will raise immediately on the first exception,
             rather than waiting for all results to finish before reporting errors.
 
-        .. versionchanged:: 7.2
+        .. versionchanged:: 8.0
             Added `return_when` argument.
         """
         if return_when == FIRST_COMPLETED:
@@ -410,7 +410,7 @@ class AsyncResult(Future):
         Inverse of .split(),
         used for rejoining split results in wait.
 
-        .. versionadded: 7.2
+        .. versionadded:: 8.0
         """
         if not async_results:
             raise ValueError("Must specify at least one AsyncResult to join")
@@ -437,7 +437,7 @@ class AsyncResult(Future):
         This can be passed to `concurrent.futures.wait` and friends
         to get partial results.
 
-        .. versionadded: 7.2
+        .. versionadded:: 8.0
         """
         if len(self._children) == 1:
             # nothing to do if we're already representing a single message
@@ -486,7 +486,7 @@ class AsyncResult(Future):
                 representing the completed and still-pending subsets of results,
                 matching the return value of `wait` itself.
 
-        .. versionchanged:: 7.2
+        .. versionchanged:: 8.0
             Added `return_when`.
         """
         if timeout and timeout < 0:

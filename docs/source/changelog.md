@@ -4,7 +4,11 @@
 
 Changes in IPython Parallel
 
-## 7.2
+## 8.0
+
+This is marked as a major revision because of the change to pass connection information via environment variables.
+BatchSystem launchers with a custom template will need to make sure to set flags that inherit environment variables,
+such as `#PBS -V` or `#SBATCH --export=ALL`.
 
 New:
 
