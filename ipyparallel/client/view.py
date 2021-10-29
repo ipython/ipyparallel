@@ -4,6 +4,9 @@
 import builtins
 import concurrent.futures
 import inspect
+import secrets
+import threading
+import time
 import warnings
 from collections import deque
 from contextlib import contextmanager
@@ -1030,6 +1033,33 @@ class BroadcastView(DirectView):
     gather = _not_coalescing(DirectView.gather)
 
 
+class LazyMapIterator:
+    """Iterable representation of a lazy map (imap)
+
+    Has a `.cancel()` method to stop consuming new inputs.
+
+    .. versionadded:: 7.2
+    """
+
+    def __init__(self, gen, signal_done):
+        self._gen = gen
+        self._signal_done = signal_done
+
+    def __iter__(self):
+        return self._gen
+
+    def __next__(self):
+        return next(self._gen)
+
+    def cancel(self):
+        """Stop consuming the input to the map.
+
+        Useful to e.g. stop consuming an infinite (or just large) input
+        when you've arrived at the result (or error) you needed.
+        """
+        self._signal_done()
+
+
 class LoadBalancedView(View):
     """An load-balancing View that only executes via the Task scheduler.
 
@@ -1054,6 +1084,7 @@ class LoadBalancedView(View):
     _flag_names = List(
         ['targets', 'block', 'track', 'follow', 'after', 'timeout', 'retries']
     )
+    _outstanding_maps = Set()
 
     def __init__(self, client=None, socket=None, **flags):
         super().__init__(client=client, socket=socket, **flags)
@@ -1380,80 +1411,140 @@ class LoadBalancedView(View):
 
         pf = PrePickled(f)
 
+        map_id = secrets.token_bytes(16)
+
+        # record that a map is outstanding, mainly for Executor.shutdown
+        self._outstanding_maps.add(map_id)
+
+        def signal_done():
+            nonlocal iterator_done
+            iterator_done = True
+            self._outstanding_maps.discard(map_id)
+
+        outstanding_lock = threading.Lock()
+
         if ordered:
             outstanding = deque()
-
-            def wait_for_ready():
-                ar = outstanding.popleft()
-                return [ar]
-
-            def should_yield():
-                # ordered: yield first result if it's ready
-                if outstanding[0].ready():
-                    return True
-
-                if max_outstanding == 0:
-                    # no limit
-                    return False
-
-                # or if we've reached capacity (only counting still-outstanding computations)
-                # not counting locally available, but not yet yielded results
-                # TODO: should we limit the local?
-                # if consumers are much slower than producers,
-                # this can fill up local memory
-                return sum(not ar.ready() for ar in outstanding) >= max_outstanding
-
+            add_outstanding = outstanding.append
         else:
-            outstanding = []
+            outstanding = set()
+            add_outstanding = outstanding.add
 
-            def wait_for_ready():
+        def wait_for_ready():
+            while not outstanding and not iterator_done:
+                # no outstanding futures, need to wait for something to wait for
+                time.sleep(0.1)
+            if not outstanding:
+                # nothing to wait for, iterator_done is True
+                return []
+
+            if ordered:
+                with outstanding_lock:
+                    return [outstanding.popleft()]
+            else:
                 # unordered, yield whatever finishes first, as soon as it's ready
-                done, outstanding[:] = concurrent.futures.wait(
-                    outstanding, return_when=concurrent.futures.FIRST_COMPLETED
+                # repeat with timeout because the consumer thread may be adding to `outstanding`
+                with outstanding_lock:
+                    to_wait = outstanding.copy()
+                done, _ = concurrent.futures.wait(
+                    to_wait,
+                    return_when=concurrent.futures.FIRST_COMPLETED,
+                    timeout=0.5,
                 )
+                if done:
+                    with outstanding_lock:
+                        for f in done:
+                            outstanding.remove(f)
                 return done
 
-            def should_yield():
-                # unordered, we are ready to yield if any result is ready
-                if any(ar.ready() for ar in outstanding):
-                    return True
+        arg_iterator = iter(zip(*sequences))
+        iterator_done = False
 
-                if max_outstanding == 0:
-                    # no limit
-                    return False
+        # consume inputs in _another_ thread,
+        # to avoid blocking the IO thread with a possibly blocking generator
+        # only need one thread for this, though.
+        consumer_pool = concurrent.futures.ThreadPoolExecutor(1)
 
-                # or wait if we are full
-                if len(outstanding) >= max_outstanding:
-                    return True
-                return False
+        def consume_callback(f):
+            if not iterator_done:
+                consumer_pool.submit(consume_next)
 
-        # zip is a lazy iterator
-        for args in zip(*sequences):
-            # submit one work item
-            ar = self.apply_async(pf, *args)
-            outstanding.append(ar)
-            # count 'pending' tasks
-            # yield first result if it's ready
-            # *or* the number of outstanding tasks has reached our limit
-            # yielding immediately means
-            if should_yield():
-                for ready_ar in wait_for_ready():
-                    yield ready_ar.get(return_exceptions=return_exceptions)
+        def consume_next():
+            """Consume the next call from the argument iterator
 
-            # we've filled the buffer, wait for at least one result before continuing
-            if len(outstanding) == max_outstanding:
-                for ready_ar in wait_for_ready():
-                    yield ready_ar.get(return_exceptions=return_exceptions)
+            If max_outstanding, schedules consumption when the result finishes.
+            If running with no limit, schedules another consumption immediately.
+            """
+            nonlocal iterator_done
+            if iterator_done:
+                return
 
-        # yield any remaining results
-        if ordered:
-            for ar in outstanding:
-                yield ar.get(return_exceptions=return_exceptions)
-        else:
-            while outstanding:
-                done, outstanding = concurrent.futures.wait(outstanding)
-                for ar in done:
+            try:
+                args = next(arg_iterator)
+                ar = self.apply_async(pf, *args)
+            except StopIteration:
+                signal_done()
+                return
+            except Exception as e:
+                # exception consuming iterator, propagate
+                ar = concurrent.futures.Future()
+                # mock get so it gets re-raised when awaited
+                ar.get = lambda *args: ar.result()
+                ar.set_exception(e)
+                with outstanding_lock:
+                    add_outstanding(ar)
+                signal_done()
+                return
+
+            with outstanding_lock:
+                add_outstanding(ar)
+            if max_outstanding:
+                ar.add_done_callback(consume_callback)
+            else:
+                consumer_pool.submit(consume_next)
+
+        # kick it off
+        # only need one if not using max_outstanding,
+        # as each eventloop tick will submit a new item
+        # otherwise, start one consumer for each slot, which will chain
+        kickoff_count = 1 if max_outstanding == 0 else max_outstanding
+        submit_futures = []
+        for i in range(kickoff_count):
+            submit_futures.append(consumer_pool.submit(consume_next))
+
+        # await the first one, just in case it raises
+        try:
+            submit_futures[0].result()
+        except Exception:
+            # make sure we clean up
+            signal_done()
+            raise
+        del submit_futures
+
+        # wrap result-yielding in another call
+        # because if this function is itself a generator
+        # the first submission won't happen until the first result is requested
+        def iter_results():
+            nonlocal outstanding
+            with consumer_pool:
+                while not iterator_done:
+                    # yield results as they become ready
+                    for ready_ar in wait_for_ready():
+                        yield ready_ar.get(return_exceptions=return_exceptions)
+
+            # yield any remaining results
+            if ordered:
+                for ar in outstanding:
                     yield ar.get(return_exceptions=return_exceptions)
+            else:
+                while outstanding:
+                    done, outstanding = concurrent.futures.wait(
+                        outstanding, return_when=concurrent.futures.FIRST_COMPLETED
+                    )
+                    for ar in done:
+                        yield ar.get(return_exceptions=return_exceptions)
+
+        return LazyMapIterator(iter_results(), signal_done)
 
     def register_joblib_backend(self, name='ipyparallel', make_default=False):
         """Register this View as a joblib parallel backend
@@ -1500,7 +1591,7 @@ class ViewExecutor(concurrent.futures.Executor):
         if 'timeout' in kwargs:
             warnings.warn("timeout unsupported in ViewExecutor.map")
             kwargs.pop('timeout')
-        yield from self.view.imap(func, *iterables, **kwargs)
+        return self.view.imap(func, *iterables, **kwargs)
 
     def shutdown(self, wait=True):
         """ViewExecutor does *not* shutdown engines
@@ -1508,6 +1599,12 @@ class ViewExecutor(concurrent.futures.Executor):
         results are awaited if wait=True, but engines are *not* shutdown.
         """
         if wait:
+            # wait for *submission* of outstanding maps,
+            # otherwise view.wait won't know what to wait for
+            outstanding_maps = getattr(self.view, "_outstanding_maps")
+            if outstanding_maps:
+                while outstanding_maps:
+                    time.sleep(0.1)
             self.view.wait()
 
 
