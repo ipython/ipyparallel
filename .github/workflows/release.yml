@@ -7,6 +7,7 @@ on:
   push:
     branches-ignore:
       - "pre-commit-ci*"
+    tags:
   pull_request:
 
 jobs:
