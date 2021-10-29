@@ -200,8 +200,6 @@ class TestLoadBalancedView(ClusterTestCase):
 
         # wait
         self.client.wait(timeout=self.timeout)
-        # verify that max_outstanding wasn't exceeded
-        assert 4 <= len(self.view.history) <= 6
 
     def test_imap_return_exceptions(self):
         view = self.view

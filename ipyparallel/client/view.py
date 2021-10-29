@@ -5,6 +5,7 @@ import builtins
 import concurrent.futures
 import inspect
 import secrets
+import threading
 import time
 import warnings
 from collections import deque
@@ -1393,10 +1394,14 @@ class LoadBalancedView(View):
             iterator_done = True
             self._outstanding_maps.remove(map_id)
 
+        outstanding_lock = threading.Lock()
+
         if ordered:
             outstanding = deque()
+            add_outstanding = outstanding.append
         else:
-            outstanding = []
+            outstanding = set()
+            add_outstanding = outstanding.add
 
         def wait_for_ready():
             while not outstanding and not iterator_done:
@@ -1407,17 +1412,22 @@ class LoadBalancedView(View):
                 return []
 
             if ordered:
-                return [outstanding.popleft()]
+                with outstanding_lock:
+                    return [outstanding.popleft()]
             else:
                 # unordered, yield whatever finishes first, as soon as it's ready
                 # repeat with timeout because the consumer thread may be adding to `outstanding`
+                with outstanding_lock:
+                    to_wait = outstanding.copy()
                 done, _ = concurrent.futures.wait(
-                    outstanding,
+                    to_wait,
                     return_when=concurrent.futures.FIRST_COMPLETED,
-                    timeout=1,
+                    timeout=0.5,
                 )
-                for f in done:
-                    outstanding.remove(f)
+                if done:
+                    with outstanding_lock:
+                        for f in done:
+                            outstanding.remove(f)
                 return done
 
         arg_iterator = iter(zip(*sequences))
@@ -1453,12 +1463,14 @@ class LoadBalancedView(View):
                 # mock get so it gets re-raised when awaited
                 ar.get = lambda *args: ar.result()
                 ar.set_exception(e)
-                outstanding.append(ar)
+                with outstanding_lock:
+                    add_outstanding(ar)
                 signal_done()
                 return
 
             ar = self.apply_async(pf, *args)
-            outstanding.append(ar)
+            with outstanding_lock:
+                add_outstanding(ar)
             if max_outstanding:
                 ar.add_done_callback(consume_callback)
             else:
