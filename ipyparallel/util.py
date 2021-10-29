@@ -662,6 +662,8 @@ def abbreviate_profile_dir(profile_dir):
 def _all_profile_dirs():
     """List all IPython profile directories"""
     profile_dirs = []
+    if not os.path.isdir(get_ipython_dir()):
+        return profile_dirs
     with os.scandir(get_ipython_dir()) as paths:
         for path in paths:
             if path.is_dir() and path.name.startswith('profile_'):
