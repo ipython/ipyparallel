@@ -94,7 +94,7 @@
   },
   "jupyterlab": {
     "extension": true,
-    "schemaDir": "schema",
+    "schemaDir": "lab/schema",
     "outputDir": "ipyparallel/labextension"
   }
 }
