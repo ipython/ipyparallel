@@ -3,6 +3,7 @@
 # Distributed under the terms of the Modified BSD License.
 import os
 import time
+from datetime import datetime
 
 from IPython.utils.io import capture_output
 
@@ -99,7 +100,7 @@ class AsyncResultTest(ClusterTestCase):
 
     def test_getattr(self):
         ar = self.client[:].apply_async(wait, 0.5)
-        self.assertEqual(ar.engine_id, [None] * len(ar))
+        self.assertEqual(ar.completed, [None] * len(ar))
         self.assertRaises(AttributeError, lambda: ar._foo)
         self.assertRaises(AttributeError, lambda: ar.__length_hint__())
         self.assertRaises(AttributeError, lambda: ar.foo)
@@ -118,21 +119,22 @@ class AsyncResultTest(ClusterTestCase):
 
     def test_getitem(self):
         ar = self.client[:].apply_async(wait, 0.5)
-        self.assertEqual(ar['engine_id'], [None] * len(ar))
+        assert ar['completed'] == [None] * len(ar)
         self.assertRaises(KeyError, lambda: ar['foo'])
         ar.get(5)
         self.assertRaises(KeyError, lambda: ar['foo'])
-        self.assertTrue(isinstance(ar['engine_id'], list))
-        self.assertEqual(ar.engine_id, ar['engine_id'])
+        assert isinstance(ar['completed'], list)
+        assert ar.completed == ar['completed']
+        assert all(isinstance(dt, datetime) for dt in ar.completed)
 
     def test_single_result(self):
         ar = self.client[-1].apply_async(wait, 0.5)
         self.assertRaises(KeyError, lambda: ar['foo'])
-        self.assertEqual(ar['engine_id'], None)
-        self.assertTrue(ar.get(5) == 0.5)
-        self.assertTrue(isinstance(ar['engine_id'], int))
-        self.assertTrue(isinstance(ar.engine_id, int))
-        self.assertEqual(ar.engine_id, ar['engine_id'])
+        assert ar['completed'] is None
+        assert ar.get(5) == 0.5
+        assert isinstance(ar['completed'], datetime)
+        assert isinstance(ar.completed, datetime)
+        self.assertEqual(ar.completed, ar['completed'])
 
     def test_abort(self):
         e = self.client[-1]
