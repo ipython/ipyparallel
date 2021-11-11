@@ -1,7 +1,7 @@
 {
   "name": "ipyparallel-labextension",
   "version": "7.0.0",
-  "private": false,
+  "private": true,
   "description": "A JupyterLab extension for IPython Parallel.",
   "keywords": [
     "ipython",
