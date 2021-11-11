@@ -227,7 +227,7 @@ async function activate(
 
       const onSettingsChanged = () => {
         // Determine whether to use the auto-starting client.
-        autoStartClient = settings.get("autoStartClient").composite as boolean;
+        // autoStartClient = settings.get("autoStartClient").composite as boolean;
         updateTrackers();
       };
       onSettingsChanged();
@@ -309,35 +309,35 @@ async function activate(
   });
 
   // Add a command to toggle the auto-starting client code.
-  app.commands.addCommand(CommandIDs.toggleAutoStartClient, {
-    label: "Auto-Start IPython Parallel",
-    isToggled: () => autoStartClient,
-    execute: async () => {
-      const value = !autoStartClient;
-      const key = "autoStartClient";
-      return settingRegistry
-        .set(PLUGIN_ID, key, value)
-        .catch((reason: Error) => {
-          console.error(
-            `Failed to set ${PLUGIN_ID}:${key} - ${reason.message}`
-          );
-        });
-    },
-  });
+  // app.commands.addCommand(CommandIDs.toggleAutoStartClient, {
+  //   label: "Auto-Start IPython Parallel",
+  //   isToggled: () => autoStartClient,
+  //   execute: async () => {
+  //     const value = !autoStartClient;
+  //     const key = "autoStartClient";
+  //     return settingRegistry
+  //       .set(PLUGIN_ID, key, value)
+  //       .catch((reason: Error) => {
+  //         console.error(
+  //           `Failed to set ${PLUGIN_ID}:${key} - ${reason.message}`
+  //         );
+  //       });
+  //   },
+  // });
 
-  // Add some commands to the menu and command palette.
-  mainMenu.settingsMenu.addGroup([
-    { command: CommandIDs.toggleAutoStartClient },
-  ]);
-  [CommandIDs.newCluster, CommandIDs.toggleAutoStartClient].forEach(
-    (command) => {
-      commandPalette.addItem({
-        category: "IPython Parallel",
-        command,
-        args: { isPalette: true },
-      });
-    }
-  );
+  // // Add some commands to the menu and command palette.
+  // mainMenu.settingsMenu.addGroup([
+  //   { command: CommandIDs.toggleAutoStartClient },
+  // ]);
+  // [CommandIDs.newCluster, CommandIDs.toggleAutoStartClient].forEach(
+  //   (command) => {
+  //     commandPalette.addItem({
+  //       category: "IPython Parallel",
+  //       command,
+  //       args: { isPalette: true },
+  //     });
+  //   }
+  // );
 
   // Add a context menu items.
   app.contextMenu.addItem({
