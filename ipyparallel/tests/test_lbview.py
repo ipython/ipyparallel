@@ -139,9 +139,9 @@ class TestLoadBalancedView(ClusterTestCase):
         # should submit at least max_outstanding
         first_result = next(gen)
         assert len(view.history) >= 5
-        # retrieving results should first result
+        # retrieving results should submit another task
         second_result = next(gen)
-        assert 6 <= len(view.history) <= 10
+        assert 5 <= len(view.history) <= 10
         self.client.wait(timeout=self.timeout)
 
     def test_imap_infinite(self):
