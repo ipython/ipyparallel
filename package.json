@@ -1,6 +1,6 @@
 {
   "name": "ipyparallel-labextension",
-  "version": "8.0.0",
+  "version": "8.0.0b1",
   "private": true,
   "description": "A JupyterLab extension for IPython Parallel.",
   "keywords": [
