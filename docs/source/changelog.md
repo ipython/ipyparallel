@@ -41,11 +41,13 @@ Fixed:
 - Various bugs preventing use of non-default Controller launchers
 - Fixed crash in jupyterlab extension when IPython directory does not exist
 - `ViewExecutor.shutdown()` waits for `imap` results, like Executors in the standard library
+- Removed spurious jupyterlab plugin options that had no effect.
 - `%autopx` streams output just like `%%px`
 
 Maintenance:
 
 - Add BroadcastView benchmark code
+- Tag releases with tbump
 
 ## 7.1
 
