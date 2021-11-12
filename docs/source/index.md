@@ -72,7 +72,7 @@ def mpi_example():
 
 # request an MPI cluster with 4 engines
 with ipp.Cluster(engines='mpi', n=4) as rc:
-    # get a broadcast_view on the cluster which is best 
+    # get a broadcast_view on the cluster which is best
     # suited for MPI style computation
     view = rc.broadcast_view()
     # run the mpi_example function on all engines in parallel
@@ -83,7 +83,6 @@ with ipp.Cluster(engines='mpi', n=4) as rc:
 ```
 
 ![IPyParallel-MPI-Example](./_static/IPyParallel-MPI-Example.png)
-
 
 Follow the [tutorial][] to learn more.
 
