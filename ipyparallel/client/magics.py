@@ -364,49 +364,52 @@ class ParallelMagics(Magics):
             self.shell.user_ns[save_name] = result
 
         if block:
+            try:
+                if progress_after is None:
+                    progress_after = self.progress_after_seconds
 
-            if progress_after is None:
-                progress_after = self.progress_after_seconds
-
-            cm = result.stream_output() if stream_output else nullcontext()
-            with cm:
-                finished_waiting = False
-                if progress_after > 0:
-                    # finite progress-after timeout
-                    # wait for 'quick' results before showing progress
-                    tic = time.perf_counter()
-                    deadline = tic + progress_after
-                    try:
-                        result.get(timeout=progress_after)
-                        remaining = max(deadline - time.perf_counter(), 0)
-                        result.wait_for_output(timeout=remaining)
-                    except TimeoutError:
-                        pass
-                    except error.CompositeError as e:
-                        if stream_output:
-                            # already streamed, show an abbreviated result
-                            raise error.AlreadyDisplayedError(e) from None
+                cm = result.stream_output() if stream_output else nullcontext()
+                with cm:
+                    finished_waiting = False
+                    if progress_after > 0:
+                        # finite progress-after timeout
+                        # wait for 'quick' results before showing progress
+                        tic = time.perf_counter()
+                        deadline = tic + progress_after
+                        try:
+                            result.get(timeout=progress_after)
+                            remaining = max(deadline - time.perf_counter(), 0)
+                            result.wait_for_output(timeout=remaining)
+                        except TimeoutError:
+                            pass
+                        except error.CompositeError as e:
+                            if stream_output:
+                                # already streamed, show an abbreviated result
+                                raise error.AlreadyDisplayedError(e) from None
+                            else:
+                                raise
                         else:
-                            raise
-                    else:
-                        finished_waiting = True
+                            finished_waiting = True
 
-                if not finished_waiting:
-                    if progress_after >= 0:
-                        # not an immediate result, start interactive progress
-                        result.wait_interactive()
-                    result.wait_for_output()
-                    try:
-                        result.get()
-                    except error.CompositeError as e:
-                        if stream_output:
-                            # already streamed, show an abbreviated result
-                            raise error.AlreadyDisplayedError(e) from None
-                        else:
-                            raise
-            # Skip redisplay if streaming output
-            if not stream_output:
-                result.display_outputs(groupby)
+                    if not finished_waiting:
+                        if progress_after >= 0:
+                            # not an immediate result, start interactive progress
+                            result.wait_interactive()
+                        result.wait_for_output()
+                        try:
+                            result.get()
+                        except error.CompositeError as e:
+                            if stream_output:
+                                # already streamed, show an abbreviated result
+                                raise error.AlreadyDisplayedError(e) from None
+                            else:
+                                raise
+                # Skip redisplay if streaming output
+                if not stream_output:
+                    result.display_outputs(groupby)
+            except KeyboardInterrupt:
+                print("Received Keyboard Interrupt. Sending signal 9 to engines...")
+                self.view.client.send_signal(9, targets=targets, block=True)
         else:
             # return AsyncResult only on non-blocking submission
             return result
