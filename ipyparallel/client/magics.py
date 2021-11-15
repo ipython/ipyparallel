@@ -156,6 +156,16 @@ def exec_args(f):
             Use -1 for no progress, 0 for always showing progress immediately.
             """,
         ),
+        magic_arguments.argument(
+            '--signal-on-interrupt',
+            dest='signal_on_interrupt',
+            type=str,
+            default=None,
+            help="""Send signal to engines on Keyboard Interrupt. By default no signal is sent.
+            Note that this is only applicable when running in blocking mode.
+            Choices: 2, SIGINT, 9, SIGKILL, etc.
+            """,
+        ),
     ]
     for a in args:
         f = a(f)
@@ -235,6 +245,8 @@ class ParallelMagics(Magics):
     stream_ouput = True
     # seconds to wait before showing progress bar for blocking execution
     progress_after_seconds = 2
+    # signal to send to engines on keyboard-interrupt
+    signal_on_interrupt = None
 
     def __init__(self, shell, view, suffix=''):
         self.view = view
@@ -267,6 +279,11 @@ class ParallelMagics(Magics):
             targets = eval(ts)
         return targets
 
+    def _eval_signal_str(self, sig_str: str):
+        if sig_str.isdigit():
+            return int(sig_str)
+        return sig_str
+
     @magic_arguments.magic_arguments()
     @exec_args
     def pxconfig(self, line):
@@ -280,6 +297,8 @@ class ParallelMagics(Magics):
             self.verbose = args.set_verbose
         if args.stream is not None:
             self.stream_ouput = args.stream
+        if args.signal_on_interrupt is not None:
+            self.signal_on_interrupt = self._eval_signal_str(args.signal_on_interrupt)
 
         if args.progress_after_seconds is not None:
             self.progress_after_seconds = args.progress_after_seconds
@@ -339,12 +358,18 @@ class ParallelMagics(Magics):
         save_name=None,
         stream_output=None,
         progress_after=None,
+        signal_on_interrupt=None,
     ):
         """implementation used by %px and %%parallel"""
 
         # defaults:
         block = self.view.block if block is None else block
         stream_output = self.stream_ouput if stream_output is None else stream_output
+        signal_on_interrupt = (
+            self.signal_on_interrupt
+            if signal_on_interrupt is None
+            else signal_on_interrupt
+        )
 
         base = "Parallel" if block else "Async parallel"
 
@@ -408,8 +433,15 @@ class ParallelMagics(Magics):
                 if not stream_output:
                     result.display_outputs(groupby)
             except KeyboardInterrupt:
-                print("Received Keyboard Interrupt. Sending signal 9 to engines...")
-                self.view.client.send_signal(9, targets=targets, block=True)
+                if signal_on_interrupt:
+                    print(
+                        f"Received Keyboard Interrupt. Sending signal {signal_on_interrupt} to engines..."
+                    )
+                    self.view.client.send_signal(
+                        signal_on_interrupt, targets=targets, block=True
+                    )
+                else:
+                    raise
         else:
             # return AsyncResult only on non-blocking submission
             return result
@@ -441,6 +473,9 @@ class ParallelMagics(Magics):
         if args.targets:
             save_targets = self.view.targets
             self.view.targets = self._eval_target_str(args.targets)
+        signal_on_interrupt = None
+        if args.signal_on_interrupt:
+            signal_on_interrupt = self._eval_signal_str(args.signal_on_interrupt)
         # if running local, don't block until after local has run
         block = False if args.local else args.block
         try:
@@ -451,6 +486,7 @@ class ParallelMagics(Magics):
                 save_name=args.save_name,
                 stream_output=args.stream,
                 progress_after=args.progress_after_seconds,
+                signal_on_interrupt=signal_on_interrupt,
             )
         finally:
             if args.targets:
