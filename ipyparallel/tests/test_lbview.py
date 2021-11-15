@@ -169,7 +169,7 @@ class TestLoadBalancedView(ClusterTestCase):
         # wait
         self.client.wait(timeout=self.timeout)
         # verify that max_outstanding wasn't exceeded
-        assert 5 <= len(self.view.history) < 10
+        assert 4 <= len(self.view.history) < 10
 
     def test_imap_unordered(self):
         self.minimum_engines(4)
