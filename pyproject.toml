@@ -50,3 +50,4 @@ search = '__version__ = "{current_version}"'
 [[tool.tbump.file]]
 src = "package.json"
 search = '"version": "{current_version}"'
+version_template = "{major}.{minor}.{patch}"
