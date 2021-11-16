@@ -161,9 +161,9 @@ def exec_args(f):
             dest='signal_on_interrupt',
             type=str,
             default=None,
-            help="""Send signal to engines on Keyboard Interrupt. By default no signal is sent.
+            help="""Send signal to engines on Keyboard Interrupt. By default a SIGINT is sent.
             Note that this is only applicable when running in blocking mode.
-            Choices: 2, SIGINT, 9, SIGKILL, etc.
+            Choices: SIGINT, 2, SIGKILL, 9, 0 (nop), etc.
             """,
         ),
     ]
@@ -246,7 +246,7 @@ class ParallelMagics(Magics):
     # seconds to wait before showing progress bar for blocking execution
     progress_after_seconds = 2
     # signal to send to engines on keyboard-interrupt
-    signal_on_interrupt = None
+    signal_on_interrupt = "SIGINT"
 
     def __init__(self, shell, view, suffix=''):
         self.view = view
@@ -433,7 +433,7 @@ class ParallelMagics(Magics):
                 if not stream_output:
                     result.display_outputs(groupby)
             except KeyboardInterrupt:
-                if signal_on_interrupt:
+                if signal_on_interrupt is not None:
                     print(
                         f"Received Keyboard Interrupt. Sending signal {signal_on_interrupt} to engines..."
                     )
