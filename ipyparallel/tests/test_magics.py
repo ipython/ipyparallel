@@ -512,20 +512,38 @@ class TestParallelMagics(ClusterTestCase):
         )
         assert 'Exiting...' not in io.stdout
 
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
     def test_cellpx_keyboard_interrupt_default(self):
         self.cellpx_keyboard_interrupt_test_helper()
 
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
     def test_cellpx_keyboard_interrupt_SIGINT(self):
         self.cellpx_keyboard_interrupt_test_helper("SIGINT")
 
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
     def test_cellpx_keyboard_interrupt_signal_2(self):
         self.cellpx_keyboard_interrupt_test_helper("2")
 
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
     def test_cellpx_keyboard_interrupt_signal_0(self):
         self.cellpx_keyboard_interrupt_test_helper("0")
 
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
     def test_cellpx_keyboard_interrupt_SIGKILL(self):
         self.cellpx_keyboard_interrupt_test_helper("SIGKILL")
 
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
     def test_cellpx_keyboard_interrupt_signal_9(self):
         self.cellpx_keyboard_interrupt_test_helper("9")
