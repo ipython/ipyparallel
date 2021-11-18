@@ -523,3 +523,9 @@ class TestParallelMagics(ClusterTestCase):
 
     def test_cellpx_keyboard_interrupt_signal_0(self):
         self.cellpx_keyboard_interrupt_test_helper("0")
+
+    def test_cellpx_keyboard_interrupt_SIGKILL(self):
+        self.cellpx_keyboard_interrupt_test_helper("SIGKILL")
+
+    def test_cellpx_keyboard_interrupt_signal_9(self):
+        self.cellpx_keyboard_interrupt_test_helper("9")
