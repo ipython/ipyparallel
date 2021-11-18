@@ -49,6 +49,7 @@ from IPython.core.error import UsageError
 from IPython.core.magic import Magics
 from IPython.core import magic_arguments
 from .. import error
+import sys
 
 # -----------------------------------------------------------------------------
 # Definitions of magic functions for use with IPython
@@ -435,7 +436,8 @@ class ParallelMagics(Magics):
             except KeyboardInterrupt:
                 if signal_on_interrupt is not None:
                     print(
-                        f"Received Keyboard Interrupt. Sending signal {signal_on_interrupt} to engines..."
+                        f"Received Keyboard Interrupt. Sending signal {signal_on_interrupt} to engines...",
+                        file=sys.stderr,
                     )
                     self.view.client.send_signal(
                         signal_on_interrupt, targets=targets, block=True
