@@ -1,5 +1,6 @@
 """Test Parallel magics"""
 import re
+import signal
 import sys
 import time
 
@@ -480,3 +481,69 @@ class TestParallelMagics(ClusterTestCase):
                     pass
             self.assertNotIn('Async', io.stdout)
             self.assertEqual(view.block, False)
+
+    def cellpx_keyboard_interrupt_test_helper(self, sig=None):
+        """%%px with Keyboard Interrupt on blocking execution"""
+
+        ip = get_ipython()
+        v = self.client[:]
+        v.block = True
+        v.activate()
+
+        def _sigalarm(sig, frame):
+            raise KeyboardInterrupt
+
+        signal.signal(signal.SIGALRM, _sigalarm)
+        signal.alarm(2)
+        with capture_output(display=False) as io:
+            ip.run_cell_magic(
+                "px",
+                "" if sig is None else f"--signal-on-interrupt {sig}",
+                "print('Entering...'); import time; time.sleep(5); print('Exiting...');",
+            )
+
+        print(io.stdout)
+        print(io.stderr, file=sys.stderr)
+        assert (
+            'Received Keyboard Interrupt. Sending signal {} to engines...'.format(
+                "SIGINT" if sig is None else sig
+            )
+            in io.stderr
+        )
+        assert 'Exiting...' not in io.stdout
+
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
+    def test_cellpx_keyboard_interrupt_default(self):
+        self.cellpx_keyboard_interrupt_test_helper()
+
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
+    def test_cellpx_keyboard_interrupt_SIGINT(self):
+        self.cellpx_keyboard_interrupt_test_helper("SIGINT")
+
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
+    def test_cellpx_keyboard_interrupt_signal_2(self):
+        self.cellpx_keyboard_interrupt_test_helper("2")
+
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
+    def test_cellpx_keyboard_interrupt_signal_0(self):
+        self.cellpx_keyboard_interrupt_test_helper("0")
+
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
+    def test_cellpx_keyboard_interrupt_SIGKILL(self):
+        self.cellpx_keyboard_interrupt_test_helper("SIGKILL")
+
+    @pytest.mark.skipif(
+        sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
+    )
+    def test_cellpx_keyboard_interrupt_signal_9(self):
+        self.cellpx_keyboard_interrupt_test_helper("9")

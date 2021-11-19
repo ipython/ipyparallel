@@ -49,6 +49,7 @@ from IPython.core.error import UsageError
 from IPython.core.magic import Magics
 from IPython.core import magic_arguments
 from .. import error
+import sys
 
 # -----------------------------------------------------------------------------
 # Definitions of magic functions for use with IPython
@@ -156,6 +157,16 @@ def exec_args(f):
             Use -1 for no progress, 0 for always showing progress immediately.
             """,
         ),
+        magic_arguments.argument(
+            '--signal-on-interrupt',
+            dest='signal_on_interrupt',
+            type=str,
+            default=None,
+            help="""Send signal to engines on Keyboard Interrupt. By default a SIGINT is sent.
+            Note that this is only applicable when running in blocking mode.
+            Choices: SIGINT, 2, SIGKILL, 9, 0 (nop), etc.
+            """,
+        ),
     ]
     for a in args:
         f = a(f)
@@ -235,6 +246,8 @@ class ParallelMagics(Magics):
     stream_ouput = True
     # seconds to wait before showing progress bar for blocking execution
     progress_after_seconds = 2
+    # signal to send to engines on keyboard-interrupt
+    signal_on_interrupt = "SIGINT"
 
     def __init__(self, shell, view, suffix=''):
         self.view = view
@@ -267,6 +280,11 @@ class ParallelMagics(Magics):
             targets = eval(ts)
         return targets
 
+    def _eval_signal_str(self, sig_str: str):
+        if sig_str.isdigit():
+            return int(sig_str)
+        return sig_str
+
     @magic_arguments.magic_arguments()
     @exec_args
     def pxconfig(self, line):
@@ -280,6 +298,8 @@ class ParallelMagics(Magics):
             self.verbose = args.set_verbose
         if args.stream is not None:
             self.stream_ouput = args.stream
+        if args.signal_on_interrupt is not None:
+            self.signal_on_interrupt = self._eval_signal_str(args.signal_on_interrupt)
 
         if args.progress_after_seconds is not None:
             self.progress_after_seconds = args.progress_after_seconds
@@ -339,12 +359,18 @@ class ParallelMagics(Magics):
         save_name=None,
         stream_output=None,
         progress_after=None,
+        signal_on_interrupt=None,
     ):
         """implementation used by %px and %%parallel"""
 
         # defaults:
         block = self.view.block if block is None else block
         stream_output = self.stream_ouput if stream_output is None else stream_output
+        signal_on_interrupt = (
+            self.signal_on_interrupt
+            if signal_on_interrupt is None
+            else signal_on_interrupt
+        )
 
         base = "Parallel" if block else "Async parallel"
 
@@ -364,49 +390,60 @@ class ParallelMagics(Magics):
             self.shell.user_ns[save_name] = result
 
         if block:
+            try:
+                if progress_after is None:
+                    progress_after = self.progress_after_seconds
 
-            if progress_after is None:
-                progress_after = self.progress_after_seconds
-
-            cm = result.stream_output() if stream_output else nullcontext()
-            with cm:
-                finished_waiting = False
-                if progress_after > 0:
-                    # finite progress-after timeout
-                    # wait for 'quick' results before showing progress
-                    tic = time.perf_counter()
-                    deadline = tic + progress_after
-                    try:
-                        result.get(timeout=progress_after)
-                        remaining = max(deadline - time.perf_counter(), 0)
-                        result.wait_for_output(timeout=remaining)
-                    except TimeoutError:
-                        pass
-                    except error.CompositeError as e:
-                        if stream_output:
-                            # already streamed, show an abbreviated result
-                            raise error.AlreadyDisplayedError(e) from None
+                cm = result.stream_output() if stream_output else nullcontext()
+                with cm:
+                    finished_waiting = False
+                    if progress_after > 0:
+                        # finite progress-after timeout
+                        # wait for 'quick' results before showing progress
+                        tic = time.perf_counter()
+                        deadline = tic + progress_after
+                        try:
+                            result.get(timeout=progress_after)
+                            remaining = max(deadline - time.perf_counter(), 0)
+                            result.wait_for_output(timeout=remaining)
+                        except TimeoutError:
+                            pass
+                        except error.CompositeError as e:
+                            if stream_output:
+                                # already streamed, show an abbreviated result
+                                raise error.AlreadyDisplayedError(e) from None
+                            else:
+                                raise
                         else:
-                            raise
-                    else:
-                        finished_waiting = True
+                            finished_waiting = True
 
-                if not finished_waiting:
-                    if progress_after >= 0:
-                        # not an immediate result, start interactive progress
-                        result.wait_interactive()
-                    result.wait_for_output()
-                    try:
-                        result.get()
-                    except error.CompositeError as e:
-                        if stream_output:
-                            # already streamed, show an abbreviated result
-                            raise error.AlreadyDisplayedError(e) from None
-                        else:
-                            raise
-            # Skip redisplay if streaming output
-            if not stream_output:
-                result.display_outputs(groupby)
+                    if not finished_waiting:
+                        if progress_after >= 0:
+                            # not an immediate result, start interactive progress
+                            result.wait_interactive()
+                        result.wait_for_output()
+                        try:
+                            result.get()
+                        except error.CompositeError as e:
+                            if stream_output:
+                                # already streamed, show an abbreviated result
+                                raise error.AlreadyDisplayedError(e) from None
+                            else:
+                                raise
+                # Skip redisplay if streaming output
+                if not stream_output:
+                    result.display_outputs(groupby)
+            except KeyboardInterrupt:
+                if signal_on_interrupt is not None:
+                    print(
+                        f"Received Keyboard Interrupt. Sending signal {signal_on_interrupt} to engines...",
+                        file=sys.stderr,
+                    )
+                    self.view.client.send_signal(
+                        signal_on_interrupt, targets=targets, block=True
+                    )
+                else:
+                    raise
         else:
             # return AsyncResult only on non-blocking submission
             return result
@@ -438,6 +475,9 @@ class ParallelMagics(Magics):
         if args.targets:
             save_targets = self.view.targets
             self.view.targets = self._eval_target_str(args.targets)
+        signal_on_interrupt = None
+        if args.signal_on_interrupt:
+            signal_on_interrupt = self._eval_signal_str(args.signal_on_interrupt)
         # if running local, don't block until after local has run
         block = False if args.local else args.block
         try:
@@ -448,6 +488,7 @@ class ParallelMagics(Magics):
                 save_name=args.save_name,
                 stream_output=args.stream,
                 progress_after=args.progress_after_seconds,
+                signal_on_interrupt=signal_on_interrupt,
             )
         finally:
             if args.targets:
