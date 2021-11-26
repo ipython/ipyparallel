@@ -2085,6 +2085,7 @@ class Client(HasTraits):
             client=self,
             socket=self._broadcast_stream,
             targets=targets,
+            **kwargs,
         )
         bcast_view.is_coalescing = is_coalescing
         return bcast_view
