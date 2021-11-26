@@ -929,3 +929,14 @@ class TestView(ClusterTestCase):
         res = view.apply_async(func, 5)
         assert res.get(timeout=10) == []
         view.use_pickle()
+
+    def test_block_kwarg(self):
+        """
+        Tests that kwargs such as 'block' can be
+        specified when creating a view, in this
+        case a BroadcastView
+        """
+        view = self.client.broadcast_view(block=True)
+        assert view.block == True
+        # Execute something as a sanity check
+        view.execute("5", silent=False)
