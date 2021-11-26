@@ -400,8 +400,8 @@ class DirectView(View):
 
     """
 
-    def __init__(self, client=None, socket=None, targets=None):
-        super().__init__(client=client, socket=socket, targets=targets)
+    def __init__(self, client=None, socket=None, targets=None, **flags):
+        super().__init__(client=client, socket=socket, targets=targets, **flags)
 
     @property
     def importer(self):
