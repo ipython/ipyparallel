@@ -359,3 +359,17 @@ async def test_wait_for_engines_crash(Cluster):
         rc = c.connect_client_sync()
         with pytest.raises(ipp.error.EngineError):
             rc.wait_for_engines(3, timeout=20)
+
+
+@pytest.mark.parametrize("activate", (True, False))
+def test_start_and_connect_activate(ipython, Cluster, activate):
+    rc = Cluster(n=2, log_level=10).start_and_connect_sync(activate=activate)
+    with rc:
+        if activate:
+            assert "px" in ipython.magics_manager.magics["cell"]
+            px = ipython.magics_manager.magics["cell"]["px"]
+            assert px.__self__.view.client is rc
+        else:
+            if "px" in ipython.magics_manager.magics["cell"]:
+                px = ipython.magics_manager.magics["cell"]["px"]
+                assert px.__self__.view.client is not rc

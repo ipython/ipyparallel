@@ -711,8 +711,17 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         log(f"engine set stopped {engine_set_id}: {stop_data}")
         self.update_cluster_file()
 
-    async def start_and_connect(self, n=None):
+    async def start_and_connect(self, n=None, activate=False):
         """Single call to start a cluster and connect a client
+
+        If `activate` is given, a blocking DirectView on all engines will be created
+        and activated, registering `%px` magics for use in IPython
+
+        Example::
+
+            rc = await Cluster(engines="mpi").start_and_connect(n=8, activate=True)
+
+            %px print("hello, world!")
 
         Equivalent to::
 
@@ -720,16 +729,31 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             client = await self.connect_client()
             await client.wait_for_engines(n, block=False)
 
-        .. versionadded: 7.1
+        .. versionadded:: 7.1
+
+        .. versionadded:: 8.1
+
+            activate argument.
         """
         if n is None:
             n = self.n
         await self.start_cluster(n=n)
         client = await self.connect_client()
+
+        if n is None:
+            # number of engines to wait for
+            # if not specified, derive current value from EngineSets
+            n = sum(engine_set.n for engine_set in self.engines.values())
+
         if n:
             await asyncio.wrap_future(
                 client.wait_for_engines(n, block=False, timeout=self.engine_timeout)
             )
+
+        if activate:
+            view = client[:]
+            view.block = True
+            view.activate()
         return client
 
     async def start_cluster(self, n=None):
