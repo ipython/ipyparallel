@@ -1455,7 +1455,7 @@ class Client(HasTraits):
         return futures
 
     def wait_for_engines(
-        self, n, *, timeout=-1, block=True, interactive=None, widget=None
+        self, n=None, *, timeout=-1, block=True, interactive=None, widget=None
     ):
         """Wait for `n` engines to become available.
 
@@ -1490,6 +1490,18 @@ class Client(HasTraits):
         ------
         TimeoutError : if timeout is reached.
         """
+        if n is None:
+            # get n from cluster, if not specified
+            if self.cluster is None:
+                raise TypeError("n engines to wait for must be specified")
+
+            if self.cluster.n:
+                n = self.cluster.n
+            else:
+                # compute n from engine sets,
+                # e.g. the default where n is calculated at runtime from `cpu_count()`
+                n = sum(engine_set.n for engine_set in self.cluster.engines.values())
+
         if len(self.ids) >= n:
             if block:
                 return
