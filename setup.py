@@ -63,7 +63,7 @@ from setupbase import wrap_installers, npm_builder, get_data_files
 
 data_files = get_data_files(data_files_spec)
 
-builder = npm_builder()
+builder = npm_builder(build_cmd="build:prod")
 if os.environ.get("IPP_DISABLE_JS") == "1":
     print("Skipping js installation")
     cmdclass = {}
@@ -88,6 +88,11 @@ setup_args = dict(
     platforms="Linux, Mac OS X, Windows",
     keywords=["Interactive", "Interpreter", "Shell", "Parallel"],
     classifiers=[
+        "Framework :: Jupyter",
+        "Framework :: Jupyter :: JupyterLab",
+        "Framework :: Jupyter :: JupyterLab :: 3",
+        "Framework :: Jupyter :: JupyterLab :: Extensions",
+        "Framework :: Jupyter :: JupyterLab :: Extensions :: Prebuilt",
         "Intended Audience :: Developers",
         "Intended Audience :: System Administrators",
         "Intended Audience :: Science/Research",
