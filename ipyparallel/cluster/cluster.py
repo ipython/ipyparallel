@@ -368,6 +368,13 @@ class Cluster(AsyncFirst, LoggingConfigurable):
         config.merge(direct_config)
         return config
 
+    @default("config")
+    def _default_config(self):
+        if self.load_profile:
+            return self.profile_config
+        else:
+            return Config()
+
     def __init__(self, *, engines=None, controller=None, **kwargs):
         """Construct a Cluster"""
         # handle more intuitive aliases, which match ipcluster cli args, etc.
