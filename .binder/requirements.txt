@@ -1,14 +1,14 @@
-# apps
-jupyterlab >=3.2.4
-retrolab >=0.3.13
-
-# `collaborative` is on
-jupyterlab-link-share
 
 # depfinder results for /examples/
 ipywidgets
+# apps
+jupyterlab >=3.2.4
+
+# `collaborative` is on
+jupyterlab-link-share
 matplotlib
 networkx
 pidigits
 requests
+retrolab >=0.3.13
 wordfreq
