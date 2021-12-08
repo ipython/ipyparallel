@@ -7,6 +7,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
 
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV PATH=$MAMBA_ROOT_PREFIX/bin:$PATH
+ENV IPP_DISABLE_JS=1
 RUN wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba \
  && mv bin/micromamba /usr/local/bin/micromamba
 
