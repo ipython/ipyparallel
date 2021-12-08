@@ -11,6 +11,6 @@ dependencies:
   - nbsphinx
   - myst-parser
 
-  - matplotlib
+  - matplotlib-base
   # nodejs needed for extension build
   - nodejs

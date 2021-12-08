@@ -17,10 +17,6 @@
  * Rules related to the cluster manager.
  */
 
-.ipp-ClusterManager {
-  border-top: 6px solid var(--jp-toolbar-border-color);
-}
-
 .ipp-ClusterManager .jp-Toolbar {
   align-items: center;
 }
