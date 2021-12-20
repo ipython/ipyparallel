@@ -4,6 +4,21 @@
 
 Changes in IPython Parallel
 
+## 8.1
+
+8.1.0 is a small release, adding a few new features and bugfixes.
+
+New features:
+
+- relay KeyboardInterrupt to engines in blocking `%px` magics
+- add `Cluster.start_and_connect(activate=True)` to include activation of `%px` magics in one-liner startup.
+
+Fixes:
+
+- Ensure profile config is always loaded.
+- Build lab extension in production mode, apply trove classifiers
+- Pass through keyword arguments to constructor in `Client.broadcast_view`
+
 ## 8.0
 
 This is marked as a major revision because of the change to pass connection information via environment variables.
