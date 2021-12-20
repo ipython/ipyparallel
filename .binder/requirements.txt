@@ -1,0 +1,9 @@
+ipywidgets
+jupyterlab >=3.2.4
+jupyterlab-link-share
+matplotlib
+networkx
+pidigits
+requests
+retrolab >=0.3.13
+wordfreq

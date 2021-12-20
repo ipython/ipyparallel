@@ -1,24 +1,21 @@
 // IPython Parallel Lab extension derived from dask-labextension@f6141455d770ed7de564fc4aa403b9964cd4e617
 // License: BSD-3-Clause
 
+import { PageConfig } from "@jupyterlab/coreutils";
+
+import { TabPanel } from "@lumino/widgets";
+
 import {
   ILabShell,
-  ILayoutRestorer,
   JupyterFrontEnd,
   JupyterFrontEndPlugin,
 } from "@jupyterlab/application";
 
-import {
-  ICommandPalette,
-  ISessionContext,
-  IWidgetTracker,
-} from "@jupyterlab/apputils";
+import { ISessionContext, IWidgetTracker } from "@jupyterlab/apputils";
 
 import { CodeEditor } from "@jupyterlab/codeeditor";
 
 import { ConsolePanel, IConsoleTracker } from "@jupyterlab/console";
-
-import { IMainMenu } from "@jupyterlab/mainmenu";
 
 import { ISettingRegistry } from "@jupyterlab/settingregistry";
 
@@ -41,11 +38,13 @@ import { IClusterModel, ClusterManager } from "./clusters";
 import { Sidebar } from "./sidebar";
 
 import "../style/index.css";
+
 import logoSvgStr from "../style/logo.svg";
 
 import { CommandIDs } from "./commands";
 
 const PLUGIN_ID = "ipyparallel-labextension:plugin";
+const CATEGORY = "IPython Parallel";
 
 /**
  * The IPython Parallel extension.
@@ -53,16 +52,8 @@ const PLUGIN_ID = "ipyparallel-labextension:plugin";
 const plugin: JupyterFrontEndPlugin<void> = {
   activate,
   id: PLUGIN_ID,
-  requires: [
-    ICommandPalette,
-    IConsoleTracker,
-    ILabShell,
-    ILayoutRestorer,
-    IMainMenu,
-    INotebookTracker,
-    ISettingRegistry,
-    IStateDB,
-  ],
+  requires: [IConsoleTracker, INotebookTracker, ISettingRegistry, IStateDB],
+  optional: [ILabShell],
   autoStart: true,
 };
 
@@ -76,16 +67,16 @@ export default plugin;
  */
 async function activate(
   app: JupyterFrontEnd,
-  commandPalette: ICommandPalette,
   consoleTracker: IConsoleTracker,
-  labShell: ILabShell,
-  restorer: ILayoutRestorer,
-  mainMenu: IMainMenu,
   notebookTracker: INotebookTracker,
   settingRegistry: ISettingRegistry,
-  state: IStateDB
+  state: IStateDB,
+  labShell?: ILabShell | null
 ): Promise<void> {
   const id = "ipp-cluster-launcher";
+
+  const isLab = !!labShell;
+  const isRetroTree = PageConfig.getOption("retroPage") == "tree";
 
   const clientCodeInjector = (model: IClusterModel) => {
     const editor = Private.getCurrentEditor(
@@ -112,9 +103,16 @@ async function activate(
   });
 
   // sidebar.title.iconClass = 'ipp-Logo jp-SideBar-tabIcon';
-  sidebar.title.caption = "IPython Parallel";
 
-  labShell.add(sidebar, "left", { rank: 200 });
+  if (isLab) {
+    labShell.add(sidebar, "left", { rank: 200 });
+    sidebar.title.caption = CATEGORY;
+  } else if (isRetroTree) {
+    const tabPanel = app.shell.currentWidget as TabPanel;
+    tabPanel.addWidget(sidebar);
+    tabPanel.tabBar.addTab(sidebar.title);
+    sidebar.title.label = CATEGORY;
+  }
 
   sidebar.clusterManager.activeClusterChanged.connect(async () => {
     const active = sidebar.clusterManager.activeCluster;

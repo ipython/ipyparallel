@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+jlpm --prefer-offline --ignore-optional --ignore-scripts
+
+jlpm build
+
+IPP_DISABLE_JS=1 python -m pip install -e .[test,benchmark]
+
+jupyter serverextension enable --sys-prefix --py ipyparallel
+jupyter serverextension list
+
+jupyter server extension enable --sys-prefix --py ipyparallel
+jupyter server extension list
+
+jupyter nbextension install --symlink --sys-prefix --py ipyparallel
+jupyter nbextension enable --sys-prefix --py ipyparallel
+jupyter nbextension list
+
+jlpm install:extension
+jupyter labextension list

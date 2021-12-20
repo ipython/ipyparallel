@@ -63,7 +63,7 @@ from setupbase import wrap_installers, npm_builder, get_data_files
 
 data_files = get_data_files(data_files_spec)
 
-builder = npm_builder(build_cmd="build:prod")
+builder = npm_builder(build_cmd="build:prod", npm="jlpm")
 if os.environ.get("IPP_DISABLE_JS") == "1":
     print("Skipping js installation")
     cmdclass = {}
@@ -123,6 +123,8 @@ setup_args = dict(
         "nbext": ["notebook", "jupyter_server"],
         "serverextension": ["jupyter_server"],
         "labextension": ["jupyter_server", "jupyterlab>=3"],
+        "retroextension": ["jupyter_server", "retrolab"],
+        "benchmark": ["asv"],
         "test": [
             "pytest",
             "pytest-cov",
