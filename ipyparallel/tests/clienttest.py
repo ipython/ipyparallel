@@ -3,6 +3,7 @@ import os
 import signal
 import sys
 import time
+import warnings
 from contextlib import contextmanager
 
 import pytest
@@ -82,6 +83,9 @@ def skip_without(*names):
             try:
                 __import__(name)
             except ImportError:
+                pytest.skip("Test requires %s" % name)
+            except Exception as e:
+                warnings.warn(f"Unexpected exception importing {name}: {e}")
                 pytest.skip("Test requires %s" % name)
         return f(*args, **kwargs)
 
