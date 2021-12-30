@@ -480,3 +480,11 @@ class AsyncResultTest(ClusterTestCase):
         done, pending = amr.wait(timeout=0, return_when=ipp.FIRST_EXCEPTION)
         assert pending == set()
         assert len(done) == len(amr)
+
+    def test_progress(self):
+        dv = self.client[:]
+        amr = dv.map_async(time.sleep, [0.2] * 2 * len(dv))
+        assert len(amr) == len(dv) * 2
+        assert amr.progress == 0
+        amr.wait_interactive()
+        assert amr.progress == len(amr)

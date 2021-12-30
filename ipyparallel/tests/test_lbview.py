@@ -29,16 +29,19 @@ class TestLoadBalancedView(ClusterTestCase):
             return x ** 2
 
         data = list(range(16))
-        r = self.view.map_sync(f, data)
-        self.assertEqual(r, list(map(f, data)))
+        ar = self.view.map_async(f, data)
+        assert len(ar) == len(data)
+        r = ar.get()
+        assert r == list(map(f, data))
 
     def test_map_generator(self):
         def f(x):
             return x ** 2
 
         data = list(range(16))
-        r = self.view.map_sync(f, iter(data))
-        self.assertEqual(r, list(map(f, iter(data))))
+        ar = self.view.map_async(f, iter(data))
+        r = ar.get()
+        assert r == list(map(f, iter(data)))
 
     def test_map_short_first(self):
         def f(x, y):
@@ -51,8 +54,10 @@ class TestLoadBalancedView(ClusterTestCase):
         data = list(range(10))
         data2 = list(range(4))
 
-        r = self.view.map_sync(f, data, data2)
-        self.assertEqual(r, list(map(f, data, data2)))
+        ar = self.view.map_async(f, data, data2)
+        assert len(ar) == len(data2)
+        r = ar.get()
+        assert r == list(map(f, data, data2))
 
     def test_map_short_last(self):
         def f(x, y):
@@ -65,8 +70,10 @@ class TestLoadBalancedView(ClusterTestCase):
         data = list(range(4))
         data2 = list(range(10))
 
-        r = self.view.map_sync(f, data, data2)
-        self.assertEqual(r, list(map(f, data, data2)))
+        ar = self.view.map_async(f, data, data2)
+        assert len(ar) == len(data)
+        r = ar.get()
+        assert r == list(map(f, data, data2))
 
     def test_map_unordered(self):
         def f(x):

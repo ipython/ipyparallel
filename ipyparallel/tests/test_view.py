@@ -334,7 +334,9 @@ class TestView(ClusterTestCase):
             return x ** 2
 
         data = list(range(16))
-        r = view.map_sync(f, data)
+        ar = view.map_async(f, data)
+        assert len(ar) == len(data)
+        r = ar.get()
         self.assertEqual(r, list(map(f, data)))
 
     def test_map_empty_sequence(self):
@@ -361,7 +363,9 @@ class TestView(ClusterTestCase):
         view = self.client[:]
         # 101 is prime, so it won't be evenly distributed
         arr = numpy.arange(101)
-        r = view.map_sync(lambda x: x, arr)
+        ar = view.map_async(lambda x: x, arr)
+        assert len(ar) == len(arr)
+        r = ar.get()
         assert_array_equal(r, arr)
 
     def test_scatter_gather_nonblocking(self):
@@ -369,7 +373,7 @@ class TestView(ClusterTestCase):
         view = self.client[:]
         view.scatter('a', data, block=False)
         ar = view.gather('a', block=False)
-        self.assertEqual(ar.get(), data)
+        assert ar.get() == data
 
     @skip_without('numpy')
     def test_scatter_gather_numpy_nonblocking(self):

@@ -271,6 +271,9 @@ class ParallelFunction(RemoteFunction):
 
         pf = PrePickled(self.func)
 
+        chunk_sizes = {}
+        chunk_size = 1
+
         for index, t in enumerate(targets):
             args = []
             for seq in sequences:
@@ -279,6 +282,10 @@ class ParallelFunction(RemoteFunction):
 
             if sum(len(arg) for arg in args) == 0:
                 continue
+
+            if _mapping:
+                chunk_size = min(len(arg) for arg in args)
+
             args = [PrePickled(arg) for arg in args]
 
             if _mapping:
@@ -292,6 +299,8 @@ class ParallelFunction(RemoteFunction):
                 ar = view.apply(f, *args)
                 ar.owner = False
 
+            msg_id = ar.msg_ids[0]
+            chunk_sizes[msg_id] = chunk_size
             futures.extend(ar._children)
 
         r = AsyncMapResult(
@@ -301,6 +310,7 @@ class ParallelFunction(RemoteFunction):
             fname=getname(self.func),
             ordered=self.ordered,
             return_exceptions=self.return_exceptions,
+            chunk_sizes=chunk_sizes,
         )
 
         if self.block:
