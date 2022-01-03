@@ -72,6 +72,7 @@ class AsyncResult(Future):
     owner = False
     _last_display_prefix = ""
     _stream_trailing_newline = True
+    _chunk_sizes = None
 
     def __init__(
         self,
@@ -81,6 +82,7 @@ class AsyncResult(Future):
         targets=None,
         owner=False,
         return_exceptions=False,
+        chunk_sizes=None,
     ):
         super().__init__()
         if not isinstance(children, list):
@@ -90,6 +92,7 @@ class AsyncResult(Future):
             self._single_result = False
 
         self._return_exceptions = return_exceptions
+        self._chunk_sizes = chunk_sizes or {}
 
         if isinstance(children[0], str):
             self.msg_ids = children
@@ -748,8 +751,14 @@ class AsyncResult(Future):
             # already done
             yield from rlist
 
+    @lru_cache()
     def __len__(self):
-        return len(self.msg_ids)
+        return self._count_chunks(*self.msg_ids)
+
+    @lru_cache()
+    def _count_chunks(self, *msg_ids):
+        """Count the granular tasks"""
+        return sum(self._chunk_sizes.setdefault(msg_id, 1) for msg_id in msg_ids)
 
     # -------------------------------------
     # Sugar methods and attributes
@@ -795,7 +804,9 @@ class AsyncResult(Future):
         Fractional progress would be given by 1.0 * ar.progress / len(ar)
         """
         self.wait(0)
-        return len(self) - len(set(self.msg_ids).intersection(self._client.outstanding))
+        finished_msg_ids = set(self.msg_ids).intersection(self._client.outstanding)
+        finished_count = self._count_chunks(*finished_msg_ids)
+        return len(self) - finished_count
 
     @property
     def elapsed(self):
@@ -1069,6 +1080,7 @@ class AsyncMapResult(AsyncResult):
         fname='',
         ordered=True,
         return_exceptions=False,
+        chunk_sizes=None,
     ):
         self._mapObject = mapObject
         self.ordered = ordered
@@ -1078,6 +1090,7 @@ class AsyncMapResult(AsyncResult):
             children,
             fname=fname,
             return_exceptions=return_exceptions,
+            chunk_sizes=chunk_sizes,
         )
         self._single_result = False
 
