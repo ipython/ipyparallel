@@ -153,6 +153,7 @@ setup_args = dict(
             'local = ipyparallel.cluster.launcher:LocalEngineSetLauncher',
             'lsf = ipyparallel.cluster.launcher:LSFEngineSetLauncher',
             'mpi = ipyparallel.cluster.launcher:MPIEngineSetLauncher',
+            'pbs = ipyparallel.cluster.launcher:PBSEngineSetLauncher',
             'sge = ipyparallel.cluster.launcher:SGEEngineSetLauncher',
             'slurm = ipyparallel.cluster.launcher:SlurmEngineSetLauncher',
             'ssh = ipyparallel.cluster.launcher:SSHEngineSetLauncher',
