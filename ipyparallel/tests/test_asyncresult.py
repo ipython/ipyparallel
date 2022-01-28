@@ -288,6 +288,20 @@ class AsyncResultTest(ClusterTestCase):
         self.assertEqual(io.stderr, '')
         self.assertEqual(io.stdout, '')
 
+    def test_display_output_error(self):
+        """display_outputs shows output on error"""
+        self.minimum_engines(1)
+
+        v = self.client[-1]
+        ar = v.execute("print (5555)\n1/0")
+        ar.get(5, return_exceptions=True)
+        ar.wait_for_output(5)
+        with capture_output() as io:
+            ar.display_outputs()
+        self.assertEqual(io.stderr, '')
+        self.assertEqual('5555\n', io.stdout)
+        assert 'ZeroDivisionError' not in io.stdout
+
     def test_await_data(self):
         """asking for ar.data flushes outputs"""
         self.minimum_engines(1)

@@ -330,6 +330,10 @@ class ParallelMagics(Magics):
         if self.last_result is None:
             raise UsageError(NO_LAST_RESULT)
 
+        if args.save_name:
+            self.shell.user_ns[args.save_name] = self.last_result
+            return
+
         self.last_result.get()
         self.last_result.display_outputs(groupby=args.groupby)
 
@@ -402,37 +406,26 @@ class ParallelMagics(Magics):
                         # wait for 'quick' results before showing progress
                         tic = time.perf_counter()
                         deadline = tic + progress_after
-                        try:
-                            result.get(timeout=progress_after)
-                            remaining = max(deadline - time.perf_counter(), 0)
-                            result.wait_for_output(timeout=remaining)
-                        except TimeoutError:
-                            pass
-                        except error.CompositeError as e:
-                            if stream_output:
-                                # already streamed, show an abbreviated result
-                                raise error.AlreadyDisplayedError(e) from None
-                            else:
-                                raise
-                        else:
-                            finished_waiting = True
+                        result.wait(timeout=progress_after)
+                        remaining = max(deadline - time.perf_counter(), 0)
+                        result.wait_for_output(timeout=remaining)
+                        finished_waiting = result.done()
 
                     if not finished_waiting:
                         if progress_after >= 0:
                             # not an immediate result, start interactive progress
                             result.wait_interactive()
-                        result.wait_for_output()
-                        try:
-                            result.get()
-                        except error.CompositeError as e:
-                            if stream_output:
-                                # already streamed, show an abbreviated result
-                                raise error.AlreadyDisplayedError(e) from None
-                            else:
-                                raise
+                            result.wait_for_output(1)
+
+                    try:
+                        result.get()
+                    except error.CompositeError as e:
+                        if stream_output:
+                            # already streamed, show an abbreviated result
+                            raise error.AlreadyDisplayedError(e) from None
+                        else:
+                            raise
                 # Skip redisplay if streaming output
-                if not stream_output:
-                    result.display_outputs(groupby)
             except KeyboardInterrupt:
                 if signal_on_interrupt is not None:
                     print(
@@ -444,6 +437,14 @@ class ParallelMagics(Magics):
                     )
                 else:
                     raise
+            finally:
+                # always redisplay outputs if not streaming,
+                # on both success and error
+
+                if not stream_output:
+                    # wait for at most 1 second for output to be complete
+                    result.wait_for_output(1)
+                    result.display_outputs(groupby)
         else:
             # return AsyncResult only on non-blocking submission
             return result

@@ -990,7 +990,7 @@ class AsyncResult(Future):
         stderrs = self.stderr
         execute_results = self.execute_result
         output_lists = self.outputs
-        results = self.get()
+        results = self.get(return_exceptions=True)
 
         targets = self.engine_id
 
