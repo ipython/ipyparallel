@@ -5,6 +5,7 @@ import os
 import time
 from datetime import datetime
 
+import pytest
 from IPython.utils.io import capture_output
 
 import ipyparallel as ipp
@@ -488,3 +489,47 @@ class AsyncResultTest(ClusterTestCase):
         assert amr.progress == 0
         amr.wait_interactive()
         assert amr.progress == len(amr)
+
+    def test_error_engine_info_apply(self):
+        dv = self.client[:]
+        targets = self.client.ids
+        ar = dv.apply_async(lambda: 1 / 0)
+        try:
+            ar.get()
+        except Exception as e:
+            exc = e
+        else:
+            pytest.fail("Should have raised remote ZeroDivisionError")
+        assert isinstance(exc, ipp.error.CompositeError)
+        expected_engine_info = [
+            {
+                "engine_id": engine_id,
+                "engine_uuid": self.client._engines[engine_id],
+                "method": "apply",
+            }
+            for engine_id in self.client.ids
+        ]
+        engine_infos = [e[-1] for e in exc.elist]
+        assert engine_infos == expected_engine_info
+
+    def test_error_engine_info_execute(self):
+        dv = self.client[:]
+        targets = self.client.ids
+        ar = dv.execute("1 / 0", block=False)
+        try:
+            ar.get()
+        except Exception as e:
+            exc = e
+        else:
+            pytest.fail("Should have raised remote ZeroDivisionError")
+        assert isinstance(exc, ipp.error.CompositeError)
+        expected_engine_info = [
+            {
+                "engine_id": engine_id,
+                "engine_uuid": self.client._engines[engine_id],
+                "method": "execute",
+            }
+            for engine_id in self.client.ids
+        ]
+        engine_infos = [e[-1] for e in exc.elist]
+        assert engine_infos == expected_engine_info

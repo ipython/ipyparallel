@@ -1,4 +1,5 @@
 """IPython kernel for parallel computing"""
+import inspect
 import sys
 
 from ipykernel.ipkernel import IPythonKernel
@@ -15,6 +16,11 @@ class IPythonParallelKernel(IPythonKernel):
     """Extend IPython kernel for parallel computing"""
 
     engine_id = Integer(-1)
+
+    @property
+    def int_id(self):
+        return self.engine_id
+
     msg_types = getattr(IPythonKernel, 'msg_types', []) + ['apply_request']
     control_msg_types = getattr(IPythonKernel, 'control_msg_types', []) + [
         'abort_request',
@@ -78,12 +84,19 @@ class IPythonParallelKernel(IPythonKernel):
         if reply_content['status'] == 'error':
             if reply_content['ename'] == 'UnmetDependency':
                 metadata['dependencies_met'] = False
-            metadata['engine_info'] = dict(
-                engine_uuid=self.ident,
-                engine_id=self.engine_id,
-            )
+            metadata['engine_info'] = self.get_engine_info()
 
         return metadata
+
+    def get_engine_info(self, method=None):
+        """Return engine_info dict"""
+        engine_info = dict(
+            engine_uuid=self.ident,
+            engine_id=self.engine_id,
+        )
+        if method:
+            engine_info["method"] = method
+        return engine_info
 
     def apply_request(self, stream, ident, parent):
         try:
@@ -168,8 +181,7 @@ class IPythonParallelKernel(IPythonKernel):
             else:
                 self.log.warning("Didn't find a traceback where I expected to")
             shell._last_traceback = None
-            e_info = dict(engine_uuid=self.ident, engine_id=self.int_id, method='apply')
-            reply_content['engine_info'] = e_info
+            reply_content["engine_info"] = self.get_engine_info(method="apply")
 
             self.log.info(
                 "Exception in apply request:\n%s", '\n'.join(reply_content['traceback'])
@@ -180,6 +192,14 @@ class IPythonParallelKernel(IPythonKernel):
             reply_content = {'status': 'ok'}
 
         return reply_content, result_buf
+
+    async def do_execute(self, *args, **kwargs):
+        reply_content = super().do_execute(*args, **kwargs)
+        if inspect.isawaitable(reply_content):
+            reply_content = await reply_content
+        if reply_content['status'] == 'error':
+            reply_content["engine_info"] = self.get_engine_info(method="execute")
+        return reply_content
 
     # Control messages for msgspec extensions:
 
