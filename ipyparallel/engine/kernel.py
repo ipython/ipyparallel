@@ -1,4 +1,5 @@
 """IPython kernel for parallel computing"""
+import asyncio
 import inspect
 import sys
 
@@ -193,13 +194,22 @@ class IPythonParallelKernel(IPythonKernel):
 
         return reply_content, result_buf
 
-    async def do_execute(self, *args, **kwargs):
-        reply_content = super().do_execute(*args, **kwargs)
-        if inspect.isawaitable(reply_content):
-            reply_content = await reply_content
-        if reply_content['status'] == 'error':
-            reply_content["engine_info"] = self.get_engine_info(method="execute")
-        return reply_content
+    def do_execute(self, *args, **kwargs):
+        super_execute = super().do_execute(*args, **kwargs)
+
+        async def _do_execute():
+            if inspect.isawaitable(super_execute):
+                reply_content = await super_execute
+            else:
+                reply_content = super_execute
+            # add engine info
+            if reply_content['status'] == 'error':
+                reply_content["engine_info"] = self.get_engine_info(method="execute")
+            return reply_content
+
+        # ipykernel 5 uses gen.maybe_future which doesn't accept async def coroutines,
+        # but it does accept asyncio.Futures
+        return asyncio.ensure_future(_do_execute())
 
     # Control messages for msgspec extensions:
 
