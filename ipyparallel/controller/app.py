@@ -332,7 +332,7 @@ class IPController(BaseParallelApplication):
 
     @default('number_of_leaf_schedulers')
     def get_number_of_leaf_schedulers(self):
-        return 2 ** self.broadcast_scheduler_depth
+        return 2**self.broadcast_scheduler_depth
 
     @default('number_of_broadcast_schedulers')
     def get_number_of_broadcast_schedulers(self):
@@ -812,7 +812,7 @@ class IPController(BaseParallelApplication):
         broadcast_ids = []  # '0', '00', '01', '001', etc.
         # always a leading 0 for the root node
         for d in range(1, self.broadcast_scheduler_depth + 1):
-            for i in range(2 ** d):
+            for i in range(2**d):
                 broadcast_ids.append(format(i, f"0{d + 1}b"))
         self.internal_info = {
             'interface': internal_interface,

@@ -294,7 +294,7 @@ class TestView(ClusterTestCase):
         R = numpy.array(
             [
                 (1, 'hi', 0.0),
-                (2 ** 30, 'there', 2.5),
+                (2**30, 'there', 2.5),
                 (-99999, 'world', -12345.6789),
             ],
             [('n', int), ('s', '|S10'), ('f', float)],
@@ -331,7 +331,7 @@ class TestView(ClusterTestCase):
         view = self.client[:]
 
         def f(x):
-            return x ** 2
+            return x**2
 
         data = list(range(16))
         ar = view.map_async(f, data)

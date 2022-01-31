@@ -111,10 +111,10 @@ class WaveSolver:
         xv = x[:, newaxis]  # for vectorized expressions with f(xv,yv)
         yv = y[newaxis, :]  # -- " --
         if dt <= 0:
-            dt = (1 / float(c)) * (1 / sqrt(1 / dx ** 2 + 1 / dy ** 2))  # max time step
+            dt = (1 / float(c)) * (1 / sqrt(1 / dx**2 + 1 / dy**2))  # max time step
         Cx2 = (c * dt / dx) ** 2
         Cy2 = (c * dt / dy) ** 2
-        dt2 = dt ** 2  # help variables
+        dt2 = dt**2  # help variables
 
         u = zeros((nx + 1, ny + 1))  # solution array
         u_1 = u.copy()  # solution at t-dt
@@ -216,10 +216,10 @@ class WaveSolver:
         xv = x[:, newaxis]  # for vectorized expressions with f(xv,yv)
         yv = y[newaxis, :]  # -- " --
         if dt <= 0:
-            dt = (1 / float(c)) * (1 / sqrt(1 / dx ** 2 + 1 / dy ** 2))  # max time step
+            dt = (1 / float(c)) * (1 / sqrt(1 / dx**2 + 1 / dy**2))  # max time step
         Cx2 = (c * dt / dx) ** 2
         Cy2 = (c * dt / dy) ** 2
-        dt2 = dt ** 2  # help variables
+        dt2 = dt**2  # help variables
         # id for the four possible neighbor subdomains
         lower_x_neigh = partitioner.lower_neighbors[0]
         upper_x_neigh = partitioner.upper_neighbors[0]

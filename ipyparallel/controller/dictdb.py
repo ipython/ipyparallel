@@ -112,7 +112,7 @@ class DictDB(BaseDB):
     _buffer_bytes = Integer(0)  # running total of the bytes in the DB
 
     size_limit = Integer(
-        1024 ** 3,
+        1024**3,
         config=True,
         help="""The maximum total size (in bytes) of the buffers stored in the db
 

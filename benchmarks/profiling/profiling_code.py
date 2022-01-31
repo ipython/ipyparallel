@@ -54,13 +54,13 @@ def run_profiling(selected_profiling_task, selected_view):
 
     if selected_profiling_task == 'many_empty_tasks':
         for x in range(1, 5):
-            profile_many_empty_tasks(view, 10 ** x)
+            profile_many_empty_tasks(view, 10**x)
     elif selected_profiling_task == 'many_empty_tasks_non_blocking':
         for x in range(1, 5):
-            profile_many_empty_tasks(view, 10 ** x, block=False)
+            profile_many_empty_tasks(view, 10**x, block=False)
     elif selected_profiling_task == 'tasks_with_large_data':
         for x in range(1, 8):
-            profile_tasks_with_large_data(view, 10 ** x)
+            profile_tasks_with_large_data(view, 10**x)
     # elif selected_profiling_task == 'echo_many_arguments':
     #     for i in range(100):
     #         for number_of_arguments in ((2 ** x) - 1 for x in range(1, 9)):

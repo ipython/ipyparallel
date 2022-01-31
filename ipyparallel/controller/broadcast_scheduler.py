@@ -49,7 +49,7 @@ class BroadcastScheduler(Scheduler):
     def send_to_sub_schedulers(
         self, msg, original_msg_id, targets, idents, is_coalescing
     ):
-        trunc = 2 ** self.max_depth
+        trunc = 2**self.max_depth
         fmt = f"0{self.max_depth + 1}b"
 
         # assign targets to sub-schedulers based on binary path

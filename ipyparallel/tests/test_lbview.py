@@ -26,7 +26,7 @@ class TestLoadBalancedView(ClusterTestCase):
 
     def test_map(self):
         def f(x):
-            return x ** 2
+            return x**2
 
         data = list(range(16))
         ar = self.view.map_async(f, data)
@@ -36,7 +36,7 @@ class TestLoadBalancedView(ClusterTestCase):
 
     def test_map_generator(self):
         def f(x):
-            return x ** 2
+            return x**2
 
         data = list(range(16))
         ar = self.view.map_async(f, iter(data))
@@ -77,13 +77,13 @@ class TestLoadBalancedView(ClusterTestCase):
 
     def test_map_unordered(self):
         def f(x):
-            return x ** 2
+            return x**2
 
         def slow_f(x):
             import time
 
             time.sleep(0.05 * x)
-            return x ** 2
+            return x**2
 
         data = list(range(16, 0, -1))
         reference = list(map(f, data))
@@ -101,13 +101,13 @@ class TestLoadBalancedView(ClusterTestCase):
 
     def test_map_ordered(self):
         def f(x):
-            return x ** 2
+            return x**2
 
         def slow_f(x):
             import time
 
             time.sleep(0.05 * x)
-            return x ** 2
+            return x**2
 
         data = list(range(16, 0, -1))
         reference = list(map(f, data))
