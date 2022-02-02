@@ -124,7 +124,7 @@ def teardown():
             try:
                 f = p.stop()
                 if f:
-                    asyncio.run(f)
+                    asyncio.get_event_loop().run_until_complete(f)
             except Exception as e:
                 print(e)
                 pass
