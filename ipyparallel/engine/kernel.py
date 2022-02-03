@@ -1,6 +1,10 @@
 """IPython kernel for parallel computing"""
+import asyncio
+import inspect
 import sys
+from functools import partial
 
+import ipykernel
 from ipykernel.ipkernel import IPythonKernel
 from traitlets import Integer
 from traitlets import Type
@@ -15,6 +19,11 @@ class IPythonParallelKernel(IPythonKernel):
     """Extend IPython kernel for parallel computing"""
 
     engine_id = Integer(-1)
+
+    @property
+    def int_id(self):
+        return self.engine_id
+
     msg_types = getattr(IPythonKernel, 'msg_types', []) + ['apply_request']
     control_msg_types = getattr(IPythonKernel, 'control_msg_types', []) + [
         'abort_request',
@@ -39,6 +48,47 @@ class IPythonParallelKernel(IPythonKernel):
         data_pub.session = self.session
         data_pub.pub_socket = self.iopub_socket
         self.aborted = set()
+
+    def _abort_queues(self):
+        # forward-port ipython/ipykernel#853
+        # may remove after requiring ipykernel 6.9
+
+        # while this flag is true,
+        # execute requests will be aborted
+        self._aborting = True
+        self.log.info("Aborting queue")
+
+        # Callback to signal that we are done aborting
+        def stop_aborting():
+            self.log.info("Finishing abort")
+            self._aborting = False
+
+        # put stop_aborting on the message queue
+        # so that it's handled after processing of already-pending messages
+        if ipykernel.version_info < (6,):
+            # 10 is SHELL priority in ipykernel 5.x
+            streams = self.shell_streams
+            schedule_stop_aborting = partial(self.schedule_dispatch, 10, stop_aborting)
+        else:
+            streams = [self.shell_stream]
+            schedule_stop_aborting = partial(self.schedule_dispatch, stop_aborting)
+
+        # flush streams, so all currently waiting messages
+        # are added to the queue
+        for stream in streams:
+            stream.flush()
+
+        # if we have a delay, give messages this long to arrive on the queue
+        # before we start accepting requests
+        asyncio.get_event_loop().call_later(
+            self.stop_on_error_timeout, schedule_stop_aborting
+        )
+
+        # for compatibility, return a completed Future
+        # so this is still awaitable
+        f = asyncio.Future()
+        f.set_result(None)
+        return f
 
     def should_handle(self, stream, msg, idents):
         """Check whether a shell-channel message should be handled
@@ -78,12 +128,19 @@ class IPythonParallelKernel(IPythonKernel):
         if reply_content['status'] == 'error':
             if reply_content['ename'] == 'UnmetDependency':
                 metadata['dependencies_met'] = False
-            metadata['engine_info'] = dict(
-                engine_uuid=self.ident,
-                engine_id=self.engine_id,
-            )
+            metadata['engine_info'] = self.get_engine_info()
 
         return metadata
+
+    def get_engine_info(self, method=None):
+        """Return engine_info dict"""
+        engine_info = dict(
+            engine_uuid=self.ident,
+            engine_id=self.engine_id,
+        )
+        if method:
+            engine_info["method"] = method
+        return engine_info
 
     def apply_request(self, stream, ident, parent):
         try:
@@ -168,8 +225,7 @@ class IPythonParallelKernel(IPythonKernel):
             else:
                 self.log.warning("Didn't find a traceback where I expected to")
             shell._last_traceback = None
-            e_info = dict(engine_uuid=self.ident, engine_id=self.int_id, method='apply')
-            reply_content['engine_info'] = e_info
+            reply_content["engine_info"] = self.get_engine_info(method="apply")
 
             self.log.info(
                 "Exception in apply request:\n%s", '\n'.join(reply_content['traceback'])
@@ -181,6 +237,26 @@ class IPythonParallelKernel(IPythonKernel):
 
         return reply_content, result_buf
 
+    async def _do_execute_async(self, *args, **kwargs):
+        super_execute = super().do_execute(*args, **kwargs)
+        if inspect.isawaitable(super_execute):
+            reply_content = await super_execute
+        else:
+            reply_content = super_execute
+        # add engine info
+        if reply_content['status'] == 'error':
+            reply_content["engine_info"] = self.get_engine_info(method="execute")
+        return reply_content
+
+    def do_execute(self, *args, **kwargs):
+        coro = self._do_execute_async(*args, **kwargs)
+        if ipykernel.version_info < (6,):
+            # ipykernel 5 uses gen.maybe_future which doesn't accept async def coroutines,
+            # but it does accept asyncio.Futures
+            return asyncio.ensure_future(coro)
+        else:
+            return coro
+
     # Control messages for msgspec extensions:
 
     def abort_request(self, stream, ident, parent):
@@ -189,7 +265,9 @@ class IPythonParallelKernel(IPythonKernel):
         if isinstance(msg_ids, str):
             msg_ids = [msg_ids]
         if not msg_ids:
-            self._abort_queues()
+            f = self._abort_queues()
+            if inspect.isawaitable(f):
+                asyncio.ensure_future(f)
         for mid in msg_ids:
             self.aborted.add(str(mid))
 

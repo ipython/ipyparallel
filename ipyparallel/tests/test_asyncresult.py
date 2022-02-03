@@ -5,6 +5,7 @@ import os
 import time
 from datetime import datetime
 
+import pytest
 from IPython.utils.io import capture_output
 
 import ipyparallel as ipp
@@ -287,6 +288,20 @@ class AsyncResultTest(ClusterTestCase):
         self.assertEqual(io.stderr, '')
         self.assertEqual(io.stdout, '')
 
+    def test_display_output_error(self):
+        """display_outputs shows output on error"""
+        self.minimum_engines(1)
+
+        v = self.client[-1]
+        ar = v.execute("print (5555)\n1/0")
+        ar.get(5, return_exceptions=True)
+        ar.wait_for_output(5)
+        with capture_output() as io:
+            ar.display_outputs()
+        self.assertEqual(io.stderr, '')
+        self.assertEqual('5555\n', io.stdout)
+        assert 'ZeroDivisionError' not in io.stdout
+
     def test_await_data(self):
         """asking for ar.data flushes outputs"""
         self.minimum_engines(1)
@@ -488,3 +503,47 @@ class AsyncResultTest(ClusterTestCase):
         assert amr.progress == 0
         amr.wait_interactive()
         assert amr.progress == len(amr)
+
+    def test_error_engine_info_apply(self):
+        dv = self.client[:]
+        targets = self.client.ids
+        ar = dv.apply_async(lambda: 1 / 0)
+        try:
+            ar.get()
+        except Exception as e:
+            exc = e
+        else:
+            pytest.fail("Should have raised remote ZeroDivisionError")
+        assert isinstance(exc, ipp.error.CompositeError)
+        expected_engine_info = [
+            {
+                "engine_id": engine_id,
+                "engine_uuid": self.client._engines[engine_id],
+                "method": "apply",
+            }
+            for engine_id in self.client.ids
+        ]
+        engine_infos = [e[-1] for e in exc.elist]
+        assert engine_infos == expected_engine_info
+
+    def test_error_engine_info_execute(self):
+        dv = self.client[:]
+        targets = self.client.ids
+        ar = dv.execute("1 / 0", block=False)
+        try:
+            ar.get()
+        except Exception as e:
+            exc = e
+        else:
+            pytest.fail("Should have raised remote ZeroDivisionError")
+        assert isinstance(exc, ipp.error.CompositeError)
+        expected_engine_info = [
+            {
+                "engine_id": engine_id,
+                "engine_uuid": self.client._engines[engine_id],
+                "method": "execute",
+            }
+            for engine_id in self.client.ids
+        ]
+        engine_infos = [e[-1] for e in exc.elist]
+        assert engine_infos == expected_engine_info
