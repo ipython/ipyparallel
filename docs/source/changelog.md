@@ -4,6 +4,26 @@
 
 Changes in IPython Parallel
 
+## 8.2
+
+8.2.0 is a small release, mostly of small bugfixes and improvements.
+
+Changes:
+
+`len(AsyncMapResult)` and progress ports now use the number of items in the map,
+not the number of messages.
+
+Enhancements:
+
+- Show output prior to errors in `%%px`
+
+Bugs fixed:
+
+- Fix cases where engine id could be `-1` in tracebacks
+- Add missing `pbs` to engine launcher entrypoints
+
+[All changes on GitHub](https://github.com/ipython/ipyparallel/compare/8.1.0...8.2.0)
+
 ## 8.1
 
 8.1.0 is a small release, adding a few new features and bugfixes.
