@@ -60,7 +60,7 @@ with ipp.Cluster() as rc:
 <source src="_static/basic.mp4"/>
 </video>
 
-You can similarly run MPI code using IPyParallel:
+You can similarly run MPI code using IPyParallel (requires [mpi4py](https://mpi4py.readthedocs.io/en/stable/install.html)):
 
 ```python
 import ipyparallel as ipp
