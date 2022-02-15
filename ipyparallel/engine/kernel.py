@@ -51,7 +51,7 @@ class IPythonParallelKernel(IPythonKernel):
 
     def _abort_queues(self):
         # forward-port ipython/ipykernel#853
-        # may remove after requiring ipykernel 6.9
+        # may remove after requiring ipykernel 6.9.1
 
         # while this flag is true,
         # execute requests will be aborted
@@ -62,6 +62,11 @@ class IPythonParallelKernel(IPythonKernel):
         def stop_aborting():
             self.log.info("Finishing abort")
             self._aborting = False
+            # must be awaitable for ipykernel >= 3.6
+            # must also be sync for ipykernel < 3.6
+            f = asyncio.Future()
+            f.set_result(None)
+            return f
 
         # put stop_aborting on the message queue
         # so that it's handled after processing of already-pending messages
