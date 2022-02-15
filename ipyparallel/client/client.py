@@ -1838,7 +1838,7 @@ class Client(HasTraits):
         scheduler_args : dict
             Keyword arguments (e.g. ip) to pass to the distributed.Scheduler constructor.
         **worker_args
-            Any additional keyword arguments (e.g. ncores) are passed to the distributed.Worker constructor.
+            Any additional keyword arguments (e.g. nthreads) are passed to the distributed.Worker constructor.
 
         Returns
         -------
@@ -1867,8 +1867,13 @@ class Client(HasTraits):
         # Start a Worker on the selected engines:
         worker_args['address'] = distributed_info['address']
         worker_args['nanny'] = nanny
-        # set default ncores=1, since that's how an IPython cluster is typically set up.
-        worker_args.setdefault('ncores', 1)
+        # distributed 2.0 renamed ncores to nthreads
+        if int(distributed.__version__.partition(".")[0]) >= 2:
+            nthreads = "nthreads"
+        else:
+            nthreads = "ncores"
+        # set default nthreads=1, since that's how an IPython cluster is typically set up.
+        worker_args.setdefault(nthreads, 1)
         dview.apply_sync(util.become_dask_worker, **worker_args)
 
         # Finally, return a Client connected to the Scheduler
