@@ -1,13 +1,13 @@
 repos:
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.31.0
+    rev: v2.31.1
     hooks:
       - id: pyupgrade
         args:
           - --py36-plus
         exclude: setupbase.py
   - repo: https://github.com/asottile/reorder_python_imports
-    rev: v2.7.1
+    rev: v3.0.1
     hooks:
       - id: reorder-python-imports
         exclude: setupbase.py
@@ -32,7 +32,7 @@ repos:
       - id: check-executables-have-shebangs
       - id: requirements-txt-fixer
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.10.0
+    rev: v8.11.0
     hooks:
       - id: eslint
         files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
