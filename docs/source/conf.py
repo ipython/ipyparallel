@@ -167,7 +167,7 @@ html_theme_options = {
     "icon_links": [
         {
             "name": "GitHub",
-            "url": "https://github.com/ipyparallel",
+            "url": "https://github.com/ipython/ipyparallel",
             "icon": "fab fa-github-square",
         },
     ],
