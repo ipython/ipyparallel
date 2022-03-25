@@ -10,6 +10,7 @@ dependencies:
   - pydata-sphinx-theme
   - nbsphinx
   - myst-parser
+  - jinja2=3.0.*
 
   - matplotlib-base
   # nodejs needed for extension build
