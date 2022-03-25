@@ -1,3 +1,5 @@
+# pin jinja2 due to broken deprecation used in nbconvert
+jinja2==3.0.*
 matplotlib
 myst-parser
 nbsphinx
