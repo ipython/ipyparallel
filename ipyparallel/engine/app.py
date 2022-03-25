@@ -914,15 +914,9 @@ class IPEngine(BaseParallelApplication):
             handler.setLevel(self.log_level)
             self.log.addHandler(handler)
 
-    @default("log_level")
-    def _default_debug(self):
-        return 10
-
     @catch_config_error
     def initialize(self, argv=None):
-        self.log_level = 10
         super().initialize(argv)
-        self.log_level = 10
         self.init_engine()
         self.forward_logging()
 
