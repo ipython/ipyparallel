@@ -9,17 +9,18 @@ contains a set of useful utilities for including npm packages
 within a Python package.
 """
 from collections import defaultdict
-from os.path import join as pjoin
 from pathlib import Path
 import io
+import logging
 import os
 import functools
 import pipes
 import re
 import shlex
-from shutil import which
 import subprocess
 import sys
+from shutil import which
+from typing import Callable, List, Optional, Tuple, Union
 
 try:
     from deprecation import deprecated
@@ -27,17 +28,18 @@ except ImportError:
     # shim deprecated to allow setuptools to find the version string in this file
     deprecated = lambda *args, **kwargs: lambda *args, **kwargs: None
 
-# BEFORE importing distutils, remove MANIFEST. distutils doesn't properly
-# update it when the contents of directories change.
-if os.path.exists('MANIFEST'): os.remove('MANIFEST')
+if Path("MANIFEST").exists():
+    Path("MANIFEST").unlink()
 
 from packaging.version import VERSION_PATTERN
 from setuptools import Command
 from setuptools.command.build_py import build_py
-from setuptools.config import StaticModule
 
-# Note: distutils must be imported after setuptools
-from distutils import log
+try:
+    from setuptools.config import StaticModule
+except ImportError:
+    # setuptools>=61.0.0
+    from setuptools.config.expand import StaticModule
 
 from setuptools.command.sdist import sdist
 from setuptools.command.develop import develop
@@ -48,22 +50,27 @@ try:
 except ImportError:  # pragma: no cover
     bdist_wheel = None
 
-if sys.platform == 'win32':   # pragma: no cover
+if sys.platform == "win32":  # pragma: no cover
     from subprocess import list2cmdline
 else:
+
     def list2cmdline(cmd_list):
-        return ' '.join(map(pipes.quote, cmd_list))
+        return " ".join(map(pipes.quote, cmd_list))
 
 
-__version__ = '0.10.6'
+__version__ = "0.12.0"
 
 # ---------------------------------------------------------------------------
 # Top Level Variables
 # ---------------------------------------------------------------------------
 
 SEPARATORS = os.sep if os.altsep is None else os.sep + os.altsep
-VERSION_REGEX = re.compile(r"^\s*" + VERSION_PATTERN + r"\s*$", re.VERBOSE | re.IGNORECASE)
+VERSION_REGEX = re.compile(
+    r"^\s*" + VERSION_PATTERN + r"\s*$", re.VERBOSE | re.IGNORECASE
+)
 
+
+log = logging.getLogger(__name__)
 
 if "--skip-npm" in sys.argv:
     print("Skipping npm install as requested.")
@@ -77,7 +84,15 @@ else:
 # Core Functions
 # ---------------------------------------------------------------------------
 
-def wrap_installers(pre_develop=None, pre_dist=None, post_develop=None, post_dist=None, ensured_targets=None, skip_if_exists=None):
+
+def wrap_installers(
+    pre_develop=None,
+    pre_dist=None,
+    post_develop=None,
+    post_dist=None,
+    ensured_targets=None,
+    skip_if_exists=None,
+):
     """Make a setuptools cmdclass that calls a prebuild function before installing.
 
     Parameters
@@ -115,11 +130,11 @@ def wrap_installers(pre_develop=None, pre_dist=None, post_develop=None, post_dis
         func.__name__ = name
         cmdclass[name] = _Wrapped
 
-    for name in ['pre_develop', 'post_develop', 'pre_dist', 'post_dist']:
+    for name in ["pre_develop", "post_develop", "pre_dist", "post_dist"]:
         if locals()[name]:
             _make_command(name, locals()[name])
 
-    cmdclass['ensure_targets'] = ensure_targets(ensured_targets or [])
+    cmdclass["ensure_targets"] = ensure_targets(ensured_targets or [])
 
     skips = skip_if_exists or []
     should_skip = skips and all(Path(path).exists() for path in skips)
@@ -130,7 +145,7 @@ def wrap_installers(pre_develop=None, pre_dist=None, post_develop=None, post_dis
                 if pre_build and not should_skip:
                     self.run_command(pre_build.__name__)
                 if klass != develop:
-                    self.run_command('ensure_targets')
+                    self.run_command("ensure_targets")
                 klass.run(self)
                 if post_build and not should_skip:
                     self.run_command(post_build.__name__)
@@ -148,8 +163,9 @@ def wrap_installers(pre_develop=None, pre_dist=None, post_develop=None, post_dis
     return cmdclass
 
 
-def npm_builder(path=None, build_dir=None, source_dir=None, build_cmd='build',
-                force=False, npm=None):
+def npm_builder(
+    path=None, build_dir=None, source_dir=None, build_cmd="build", force=False, npm=None
+):
     """Build function factory for managing an npm installation.
 
     Note: The function is a no-op if the `--skip-npm` cli flag is used.
@@ -172,33 +188,34 @@ def npm_builder(path=None, build_dir=None, source_dir=None, build_cmd='build',
     -------
     A build function to use with `wrap_installers`
     """
+
     def builder():
         if skip_npm:
-            log.info('Skipping npm-installation')
+            log.info("Skipping npm-installation")
             return
 
-        node_package = path or os.path.abspath(os.getcwd())
-        node_modules = pjoin(node_package, 'node_modules')
+        node_package = Path(path or Path.cwd().resolve())
 
-        is_yarn = os.path.exists(pjoin(node_package, 'yarn.lock'))
-        if is_yarn and not which('yarn'):
-            log.warn('yarn not found, ignoring yarn.lock file')
+        is_yarn = (node_package / "yarn.lock").exists()
+        if is_yarn and not which("yarn"):
+            log.warn("yarn not found, ignoring yarn.lock file")
             is_yarn = False
 
         npm_cmd = npm
 
         if npm is None:
             if is_yarn:
-                npm_cmd = ['yarn']
+                npm_cmd = ["yarn"]
             else:
-                npm_cmd = ['npm']
+                npm_cmd = ["npm"]
         elif isinstance(npm, str):
             npm_cmd = [npm]
 
         if not which(npm_cmd[0]):
-            log.error("`{0}` unavailable.  If you're running this command "
-                        "using sudo, make sure `{0}` is available to sudo"
-                        .format(npm_cmd[0]))
+            log.error(
+                "`{0}` unavailable.  If you're running this command "
+                "using sudo, make sure `{0}` is available to sudo".format(npm_cmd[0])
+            )
             return
 
         if build_dir and source_dir and not force:
@@ -207,17 +224,20 @@ def npm_builder(path=None, build_dir=None, source_dir=None, build_cmd='build',
             should_build = True
 
         if should_build:
-            log.info('Installing build dependencies with npm.  This may '
-                        'take a while...')
-            run(npm_cmd + ['install'], cwd=node_package)
+            log.info(
+                "Installing build dependencies with npm.  This may " "take a while..."
+            )
+            run(npm_cmd + ["install"], cwd=node_package)
             if build_cmd:
-                run(npm_cmd + ['run', build_cmd], cwd=node_package)
+                run(npm_cmd + ["run", build_cmd], cwd=node_package)
 
     return builder
+
 
 # ---------------------------------------------------------------------------
 # Utility Functions
 # ---------------------------------------------------------------------------
+
 
 def get_data_files(data_specs, *, top=None, exclude=None):
     """Expand data file specs into valid data files metadata.
@@ -240,18 +260,17 @@ def get_data_files(data_specs, *, top=None, exclude=None):
     return _get_data_files(data_specs, None, top=top, exclude=exclude)
 
 
-def get_version(fpath, name='__version__'):
-    """Get the version of the package from the given file by extracting the given `name`.
-    """
+def get_version(fpath: Union[str, Path], name: str = "__version__") -> str:
+    """Get the version of the package from the given file by extracting the given `name`."""
+    fpath = Path(fpath)
     # Try to get it from a static import first
     try:
-
-        module = StaticModule(fpath.replace(os.sep, '.').replace('.py', ''))
+        module = StaticModule(fpath.as_posix().replace("/", ".").replace(".py", ""))
         return getattr(module, name)
     except Exception as e:
         pass
 
-    path = os.path.realpath(fpath)
+    path = fpath.resolve()
     version_ns = {}
     with io.open(path, encoding="utf8") as f:
         exec(f.read(), {}, version_ns)
@@ -260,26 +279,28 @@ def get_version(fpath, name='__version__'):
 
 def run(cmd, **kwargs):
     """Echo a command before running it."""
-    log.info('> ' + list2cmdline(cmd))
-    kwargs.setdefault('shell', os.name == 'nt')
+    log.info("> " + list2cmdline(cmd))
+    kwargs.setdefault("shell", os.name == "nt")
     if not isinstance(cmd, (list, tuple)):
-        cmd = shlex.split(cmd, posix=os.name!='nt')
-    if not os.path.isabs(cmd[0]):
+        cmd = shlex.split(cmd, posix=os.name != "nt")
+    if not Path(cmd[0]).is_absolute():
         # If a command is not an absolute path find it first.
         cmd_path = which(cmd[0])
         if not cmd_path:
-            raise ValueError("Aborting. Could not find cmd (%s) in path. "
-                    "If command is not expected to be in user's path, "
-                    "use an absolute path." % cmd[0])
+            raise ValueError(
+                f"Aborting. Could not find cmd ({cmd[0]}) in path. "
+                "If command is not expected to be in user's path, "
+                "use an absolute path."
+            )
         cmd[0] = cmd_path
     return subprocess.check_call(cmd, **kwargs)
 
 
-def is_stale(target, source):
+def is_stale(target: Union[str, Path], source: Union[str, Path]) -> bool:
     """Test whether the target file/directory is stale based on the source
-       file/directory.
+    file/directory.
     """
-    if not os.path.exists(target):
+    if not Path(target).exists():
         return True
     target_mtime = recursive_mtime(target) or 0
     return compare_recursive_mtime(source, cutoff=target_mtime)
@@ -287,6 +308,7 @@ def is_stale(target, source):
 
 class BaseCommand(Command):
     """Empty command because Command needs subclasses to override too much"""
+
     user_options = []
 
     def initialize_options(self):
@@ -304,6 +326,7 @@ class BaseCommand(Command):
 
 def combine_commands(*commands):
     """Return a Command that combines several commands."""
+
     class CombinedCommand(BaseCommand):
         def initialize_options(self):
             self.commands = []
@@ -319,10 +342,13 @@ def combine_commands(*commands):
         def run(self):
             for c in self.commands:
                 c.run()
+
     return CombinedCommand
 
 
-def compare_recursive_mtime(path, cutoff, newest=True):
+def compare_recursive_mtime(
+    path: Union[str, Path], cutoff: float, newest: bool = True
+) -> bool:
     """Compare the newest/oldest mtime for all files in a directory.
 
     Cutoff should be another mtime to be compared against. If an mtime that is
@@ -330,16 +356,17 @@ def compare_recursive_mtime(path, cutoff, newest=True):
     E.g. if newest=True, and a file in path is newer than the cutoff, it will
     return True.
     """
-    if os.path.isfile(path):
+    path = Path(path)
+    if path.is_file():
         mt = mtime(path)
         if newest:
             if mt > cutoff:
                 return True
         elif mt < cutoff:
             return True
-    for dirname, _, filenames in os.walk(path, topdown=False):
+    for dirname, _, filenames in os.walk(str(path), topdown=False):
         for filename in filenames:
-            mt = mtime(pjoin(dirname, filename))
+            mt = mtime(Path(dirname) / filename)
             if newest:  # Put outside of loop?
                 if mt > cutoff:
                     return True
@@ -348,14 +375,15 @@ def compare_recursive_mtime(path, cutoff, newest=True):
     return False
 
 
-def recursive_mtime(path, newest=True):
+def recursive_mtime(path: Union[str, Path], newest: bool = True) -> float:
     """Gets the newest/oldest mtime for all files in a directory."""
-    if os.path.isfile(path):
+    path = Path(path)
+    if path.is_file():
         return mtime(path)
     current_extreme = None
-    for dirname, dirnames, filenames in os.walk(path, topdown=False):
+    for dirname, _, filenames in os.walk(str(path), topdown=False):
         for filename in filenames:
-            mt = mtime(pjoin(dirname, filename))
+            mt = mtime(Path(dirname) / filename)
             if newest:  # Put outside of loop?
                 if mt >= (current_extreme or mt):
                     current_extreme = mt
@@ -364,15 +392,17 @@ def recursive_mtime(path, newest=True):
     return current_extreme
 
 
-def mtime(path):
+def mtime(path: Union[str, Path]) -> float:
     """shorthand for mtime"""
-    return os.stat(path).st_mtime
+    return Path(path).stat().st_mtime
 
 
 def skip_if_exists(paths, CommandClass):
     """Skip a command if list of paths exists."""
+
     def should_skip():
         return all(Path(path).exists() for path in paths)
+
     class SkipIfExistCommand(Command):
         def initialize_options(self):
             if not should_skip():
@@ -399,14 +429,15 @@ def ensure_targets(targets):
 
     Note: The check is skipped if the `--skip-npm` flag is used.
     """
+
     class TargetsCheck(BaseCommand):
         def run(self):
             if skip_npm:
-                log.info('Skipping target checks')
+                log.info("Skipping target checks")
                 return
             missing = [t for t in targets if not os.path.exists(t)]
             if missing:
-                raise ValueError(('missing files: %s' % missing))
+                raise ValueError(("missing files: %s" % missing))
 
     return TargetsCheck
 
@@ -415,8 +446,13 @@ def ensure_targets(targets):
 # Deprecated Functions
 # ---------------------------------------------------------------------------
 
-@deprecated(deprecated_in="0.11", removed_in="2.0", current_version=__version__,
-            details="Parse the version info as described in `get_version_info` docstring")
+
+@deprecated(
+    deprecated_in="0.11",
+    removed_in="2.0",
+    current_version=__version__,
+    details="Parse the version info as described in `get_version_info` docstring",
+)
 def get_version_info(version_str):
     """DEPRECATED: Get a version info tuple given a version string
 
@@ -429,7 +465,7 @@ def get_version_info(version_str):
     __version__ = '1.4.0.dev0'
 
     # Build up version_info tuple for backwards compatibility
-    pattern = r'(?P<major>\d+).(?P<minor>\d+).(?P<patch>\d+)(?P<rest>.*)'
+    pattern = r'(?P<major>/d+).(?P<minor>/d+).(?P<patch>/d+)(?P<rest>.*)'
     match = re.match(pattern, __version__)
     parts = [int(match[part]) for part in ['major', 'minor', 'patch']]
     if match['rest']:
@@ -440,19 +476,23 @@ def get_version_info(version_str):
     match = VERSION_REGEX.match(version_str)
     if not match:
         raise ValueError(f'Invalid version "{version_str}"')
-    release = match['release']
-    version_info = [int(p) for p in release.split('.')]
+    release = match["release"]
+    version_info = [int(p) for p in release.split(".")]
     if release != version_str:
-        version_info.append(version_str[len(release):])
+        version_info.append(version_str[len(release) :])
     return tuple(version_info)
 
 
-@deprecated(deprecated_in="0.8", removed_in="1.0", current_version=__version__,
-            details="Use `BaseCommand` directly instead")
+@deprecated(
+    deprecated_in="0.8",
+    removed_in="1.0",
+    current_version=__version__,
+    details="Use `BaseCommand` directly instead",
+)
 def command_for_func(func):
     """Create a command that calls the given function."""
-    class FuncCommand(BaseCommand):
 
+    class FuncCommand(BaseCommand):
         def run(self):
             func()
             update_package_data(self.distribution)
@@ -460,17 +500,22 @@ def command_for_func(func):
     return FuncCommand
 
 
-@deprecated(deprecated_in="0.7", removed_in="1.0", current_version=__version__,
-            details="Use `setuptools` `python_requires` instead")
+@deprecated(
+    deprecated_in="0.7",
+    removed_in="1.0",
+    current_version=__version__,
+    details="Use `setuptools` `python_requires` instead",
+)
 def ensure_python(specs):
-    """Given a list of range specifiers for python, ensure compatibility.
-    """
+    """Given a list of range specifiers for python, ensure compatibility."""
     if sys.version_info >= (3, 10):
-        raise RuntimeError("ensure_python is deprecated and not compatible with Python 3.10+")
+        raise RuntimeError(
+            "ensure_python is deprecated and not compatible with Python 3.10+"
+        )
     if not isinstance(specs, (list, tuple)):
         specs = [specs]
     v = sys.version_info
-    part = '%s.%s' % (v.major, v.minor)
+    part = "%s.%s" % (v.major, v.minor)
     for spec in specs:
         if part == spec:
             return
@@ -479,48 +524,69 @@ def ensure_python(specs):
                 return
         except SyntaxError:
             pass
-    raise ValueError('Python version %s unsupported' % part)
+    raise ValueError("Python version %s unsupported" % part)
 
 
-@deprecated(deprecated_in="0.7", removed_in="1.0", current_version=__version__,
-            details="Use `setuptools.find_packages` instead")
+@deprecated(
+    deprecated_in="0.7",
+    removed_in="1.0",
+    current_version=__version__,
+    details="Use `setuptools.find_packages` instead",
+)
 def find_packages(top):
     """
     Find all of the packages.
     """
     from setuptools import find_packages as fp
+
     return fp(top)
 
 
-@deprecated(deprecated_in="0.8", removed_in="1.0", current_version=__version__,
-            details="Use `use_package_data=True` and `MANIFEST.in` instead")
+@deprecated(
+    deprecated_in="0.8",
+    removed_in="1.0",
+    current_version=__version__,
+    details="Use `use_package_data=True` and `MANIFEST.in` instead",
+)
 def update_package_data(distribution):
     """update build_py options to get package_data changes"""
-    build_py = distribution.get_command_obj('build_py')
+    build_py = distribution.get_command_obj("build_py")
     build_py.finalize_options()
 
 
-@deprecated(deprecated_in="0.8", removed_in="1.0", current_version=__version__,
-            details="Not needed")
+@deprecated(
+    deprecated_in="0.8",
+    removed_in="1.0",
+    current_version=__version__,
+    details="Not needed",
+)
 class bdist_egg_disabled(bdist_egg):
     """Disabled version of bdist_egg
 
     Prevents setup.py install performing setuptools' default easy_install,
     which it should never ever do.
     """
+
     def run(self):
-        sys.exit("Aborting implicit building of eggs. Use `pip install .` "
-                 " to install from source.")
+        sys.exit(
+            "Aborting implicit building of eggs. Use `pip install .` "
+            " to install from source."
+        )
 
 
-@deprecated(deprecated_in="0.8", removed_in="1.0", current_version=__version__,
-            details=""""
+@deprecated(
+    deprecated_in="0.8",
+    removed_in="1.0",
+    current_version=__version__,
+    details=""""
 Use `wrap_installers` to handle prebuild steps in cmdclass.
 Use `get_data_files` to handle data files.
 Use `include_package_data=True` and `MANIFEST.in` for package data.
-""")
-def create_cmdclass(prerelease_cmd=None, package_data_spec=None,
-                    data_files_spec=None, exclude=None):
+""",
+)
+def create_cmdclass(
+    prerelease_cmd=None, package_data_spec=None, data_files_spec=None, exclude=None
+):
     """Create a command class with the given optional prerelease class.
 
     Parameters
@@ -557,18 +623,18 @@ def create_cmdclass(prerelease_cmd=None, package_data_spec=None,
     """
     wrapped = [prerelease_cmd] if prerelease_cmd else []
     if package_data_spec or data_files_spec:
-        wrapped.append('handle_files')
+        wrapped.append("handle_files")
 
     wrapper = functools.partial(_wrap_command, wrapped)
     handle_files = _get_file_handler(package_data_spec, data_files_spec, exclude)
     develop_handler = _get_develop_handler()
 
-    if 'bdist_egg' in sys.argv:
+    if "bdist_egg" in sys.argv:
         egg = wrapper(bdist_egg, strict=True)
     else:
         egg = bdist_egg_disabled
 
-    is_repo = os.path.exists('.git')
+    is_repo = os.path.exists(".git")
 
     cmdclass = dict(
         build_py=wrapper(build_py, strict=is_repo),
@@ -578,16 +644,21 @@ def create_cmdclass(prerelease_cmd=None, package_data_spec=None,
     )
 
     if bdist_wheel:
-        cmdclass['bdist_wheel'] = wrapper(bdist_wheel, strict=True)
+        cmdclass["bdist_wheel"] = wrapper(bdist_wheel, strict=True)
 
-    cmdclass['develop'] = wrapper(develop_handler, strict=True)
+    cmdclass["develop"] = wrapper(develop_handler, strict=True)
     return cmdclass
 
 
-@deprecated(deprecated_in="0.8", removed_in="1.0", current_version=__version__,
-            details="Use `npm_builder` and `wrap_installers`")
-def install_npm(path=None, build_dir=None, source_dir=None, build_cmd='build',
-                force=False, npm=None):
+@deprecated(
+    deprecated_in="0.8",
+    removed_in="1.0",
+    current_version=__version__,
+    details="Use `npm_builder` and `wrap_installers`",
+)
+def install_npm(
+    path=None, build_dir=None, source_dir=None, build_cmd="build", force=False, npm=None
+):
     """Return a Command for managing an npm installation.
 
     Note: The command is skipped if the `--skip-npm` flag is used.
@@ -606,22 +677,35 @@ def install_npm(path=None, build_dir=None, source_dir=None, build_cmd='build',
     npm: str or list, optional.
         The npm executable name, or a tuple of ['node', executable].
     """
-    builder = npm_builder(path=path, build_dir=build_dir, source_dir=source_dir, build_cmd=build_cmd, force=force, npm=npm)
+    builder = npm_builder(
+        path=path,
+        build_dir=build_dir,
+        source_dir=source_dir,
+        build_cmd=build_cmd,
+        force=force,
+        npm=npm,
+    )
 
     class NPM(BaseCommand):
-        description = 'install package.json dependencies using npm'
+        description = "install package.json dependencies using npm"
 
         def run(self):
             builder()
 
     return NPM
 
+
 # ---------------------------------------------------------------------------
 # Private Functions
 # ---------------------------------------------------------------------------
 
-@deprecated(deprecated_in="0.8", removed_in="1.0", current_version=__version__,
-            details="Use `npm_builder` and `wrap_installers`")
+
+@deprecated(
+    deprecated_in="0.8",
+    removed_in="1.0",
+    current_version=__version__,
+    details="Use `npm_builder` and `wrap_installers`",
+)
 def _wrap_command(cmds, cls, strict=True):
     """Wrap a setup command
 
@@ -632,10 +716,10 @@ def _wrap_command(cmds, cls, strict=True):
     strict: boolean, optional
         Whether to raise errors when a pre-command fails.
     """
-    class WrappedCommand(cls):
 
+    class WrappedCommand(cls):
         def run(self):
-            if not getattr(self, 'uninstall', None):
+            if not getattr(self, "uninstall", None):
                 try:
                     [self.run_command(cmd) for cmd in cmds]
                 except Exception:
@@ -648,25 +732,29 @@ def _wrap_command(cmds, cls, strict=True):
 
             result = cls.run(self)
             return result
+
     return WrappedCommand
 
 
-@deprecated(deprecated_in="0.8", removed_in="1.0", current_version=__version__,
-            details="Use `npm_builder` and `wrap_installers`")
+@deprecated(
+    deprecated_in="0.8",
+    removed_in="1.0",
+    current_version=__version__,
+    details="Use `npm_builder` and `wrap_installers`",
+)
 def _get_file_handler(package_data_spec, data_files_spec, exclude=None):
-    """Get a package_data and data_files handler command.
-    """
-    class FileHandler(BaseCommand):
+    """Get a package_data and data_files handler command."""
 
+    class FileHandler(BaseCommand):
         def run(self):
             package_data = self.distribution.package_data
             package_spec = package_data_spec or dict()
 
             for (key, patterns) in package_spec.items():
-                files =  _get_package_data(key, patterns)
+                files = _get_package_data(key, patterns)
                 if exclude is not None:
                     files = [f for f in files if not exclude(f)]
-                package_data[key] =files
+                package_data[key] = files
 
             self.distribution.data_files = _get_data_files(
                 data_files_spec, self.distribution.data_files, exclude=exclude
@@ -675,35 +763,45 @@ def _get_file_handler(package_data_spec, data_files_spec, exclude=None):
     return FileHandler
 
 
-@deprecated(deprecated_in="0.8", removed_in="1.0", current_version=__version__,
-            details="Use `npm_builder` and `wrap_installers`")
+@deprecated(
+    deprecated_in="0.8",
+    removed_in="1.0",
+    current_version=__version__,
+    details="Use `npm_builder` and `wrap_installers`",
+)
 def _get_develop_handler():
     """Get a handler for the develop command"""
-    class _develop(develop):
 
+    class _develop(develop):
         def install_for_development(self):
             self.finalize_options()
             super(_develop, self).install_for_development()
-            self.run_command('handle_files')
-            prefix = self.install_base or self.prefix or sys.prefix
+            self.run_command("handle_files")
+            prefix = Path(self.install_base or self.prefix or sys.prefix)
             for target_dir, filepaths in self.distribution.data_files:
                 for filepath in filepaths:
-                    filename = os.path.basename(filepath)
-                    target = os.path.join(prefix, target_dir, filename)
-                    self.mkpath(os.path.dirname(target))
-                    outf, copied = self.copy_file(filepath, target)
+                    filename = Path(filepath).name
+                    target = prefix / target_dir / filename
+                    self.mkpath(str(target.parent))
+                    self.copy_file(str(filepath), str(target))
 
     return _develop
 
 
-def _glob_pjoin(*parts):
+def _glob_pjoin(*parts: List[Union[str, Path]]) -> str:
     """Join paths for glob processing"""
-    if parts[0] in ('.', ''):
+    if str(parts[0]) in (".", ""):
         parts = parts[1:]
-    return pjoin(*parts).replace(os.sep, '/')
+    return Path().joinpath(*parts).as_posix()
 
 
-def _get_data_files(data_specs, existing, *, top=None, exclude=None):
+def _get_data_files(
+    data_specs: List[Tuple[str, str, str]],
+    existing: List[Tuple[str, str]],
+    *,
+    top: Optional[Union[str, Path]] = None,
+    exclude: Callable[[str], bool] = None,
+):
     """Expand data file specs into valid data files metadata.
 
     Parameters
@@ -722,7 +820,10 @@ def _get_data_files(data_specs, existing, *, top=None, exclude=None):
     A valid list of data_files items.
     """
     if top is None:
-        top = os.path.abspath(os.getcwd())
+        top = Path.cwd().resolve()
+    else:
+        top = Path(top)
+
     # Extract the existing data files into a staging object.
     file_data = defaultdict(list)
     for (path, files) in existing or []:
@@ -731,19 +832,20 @@ def _get_data_files(data_specs, existing, *, top=None, exclude=None):
     # Extract the files and assign them to the proper data
     # files path.
     for (path, dname, pattern) in data_specs or []:
-        if os.path.isabs(dname):
-            dname = os.path.relpath(dname, top)
+        dname = Path(dname)
+        if dname.is_absolute():
+            dname = dname.relative_to(top)
 
-        dname = dname.replace(os.sep, '/').rstrip('/')
-        offset = 0 if dname in ('.', '') else len(dname) + 1
+        dname = dname.as_posix().rstrip("/")
+        offset = 0 if dname in (".", "") else len(dname) + 1
         files = _get_files(_glob_pjoin(dname, pattern), top=top)
 
         for fname in files:
             # Normalize the path.
-            root = os.path.dirname(fname)
+            root = str(Path(fname).parent)
             full_path = _glob_pjoin(path, root[offset:])
-            if full_path.endswith('/'):
-                full_path = full_path[:-1]
+            full_path.rstrip("/")
+
             if exclude is not None and exclude(fname):
                 continue
             file_data[full_path].append(fname)
@@ -755,7 +857,9 @@ def _get_data_files(data_specs, existing, *, top=None, exclude=None):
     return data_files
 
 
-def _get_files(file_patterns, top=None):
+def _get_files(
+    file_patterns: Union[str, List[str]], top: Union[str, Path] = None
+) -> List[str]:
     """Expand file patterns to a list of paths.
 
     Parameters
@@ -772,35 +876,45 @@ def _get_files(file_patterns, top=None):
     Files in `node_modules` are ignored.
     """
     if top is None:
-        top = os.path.abspath(os.getcwd())
+        top = Path.cwd().resolve()
+    else:
+        top = Path(top)
+
     if not isinstance(file_patterns, (list, tuple)):
         file_patterns = [file_patterns]
 
     for i, p in enumerate(file_patterns):
-        if os.path.isabs(p):
-            file_patterns[i] = os.path.relpath(p, top)
+        p = Path(p)
+        if p.is_absolute():
+            file_patterns[i] = str(p.relative_to(top))
 
     matchers = [_compile_pattern(p) for p in file_patterns]
 
     files = set()
 
-    for root, dirnames, filenames in os.walk(top):
+    for root, dirnames, filenames in os.walk(str(top)):
         # Don't recurse into node_modules
-        if 'node_modules' in dirnames:
-            dirnames.remove('node_modules')
+        if "node_modules" in dirnames:
+            dirnames.remove("node_modules")
         for m in matchers:
             for filename in filenames:
-                fn = os.path.relpath(_glob_pjoin(root, filename), top)
-                fn = fn.replace(os.sep, '/')
+                fn = Path(_glob_pjoin(root, filename)).relative_to(top)
+                fn = fn.as_posix()
                 if m(fn):
                     files.add(fn)
 
     return list(files)
 
 
-@deprecated(deprecated_in="0.8", removed_in="1.0", current_version=__version__,
-            details="Use `npm_builder` and `wrap_installers`")
-def _get_package_data(root, file_patterns=None):
+@deprecated(
+    deprecated_in="0.8",
+    removed_in="1.0",
+    current_version=__version__,
+    details="Use `npm_builder` and `wrap_installers`",
+)
+def _get_package_data(
+    root: Union[str, Path], file_patterns: Union[str, List[str]] = None
+) -> List[str]:
     """Expand file patterns to a list of `package_data` paths.
 
     Parameters
@@ -817,16 +931,16 @@ def _get_package_data(root, file_patterns=None):
     Files in `node_modules` are ignored.
     """
     if file_patterns is None:
-        file_patterns = ['*']
-    return _get_files(file_patterns, _glob_pjoin(os.path.abspath(os.getcwd()), root))
+        file_patterns = ["*"]
+    return _get_files(file_patterns, _glob_pjoin(Path.cwd().resolve(), root))
 
 
-def _compile_pattern(pat, ignore_case=True):
+def _compile_pattern(pat: str, ignore_case=True) -> Callable:
     """Translate and compile a glob pattern to a regular expression matcher."""
     if isinstance(pat, bytes):
-        pat_str = pat.decode('ISO-8859-1')
+        pat_str = pat.decode("ISO-8859-1")
         res_str = _translate_glob(pat_str)
-        res = res_str.encode('ISO-8859-1')
+        res = res_str.encode("ISO-8859-1")
     else:
         res = _translate_glob(pat)
     flags = re.IGNORECASE if ignore_case else 0
@@ -838,7 +952,7 @@ def _iexplode_path(path):
 
     Splits path recursively with os.path.split().
     """
-    (head, tail) = os.path.split(path)
+    (head, tail) = os.path.split(str(path))
     if not head or (not tail and head == path):
         if head:
             yield head
@@ -855,9 +969,9 @@ def _translate_glob(pat):
     translated_parts = []
     for part in _iexplode_path(pat):
         translated_parts.append(_translate_glob_part(part))
-    os_sep_class = '[%s]' % re.escape(SEPARATORS)
+    os_sep_class = "[%s]" % re.escape(SEPARATORS)
     res = _join_translated(translated_parts, os_sep_class)
-    return '(?ms){res}\\Z'.format(res=res)
+    return "(?ms){res}\\Z".format(res=res)
 
 
 def _join_translated(translated_parts, os_sep_class):
@@ -866,20 +980,20 @@ def _join_translated(translated_parts, os_sep_class):
     This is different from a simple join, as care need to be taken
     to allow ** to match ZERO or more directories.
     """
-    res = ''
+    res = ""
     for part in translated_parts[:-1]:
-        if part == '.*':
+        if part == ".*":
             # drop separator, since it is optional
             # (** matches ZERO or more dirs)
             res += part
         else:
             res += part + os_sep_class
 
-    if translated_parts[-1] == '.*':
+    if translated_parts[-1] == ".*":
         # Final part is **
-        res += '.+'
+        res += ".+"
         # Follow stdlib/git convention of matching all sub files/directories:
-        res += '({os_sep_class}?.*)?'.format(os_sep_class=os_sep_class)
+        res += "({os_sep_class}?.*)?".format(os_sep_class=os_sep_class)
     else:
         res += translated_parts[-1]
     return res
@@ -888,36 +1002,36 @@ def _join_translated(translated_parts, os_sep_class):
 def _translate_glob_part(pat):
     """Translate a glob PATTERN PART to a regular expression."""
     # Code modified from Python 3 standard lib fnmatch:
-    if pat == '**':
-        return '.*'
+    if pat == "**":
+        return ".*"
     i, n = 0, len(pat)
     res = []
     while i < n:
         c = pat[i]
         i = i + 1
-        if c == '*':
+        if c == "*":
             # Match anything but path separators:
-            res.append('[^%s]*' % SEPARATORS)
-        elif c == '?':
-            res.append('[^%s]?' % SEPARATORS)
-        elif c == '[':
+            res.append("[^%s]*" % SEPARATORS)
+        elif c == "?":
+            res.append("[^%s]?" % SEPARATORS)
+        elif c == "[":
             j = i
-            if j < n and pat[j] == '!':
+            if j < n and pat[j] == "!":
                 j = j + 1
-            if j < n and pat[j] == ']':
+            if j < n and pat[j] == "]":
                 j = j + 1
-            while j < n and pat[j] != ']':
+            while j < n and pat[j] != "]":
                 j = j + 1
             if j >= n:
-                res.append('\\[')
+                res.append("\\[")
             else:
-                stuff = pat[i:j].replace('\\', '\\\\')
+                stuff = pat[i:j].replace("\\", "\\\\")
                 i = j + 1
-                if stuff[0] == '!':
-                    stuff = '^' + stuff[1:]
-                elif stuff[0] == '^':
-                    stuff = '\\' + stuff
-                res.append('[%s]' % stuff)
+                if stuff[0] == "!":
+                    stuff = "^" + stuff[1:]
+                elif stuff[0] == "^":
+                    stuff = "\\" + stuff
+                res.append("[%s]" % stuff)
         else:
             res.append(re.escape(c))
-    return ''.join(res)
+    return "".join(res)
