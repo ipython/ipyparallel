@@ -6,6 +6,13 @@ Changes in IPython Parallel
 
 ## 8.2
 
+### 8.2.1
+
+8.2.1 Fixes some compatibility issues with latest dask, ipykernel, and setuptools,
+as well as some typos and improved documentation.
+
+### 8.2.0
+
 8.2.0 is a small release, mostly of small bugfixes and improvements.
 
 Changes:
