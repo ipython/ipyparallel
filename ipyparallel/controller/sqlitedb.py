@@ -19,7 +19,7 @@ from dateutil.parser import parse as dateutil_parse
 from tornado import ioloop
 
 from traitlets import Unicode, Instance, List, Dict
-from jupyter_client.jsonutil import date_default
+from jupyter_client.jsonutil import json_default
 
 from .dictdb import BaseDB
 from ..util import ensure_timezone, extract_dates
@@ -49,7 +49,7 @@ null_operators = {
 
 
 def _adapt_dict(d):
-    return json.dumps(d, default=date_default)
+    return json.dumps(d, default=json_default)
 
 
 def _convert_dict(ds):

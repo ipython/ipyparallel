@@ -601,12 +601,15 @@ def utcnow():
     return datetime.utcnow().replace(tzinfo=utc)
 
 
+def _v(version_s):
+    return tuple(int(s) for s in re.findall(r"\d+", version_s))
+
+
 def _patch_jupyter_client_dates():
     """Monkeypatch jupyter_client.extract_dates to be nondestructive wrt timezone info"""
     import jupyter_client
-    from distutils.version import LooseVersion as V
 
-    if V(jupyter_client.__version__) < V('5.0'):
+    if _v(jupyter_client.__version__) < _v('5.0'):
         from jupyter_client import session
 
         if hasattr(session, '_save_extract_dates'):

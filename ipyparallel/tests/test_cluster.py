@@ -350,6 +350,7 @@ async def test_cluster_manager_notice_stop(Cluster):
     assert key not in cm.clusters
 
 
+@pytest.mark.skipif(os.name == 'nt', reason="Does not work on Windows")
 async def test_wait_for_engines_crash(Cluster):
     """wait_for_engines is cancelled when the engines stop"""
     c = Cluster(n=2, log_level=10)

@@ -120,7 +120,6 @@ setup_args = dict(
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: BSD License",
         "Programming Language :: Python",
-        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
@@ -140,7 +139,7 @@ setup_args = dict(
         "python-dateutil>=2.1",
         "tqdm",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.7",
     extras_require={
         "nbext": ["notebook", "jupyter_server"],
         "serverextension": ["jupyter_server"],

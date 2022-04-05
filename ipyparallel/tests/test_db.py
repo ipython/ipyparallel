@@ -274,7 +274,9 @@ class TestSQLiteBackend(TaskDBTest, TestCase):
     def setUp(self):
         # make a new IOLoop
         IOLoop().make_current()
-        self.temp_db = tempfile.NamedTemporaryFile(suffix='.db').name
+        tmp_file = tempfile.NamedTemporaryFile(suffix='.db')
+        self.temp_db = tmp_file.name
+        tmp_file.close()
         super().setUp()
 
     def create_db(self):

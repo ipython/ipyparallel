@@ -115,6 +115,7 @@ def test_bind_kernel(request):
             io_loop=create_autospec(spec=ioloop.IOLoop, spec_set=True, instance=True),
         )
     ]
+
     app.kernel.control_stream = zmqstream.ZMQStream(
         socket=socket_spec(),
         io_loop=create_autospec(spec=ioloop.IOLoop, spec_set=True, instance=True),
@@ -122,6 +123,7 @@ def test_bind_kernel(request):
 
     # testing the case iopub_socket is not replaced with IOPubThread
     iopub_socket = socket_spec()
+
     app.kernel.iopub_socket = iopub_socket
     assert isinstance(app.kernel.iopub_socket, zmq.Socket)
     bind_kernel(app)
@@ -230,6 +232,7 @@ def test_ipcluster_start_stop(request, ipython_dir, daemonize):
 
     # cluster running, try to connect with default args
     cluster = ipp.Cluster.from_file(log_level=10)
+
     try:
         with cluster.connect_client_sync() as rc:
             rc.wait_for_engines(n=2, timeout=60)

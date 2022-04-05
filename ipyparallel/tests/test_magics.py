@@ -22,18 +22,19 @@ class TestParallelMagics(ClusterTestCase):
         v.activate()
         v.block = True
 
-        ip.magic('px a=5')
+        ip.run_line_magic('px', 'a=5')
         self.assertEqual(v['a'], [5])
-        ip.magic('px a=10')
+        ip.run_line_magic('px', 'a=10')
         self.assertEqual(v['a'], [10])
         # just 'print a' works ~99% of the time, but this ensures that
         # the stdout message has arrived when the result is finished:
         with capture_output() as io:
-            ip.magic('px import sys,time;print(a);sys.stdout.flush();time.sleep(0.2)')
+            ip.run_line_magic(
+                'px', 'import sys,time;print(a);sys.stdout.flush();time.sleep(0.2)'
+            )
         self.assertIn('[stdout:', io.stdout)
         self.assertNotIn('\n\n', io.stdout)
         assert io.stdout.rstrip().endswith('10')
-        self.assertRaisesRemote(ZeroDivisionError, ip.magic, 'px 1/0')
 
     def _check_generated_stderr(self, stderr, n):
         expected = [
@@ -69,7 +70,7 @@ class TestParallelMagics(ClusterTestCase):
 
         for block in (True, False):
             v.block = block
-            ip.magic("pxconfig --verbose")
+            ip.run_line_magic("pxconfig", "--verbose")
             with capture_output(display=False) as io:
                 ip.run_cell_magic("px", "", "1")
             if block:
@@ -327,19 +328,19 @@ class TestParallelMagics(ClusterTestCase):
         v.activate()
         v.block = False
 
-        ip.magic('px a=5')
+        ip.run_line_magic('px', 'a=5')
         self.assertEqual(v['a'], [5])
-        ip.magic('px a=10')
+        ip.run_line_magic('px', 'a=10')
         self.assertEqual(v['a'], [10])
-        ip.magic('pxconfig --verbose')
+        ip.run_line_magic('pxconfig', '--verbose')
         with capture_output() as io:
-            ar = ip.magic('px print (a)')
+            ar = ip.run_line_magic('px', 'print (a)')
         self.assertIsInstance(ar, AsyncResult)
         self.assertIn('Async', io.stdout)
         self.assertNotIn('[stdout:', io.stdout)
         self.assertNotIn('\n\n', io.stdout)
 
-        ar = ip.magic('px 1/0')
+        ar = ip.run_line_magic('px', '1/0')
         self.assertRaisesRemote(ZeroDivisionError, ar.get)
 
     def test_autopx_blocking(self):
@@ -349,13 +350,13 @@ class TestParallelMagics(ClusterTestCase):
         v.block = True
 
         with capture_output(display=False) as io:
-            ip.magic('autopx')
+            ip.run_line_magic('autopx', '')
             ip.run_cell('\n'.join(('a=5', 'b=12345', 'c=0')))
             ip.run_cell('b*=2')
             ip.run_cell('print (b)')
             ip.run_cell('b')
             ip.run_cell("b/c")
-            ip.magic('autopx')
+            ip.run_line_magic('autopx', '')
 
         output = io.stdout
 
@@ -378,13 +379,13 @@ class TestParallelMagics(ClusterTestCase):
         v.block = False
 
         with capture_output() as io:
-            ip.magic('autopx')
+            ip.run_line_magic('autopx', '')
             ip.run_cell('\n'.join(('a=5', 'b=10', 'c=0')))
             ip.run_cell('print (b)')
             ip.run_cell('import time; time.sleep(0.1)')
             ip.run_cell("b/c")
             ip.run_cell('b*=2')
-            ip.magic('autopx')
+            ip.run_line_magic('autopx', '')
 
         output = io.stdout.rstrip()
         assert output.startswith('%autopx enabled'), output
@@ -406,9 +407,9 @@ class TestParallelMagics(ClusterTestCase):
         v.push(data, block=True)
 
         for name in ('a', 'b'):
-            ip.magic('px ' + name)
+            ip.run_line_magic('px', name)
             with capture_output(display=False) as io:
-                ip.magic('pxresult')
+                ip.run_line_magic('pxresult', '')
             self.assertIn(str(data[name]), io.stdout)
 
     def test_px_pylab(self):
@@ -420,14 +421,14 @@ class TestParallelMagics(ClusterTestCase):
         v.activate()
 
         with capture_output() as io:
-            ip.magic("px %pylab inline")
+            ip.run_line_magic("px", "%pylab inline")
 
         self.assertIn(
             "Populating the interactive namespace from numpy and matplotlib", io.stdout
         )
 
         with capture_output(display=False) as io:
-            ip.magic("px plot(rand(100))")
+            ip.run_line_magic("px", "plot(rand(100))")
         self.assertIn('Out[', io.stdout)
         self.assertIn('matplotlib.lines', io.stdout)
 
@@ -436,17 +437,17 @@ class TestParallelMagics(ClusterTestCase):
         rc = self.client
         v = rc.activate(-1, '_tst')
         self.assertEqual(v.targets, rc.ids[-1])
-        ip.magic("%pxconfig_tst -t :")
+        ip.run_line_magic("pxconfig_tst", "-t :")
         self.assertEqual(v.targets, rc.ids)
-        ip.magic("%pxconfig_tst -t ::2")
+        ip.run_line_magic("pxconfig_tst", "-t ::2")
         self.assertEqual(v.targets, rc.ids[::2])
-        ip.magic("%pxconfig_tst -t 1::2")
+        ip.run_line_magic("pxconfig_tst", "-t 1::2")
         self.assertEqual(v.targets, rc.ids[1::2])
-        ip.magic("%pxconfig_tst -t 1")
+        ip.run_line_magic("pxconfig_tst", "-t 1")
         self.assertEqual(v.targets, 1)
-        ip.magic("%pxconfig_tst --block")
+        ip.run_line_magic("pxconfig_tst", "--block")
         self.assertEqual(v.block, True)
-        ip.magic("%pxconfig_tst --noblock")
+        ip.run_line_magic("pxconfig_tst", "--noblock")
         self.assertEqual(v.block, False)
 
     def test_cellpx_targets(self):
@@ -455,7 +456,7 @@ class TestParallelMagics(ClusterTestCase):
         rc = self.client
         view = rc.activate(rc.ids)
         self.assertEqual(view.targets, rc.ids)
-        ip.magic('pxconfig --verbose')
+        ip.run_line_magic('pxconfig', '--verbose')
         for cell in ("pass", "1/0"):
             with capture_output(display=False) as io:
                 try:
@@ -472,7 +473,7 @@ class TestParallelMagics(ClusterTestCase):
         view = rc.activate(rc.ids)
         view.block = False
         self.assertEqual(view.targets, rc.ids)
-        ip.magic('pxconfig --verbose')
+        ip.run_line_magic('pxconfig', '--verbose')
         for cell in ("pass", "1/0"):
             with capture_output(display=False) as io:
                 try:
