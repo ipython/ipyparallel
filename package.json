@@ -95,6 +95,7 @@
   "jupyterlab": {
     "extension": true,
     "schemaDir": "lab/schema",
+    "webpackConfig": "lab/webpack.config.js",
     "outputDir": "ipyparallel/labextension"
   }
 }
