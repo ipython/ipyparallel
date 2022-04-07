@@ -6,6 +6,13 @@ on:
     branches-ignore:
       - "pre-commit-ci*"
 
+concurrency:
+  group: >-
+    ${{ github.workflow }}-
+    ${{ github.ref_type }}-
+    ${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
 env:
   # UTF-8 content may be interpreted as ascii and causes errors without this.
   LANG: C.UTF-8
@@ -28,9 +35,8 @@ jobs:
           - python: "3.7"
             cluster_type: slurm
             container: slurmctld
-          - python: "3.6"
-            tornado: "5.1.1"
           - python: "3.7"
+          - python: "3.8"
             env:
               IPP_CONTROLLER_IP: "*"
           - python: "3.9"
@@ -113,11 +119,6 @@ jobs:
           pip install --pre --upgrade .[test] distributed joblib codecov
           pip install --only-binary :all: matplotlib || echo "no matplotlib"
 
-      - name: Install pinned tornado
-        if: matrix.tornado
-        run: |
-          pip install tornado==${{ matrix.tornado }}
-
       - name: Show environment
         run: pip freeze
 
@@ -128,14 +129,12 @@ jobs:
       - name: Run ${{ matrix.cluster_type }} tests
         if: ${{ matrix.cluster_type }}
         run: |
-          ${EXEC:-} pytest -ra -v --maxfail=2 --color=yes --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
+          ${EXEC:-} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
 
       - name: Run tests
         if: ${{ ! matrix.cluster_type }}
-        # FIXME: --color=yes explicitly set because:
-        #        https://github.com/actions/runner/issues/241
         run: |
-          pytest -ra -v --maxfail=3 --color=yes --cov=ipyparallel ipyparallel/tests
+          pytest -v --maxfail=3 --cov=ipyparallel
 
       - name: Fixup coverage permissions ${{ matrix.container }}
         if: ${{ matrix.container }}

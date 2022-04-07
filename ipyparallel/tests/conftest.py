@@ -4,8 +4,10 @@ import logging
 import os
 import sys
 from contextlib import contextmanager
+from pathlib import Path
 from subprocess import check_call
 from subprocess import check_output
+from tempfile import NamedTemporaryFile
 from tempfile import TemporaryDirectory
 from unittest import mock
 
@@ -14,12 +16,24 @@ import pytest
 import zmq
 from IPython.core.profiledir import ProfileDir
 from IPython.terminal.interactiveshell import TerminalInteractiveShell
-from IPython.testing.tools import default_config
 from traitlets.config import Config
 
 import ipyparallel as ipp
 from . import setup
 from . import teardown
+
+
+def default_config():
+    """Return a config object with good defaults for testing."""
+    config = Config()
+    config.TerminalInteractiveShell.colors = 'NoColor'
+    config.TerminalTerminalInteractiveShell.term_title = (False,)
+    config.TerminalInteractiveShell.autocall = 0
+    f = NamedTemporaryFile(suffix='test_hist.sqlite', delete=False)
+    config.HistoryManager.hist_file = str(Path(f.name))
+    f.close()
+    config.HistoryManager.db_cache_size = 10000
+    return config
 
 
 @contextmanager

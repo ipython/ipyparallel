@@ -15,6 +15,25 @@ target_version = [
     "py38",
 ]
 
+[tool.pytest.ini_options]
+addopts = "-raXs --durations 10 --color=yes"
+asyncio_mode = "auto"
+testpaths = [
+    "ipyparallel/tests"
+]
+filterwarnings = [
+  "error",
+  "ignore:unclosed event loop:ResourceWarning",
+  "ignore:unclosed socket <zmq.Socket:ResourceWarning",
+  "ignore:unclosed <socket.socket:ResourceWarning",
+  "ignore:unclosed file <_io.BufferedWriter:ResourceWarning",
+  "ignore:subprocess .* is still running:ResourceWarning",
+  "ignore:unclosed file <_io.BufferedRandom>:ResourceWarning",
+  # from older versions of ipykernel
+  "ignore:the imp module is:DeprecationWarning",
+]
+
+
 [tool.tbump]
 # Uncomment this if your project is hosted on GitHub:
 github_url = "https://github.com/jupyterhub/jupyterhub"

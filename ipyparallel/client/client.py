@@ -1036,11 +1036,9 @@ class Client(HasTraits):
         """Make my IOLoop. Override with IOLoop.current to return"""
         # runs first thing in the io thread
         # always create a fresh asyncio loop for the thread
+        if os.name == "nt":
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         asyncio_loop = asyncio.new_event_loop()
-        if hasattr(asyncio, 'ProactorEventLoop') and isinstance(
-            asyncio_loop, asyncio.ProactorEventLoop
-        ):
-            asyncio_loop = asyncio.SelectorEventLoop()
         asyncio.set_event_loop(asyncio_loop)
         loop = ioloop.IOLoop()
         loop.make_current()
@@ -1077,7 +1075,7 @@ class Client(HasTraits):
         self._io_thread.daemon = True
         self._io_thread.start()
         # wait for the IOLoop to start
-        for i in range(10):
+        for i in range(20):
             if evt.wait(1):
                 return
             if not self._io_thread.is_alive():
