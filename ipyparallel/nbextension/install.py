@@ -11,10 +11,10 @@ def install_extensions(enable=True, user=False):
 
     Toggle with enable=True/False.
     """
-    from distutils.version import LooseVersion as V
+    from ipyparallel.util import _v
     import notebook
 
-    if V(notebook.__version__) < V('4.2'):
+    if _v(notebook.__version__) < _v('4.2'):
         return _install_extension_nb41(enable)
 
     from notebook.nbextensions import (
