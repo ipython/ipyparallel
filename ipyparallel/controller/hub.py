@@ -1050,7 +1050,7 @@ class Hub(LoggingConfigurable):
     def _purge_stalled_registration(self, heart):
         # flush monitor messages before purging
         # first heartbeat might be waiting to be handled
-        self.mon_stream.flush()
+        self.monitor.flush()
         if heart in self.incoming_registrations:
             ec = self.incoming_registrations.pop(heart)
             self.log.warning(
