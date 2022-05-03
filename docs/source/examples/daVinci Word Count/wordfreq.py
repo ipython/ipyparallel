@@ -38,8 +38,9 @@ def wordfreq_to_weightsize(
 
 
 def tagcloud(worddict, n=10, minsize=25, maxsize=50, minalpha=0.5, maxalpha=1.0):
-    from matplotlib import pyplot as plt
     import random
+
+    from matplotlib import pyplot as plt
 
     worddict = wordfreq_to_weightsize(worddict, minsize, maxsize, minalpha, maxalpha)
 

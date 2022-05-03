@@ -13,28 +13,16 @@ from contextlib import contextmanager
 
 from decorator import decorator
 from IPython import get_ipython
-from traitlets import Any
-from traitlets import Bool
-from traitlets import CFloat
-from traitlets import Dict
-from traitlets import HasTraits
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import List
-from traitlets import Set
+from traitlets import Any, Bool, CFloat, Dict, HasTraits, Instance, Integer, List, Set
 
-from . import map as Map
+from ipyparallel import util
+from ipyparallel.controller.dependency import Dependency, dependent
+
 from .. import serialize
 from ..serialize import PrePickled
-from .asyncresult import AsyncMapResult
-from .asyncresult import AsyncResult
-from .remotefunction import getname
-from .remotefunction import parallel
-from .remotefunction import ParallelFunction
-from .remotefunction import remote
-from ipyparallel import util
-from ipyparallel.controller.dependency import Dependency
-from ipyparallel.controller.dependency import dependent
+from . import map as Map
+from .asyncresult import AsyncMapResult, AsyncResult
+from .remotefunction import ParallelFunction, getname, parallel, remote
 
 # -----------------------------------------------------------------------------
 # Decorators
@@ -1563,6 +1551,7 @@ class LoadBalancedView(View):
         .. versionadded:: 5.1
         """
         from joblib.parallel import register_parallel_backend
+
         from ._joblib import IPythonParallelBackend
 
         register_parallel_backend(

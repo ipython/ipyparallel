@@ -6,13 +6,12 @@ from functools import partial
 
 import ipykernel
 from ipykernel.ipkernel import IPythonKernel
-from traitlets import Integer
-from traitlets import Type
+from traitlets import Integer, Type
+
+from ipyparallel.serialize import serialize_object, unpack_apply_message
+from ipyparallel.util import utcnow
 
 from .datapub import ZMQDataPublisher
-from ipyparallel.serialize import serialize_object
-from ipyparallel.serialize import unpack_apply_message
-from ipyparallel.util import utcnow
 
 
 class IPythonParallelKernel(IPythonKernel):

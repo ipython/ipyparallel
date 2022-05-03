@@ -5,8 +5,7 @@ import logging
 import os
 import tempfile
 import time
-from datetime import datetime
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest import TestCase
 
 from jupyter_client.session import Session

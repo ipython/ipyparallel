@@ -8,6 +8,7 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
 from datetime import datetime
 
 try:
@@ -16,13 +17,12 @@ except ImportError:
     sqlite3 = None
 
 from dateutil.parser import parse as dateutil_parse
-from tornado import ioloop
-
-from traitlets import Unicode, Instance, List, Dict
 from jupyter_client.jsonutil import json_default
+from tornado import ioloop
+from traitlets import Dict, Instance, List, Unicode
 
-from .dictdb import BaseDB
 from ..util import ensure_timezone, extract_dates
+from .dictdb import BaseDB
 
 # -----------------------------------------------------------------------------
 # SQLite operators, adapters, and converters

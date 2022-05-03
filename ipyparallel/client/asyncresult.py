@@ -6,32 +6,22 @@ import sys
 import threading
 import time
 import warnings
-from concurrent.futures import ALL_COMPLETED
-from concurrent.futures import FIRST_COMPLETED
-from concurrent.futures import FIRST_EXCEPTION
-from concurrent.futures import Future
+from concurrent.futures import ALL_COMPLETED, FIRST_COMPLETED, FIRST_EXCEPTION, Future
 from contextlib import contextmanager
 from datetime import datetime
-from functools import lru_cache
-from functools import partial
-from itertools import chain
-from itertools import repeat
+from functools import lru_cache, partial
+from itertools import chain, repeat
 from threading import Event
 
 import zmq
 from decorator import decorator
 from IPython import get_ipython
-from IPython.display import display
-from IPython.display import display_pretty
-from IPython.display import publish_display_data
+from IPython.display import display, display_pretty, publish_display_data
 
-from .futures import MessageFuture
-from .futures import multi_future
 from ipyparallel import error
-from ipyparallel.util import _parse_date
-from ipyparallel.util import compare_datetimes
-from ipyparallel.util import progress
-from ipyparallel.util import utcnow
+from ipyparallel.util import _parse_date, compare_datetimes, progress, utcnow
+
+from .futures import MessageFuture, multi_future
 
 
 def _raw_text(s):

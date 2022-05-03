@@ -18,17 +18,17 @@ except AttributeError:
 
 from itertools import chain
 
+from jupyter_client.session import MAX_BYTES, MAX_ITEMS
+
 from .canning import (
-    can,
-    uncan,
-    can_sequence,
-    uncan_sequence,
     CannedObject,
+    can,
+    can_sequence,
     istype,
     sequence_types,
+    uncan,
+    uncan_sequence,
 )
-from jupyter_client.session import MAX_ITEMS, MAX_BYTES
-
 
 # -----------------------------------------------------------------------------
 # Serialization Functions

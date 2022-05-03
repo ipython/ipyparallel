@@ -13,23 +13,13 @@ from functools import partial
 import entrypoints
 import zmq
 from IPython.core.profiledir import ProfileDir
-from traitlets import Bool
-from traitlets import CaselessStrEnum
-from traitlets import default
-from traitlets import Dict
-from traitlets import Integer
-from traitlets import List
+from traitlets import Bool, CaselessStrEnum, Dict, Integer, List, default
 from traitlets.config.application import catch_config_error
 
 from ipyparallel._version import __version__
-from ipyparallel.apps.baseapp import base_aliases
-from ipyparallel.apps.baseapp import base_flags
-from ipyparallel.apps.baseapp import BaseParallelApplication
-from ipyparallel.cluster import clean_cluster_files
-from ipyparallel.cluster import Cluster
-from ipyparallel.cluster import ClusterManager
+from ipyparallel.apps.baseapp import BaseParallelApplication, base_aliases, base_flags
+from ipyparallel.cluster import Cluster, ClusterManager, clean_cluster_files
 from ipyparallel.util import abbreviate_profile_dir
-
 
 # -----------------------------------------------------------------------------
 # Module level variables

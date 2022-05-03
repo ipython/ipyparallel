@@ -1,16 +1,20 @@
-from .canning import can
-from .canning import can_map
-from .canning import Reference
-from .canning import uncan
-from .canning import uncan_map
-from .canning import use_cloudpickle
-from .canning import use_dill
-from .canning import use_pickle
-from .serialize import deserialize_object
-from .serialize import pack_apply_message
-from .serialize import PrePickled
-from .serialize import serialize_object
-from .serialize import unpack_apply_message
+from .canning import (
+    Reference,
+    can,
+    can_map,
+    uncan,
+    uncan_map,
+    use_cloudpickle,
+    use_dill,
+    use_pickle,
+)
+from .serialize import (
+    PrePickled,
+    deserialize_object,
+    pack_apply_message,
+    serialize_object,
+    unpack_apply_message,
+)
 
 __all__ = (
     'Reference',

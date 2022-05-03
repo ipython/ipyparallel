@@ -11,13 +11,9 @@ import shlex
 import socket
 import sys
 import warnings
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 from functools import lru_cache
-from signal import SIGABRT
-from signal import SIGINT
-from signal import signal
-from signal import SIGTERM
+from signal import SIGABRT, SIGINT, SIGTERM, signal
 from types import FunctionType
 
 import traitlets
@@ -25,12 +21,9 @@ import zmq
 from dateutil.parser import parse as dateutil_parse
 from dateutil.tz import tzlocal
 from IPython import get_ipython
-from IPython.core.profiledir import ProfileDir
-from IPython.core.profiledir import ProfileDirError
+from IPython.core.profiledir import ProfileDir, ProfileDirError
 from IPython.paths import get_ipython_dir
-from jupyter_client.localinterfaces import is_public_ip
-from jupyter_client.localinterfaces import localhost
-from jupyter_client.localinterfaces import public_ips
+from jupyter_client.localinterfaces import is_public_ip, localhost, public_ips
 from tornado.ioloop import IOLoop
 from traitlets.log import get_logger
 from zmq.log import handlers
@@ -489,7 +482,7 @@ def become_dask_worker(address, nanny=False, **kwargs):
     if getattr(kernel, 'dask_worker', None) is not None:
         kernel.log.info("Dask worker is already running.")
         return
-    from distributed import Worker, Nanny
+    from distributed import Nanny, Worker
 
     if nanny:
         w = Nanny(address, **kwargs)

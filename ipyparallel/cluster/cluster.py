@@ -21,29 +21,31 @@ from multiprocessing import cpu_count
 from weakref import WeakSet
 
 import IPython
-from traitlets import Any
-from traitlets import Bool
-from traitlets import default
-from traitlets import Dict
-from traitlets import Float
-from traitlets import import_item
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import List
-from traitlets import Unicode
-from traitlets import validate
-from traitlets.config import Application
-from traitlets.config import Config
-from traitlets.config import LoggingConfigurable
+from traitlets import (
+    Any,
+    Bool,
+    Dict,
+    Float,
+    Instance,
+    Integer,
+    List,
+    Unicode,
+    default,
+    import_item,
+    validate,
+)
+from traitlets.config import Application, Config, LoggingConfigurable
 
-from . import launcher
 from .._async import AsyncFirst
 from ..traitlets import Launcher
-from ..util import _all_profile_dirs
-from ..util import _default_profile_dir
-from ..util import _locate_profiles
-from ..util import _traitlet_signature
-from ..util import abbreviate_profile_dir
+from ..util import (
+    _all_profile_dirs,
+    _default_profile_dir,
+    _locate_profiles,
+    _traitlet_signature,
+    abbreviate_profile_dir,
+)
+from . import launcher
 
 _suffix_chars = string.ascii_lowercase + string.digits
 

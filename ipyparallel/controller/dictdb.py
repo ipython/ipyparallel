@@ -38,10 +38,7 @@ import copy
 from copy import deepcopy
 from datetime import datetime
 
-from traitlets import Dict
-from traitlets import Float
-from traitlets import Integer
-from traitlets import Unicode
+from traitlets import Dict, Float, Integer, Unicode
 from traitlets.config.configurable import LoggingConfigurable
 
 from ..util import ensure_timezone

@@ -7,19 +7,14 @@ import re
 import sys
 
 import traitlets
+from IPython.core.application import BaseIPythonApplication
 from IPython.core.application import base_aliases as base_ip_aliases
 from IPython.core.application import base_flags as base_ip_flags
-from IPython.core.application import BaseIPythonApplication
 from IPython.utils.path import expand_path
 from jupyter_client.session import Session
 from tornado.ioloop import IOLoop
-from traitlets import Bool
-from traitlets import default
-from traitlets import Instance
-from traitlets import observe
-from traitlets import Unicode
-from traitlets.config.application import catch_config_error
-from traitlets.config.application import LevelFormatter
+from traitlets import Bool, Instance, Unicode, default, observe
+from traitlets.config.application import LevelFormatter, catch_config_error
 
 from .._version import __version__
 

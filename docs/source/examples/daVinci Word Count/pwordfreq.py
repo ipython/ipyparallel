@@ -8,8 +8,7 @@ import time
 from itertools import repeat
 
 import requests
-from wordfreq import print_wordfreq
-from wordfreq import wordfreq
+from wordfreq import print_wordfreq, wordfreq
 
 import ipyparallel as ipp
 

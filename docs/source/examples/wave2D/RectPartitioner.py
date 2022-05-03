@@ -15,9 +15,7 @@ Authors
  * Min Ragan-Kelley
 
 """
-from numpy import ascontiguousarray
-from numpy import frombuffer
-from numpy import zeros
+from numpy import ascontiguousarray, frombuffer, zeros
 
 try:
     from mpi4py import MPI

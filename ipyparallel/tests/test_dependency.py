@@ -2,10 +2,10 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import ipyparallel as ipp
-from .clienttest import ClusterTestCase
-from ipyparallel.serialize import can
-from ipyparallel.serialize import uncan
+from ipyparallel.serialize import can, uncan
 from ipyparallel.util import interactive
+
+from .clienttest import ClusterTestCase
 
 
 @ipp.require('time')

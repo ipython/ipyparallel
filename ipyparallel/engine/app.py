@@ -10,8 +10,7 @@ import signal
 import sys
 import time
 from getpass import getpass
-from io import FileIO
-from io import TextIOWrapper
+from io import FileIO, TextIOWrapper
 from logging import StreamHandler
 
 import zmq
@@ -19,35 +18,37 @@ from ipykernel.kernelapp import IPKernelApp
 from ipykernel.zmqshell import ZMQInteractiveShell
 from IPython.core.profiledir import ProfileDir
 from jupyter_client.localinterfaces import localhost
-from jupyter_client.session import Session
-from jupyter_client.session import session_aliases
-from jupyter_client.session import session_flags
+from jupyter_client.session import Session, session_aliases, session_flags
 from tornado import ioloop
-from traitlets import Bool
-from traitlets import Bytes
-from traitlets import default
-from traitlets import Dict
-from traitlets import Float
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import List
-from traitlets import observe
-from traitlets import Type
-from traitlets import Unicode
-from traitlets import validate
+from traitlets import (
+    Bool,
+    Bytes,
+    Dict,
+    Float,
+    Instance,
+    Integer,
+    List,
+    Type,
+    Unicode,
+    default,
+    observe,
+    validate,
+)
 from traitlets.config import Config
 from zmq.eventloop import zmqstream
+
+from ipyparallel.apps.baseapp import (
+    BaseParallelApplication,
+    base_aliases,
+    base_flags,
+    catch_config_error,
+)
+from ipyparallel.controller.heartmonitor import Heart
+from ipyparallel.util import disambiguate_ip_address, disambiguate_url
 
 from .kernel import IPythonParallelKernel as Kernel
 from .log import EnginePUBHandler
 from .nanny import start_nanny
-from ipyparallel.apps.baseapp import base_aliases
-from ipyparallel.apps.baseapp import base_flags
-from ipyparallel.apps.baseapp import BaseParallelApplication
-from ipyparallel.apps.baseapp import catch_config_error
-from ipyparallel.controller.heartmonitor import Heart
-from ipyparallel.util import disambiguate_ip_address
-from ipyparallel.util import disambiguate_url
 
 # -----------------------------------------------------------------------------
 # Module level variables

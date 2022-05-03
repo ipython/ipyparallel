@@ -2,12 +2,8 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 from ipykernel.jsonutil import json_clean
-from jupyter_client.session import extract_header
-from jupyter_client.session import Session
-from traitlets import Any
-from traitlets import CBytes
-from traitlets import Dict
-from traitlets import Instance
+from jupyter_client.session import Session, extract_header
+from traitlets import Any, CBytes, Dict, Instance
 from traitlets.config import Configurable
 
 from ipyparallel.serialize import serialize_object

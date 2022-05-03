@@ -12,22 +12,12 @@ import uuid
 import zmq
 from jupyter_client.session import Session
 from tornado import ioloop
-from traitlets import Bool
-from traitlets import default
-from traitlets import Dict
-from traitlets import Float
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import Set
+from traitlets import Bool, Dict, Float, Instance, Integer, Set, default
 from traitlets.config.configurable import LoggingConfigurable
-from zmq.devices import ThreadDevice
-from zmq.devices import ThreadMonitoredQueue
+from zmq.devices import ThreadDevice, ThreadMonitoredQueue
 from zmq.eventloop.zmqstream import ZMQStream
 
-from ipyparallel.util import bind
-from ipyparallel.util import connect
-from ipyparallel.util import log_errors
-from ipyparallel.util import set_hwm
+from ipyparallel.util import bind, connect, log_errors, set_hwm
 
 
 class Heart:

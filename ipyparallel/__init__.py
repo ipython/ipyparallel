@@ -35,6 +35,7 @@ def bind_kernel(**kwargs):
     This function returns immediately.
     """
     from ipykernel.kernelapp import IPKernelApp
+
     from ipyparallel.engine.app import IPEngine
 
     # first check for IPKernelApp, in which case this should be a no-op

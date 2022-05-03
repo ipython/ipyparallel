@@ -19,8 +19,7 @@ import os
 import pickle
 import signal
 import sys
-from subprocess import PIPE
-from subprocess import Popen
+from subprocess import PIPE, Popen
 from threading import Thread
 
 import psutil
@@ -30,8 +29,7 @@ from tornado.ioloop import IOLoop
 from traitlets.config import Config
 from zmq.eventloop.zmqstream import ZMQStream
 
-from ipyparallel import error
-from ipyparallel import util
+from ipyparallel import error, util
 from ipyparallel.util import local_logger
 
 

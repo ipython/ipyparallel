@@ -11,7 +11,6 @@ from ..cluster import ClusterManager
 from ..util import abbreviate_profile_dir
 from .base import get_api_handler
 
-
 static = os.path.join(os.path.dirname(__file__), 'static')
 
 APIHandler = get_api_handler()

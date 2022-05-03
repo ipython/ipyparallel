@@ -13,9 +13,10 @@ import pytest
 from traitlets.config import Config
 
 import ipyparallel as ipp
-from .clienttest import raises_remote
 from ipyparallel import cluster
 from ipyparallel.cluster.launcher import find_launcher_class
+
+from .clienttest import raises_remote
 
 _timeout = 30
 

@@ -16,39 +16,33 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-from functools import lru_cache
-from functools import partial
+from functools import lru_cache, partial
 from signal import SIGTERM
-from subprocess import check_output
-from subprocess import PIPE
-from subprocess import Popen
-from subprocess import STDOUT
+from subprocess import PIPE, STDOUT, Popen, check_output
 from tempfile import TemporaryDirectory
 from textwrap import indent
 
 import entrypoints
 import psutil
-from IPython.utils.path import ensure_dir_exists
-from IPython.utils.path import get_home_dir
+from IPython.utils.path import ensure_dir_exists, get_home_dir
 from IPython.utils.text import EvalFormatter
 from tornado import ioloop
-from traitlets import Any
-from traitlets import CRegExp
-from traitlets import default
-from traitlets import Dict
-from traitlets import Float
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import List
-from traitlets import observe
-from traitlets import Unicode
+from traitlets import (
+    Any,
+    CRegExp,
+    Dict,
+    Float,
+    Instance,
+    Integer,
+    List,
+    Unicode,
+    default,
+    observe,
+)
 from traitlets.config.configurable import LoggingConfigurable
 
 from ..util import shlex_join
-from ._winhpcjob import IPControllerJob
-from ._winhpcjob import IPControllerTask
-from ._winhpcjob import IPEngineSetJob
-from ._winhpcjob import IPEngineTask
+from ._winhpcjob import IPControllerJob, IPControllerTask, IPEngineSetJob, IPEngineTask
 
 WINDOWS = os.name == 'nt'
 

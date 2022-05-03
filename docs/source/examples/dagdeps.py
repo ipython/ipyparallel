@@ -89,8 +89,8 @@ def main(nodes, edges):
     point at least slightly to the right if the graph is valid.
     """
     from matplotlib import pyplot as plt
-    from matplotlib.dates import date2num
     from matplotlib.cm import gist_rainbow
+    from matplotlib.dates import date2num
 
     print("building DAG")
     G = random_dag(nodes, edges)

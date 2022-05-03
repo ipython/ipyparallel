@@ -14,15 +14,10 @@ from IPython import get_ipython
 from IPython.utils.io import capture_output
 
 import ipyparallel as ipp
-from .clienttest import ClusterTestCase
-from .clienttest import conditional_crash
-from .clienttest import skip_without
-from .clienttest import wait
-from ipyparallel import AsyncHubResult
-from ipyparallel import AsyncMapResult
-from ipyparallel import AsyncResult
-from ipyparallel import error
+from ipyparallel import AsyncHubResult, AsyncMapResult, AsyncResult, error
 from ipyparallel.util import interactive
+
+from .clienttest import ClusterTestCase, conditional_crash, skip_without, wait
 
 point = namedtuple("point", "x y")
 

@@ -7,12 +7,7 @@ import re
 import uuid
 from xml.etree import ElementTree as ET
 
-from traitlets import Bool
-from traitlets import Enum
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import List
-from traitlets import Unicode
+from traitlets import Bool, Enum, Instance, Integer, List, Unicode
 from traitlets.config.configurable import Configurable
 
 # -----------------------------------------------------------------------------
