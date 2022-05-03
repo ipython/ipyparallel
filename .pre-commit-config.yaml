@@ -6,10 +6,10 @@ repos:
         args:
           - --py36-plus
         exclude: setupbase.py
-  - repo: https://github.com/asottile/reorder_python_imports
-    rev: v3.0.1
+  - repo: https://github.com/pycqa/isort
+    rev: 5.10.1
     hooks:
-      - id: reorder-python-imports
+      - id: isort
         exclude: setupbase.py
   - repo: https://github.com/psf/black
     rev: 22.3.0
