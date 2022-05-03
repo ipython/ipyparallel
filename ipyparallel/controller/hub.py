@@ -874,7 +874,7 @@ class Hub(LoggingConfigurable):
         )
 
     def register_engine(self, reg, msg):
-        """Register a new engine."""
+        """Begin registration of a new engine."""
         content = msg['content']
         try:
             uuid = content['uuid']
@@ -899,8 +899,8 @@ class Hub(LoggingConfigurable):
                 content = error.wrap_exception()
                 self.log.error("uuid %r in use", uuid, exc_info=True)
         else:
-            for h, ec in self.incoming_registrations.items():
-                if uuid == h:
+            for heart_id, ec in self.incoming_registrations.items():
+                if uuid == heart_id:
                     try:
                         raise KeyError("heart_id %r in use" % uuid)
                     except:
@@ -951,10 +951,22 @@ class Hub(LoggingConfigurable):
             )
             return
         if eid not in self.engines:
-            self.log.info(
-                f"registration::unregister_engine({eid}) already unregistered"
-            )
+            # engine not registered
+            # first, check for still-pending registration
+            remove_heart_id = None
+            for heart_id, ec in self.incoming_registrations.items():
+                if ec.id == eid:
+                    remove_heart_id = heart_id
+                    break
+            if remove_heart_id is not None:
+                self.log.info(f"registration::canceling registration {ec.id}:{ec.uuid}")
+                self.incoming_registrations.pop(remove_heart_id)
+            else:
+                self.log.info(
+                    f"registration::unregister_engine({eid}) already unregistered"
+                )
             return
+
         self.log.info(f"registration::unregister_engine({eid})")
         ec = self.engines[eid]
 
