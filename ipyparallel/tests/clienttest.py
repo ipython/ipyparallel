@@ -11,10 +11,8 @@ import zmq
 from decorator import decorator
 from zmq.tests import BaseZMQTestCase
 
-from ipyparallel import Client
-from ipyparallel import error
-from ipyparallel.tests import add_engines
-from ipyparallel.tests import launchers
+from ipyparallel import Client, error
+from ipyparallel.tests import add_engines, launchers
 
 # simple tasks for use in apply tests
 
@@ -57,7 +55,7 @@ def generate_output():
     a rich displayable object.
     """
 
-    from IPython.core.display import display, HTML, Math
+    from IPython.core.display import HTML, Math, display
 
     print("stdout")
     print("stderr", file=sys.stderr)

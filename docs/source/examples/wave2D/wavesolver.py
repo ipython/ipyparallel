@@ -12,10 +12,7 @@ Authors
 """
 import time
 
-from numpy import arange
-from numpy import newaxis
-from numpy import sqrt
-from numpy import zeros
+from numpy import arange, newaxis, sqrt, zeros
 
 
 def iseq(start=0, stop=None, inc=1):

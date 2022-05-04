@@ -7,8 +7,8 @@ from inspect import signature
 
 from decorator import decorator
 
-from . import map as Map
 from ..serialize import PrePickled
+from . import map as Map
 from .asyncresult import AsyncMapResult
 
 # -----------------------------------------------------------------------------

@@ -11,16 +11,17 @@ def install_extensions(enable=True, user=False):
 
     Toggle with enable=True/False.
     """
-    from ipyparallel.util import _v
     import notebook
+
+    from ipyparallel.util import _v
 
     if _v(notebook.__version__) < _v('4.2'):
         return _install_extension_nb41(enable)
 
     from notebook.nbextensions import (
-        install_nbextension_python,
-        enable_nbextension,
         disable_nbextension,
+        enable_nbextension,
+        install_nbextension_python,
     )
     from notebook.serverextensions import toggle_serverextension_python
 

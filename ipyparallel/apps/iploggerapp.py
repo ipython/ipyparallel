@@ -5,9 +5,11 @@ A simple IPython logger application
 from IPython.core.profiledir import ProfileDir
 from traitlets import Dict
 
-from ipyparallel.apps.baseapp import base_aliases
-from ipyparallel.apps.baseapp import BaseParallelApplication
-from ipyparallel.apps.baseapp import catch_config_error
+from ipyparallel.apps.baseapp import (
+    BaseParallelApplication,
+    base_aliases,
+    catch_config_error,
+)
 from ipyparallel.apps.logwatcher import LogWatcher
 
 # -----------------------------------------------------------------------------

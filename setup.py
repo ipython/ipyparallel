@@ -60,7 +60,7 @@ with open(pjoin(here, "README.md")) as f:
 # import setupbase from jupyter_packaging (0.10.4)
 if '' not in sys.path:
     sys.path.insert(0, '')
-from setupbase import wrap_installers, npm_builder, get_data_files
+from setupbase import get_data_files, npm_builder, wrap_installers
 
 builder = npm_builder(build_cmd="build:prod", npm="jlpm")
 

@@ -12,8 +12,7 @@ from functools import reduce
 
 import zmq
 
-from ipyparallel.serialize import deserialize_object
-from ipyparallel.serialize import serialize_object
+from ipyparallel.serialize import deserialize_object, serialize_object
 from ipyparallel.util import disambiguate_url
 
 # ----------------------------------------------------------------------------

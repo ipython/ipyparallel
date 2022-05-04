@@ -16,16 +16,11 @@ import pytest
 import tornado
 from IPython import get_ipython
 
-from .clienttest import ClusterTestCase
-from .clienttest import raises_remote
-from .clienttest import skip_without
-from .clienttest import wait
-from ipyparallel import AsyncHubResult
-from ipyparallel import DirectView
-from ipyparallel import error
-from ipyparallel import Reference
+from ipyparallel import AsyncHubResult, DirectView, Reference, error
 from ipyparallel.client import client as clientmod
 from ipyparallel.util import utc
+
+from .clienttest import ClusterTestCase, raises_remote, skip_without, wait
 
 
 @pytest.mark.usefixtures('ipython')

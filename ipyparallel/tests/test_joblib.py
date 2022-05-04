@@ -4,13 +4,14 @@ from unittest import mock
 import pytest
 
 import ipyparallel as ipp
-from .clienttest import add_engines
-from .clienttest import ClusterTestCase
+
+from .clienttest import ClusterTestCase, add_engines
 
 try:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         from joblib import Parallel, delayed
+
         from ipyparallel.client._joblib import IPythonParallelBackend  # noqa
 except (ImportError, TypeError):
     have_joblib = False

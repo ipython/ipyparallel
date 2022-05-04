@@ -5,17 +5,12 @@ import os
 import sys
 import time
 import types
-from subprocess import check_call
-from subprocess import check_output
-from subprocess import Popen
-from unittest.mock import create_autospec
-from unittest.mock import MagicMock
-from unittest.mock import patch
+from subprocess import Popen, check_call, check_output
+from unittest.mock import MagicMock, create_autospec, patch
 
 import pytest
 import zmq
-from ipykernel import iostream
-from ipykernel import kernelapp
+from ipykernel import iostream, kernelapp
 from ipykernel.ipkernel import IPythonKernel
 from IPython.core.profiledir import ProfileDir
 from tornado import ioloop

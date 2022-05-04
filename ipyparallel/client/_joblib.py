@@ -1,8 +1,7 @@
 """joblib parallel backend for IPython Parallel"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-from joblib.parallel import AutoBatchingMixin
-from joblib.parallel import ParallelBackendBase
+from joblib.parallel import AutoBatchingMixin, ParallelBackendBase
 
 import ipyparallel as ipp
 

@@ -1,16 +1,14 @@
 import logging
 
 import zmq
-from traitlets import Bool
-from traitlets import Bytes
-from traitlets import Integer
-from traitlets import List
-from traitlets import Unicode
+from traitlets import Bool, Bytes, Integer, List, Unicode
 
 from ipyparallel import util
-from ipyparallel.controller.scheduler import get_common_scheduler_streams
-from ipyparallel.controller.scheduler import Scheduler
-from ipyparallel.controller.scheduler import ZMQStream
+from ipyparallel.controller.scheduler import (
+    Scheduler,
+    ZMQStream,
+    get_common_scheduler_streams,
+)
 
 
 class BroadcastScheduler(Scheduler):

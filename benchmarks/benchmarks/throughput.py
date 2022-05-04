@@ -1,10 +1,12 @@
 import os
 
 os.environ['OPENBLAS_NUM_THREADS'] = '1'
-import ipyparallel as ipp
-import timeit
 import time
+import timeit
+
 import numpy as np
+
+import ipyparallel as ipp
 
 delay = [0]
 engines = [1, 2, 16, 64, 128, 256, 512, 1024]

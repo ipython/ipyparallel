@@ -14,9 +14,7 @@ from concurrent.futures import Future
 from functools import partial
 from getpass import getpass
 from pprint import pprint
-from threading import current_thread
-from threading import Event
-from threading import Thread
+from threading import Event, Thread, current_thread
 
 import jupyter_client.session
 import zmq
@@ -24,41 +22,35 @@ from decorator import decorator
 from ipykernel.comm import Comm
 from IPython import get_ipython
 from IPython.core.application import BaseIPythonApplication
-from IPython.core.profiledir import ProfileDir
-from IPython.core.profiledir import ProfileDirError
+from IPython.core.profiledir import ProfileDir, ProfileDirError
 from IPython.paths import get_ipython_dir
 from IPython.utils.capture import RichOutput
 from IPython.utils.coloransi import TermColors
 from IPython.utils.path import compress_user
-from jupyter_client.localinterfaces import is_local_ip
-from jupyter_client.localinterfaces import localhost
+from jupyter_client.localinterfaces import is_local_ip, localhost
 from jupyter_client.session import Session
 from tornado import ioloop
-from traitlets import Any
-from traitlets import Bool
-from traitlets import Bytes
-from traitlets import default
-from traitlets import Dict
-from traitlets import HasTraits
-from traitlets import Instance
-from traitlets import List
-from traitlets import Set
-from traitlets import Unicode
+from traitlets import (
+    Any,
+    Bool,
+    Bytes,
+    Dict,
+    HasTraits,
+    Instance,
+    List,
+    Set,
+    Unicode,
+    default,
+)
 from traitlets.config.configurable import MultipleInstanceError
 from zmq.eventloop.zmqstream import ZMQStream
 
-from .asyncresult import AsyncHubResult
-from .asyncresult import AsyncResult
-from .futures import MessageFuture
-from .futures import multi_future
-from .view import BroadcastView
-from .view import DirectView
-from .view import LoadBalancedView
-from ipyparallel import error
-from ipyparallel import serialize
-from ipyparallel import util
-from ipyparallel.serialize import PrePickled
-from ipyparallel.serialize import Reference
+from ipyparallel import error, serialize, util
+from ipyparallel.serialize import PrePickled, Reference
+
+from .asyncresult import AsyncHubResult, AsyncResult
+from .futures import MessageFuture, multi_future
+from .view import BroadcastView, DirectView, LoadBalancedView
 
 pjoin = os.path.join
 jupyter_client.session.extract_dates = lambda obj: obj

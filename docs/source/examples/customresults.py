@@ -26,7 +26,8 @@ print(dv['id'])
 
 def sleep_here(count, t):
     """simple function that takes args, prints a short message, sleeps for a time, and returns the same args"""
-    import time, sys
+    import sys
+    import time
 
     print("hi from engine %i" % id)
     sys.stdout.flush()

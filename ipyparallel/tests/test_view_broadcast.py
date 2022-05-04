@@ -3,7 +3,6 @@ import pytest
 
 from . import test_view
 
-
 needs_map = pytest.mark.xfail(reason="map not yet implemented")
 
 

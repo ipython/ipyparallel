@@ -12,7 +12,7 @@ try:
 except ImportError:
     from bson import Binary
 
-from traitlets import Dict, List, Unicode, Instance
+from traitlets import Dict, Instance, List, Unicode
 
 from .dictdb import BaseDB
 

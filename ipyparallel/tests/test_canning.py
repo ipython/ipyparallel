@@ -4,8 +4,7 @@ from binascii import b2a_hex
 from functools import partial
 
 from ipyparallel.serialize import canning
-from ipyparallel.serialize.canning import can
-from ipyparallel.serialize.canning import uncan
+from ipyparallel.serialize.canning import can, uncan
 
 
 def interactive(f):

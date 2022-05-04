@@ -17,23 +17,25 @@ import zmq
 from jupyter_client.jsonutil import parse_date
 from jupyter_client.session import Session
 from tornado import ioloop
-from traitlets import Any
-from traitlets import Bytes
-from traitlets import default
-from traitlets import Dict
-from traitlets import Float
-from traitlets import HasTraits
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import Set
-from traitlets import Unicode
+from traitlets import (
+    Any,
+    Bytes,
+    Dict,
+    Float,
+    HasTraits,
+    Instance,
+    Integer,
+    Set,
+    Unicode,
+    default,
+)
 from traitlets.config import LoggingConfigurable
 from zmq.eventloop.zmqstream import ZMQStream
 
+from ipyparallel import error, util
+
 from ..util import extract_dates
 from .heartmonitor import HeartMonitor
-from ipyparallel import error
-from ipyparallel import util
 
 # internal:
 

@@ -28,6 +28,7 @@ Usage
 import time
 from contextlib import contextmanager
 
+
 # Python 3.6 doesn't have nullcontext, so we define our own
 @contextmanager
 def nullcontext():
@@ -43,13 +44,14 @@ def nullcontext():
 
 import inspect
 import re
+import sys
 from textwrap import dedent
 
+from IPython.core import magic_arguments
 from IPython.core.error import UsageError
 from IPython.core.magic import Magics
-from IPython.core import magic_arguments
+
 from .. import error
-import sys
 
 # -----------------------------------------------------------------------------
 # Definitions of magic functions for use with IPython

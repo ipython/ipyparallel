@@ -6,8 +6,7 @@ pieces to individual nodes in a cluster.
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import sys
-from itertools import chain
-from itertools import islice
+from itertools import chain, islice
 
 numpy = None
 

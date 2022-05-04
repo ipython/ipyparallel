@@ -1,6 +1,5 @@
 import ipyparallel as ipp
 
-
 rc = ipp.Client()
 rc.block = True
 view = rc[:]

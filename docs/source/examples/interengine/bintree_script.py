@@ -18,7 +18,6 @@ where you can reorder the partial data before performing the reduce.
 """
 import ipyparallel as ipp
 
-
 # connect client and create views
 rc = ipp.Client()
 rc.block = True

@@ -19,9 +19,10 @@ import ipyparallel as ipp
 
 
 def fetchAndParse(url, data=None):
-    import requests
     from urllib.parse import urljoin
+
     import bs4  # noqa
+    import requests
 
     links = []
     r = requests.get(url, data=data)

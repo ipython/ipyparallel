@@ -9,9 +9,9 @@ import pytest
 from IPython.utils.io import capture_output
 
 import ipyparallel as ipp
-from .clienttest import ClusterTestCase
-from .clienttest import raises_remote
 from ipyparallel import error
+
+from .clienttest import ClusterTestCase, raises_remote
 
 
 def wait(n):

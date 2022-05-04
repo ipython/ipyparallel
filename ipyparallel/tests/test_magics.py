@@ -9,9 +9,9 @@ from IPython import get_ipython
 from IPython.utils.io import capture_output
 
 import ipyparallel as ipp
-from .clienttest import ClusterTestCase
-from .clienttest import generate_output
 from ipyparallel import AsyncResult
+
+from .clienttest import ClusterTestCase, generate_output
 
 
 @pytest.mark.usefixtures('ipython_interactive')

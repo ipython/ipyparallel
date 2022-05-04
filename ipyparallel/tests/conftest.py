@@ -5,10 +5,8 @@ import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from subprocess import check_call
-from subprocess import check_output
-from tempfile import NamedTemporaryFile
-from tempfile import TemporaryDirectory
+from subprocess import check_call, check_output
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest import mock
 
 import IPython.paths
@@ -19,8 +17,8 @@ from IPython.terminal.interactiveshell import TerminalInteractiveShell
 from traitlets.config import Config
 
 import ipyparallel as ipp
-from . import setup
-from . import teardown
+
+from . import setup, teardown
 
 
 def default_config():

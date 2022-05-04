@@ -18,10 +18,12 @@ of the IPython engines.
 from timeit import default_timer as clock
 
 from matplotlib import pyplot as plt
-from pidigits import compute_two_digit_freqs
-from pidigits import fetch_pi_file
-from pidigits import plot_two_digit_freqs
-from pidigits import reduce_freqs
+from pidigits import (
+    compute_two_digit_freqs,
+    fetch_pi_file,
+    plot_two_digit_freqs,
+    reduce_freqs,
+)
 
 import ipyparallel as ipp
 

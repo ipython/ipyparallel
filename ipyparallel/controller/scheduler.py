@@ -13,17 +13,12 @@ import traitlets.log
 import zmq
 from decorator import decorator
 from tornado import ioloop
-from traitlets import Bytes
-from traitlets import default
-from traitlets import Instance
-from traitlets import Set
-from traitlets.config import Config
-from traitlets.config import LoggingConfigurable
+from traitlets import Bytes, Instance, Set, default
+from traitlets.config import Config, LoggingConfigurable
 from zmq.eventloop import zmqstream
 
 from ipyparallel import util
-from ipyparallel.util import connect_logger
-from ipyparallel.util import local_logger
+from ipyparallel.util import connect_logger, local_logger
 
 # local imports
 

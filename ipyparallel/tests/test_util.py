@@ -1,8 +1,7 @@
 import socket
 from unittest import mock
 
-from jupyter_client.localinterfaces import localhost
-from jupyter_client.localinterfaces import public_ips
+from jupyter_client.localinterfaces import localhost, public_ips
 
 from ipyparallel import util
 

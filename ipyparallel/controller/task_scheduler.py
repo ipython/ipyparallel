@@ -1,20 +1,12 @@
 import time
 from collections import deque
-from random import randint
-from random import random
+from random import randint, random
 from types import FunctionType
 
 import zmq
-from traitlets import Dict
-from traitlets import Enum
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import List
-from traitlets import observe
+from traitlets import Dict, Enum, Instance, Integer, List, observe
 
-from ipyparallel import Dependency
-from ipyparallel import error
-from ipyparallel import util
+from ipyparallel import Dependency, error, util
 from ipyparallel.controller.scheduler import Scheduler
 
 try:

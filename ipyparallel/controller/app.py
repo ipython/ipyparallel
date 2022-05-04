@@ -11,51 +11,50 @@ import stat
 import sys
 import time
 from multiprocessing import Process
-from signal import SIGABRT
-from signal import SIGINT
-from signal import signal
-from signal import SIGTERM
+from signal import SIGABRT, SIGINT, SIGTERM, signal
 
 import zmq
 from IPython.core.profiledir import ProfileDir
 from jupyter_client.localinterfaces import localhost
-from jupyter_client.session import Session
-from jupyter_client.session import session_aliases
-from jupyter_client.session import session_flags
-from traitlets import Bool
-from traitlets import Bytes
-from traitlets import default
-from traitlets import Dict
-from traitlets import import_item
-from traitlets import Instance
-from traitlets import Integer
-from traitlets import List
-from traitlets import observe
-from traitlets import Tuple
-from traitlets import Type
-from traitlets import Unicode
-from traitlets import Union
-from traitlets import validate
+from jupyter_client.session import Session, session_aliases, session_flags
+from traitlets import (
+    Bool,
+    Bytes,
+    Dict,
+    Instance,
+    Integer,
+    List,
+    Tuple,
+    Type,
+    Unicode,
+    Union,
+    default,
+    import_item,
+    observe,
+    validate,
+)
 from traitlets.config import Config
 from zmq.devices import ProcessMonitoredQueue
 from zmq.eventloop.zmqstream import ZMQStream
 from zmq.log.handlers import PUBHandler
 
-from .broadcast_scheduler import BroadcastScheduler
 from ipyparallel import util
-from ipyparallel.apps.baseapp import base_aliases
-from ipyparallel.apps.baseapp import base_flags
-from ipyparallel.apps.baseapp import BaseParallelApplication
-from ipyparallel.apps.baseapp import catch_config_error
+from ipyparallel.apps.baseapp import (
+    BaseParallelApplication,
+    base_aliases,
+    base_flags,
+    catch_config_error,
+)
 from ipyparallel.controller.broadcast_scheduler import launch_broadcast_scheduler
 from ipyparallel.controller.dictdb import DictDB
-from ipyparallel.controller.heartmonitor import HeartMonitor
-from ipyparallel.controller.heartmonitor import start_heartmonitor
+from ipyparallel.controller.heartmonitor import HeartMonitor, start_heartmonitor
 from ipyparallel.controller.hub import Hub
 from ipyparallel.controller.scheduler import launch_scheduler
 from ipyparallel.controller.task_scheduler import TaskScheduler
 from ipyparallel.traitlets import PortList
 from ipyparallel.util import disambiguate_url
+
+from .broadcast_scheduler import BroadcastScheduler
 
 # conditional import of SQLiteDB / MongoDB backend class
 real_dbs = []

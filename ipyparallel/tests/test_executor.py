@@ -5,9 +5,9 @@ import time
 
 from tornado.ioloop import IOLoop
 
+from ipyparallel.client.view import LazyMapIterator, LoadBalancedView
+
 from .clienttest import ClusterTestCase
-from ipyparallel.client.view import LazyMapIterator
-from ipyparallel.client.view import LoadBalancedView
 
 
 def wait(n):

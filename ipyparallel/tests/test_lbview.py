@@ -3,9 +3,9 @@ import time
 from itertools import count
 
 import ipyparallel as ipp
-from .clienttest import ClusterTestCase
-from .clienttest import crash
 from ipyparallel import error
+
+from .clienttest import ClusterTestCase, crash
 
 
 class TestLoadBalancedView(ClusterTestCase):

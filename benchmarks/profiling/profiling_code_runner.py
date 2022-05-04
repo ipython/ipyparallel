@@ -2,9 +2,7 @@ import datetime
 import os
 import sys
 import time
-from subprocess import check_call
-from subprocess import check_output
-from subprocess import Popen
+from subprocess import Popen, check_call, check_output
 
 import ipyparallel as ipp
 

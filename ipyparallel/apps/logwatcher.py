@@ -5,12 +5,9 @@ import logging
 
 import zmq
 from jupyter_client.localinterfaces import localhost
-from traitlets import Instance
-from traitlets import List
-from traitlets import Unicode
+from traitlets import Instance, List, Unicode
 from traitlets.config.configurable import LoggingConfigurable
-from zmq.eventloop import ioloop
-from zmq.eventloop import zmqstream
+from zmq.eventloop import ioloop, zmqstream
 
 
 class LogWatcher(LoggingConfigurable):

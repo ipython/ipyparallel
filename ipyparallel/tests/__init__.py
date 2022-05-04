@@ -6,13 +6,14 @@ from subprocess import Popen
 
 from IPython.paths import get_ipython_dir
 
-from ipyparallel import Client
-from ipyparallel import error
-from ipyparallel.cluster.launcher import ipcontroller_cmd_argv
-from ipyparallel.cluster.launcher import ipengine_cmd_argv
-from ipyparallel.cluster.launcher import LocalProcessLauncher
-from ipyparallel.cluster.launcher import ProcessStateError
-from ipyparallel.cluster.launcher import SIGKILL
+from ipyparallel import Client, error
+from ipyparallel.cluster.launcher import (
+    SIGKILL,
+    LocalProcessLauncher,
+    ProcessStateError,
+    ipcontroller_cmd_argv,
+    ipengine_cmd_argv,
+)
 
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
