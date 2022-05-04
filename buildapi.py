@@ -45,12 +45,19 @@ def _handle_labextension(cmd="build:labextension"):
             needs_js = False
 
     if needs_js:
-        subprocess.check_call(['npm', 'install'], cwd=here)
-        subprocess.check_call(['npm', 'run', cmd], cwd=here)
+        subprocess.check_call(['yarn'], cwd=here)
+        subprocess.check_call(['yarn', 'run', cmd], cwd=here)
+
+        source = osp.join(here, 'ipyparallel', 'labextension')
+        if labextension_built:
+            shutil.rmtree(lab_path)
+        shutil.copytree(source, lab_path)
 
 
 def _handle_nbextension():
     source = osp.join(here, 'ipyparallel', 'nbextension', 'static')
+    if osp.exists(nbclassic_path):
+        shutil.rmtree(nbclassic_path)
     shutil.copytree(source, nbclassic_path)
 
 
