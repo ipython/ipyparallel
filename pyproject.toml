@@ -1,11 +1,106 @@
 [build-system]
 requires = [
   "jupyterlab>=3.0.0,==3.*",
-  "packaging",
-  "setuptools>=40.8.0",
-  "wheel",
+  "flit_core >=3.2,<4"
 ]
-build-backend = "setuptools.build_meta"
+build-backend = "buildapi"
+backend-path = ["."]
+
+[project]
+name = "ipyparallel"
+authors = [{name = "IPython Development Team", email = "ipython-dev@scipy.org"}]
+license = {file = "COPYING.md"}
+readme = "README.md"
+description = "Interactive Parallel Computing with IPython"
+keywords = [
+    "Interactive",
+    "Interpreter",
+    "Shell",
+    "Parallel",
+]
+classifiers = [
+    "Framework :: Jupyter",
+    "Framework :: Jupyter :: JupyterLab",
+    "Framework :: Jupyter :: JupyterLab :: 3",
+    "Framework :: Jupyter :: JupyterLab :: Extensions",
+    "Framework :: Jupyter :: JupyterLab :: Extensions :: Prebuilt",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+]
+urls = {Homepage = "https://ipython.org"}
+requires-python = ">=3.7"
+dependencies = [
+    "entrypoints",
+    "decorator",
+    "pyzmq>=18",
+    "traitlets>=4.3",
+    "ipython>=4",
+    "jupyter_client",
+    "ipykernel>=4.4",
+    "tornado>=5.1",
+    "psutil",
+    "python-dateutil>=2.1",
+    "tqdm",
+]
+dynamic = ["version"]
+
+[project.entry-points."ipyparallel.controller_launchers"]
+batch = "ipyparallel.cluster.launcher:BatchControllerLauncher"
+htcondor = "ipyparallel.cluster.launcher:HTCondorControllerLauncher"
+local = "ipyparallel.cluster.launcher:LocalControllerLauncher"
+lsf = "ipyparallel.cluster.launcher:LSFControllerLauncher"
+mpi = "ipyparallel.cluster.launcher:MPIControllerLauncher"
+pbs = "ipyparallel.cluster.launcher:PBSControllerLauncher"
+sge = "ipyparallel.cluster.launcher:SGEControllerLauncher"
+ssh = "ipyparallel.cluster.launcher:SSHControllerLauncher"
+slurm = "ipyparallel.cluster.launcher:SlurmControllerLauncher"
+winhpc = "ipyparallel.cluster.launcher:WindowsHPCControllerLauncher"
+
+[project.entry-points."ipyparallel.engine_launchers"]
+batch = "ipyparallel.cluster.launcher:BatchEngineSetLauncher"
+htcondor = "ipyparallel.cluster.launcher:HTCondorEngineSetLauncher"
+local = "ipyparallel.cluster.launcher:LocalEngineSetLauncher"
+lsf = "ipyparallel.cluster.launcher:LSFEngineSetLauncher"
+mpi = "ipyparallel.cluster.launcher:MPIEngineSetLauncher"
+pbs = "ipyparallel.cluster.launcher:PBSEngineSetLauncher"
+sge = "ipyparallel.cluster.launcher:SGEEngineSetLauncher"
+slurm = "ipyparallel.cluster.launcher:SlurmEngineSetLauncher"
+ssh = "ipyparallel.cluster.launcher:SSHEngineSetLauncher"
+sshproxy = "ipyparallel.cluster.launcher:SSHProxyEngineSetLauncher"
+winhpc = "ipyparallel.cluster.launcher:WindowsHPCEngineSetLauncher"
+
+[project.optional-dependencies]
+nbext = ["notebook", "jupyter_server"]
+serverextension = ["jupyter_server"]
+labextension = ["jupyter_server", "jupyterlab>=3"]
+retroextension = ["jupyter_server", "retrolab"]
+benchmark = ["asv"]
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "pytest-tornado",
+    "ipython[test]",
+    "testpath",
+]
+
+[project.scripts]
+ipcluster = "ipyparallel.cluster.app:main"
+ipcontroller = "ipyparallel.controller.app:main"
+ipengine = "ipyparallel.engine.app:main"
+
+[tool.flit.sdist]
+include = ["install.json", "jupyter-data/", "lab/"]
+exclude = ["lab/lib/"]
+
+[tool.flit.external-data]
+directory = "jupyter-data"
 
 [tool.black]
 skip-string-normalization = true
