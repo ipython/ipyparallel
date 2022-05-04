@@ -45,8 +45,8 @@ def _handle_labextension(cmd="build:labextension"):
             needs_js = False
 
     if needs_js:
-        subprocess.check_call(['yarn'], cwd=here)
-        subprocess.check_call(['yarn', 'run', cmd], cwd=here)
+        subprocess.check_call(['jlpm'], cwd=here)
+        subprocess.check_call(['jlpm', 'run', cmd], cwd=here)
 
         source = osp.join(here, 'ipyparallel', 'labextension')
         if labextension_built:
