@@ -27,7 +27,7 @@ nbclassic_path = osp.join(share_dir, "nbextensions", "ipyparallel")
 lab_path = osp.join(share_dir, "labextensions", "ipyparallel-labextension")
 
 
-def _handle_labextension(cmd="build:labextension"):
+def _handle_labextension(cmd="build:prod"):
     if os.environ.get("IPP_DISABLE_JS") == "1":
         print("Skipping js installation")
         return
@@ -74,6 +74,6 @@ def get_requires_for_build_sdist(config_settings=None):
 
 
 def get_requires_for_build_editable(config_settings=None):
-    _handle_labextension(cmd="build:labextension:dev")
+    _handle_labextension(cmd="build")
     _handle_nbextension()
     return get_requires_for_build_editable_orig(config_settings=config_settings)
