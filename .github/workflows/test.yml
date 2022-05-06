@@ -113,14 +113,14 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
 
-      - name: Build release
+      - name: Install ipyparallel itself
         run: |
-          pip install --upgrade pip build
-          python3 -m build .
+          pip install --upgrade pip
+          pip install --no-deps .
 
       - name: Install Python dependencies
         run: |
-          pip install --pre --upgrade dist/*.whl ipyparallel[test] distributed joblib codecov
+          pip install --pre --upgrade ipyparallel[test] distributed joblib codecov
           pip install --only-binary :all: matplotlib || echo "no matplotlib"
 
       - name: Show environment
