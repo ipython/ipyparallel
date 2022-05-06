@@ -96,7 +96,7 @@ ipcontroller = "ipyparallel.controller.app:main"
 ipengine = "ipyparallel.engine.app:main"
 
 [tool.flit.sdist]
-include = ["install.json", "jupyter-data/", "lab/"]
+include = ["install.json", "jupyter-data/", "lab/", "buildapi.py"]
 exclude = ["lab/lib/"]
 
 [tool.flit.external-data]
