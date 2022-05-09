@@ -4,6 +4,35 @@
 
 Changes in IPython Parallel
 
+## 8.3
+
+### 8.3.0
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/8.2.1...8.3.0))
+
+8.3.0 is a small release, with some bugfixes and improvements to the release process.
+
+Build fixes:
+
+- Workaround SSL issues with recent builds of nodejs + webpack
+- Build with flit, removing setup.py
+
+Fixes:
+
+- Remove remaining references to deprecated `distutils` package (has surprising impact on process memory)
+- Improve logging when engine registration times out
+
+Maintenance changes that shouldn't affect users:
+
+- Releases are now built with pip instead of `setup.py`
+- Updates to autoformatting configuration
+
+#### Contributors to this release
+
+([GitHub contributors page for this release](https://github.com/ipython/ipyparallel/graphs/contributors?from=2022-04-01&to=2022-05-09&type=c))
+
+[@blink1073](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Ablink1073+updated%3A2022-04-01..2022-05-09&type=Issues) | [@dependabot](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Adependabot+updated%3A2022-04-01..2022-05-09&type=Issues) | [@jburroni](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Ajburroni+updated%3A2022-04-01..2022-05-09&type=Issues) | [@kloczek](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Akloczek+updated%3A2022-04-01..2022-05-09&type=Issues) | [@minrk](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Aminrk+updated%3A2022-04-01..2022-05-09&type=Issues) | [@pre-commit-ci](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Apre-commit-ci+updated%3A2022-04-01..2022-05-09&type=Issues)
+
 ## 8.2
 
 ### 8.2.1
