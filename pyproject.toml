@@ -145,7 +145,7 @@ filterwarnings = [
 github_url = "https://github.com/jupyterhub/jupyterhub"
 
 [tool.tbump.version]
-current = "8.3.0.dev"
+current = "8.3.0"
 
 # pep440 regex
 regex = '''
