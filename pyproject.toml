@@ -100,10 +100,7 @@ ipengine = "ipyparallel.engine.app:main"
 
 [tool.hatch.build]
 artifacts = [
-  "ipyparallel/**/*.*"
-]
-exclude = [
-  "lab/lib"
+  "ipyparallel/labextension/*.*"
 ]
 
 [tool.hatch.build.targets.wheel.shared-data]
