@@ -8,7 +8,7 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 class CustomHook(BuildHookInterface):
     def initialize(self, version, build_data):
-        cmd = "build:prod" if version == "stable" else "build"
+        cmd = "build:prod" if version == "standard" else "build"
         osp = os.path
         here = osp.abspath(osp.dirname(__file__))
         lab_path = osp.join(here, 'ipyparallel', 'labextension')
