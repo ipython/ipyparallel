@@ -8,6 +8,8 @@ from hatchling.builders.hooks.plugin.interface import BuildHookInterface
 
 class CustomHook(BuildHookInterface):
     def initialize(self, version, build_data):
+        if self.target_name not in ["wheel", "sdist"]:
+            return
         cmd = "build:prod" if version == "standard" else "build"
         osp = os.path
         here = osp.abspath(osp.dirname(__file__))

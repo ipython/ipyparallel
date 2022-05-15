@@ -95,13 +95,11 @@ ipcontroller = "ipyparallel.controller.app:main"
 ipengine = "ipyparallel.engine.app:main"
 
 # Used to call hatch_build.py
-[tool.hatch.build.targets.wheel.hooks.custom]
-[tool.hatch.build.targets.sdist.hooks.custom]
+[tool.hatch.build.hooks.custom]
 
-[tool.hatch.build]
-artifacts = [
-  "ipyparallel/labextension/**/*.*"
-]
+[tool.hatch.build.force-include]
+"./ipyparallel/labextension" = "ipyparallel/labextension"
+
 
 [tool.hatch.build.targets.wheel.shared-data]
 "jupyter-config" = "etc/jupyter"
