@@ -1,13 +1,13 @@
 [build-system]
 requires = [
   "jupyterlab>=3.0.0,==3.*",
-  "flit_core >=3.2,<4"
+  "hatchling>=0.25"
 ]
-build-backend = "buildapi"
-backend-path = ["."]
+build-backend = "hatchling.build"
 
 [project]
 name = "ipyparallel"
+version = "8.4.0.dev"
 authors = [{name = "IPython Development Team", email = "ipython-dev@scipy.org"}]
 license = {file = "COPYING.md"}
 readme = "README.md"
@@ -48,7 +48,6 @@ dependencies = [
     "python-dateutil>=2.1",
     "tqdm",
 ]
-dynamic = ["version"]
 
 [project.entry-points."ipyparallel.controller_launchers"]
 batch = "ipyparallel.cluster.launcher:BatchControllerLauncher"
@@ -95,20 +94,18 @@ ipcluster = "ipyparallel.cluster.app:main"
 ipcontroller = "ipyparallel.controller.app:main"
 ipengine = "ipyparallel.engine.app:main"
 
-[tool.flit.sdist]
-include = [
-  "benchmarks/",
-  "docs/",
-  "*.json",
-  "yarn.lock",
-  "jupyter-data/",
-  "lab/",
-  "buildapi.py",
-]
-exclude = ["lab/lib/"]
+# Used to call hatch_build.py
+[tool.hatch.build.hooks.custom]
 
-[tool.flit.external-data]
-directory = "jupyter-data"
+[tool.hatch.build]
+artifacts = [
+  "ipyparallel/labextension/**/*.*"
+]
+
+[tool.hatch.build.targets.wheel.shared-data]
+"jupyter-config" = "etc/jupyter"
+"ipyparallel/nbextension/static" = "share/jupyter/nbextensions/ipyparallel"
+"ipyparallel/labextension" = "share/jupyter/labextensions/ipyparallel-labextension"
 
 [tool.black]
 skip-string-normalization = true
@@ -138,7 +135,6 @@ filterwarnings = [
   # from older versions of ipykernel
   "ignore:the imp module is:DeprecationWarning",
 ]
-
 
 [tool.tbump]
 # Uncomment this if your project is hosted on GitHub:
@@ -171,6 +167,10 @@ tag_template = "{new_version}"
 [[tool.tbump.file]]
 src = "ipyparallel/_version.py"
 search = '__version__ = "{current_version}"'
+
+[[tool.tbump.file]]
+src = "pyproject.toml"
+search = '"version" = "{current_version}"'
 
 [[tool.tbump.file]]
 src = "package.json"
