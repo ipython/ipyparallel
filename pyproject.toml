@@ -1,7 +1,7 @@
 [build-system]
 requires = [
   "jupyterlab>=3.0.0,==3.*",
-  "hatchling"
+  "hatchling>=0.25"
 ]
 build-backend = "hatchling.build"
 
@@ -97,9 +97,10 @@ ipengine = "ipyparallel.engine.app:main"
 # Used to call hatch_build.py
 [tool.hatch.build.hooks.custom]
 
-[tool.hatch.build.force-include]
-"./ipyparallel/labextension" = "ipyparallel/labextension"
-
+[tool.hatch.build]
+artifacts = [
+  "ipyparallel/labextension/**/*.*"
+]
 
 [tool.hatch.build.targets.wheel.shared-data]
 "jupyter-config" = "etc/jupyter"
