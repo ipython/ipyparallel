@@ -422,7 +422,7 @@ class ParallelMagics(Magics):
                     try:
                         result.get()
                     except error.CompositeError as e:
-                        if stream_output:
+                        if stream_output and result._output_ready:
                             # already streamed, show an abbreviated result
                             raise error.AlreadyDisplayedError(e) from None
                         else:
