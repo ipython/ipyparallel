@@ -4,6 +4,27 @@
 
 Changes in IPython Parallel
 
+## 8.4
+
+### 8.4.0
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/8.3.0...8.4.0))
+
+8.4.0 is a small release, with some bugfixes and improvements to the release process.
+
+Bugfixes:
+
+- (`%px`) only skip redisplay of streamed errors if outputs are complete
+
+Compatibility improvements:
+
+- Avoid use of recently deprecated asyncio/tornado APIs
+  around 'current' event loops that are not running.
+
+Build improvements:
+
+- Switch to hatch backend for packaging
+
 ## 8.3
 
 ### 8.3.0
