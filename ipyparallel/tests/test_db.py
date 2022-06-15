@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 from unittest import TestCase
 
 from jupyter_client.session import Session
-from tornado.ioloop import IOLoop
 
 from ipyparallel import util
 from ipyparallel.controller.dictdb import DictDB
@@ -30,7 +29,7 @@ class TaskDBTest:
     def load_records(self, n=1, buffer_size=100):
         """load n records for testing"""
         # sleep 1/10 s, to ensure timestamp is different to previous calls
-        time.sleep(0.1)
+        time.sleep(0.01)
         msg_ids = []
         for i in range(n):
             msg = self.session.msg('apply_request', content=dict(a=5))
@@ -271,8 +270,6 @@ class TestDictBackend(TaskDBTest, TestCase):
 
 class TestSQLiteBackend(TaskDBTest, TestCase):
     def setUp(self):
-        # make a new IOLoop
-        IOLoop().make_current()
         tmp_file = tempfile.NamedTemporaryFile(suffix='.db')
         self.temp_db = tmp_file.name
         tmp_file.close()
@@ -290,4 +287,3 @@ class TestSQLiteBackend(TaskDBTest, TestCase):
             os.remove(self.temp_db)
         except:
             pass
-        IOLoop.clear_current()

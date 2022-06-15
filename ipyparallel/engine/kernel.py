@@ -84,7 +84,7 @@ class IPythonParallelKernel(IPythonKernel):
 
         # if we have a delay, give messages this long to arrive on the queue
         # before we start accepting requests
-        asyncio.get_event_loop().call_later(
+        asyncio.get_running_loop().call_later(
             self.stop_on_error_timeout, schedule_stop_aborting
         )
 

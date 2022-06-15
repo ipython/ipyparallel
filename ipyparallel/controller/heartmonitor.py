@@ -5,6 +5,7 @@ and hearts are tracked based on their DEALER identities.
 """
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
 import logging
 import time
 import uuid
@@ -241,24 +242,21 @@ class HeartMonitor(LoggingConfigurable):
             )
 
 
-def start_heartmonitor(
+async def _setup_heartmonitor(
+    ctx,
     ping_url,
     pong_url,
     monitor_url,
     log_level=logging.INFO,
     curve_publickey=None,
     curve_secretkey=None,
-    **kwargs,
+    **heart_monitor_kwargs,
 ):
-    """Start a heart monitor.
+    """Set up heart monitor
 
     For use in a background process,
     via Process(target=start_heartmonitor)
     """
-    loop = ioloop.IOLoop()
-    loop.make_current()
-    ctx = zmq.Context()
-
     ping_socket = ctx.socket(zmq.PUB)
     bind(
         ping_socket,
@@ -292,18 +290,47 @@ def start_heartmonitor(
     from .app import IPController
 
     app = IPController(log_level=log_level)
-    kwargs['log'] = app.log
+    heart_monitor_kwargs['log'] = app.log
 
     heart_monitor = HeartMonitor(
         ping_stream=ping_stream,
         pong_stream=pong_stream,
         monitor_stream=monitor_stream,
-        **kwargs,
+        **heart_monitor_kwargs,
     )
     heart_monitor.start()
 
+
+def start_heartmonitor(
+    ping_url,
+    pong_url,
+    monitor_url,
+    log_level=logging.INFO,
+    curve_publickey=None,
+    curve_secretkey=None,
+    **heart_monitor_kwargs,
+):
+    """Start a heart monitor.
+
+    For use in a background process,
+    via Process(target=start_heartmonitor)
+    """
+    ctx = zmq.Context()
+    loop = asyncio.new_event_loop()
     try:
-        loop.start()
+        loop.run_until_complete(
+            _setup_heartmonitor(
+                ctx=ctx,
+                ping_url=ping_url,
+                pong_url=pong_url,
+                monitor_url=monitor_url,
+                log_level=log_level,
+                curve_publickey=curve_publickey,
+                curve_secretkey=curve_secretkey,
+                **heart_monitor_kwargs,
+            )
+        )
+        loop.run_forever()
     finally:
-        loop.close(all_fds=True)
-    ctx.destroy()
+        loop.close()
+        ctx.destroy()

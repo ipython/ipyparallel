@@ -134,8 +134,7 @@ def get_common_scheduler_streams(
         # in a process, don't use instance()
         # for safety with multiprocessing
         ctx = zmq.Context()
-        loop = ioloop.IOLoop()
-        loop.make_current()
+        loop = ioloop.IOLoop(make_current=False)
 
     def connect(s, addr):
         return util.connect(
