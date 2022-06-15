@@ -185,7 +185,7 @@ class IPClusterStop(BaseParallelApplication):
                 tasks.append(cluster.stop_cluster())
             await asyncio.gather(*tasks)
 
-        asyncio.get_event_loop().run_until_complete(_stop_all())
+        asyncio.run(_stop_all())
 
 
 list_aliases = {}

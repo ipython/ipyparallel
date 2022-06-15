@@ -1030,10 +1030,7 @@ class Client(HasTraits):
         # always create a fresh asyncio loop for the thread
         if os.name == "nt":
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-        asyncio_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(asyncio_loop)
-        loop = ioloop.IOLoop()
-        loop.make_current()
+        loop = ioloop.IOLoop(make_current=False)
         return loop
 
     def _stop_io_thread(self):

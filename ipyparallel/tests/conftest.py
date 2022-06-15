@@ -136,7 +136,6 @@ def cluster_config():
 def Cluster(
     request,
     ipython_dir,
-    io_loop,
     controller_launcher_class,
     engine_launcher_class,
     cluster_config,

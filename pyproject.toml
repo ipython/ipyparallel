@@ -84,7 +84,6 @@ test = [
     "pytest",
     "pytest-cov",
     "pytest-asyncio",
-    "pytest-tornado",
     "ipython[test]",
     "testpath",
 ]

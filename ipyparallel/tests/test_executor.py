@@ -3,8 +3,6 @@
 # Distributed under the terms of the Modified BSD License.
 import time
 
-from tornado.ioloop import IOLoop
-
 from ipyparallel.client.view import LazyMapIterator, LoadBalancedView
 
 from .clienttest import ClusterTestCase
@@ -22,14 +20,11 @@ def echo(x):
 
 
 class AsyncResultTest(ClusterTestCase):
-    def resolve(self, future):
-        return IOLoop().run_sync(lambda: future)
-
     def test_client_executor(self):
         executor = self.client.executor()
         assert isinstance(executor.view, LoadBalancedView)
         f = executor.submit(lambda x: 2 * x, 5)
-        r = self.resolve(f)
+        r = f.result()
         self.assertEqual(r, 10)
 
     def test_view_executor(self):
@@ -41,7 +36,7 @@ class AsyncResultTest(ClusterTestCase):
         view = self.client.load_balanced_view()
         executor = view.executor
         f = executor.submit(lambda x, y: x * y, 2, 3)
-        r = self.resolve(f)
+        r = f.result()
         self.assertEqual(r, 6)
 
     def test_executor_map(self):

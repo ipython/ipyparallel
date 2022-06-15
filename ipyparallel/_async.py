@@ -13,8 +13,11 @@ def _asyncio_run(coro):
     # for now: using tornado for broader compatibility with FDs,
     # e.g. when using the only partially functional default
     # Proactor on windows
-    loop = IOLoop()
-    return loop.run_sync(lambda: asyncio.ensure_future(coro))
+    loop = IOLoop(make_current=False)
+    try:
+        return loop.run_sync(lambda: asyncio.ensure_future(coro))
+    finally:
+        loop.close()
 
 
 class AsyncFirst:
@@ -29,9 +32,7 @@ class AsyncFirst:
     _async_thread = None
 
     def _thread_main(self):
-        asyncio_loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(asyncio_loop)
-        loop = self._thread_loop = IOLoop.current()
+        loop = self._thread_loop = IOLoop(make_current=False)
         loop.add_callback(self._loop_started.set)
         loop.start()
 
@@ -61,12 +62,11 @@ class AsyncFirst:
         otherwise puts it in a background thread
         """
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
         except RuntimeError:
-            # sometimes get returns a RuntimeError
-            # if there's no current loop under certain policies
+            # not in a running loop
             loop = None
-        if loop and loop.is_running():
+        if loop:
             return self._in_thread(async_f, *args, **kwargs)
         else:
             return _asyncio_run(async_f(*args, **kwargs))
