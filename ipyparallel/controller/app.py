@@ -342,7 +342,7 @@ class IPController(BaseParallelApplication):
         return self.number_of_broadcast_schedulers - self.number_of_leaf_schedulers
 
     ports = PortList(
-        Integer(min_value=1, max_value=65536),
+        Integer(min=1, max=65536),
         config=True,
         help="""
         Pool of ports to use for the controller.
