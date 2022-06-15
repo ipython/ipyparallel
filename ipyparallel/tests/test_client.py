@@ -601,6 +601,7 @@ class TestClient(ClusterTestCase):
         tornado.version_info[:2] < (5,),
         reason="become_dask doesn't work with tornado 4",
     )
+    @pytest.mark.filterwarnings("ignore:make_current")
     def test_become_dask(self):
         executor = self.client.become_dask()
         reprs = self.client[:].apply_sync(repr, Reference('distributed_worker'))
