@@ -169,7 +169,7 @@ search = '__version__ = "{current_version}"'
 
 [[tool.tbump.file]]
 src = "pyproject.toml"
-search = '"version" = "{current_version}"'
+search = 'version = "{current_version}"'
 
 [[tool.tbump.file]]
 src = "package.json"
