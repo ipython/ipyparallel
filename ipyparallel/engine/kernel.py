@@ -211,7 +211,10 @@ class IPythonParallelKernel(IPythonKernel):
         except BaseException as e:
             # invoke IPython traceback formatting
             # this sends the 'error' message
-            shell.showtraceback()
+            try:
+                shell.showtraceback()
+            except Exception as tb_error:
+                self.log.error(f"Failed to show traceback for {e}: {tb_error}")
 
             try:
                 str_evalue = str(e)
