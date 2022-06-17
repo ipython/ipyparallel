@@ -121,7 +121,12 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --pre --upgrade ipyparallel[test] distributed joblib codecov
+          pip install --pre --upgrade ipyparallel[test] codecov
+
+      - name: Install extra Python packages
+        if: ${{ ! startsWith(matrix.python, '3.11') }}
+        run: |
+          pip install distributed joblib
           pip install --only-binary :all: matplotlib || echo "no matplotlib"
 
       - name: Show environment
