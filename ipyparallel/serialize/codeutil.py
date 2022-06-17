@@ -43,6 +43,9 @@ def reduce_code(co):
         args.insert(1, co.co_kwonlyargcount)
     if sys.version_info > (3, 8):
         args.insert(1, co.co_posonlyargcount)
+    if sys.version_info > (3, 11):
+        args.insert(12, co.co_qualname)
+        args.insert(15, co.co_exceptiontable)
     return code_ctor, tuple(args)
 
 
