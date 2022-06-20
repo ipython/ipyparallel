@@ -36,7 +36,7 @@ jobs:
             cluster_type: slurm
             container: slurmctld
           - python: "3.7"
-          - python: "3.8"
+          - python: "3.10"
             env:
               IPP_CONTROLLER_IP: "*"
           - python: "3.9"
@@ -46,6 +46,7 @@ jobs:
             runs_on: windows-2019
           - python: "3.9"
             runs_on: macos-10.15
+          - python: "3.11.0-beta.3"
 
     steps:
       - uses: actions/checkout@v2
@@ -120,7 +121,12 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --pre --upgrade ipyparallel[test] distributed joblib codecov
+          pip install --pre --upgrade ipyparallel[test] codecov
+
+      - name: Install extra Python packages
+        if: ${{ ! startsWith(matrix.python, '3.11') }}
+        run: |
+          pip install distributed joblib
           pip install --only-binary :all: matplotlib || echo "no matplotlib"
 
       - name: Show environment

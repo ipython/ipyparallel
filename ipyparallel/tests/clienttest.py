@@ -197,7 +197,8 @@ class ClusterTestCase(BaseZMQTestCase):
         self.engines = []
 
     def tearDown(self):
-        self.client[:].use_pickle()
+        if len(self.client):
+            self.client[:].use_pickle()
 
         # self.client.clear(block=True)
         # close fds:

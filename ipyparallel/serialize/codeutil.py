@@ -9,41 +9,58 @@ Reference: A. Tremols, P Cogolo, "Python Cookbook," p 302-305
 """
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
+import copyreg
+import inspect
 import sys
 import types
-
-try:
-    import copyreg  # Py 3
-except ImportError:
-    import copy_reg as copyreg  # Py 2
 
 
 def code_ctor(*args):
     return types.CodeType(*args)
 
 
-def reduce_code(co):
-    args = [
-        co.co_argcount,
-        co.co_nlocals,
-        co.co_stacksize,
-        co.co_flags,
-        co.co_code,
-        co.co_consts,
-        co.co_names,
-        co.co_varnames,
-        co.co_filename,
-        co.co_name,
-        co.co_firstlineno,
-        co.co_lnotab,
-        co.co_freevars,
-        co.co_cellvars,
+# map CodeType constructor args to code co_ attribute names
+# (they _almost_ all match, and new ones probably will)
+_code_attr_map = {
+    "codestring": "code",
+    "constants": "consts",
+}
+# pass every supported arg to the code constructor
+# this should be more forward-compatible
+if sys.version_info >= (3, 10):
+    _code_attr_names = tuple(
+        _code_attr_map.get(name, name)
+        for name, param in inspect.signature(types.CodeType).parameters.items()
+        if param.POSITIONAL_ONLY or param.POSITIONAL_OR_KEYWORD
+    )
+else:
+    # can't inspect types.CodeType on Python < 3.10
+    _code_attr_names = [
+        "argcount",
+        "kwonlyargcount",
+        "nlocals",
+        "stacksize",
+        "flags",
+        "code",
+        "consts",
+        "names",
+        "varnames",
+        "filename",
+        "name",
+        "firstlineno",
+        "lnotab",
+        "freevars",
+        "cellvars",
     ]
-    if sys.version_info[0] >= 3:
-        args.insert(1, co.co_kwonlyargcount)
-    if sys.version_info > (3, 8):
-        args.insert(1, co.co_posonlyargcount)
-    return code_ctor, tuple(args)
+    if hasattr(types.CodeType, "co_posonlyargcount"):
+        _code_attr_names.insert(1, "posonlyargcount")
+
+    _code_attr_names = tuple(_code_attr_names)
+
+
+def reduce_code(obj):
+    """codeobject reducer"""
+    return code_ctor, tuple(getattr(obj, f'co_{name}') for name in _code_attr_names)
 
 
 copyreg.pickle(types.CodeType, reduce_code)

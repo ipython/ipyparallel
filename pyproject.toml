@@ -124,7 +124,8 @@ testpaths = [
     "ipyparallel/tests"
 ]
 filterwarnings = [
-  "error",
+  "error:::ipy*",
+  "error:::jupyter*",
   "ignore:unclosed event loop:ResourceWarning",
   "ignore:unclosed socket <zmq.Socket:ResourceWarning",
   "ignore:unclosed <socket.socket:ResourceWarning",
