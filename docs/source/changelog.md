@@ -6,6 +6,12 @@ Changes in IPython Parallel
 
 ## 8.4
 
+### 8.4.1
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/8.4.0...8.4.1))
+
+8.4.1 is a tiny release, adding support for Python 3.11
+
 ### 8.4.0
 
 ([full changelog](https://github.com/ipython/ipyparallel/compare/8.3.0...8.4.0))
