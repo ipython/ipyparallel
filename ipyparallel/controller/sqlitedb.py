@@ -17,7 +17,12 @@ except ImportError:
     sqlite3 = None
 
 from dateutil.parser import parse as dateutil_parse
-from jupyter_client.jsonutil import json_default
+
+try:
+    from jupyter_client.jsonutil import json_default
+except ImportError:
+    from jupyter_client.jsonutil import date_default as json_default
+
 from tornado import ioloop
 from traitlets import Dict, Instance, List, Unicode
 
