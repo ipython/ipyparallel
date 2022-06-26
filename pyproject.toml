@@ -134,6 +134,7 @@ filterwarnings = [
   "ignore:unclosed file <_io.BufferedRandom>:ResourceWarning",
   # from older versions of ipykernel
   "ignore:the imp module is:DeprecationWarning",
+  "ignore:The distutils package is:DeprecationWarning"
 ]
 
 [tool.tbump]
