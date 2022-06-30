@@ -626,23 +626,25 @@ class TestClient(ClusterTestCase):
                     c = self.connect_client()
                 c.close()
             with mock.patch('socket.gethostname', lambda: location):
+                c = None
                 try:
-                    c = self.connect_client()
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("error", category=RuntimeWarning)
+                        c = self.connect_client()
                 finally:
                     if c:
-                        warnings.simplefilter("ignore", category=RuntimeWarning)
                         c.close()
 
     def test_local_ip_true_doesnt_trigger_warning(self):
         with mock.patch('ipyparallel.client.client.is_local_ip', lambda x: True):
             c = None
-            with warnings.catch_warnings():
-                warnings.simplefilter("error")
-                try:
+            try:
+                with warnings.catch_warnings():
+                    warnings.simplefilter("error", category=RuntimeWarning)
                     c = self.connect_client()
-                finally:
-                    if c:
-                        c.close()
+            finally:
+                if c:
+                    c.close()
 
     def test_wait_for_engines(self):
         n = len(self.client)
