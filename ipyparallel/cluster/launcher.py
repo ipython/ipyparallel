@@ -461,6 +461,7 @@ class LocalProcessLauncher(BaseLauncher):
     stderr = None
     process = None
     _wait_thread = None
+    _popen_process = None
 
     def find_args(self):
         return self.cmd_and_args
@@ -493,6 +494,9 @@ class LocalProcessLauncher(BaseLauncher):
                 break
         stop_data = dict(exit_code=exit_code, pid=self.pid, identifier=self.identifier)
         self.loop.add_callback(lambda: self.notify_stop(stop_data))
+        if self._popen_process:
+            # wait avoids ResourceWarning if the process has exited
+            self._popen_process.wait(0)
 
     def _start_waiting(self):
         """Start background thread waiting on the process to exit"""
@@ -516,12 +520,12 @@ class LocalProcessLauncher(BaseLauncher):
         env.update(self.get_env())
         self.log.debug(f"Setting environment: {','.join(self.get_env())}")
 
-        with open(self.output_file, "ab") as f:
-            proc = Popen(
+        with open(self.output_file, "ab") as f, open(os.devnull, "rb") as stdin:
+            proc = self._popen_process = Popen(
                 self.args,
                 stdout=f.fileno(),
                 stderr=STDOUT,
-                stdin=PIPE,
+                stdin=stdin,
                 env=env,
                 cwd=self.work_dir,
                 start_new_session=True,  # don't forward signals
