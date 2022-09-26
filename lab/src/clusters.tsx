@@ -113,7 +113,7 @@ export class ClusterManager extends Widget {
           return this._updateClusterList();
         },
         tooltip: "Refresh Cluster List",
-      })
+      }),
     );
 
     // Make a new cluster button for the toolbar.
@@ -122,7 +122,7 @@ export class ClusterManager extends Widget {
       new CommandToolbarButton({
         commands: this._registry,
         id: CommandIDs.newCluster,
-      })
+      }),
     );
 
     layout.addWidget(toolbar);
@@ -267,7 +267,7 @@ export class ClusterManager extends Widget {
         setActiveById={this._setActiveById}
         injectClientCodeForCluster={this._injectClientCodeForCluster}
       />,
-      this._clusterListing.node
+      this._clusterListing.node,
     );
   }
 
@@ -399,12 +399,12 @@ export class ClusterManager extends Widget {
   private async _startDrag(
     index: number,
     clientX: number,
-    clientY: number
+    clientY: number,
   ): Promise<void> {
     // Create the drag image.
     const model = this._clusters[index];
     const listingItem = this._clusterListing.node.querySelector(
-      `li.ipp-ClusterListingItem[data-cluster-id="${model.id}"]`
+      `li.ipp-ClusterListingItem[data-cluster-id="${model.id}"]`,
     ) as HTMLElement;
     const dragImage = Private.createDragImage(listingItem);
 
@@ -449,7 +449,7 @@ export class ClusterManager extends Widget {
    * Launch a new cluster on the server.
    */
   private async _newCluster(
-    clusterRequest: INewCluster
+    clusterRequest: INewCluster,
   ): Promise<IClusterModel> {
     this._isReady = false;
     this._registry.notifyCommandChanged(CommandIDs.newCluster);
@@ -457,7 +457,7 @@ export class ClusterManager extends Widget {
     const response = await ServerConnection.makeRequest(
       `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}`,
       { method: "POST", body: JSON.stringify(clusterRequest) },
-      this._serverSettings
+      this._serverSettings,
     );
     if (response.status !== 200) {
       const err = await response.json();
@@ -480,7 +480,7 @@ export class ClusterManager extends Widget {
     const response = await ServerConnection.makeRequest(
       `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}`,
       {},
-      this._serverSettings
+      this._serverSettings,
     );
     if (response.status !== 200) {
       const msg =
@@ -499,7 +499,7 @@ export class ClusterManager extends Widget {
     // If it doesn't, or if there is no active cluster,
     // select the first one.
     const active = this._clusters.find(
-      (c) => c.id === (this._activeCluster && this._activeCluster.id)
+      (c) => c.id === (this._activeCluster && this._activeCluster.id),
     );
     if (!active) {
       const id = (this._clusters[0] && this._clusters[0].id) || "";
@@ -515,7 +515,7 @@ export class ClusterManager extends Widget {
     const response = await ServerConnection.makeRequest(
       `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}/${id}`,
       { method: "POST" },
-      this._serverSettings
+      this._serverSettings,
     );
     if (response.status > 299) {
       const err = await response.json();
@@ -532,7 +532,7 @@ export class ClusterManager extends Widget {
     const response = await ServerConnection.makeRequest(
       `${this._serverSettings.baseUrl}${CLUSTER_PREFIX}/${id}`,
       { method: "DELETE" },
-      this._serverSettings
+      this._serverSettings,
     );
     if (response.status !== 204) {
       const err = await response.json();
@@ -569,7 +569,7 @@ export class ClusterManager extends Widget {
         method: "PATCH",
         body: JSON.stringify(update),
       },
-      this._serverSettings
+      this._serverSettings,
     );
     if (response.status !== 200) {
       const err = await response.json();
@@ -583,7 +583,7 @@ export class ClusterManager extends Widget {
 
   private _findCluster(event: MouseEvent): number {
     const nodes = Array.from(
-      this.node.querySelectorAll("li.ipp-ClusterListingItem")
+      this.node.querySelectorAll("li.ipp-ClusterListingItem"),
     );
     return ArrayExt.findFirstIndex(nodes, (node) => {
       return ElementExt.hitTest(node, event.clientX, event.clientY);

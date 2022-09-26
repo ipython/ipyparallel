@@ -29,7 +29,7 @@ define(function (require) {
       "    </div>",
       "  </div>",
       "</div>",
-    ].join("\n")
+    ].join("\n"),
   );
 
   function load() {
@@ -41,7 +41,7 @@ define(function (require) {
       $("<link>")
         .attr("rel", "stylesheet")
         .attr("type", "text/css")
-        .attr("href", base_url + "nbextensions/ipyparallel/clusterlist.css")
+        .attr("href", base_url + "nbextensions/ipyparallel/clusterlist.css"),
     );
     $(".tab-content").append(cluster_html);
     $("#tabs").append(
@@ -52,8 +52,8 @@ define(function (require) {
           .text("IPython Clusters")
           .click(function (e) {
             window.history.pushState(null, null, "#ipyclusters");
-          })
-      )
+          }),
+      ),
     );
     var cluster_list = new clusterlist.ClusterList("#cluster_list", {
       base_url: IPython.notebook_list.base_url,

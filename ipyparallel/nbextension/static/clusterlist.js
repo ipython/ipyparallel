@@ -4,7 +4,7 @@
 define(["base/js/namespace", "jquery", "base/js/utils"], function (
   IPython,
   $,
-  utils
+  utils,
 ) {
   "use strict";
 
@@ -115,7 +115,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
     var action_col = $("<div/>")
       .addClass("action_col col-xs-2")
       .append(
-        $("<span/>").addClass("item_buttons btn-group").append(start_button)
+        $("<span/>").addClass("item_buttons btn-group").append(start_button),
       );
     this.element
       .empty()
@@ -151,7 +151,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
         var url = utils.url_join_encode(
           that.base_url,
           "ipyparallel/clusters",
-          that.cluster.id
+          that.cluster.id,
         );
         ajax(url, settings);
       }
@@ -180,7 +180,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
     var action_col = $("<div/>")
       .addClass("action_col col-xs-2")
       .append(
-        $("<span/>").addClass("item_buttons btn-group").append(stop_button)
+        $("<span/>").addClass("item_buttons btn-group").append(stop_button),
       );
 
     this.element
@@ -207,7 +207,7 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
       var url = utils.url_join_encode(
         that.base_url,
         "ipyparallel/clusters",
-        that.cluster.id
+        that.cluster.id,
       );
       ajax(url, settings);
     });
