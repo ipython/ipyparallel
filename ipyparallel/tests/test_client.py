@@ -39,40 +39,41 @@ class TestClient(ClusterTestCase):
     def test_ids(self):
         n = len(self.client.ids)
         self.add_engines(2)
-        self.assertEqual(len(self.client.ids), n + 2)
+        assert len(self.client.ids) == n + 2
 
     def test_iter(self):
         self.minimum_engines(4)
         engine_ids = [view.targets for view in self.client]
-        self.assertEqual(engine_ids, self.client.ids)
+        assert engine_ids == self.client.ids
 
     def test_view_indexing(self):
         """test index access for views"""
         self.minimum_engines(4)
         targets = self.client._build_targets('all')[-1]
         v = self.client[:]
-        self.assertEqual(v.targets, targets)
+        assert v.targets == targets
         t = self.client.ids[2]
         v = self.client[t]
-        self.assertTrue(isinstance(v, DirectView))
-        self.assertEqual(v.targets, t)
+        assert isinstance(v, DirectView)
+        assert v.targets == t
         t = self.client.ids[2:4]
         v = self.client[t]
-        self.assertTrue(isinstance(v, DirectView))
-        self.assertEqual(v.targets, t)
+        assert isinstance(v, DirectView)
+        assert v.targets == t
         v = self.client[::2]
-        self.assertTrue(isinstance(v, DirectView))
-        self.assertEqual(v.targets, targets[::2])
+        assert isinstance(v, DirectView)
+        assert v.targets == targets[::2]
         v = self.client[1::3]
-        self.assertTrue(isinstance(v, DirectView))
-        self.assertEqual(v.targets, targets[1::3])
+        assert isinstance(v, DirectView)
+        assert v.targets == targets[1::3]
         v = self.client[:-3]
-        self.assertTrue(isinstance(v, DirectView))
-        self.assertEqual(v.targets, targets[:-3])
+        assert isinstance(v, DirectView)
+        assert v.targets == targets[:-3]
         v = self.client[-1]
-        self.assertTrue(isinstance(v, DirectView))
-        self.assertEqual(v.targets, targets[-1])
-        self.assertRaises(TypeError, lambda: self.client[None])
+        assert isinstance(v, DirectView)
+        assert v.targets == targets[-1]
+        with pytest.raises(TypeError):
+            self.client[None]
 
     def test_outstanding(self):
         self.minimum_engines(1)
@@ -90,25 +91,25 @@ class TestClient(ClusterTestCase):
     def test_lbview_targets(self):
         """test load_balanced_view targets"""
         v = self.client.load_balanced_view()
-        self.assertEqual(v.targets, None)
+        assert v.targets == None
         v = self.client.load_balanced_view(-1)
-        self.assertEqual(v.targets, [self.client.ids[-1]])
+        assert v.targets == [self.client.ids[-1]]
         v = self.client.load_balanced_view('all')
-        self.assertEqual(v.targets, None)
+        assert v.targets == None
 
     def test_dview_targets(self):
         """test direct_view targets"""
         v = self.client.direct_view()
-        self.assertEqual(v.targets, 'all')
+        assert v.targets == 'all'
         v = self.client.direct_view('all')
-        self.assertEqual(v.targets, 'all')
+        assert v.targets == 'all'
         v = self.client.direct_view(-1)
-        self.assertEqual(v.targets, self.client.ids[-1])
+        assert v.targets == self.client.ids[-1]
 
     def test_lazy_all_targets(self):
         """test lazy evaluation of rc.direct_view('all')"""
         v = self.client.direct_view()
-        self.assertEqual(v.targets, 'all')
+        assert v.targets == 'all'
 
         def double(x):
             return x * 2
@@ -122,31 +123,31 @@ class TestClient(ClusterTestCase):
 
         # simple apply
         r = v.apply_sync(lambda: 1)
-        self.assertEqual(r, [1] * n1)
+        assert r == [1] * n1
 
         # map goes through remotefunction
         r = v.map_sync(double, seq)
-        self.assertEqual(r, ref)
+        assert r == ref
 
         # add a couple more engines, and try again
         self.add_engines(2)
         n2 = len(self.client.ids)
-        self.assertNotEqual(n2, n1)
+        assert n2 != n1
 
         # apply
         r = v.apply_sync(lambda: 1)
-        self.assertEqual(r, [1] * n2)
+        assert r == [1] * n2
 
         # map
         r = v.map_sync(double, seq)
-        self.assertEqual(r, ref)
+        assert r == ref
 
     def test_targets(self):
         """test various valid targets arguments"""
         build = self.client._build_targets
         ids = self.client.ids
         idents, targets = build(None)
-        self.assertEqual(ids, targets)
+        assert ids == targets
 
     def test_clear(self):
         """test clear behavior"""
@@ -158,10 +159,12 @@ class TestClient(ClusterTestCase):
         id0 = self.client.ids[-1]
         self.client.clear(targets=id0, block=True)
         a = self.client[:-1].get('a')
-        self.assertRaisesRemote(NameError, self.client[id0].get, 'a')
+        with raises_remote(NameError):
+            self.client[id0].get('a')
         self.client.clear(block=True)
         for i in self.client.ids:
-            self.assertRaisesRemote(NameError, self.client[i].get, 'a')
+            with raises_remote(NameError):
+                self.client[i].get('a')
 
     def test_get_result(self):
         """test getting results from the Hub."""
@@ -171,15 +174,15 @@ class TestClient(ClusterTestCase):
         # give the monitor time to notice the message
         time.sleep(0.25)
         ahr = self.client.get_result(ar.msg_ids[0], owner=False)
-        self.assertIsInstance(ahr, AsyncHubResult)
-        self.assertEqual(ahr.get(), ar.get())
+        assert isinstance(ahr, AsyncHubResult)
+        assert ahr.get() == ar.get()
         ar2 = self.client.get_result(ar.msg_ids[0])
-        self.assertNotIsInstance(ar2, AsyncHubResult)
-        self.assertEqual(ahr.get(), ar2.get())
+        assert not isinstance(ar2, AsyncHubResult)
+        assert ahr.get() == ar2.get()
         ar3 = self.client.get_result(ar2)
-        self.assertEqual(ar3.msg_ids, ar2.msg_ids)
+        assert ar3.msg_ids == ar2.msg_ids
         ar3 = self.client.get_result([ar2])
-        self.assertEqual(ar3.msg_ids, ar2.msg_ids)
+        assert ar3.msg_ids == ar2.msg_ids
         c.close()
 
     def test_get_execute_result(self):
@@ -191,29 +194,29 @@ class TestClient(ClusterTestCase):
         # give the monitor time to notice the message
         time.sleep(0.25)
         ahr = self.client.get_result(ar.msg_ids[0], owner=False)
-        self.assertIsInstance(ahr, AsyncHubResult)
-        self.assertEqual(ahr.get().execute_result, ar.get().execute_result)
+        assert isinstance(ahr, AsyncHubResult)
+        assert ahr.get().execute_result == ar.get().execute_result
         ar2 = self.client.get_result(ar.msg_ids[0])
-        self.assertNotIsInstance(ar2, AsyncHubResult)
-        self.assertEqual(ahr.get(), ar2.get())
+        assert not isinstance(ar2, AsyncHubResult)
+        assert ahr.get() == ar2.get()
         c.close()
 
     def test_ids_list(self):
         """test client.ids"""
         ids = self.client.ids
-        self.assertEqual(ids, self.client._ids)
-        self.assertFalse(ids is self.client._ids)
+        assert ids == self.client._ids
+        assert ids is not self.client._ids
         ids.remove(ids[-1])
-        self.assertNotEqual(ids, self.client._ids)
+        assert ids != self.client._ids
 
     def test_queue_status(self):
         ids = self.client.ids
         id0 = ids[0]
         qs = self.client.queue_status(targets=id0)
-        self.assertTrue(isinstance(qs, dict))
-        self.assertEqual(sorted(qs.keys()), ['completed', 'queue', 'tasks'])
+        assert isinstance(qs, dict)
+        assert sorted(qs.keys()), ['completed', 'queue' == 'tasks']
         allqs = self.client.queue_status()
-        self.assertTrue(isinstance(allqs, dict))
+        assert isinstance(allqs, dict)
         intkeys = list(allqs.keys())
         intkeys.remove('unassigned')
         print("intkeys", intkeys)
@@ -221,11 +224,11 @@ class TestClient(ClusterTestCase):
         ids = self.client.ids
         print("client.ids", ids)
         ids = sorted(self.client.ids)
-        self.assertEqual(intkeys, ids)
+        assert intkeys == ids
         unassigned = allqs.pop('unassigned')
         for eid, qs in allqs.items():
-            self.assertTrue(isinstance(qs, dict))
-            self.assertEqual(sorted(qs.keys()), ['completed', 'queue', 'tasks'])
+            assert isinstance(qs, dict)
+            assert sorted(qs.keys()), ['completed', 'queue' == 'tasks']
 
     @pytest.mark.skipif(os.name == 'nt', reason='timing out on Windows')
     def test_shutdown(self):
@@ -240,8 +243,9 @@ class TestClient(ClusterTestCase):
             if id0 not in self.client.ids:
                 break
             time.sleep(0.1)
-        self.assertNotIn(id0, self.client.ids)
-        self.assertRaises(IndexError, lambda: self.client[id0])
+        assert id0 not in self.client.ids
+        with pytest.raises(IndexError):
+            self.client[id0]
 
     def test_result_status(self):
         pass
@@ -249,19 +253,37 @@ class TestClient(ClusterTestCase):
 
     def test_db_query_dt(self):
         """test db query by date"""
+        hub_n_before = len(self.client.hub_history())
+        client_n_before = len(self.client.history)
+
+        for i in range(4):
+            self.client[:].apply_sync(lambda: 1)
+        new_entries = len(self.client.history) - client_n_before
         hist = self.client.hub_history()
+        for i in range(10):
+            if len(hist) < hub_n_before + new_entries:
+                time.sleep(0.5)
+                hist = self.client.hub_history()
+            else:
+                break
+        else:
+            raise TimeoutError(
+                f"Timeout waiting for {new_entries} entries in the hub history"
+            )
+
+        print(hist)
         middle = self.client.db_query({'msg_id': hist[len(hist) // 2]})[0]
         tic = middle['submitted']
         before = self.client.db_query({'submitted': {'$lt': tic}})
         after = self.client.db_query({'submitted': {'$gte': tic}})
-        self.assertEqual(len(before) + len(after), len(hist))
+        assert len(before) + len(after) == len(hist)
         for b in before:
-            self.assertTrue(b['submitted'] < tic)
+            assert b['submitted'] < tic
         for a in after:
-            self.assertTrue(a['submitted'] >= tic)
+            assert a['submitted'] >= tic
         same = self.client.db_query({'submitted': tic})
         for s in same:
-            self.assertTrue(s['submitted'] == tic)
+            assert s['submitted'] == tic
 
     def test_db_query_keys(self):
         """test extracting subset of record keys"""
@@ -269,17 +291,15 @@ class TestClient(ClusterTestCase):
             {'msg_id': {'$ne': ''}}, keys=['submitted', 'completed']
         )
         for rec in found:
-            self.assertEqual(set(rec.keys()), {'msg_id', 'submitted', 'completed'})
+            assert set(rec.keys()), {'msg_id', 'submitted' == 'completed'}
 
     def test_db_query_default_keys(self):
         """default db_query excludes buffers"""
         found = self.client.db_query({'msg_id': {'$ne': ''}})
         for rec in found:
             keys = set(rec.keys())
-            self.assertFalse('buffers' in keys, "'buffers' should not be in: %s" % keys)
-            self.assertFalse(
-                'result_buffers' in keys, "'result_buffers' should not be in: %s" % keys
-            )
+            assert 'buffers' not in keys
+            assert 'result_buffers' not in keys
 
     def test_db_query_msg_id(self):
         """ensure msg_id is always in db queries"""
@@ -287,13 +307,13 @@ class TestClient(ClusterTestCase):
             {'msg_id': {'$ne': ''}}, keys=['submitted', 'completed']
         )
         for rec in found:
-            self.assertTrue('msg_id' in rec.keys())
+            assert 'msg_id' in rec.keys()
         found = self.client.db_query({'msg_id': {'$ne': ''}}, keys=['submitted'])
         for rec in found:
-            self.assertTrue('msg_id' in rec.keys())
+            assert 'msg_id' in rec.keys()
         found = self.client.db_query({'msg_id': {'$ne': ''}}, keys=['msg_id'])
         for rec in found:
-            self.assertTrue('msg_id' in rec.keys())
+            assert 'msg_id' in rec.keys()
 
     def test_db_query_get_result(self):
         """pop in db_query shouldn't pop from result itself"""
@@ -302,8 +322,11 @@ class TestClient(ClusterTestCase):
         rc2 = clientmod.Client(profile='iptest')
         # If this bug is not fixed, this call will hang:
         ar = rc2.get_result(self.client.history[-1])
+        print("mark")
         ar.wait(2)
-        self.assertTrue(ar.ready())
+        print("mark2")
+        assert ar.ready()
+        print("mark3")
         ar.get()
         rc2.close()
 
@@ -314,10 +337,10 @@ class TestClient(ClusterTestCase):
         odd = hist[1::2]
         recs = self.client.db_query({'msg_id': {'$in': even}})
         found = [r['msg_id'] for r in recs]
-        self.assertEqual(set(even), set(found))
+        assert set(even) == set(found)
         recs = self.client.db_query({'msg_id': {'$nin': even}})
         found = [r['msg_id'] for r in recs]
-        self.assertEqual(set(odd), set(found))
+        assert set(odd) == set(found)
 
     def test_hub_history(self):
         hist = self.client.hub_history()
@@ -330,12 +353,12 @@ class TestClient(ClusterTestCase):
         for msg_id in hist:
             rec = recdict[msg_id]
             newt = rec['submitted']
-            self.assertTrue(newt >= latest)
+            assert newt >= latest
             latest = newt
         ar = self.client[-1].apply_async(lambda: 1)
         ar.get()
         time.sleep(0.25)
-        self.assertEqual(self.client.hub_history()[-1:], ar.msg_ids)
+        assert self.client.hub_history()[-1:] == ar.msg_ids
 
     def _wait_for_idle(self):
         """wait for the cluster to become idle, according to the everyone."""
@@ -356,7 +379,7 @@ class TestClient(ClusterTestCase):
             else:
                 break
 
-        self.assertEqual(len(msg_ids.difference(hub_hist)), 0)
+        assert len(msg_ids.difference(hub_hist)) == 0
 
         # step 2. wait for all requests to be done
         # timeout 5s, polling every 100ms
@@ -371,10 +394,10 @@ class TestClient(ClusterTestCase):
                 break
 
         # ensure Hub up to date:
-        self.assertEqual(qs['unassigned'], 0)
+        assert qs['unassigned'] == 0
         for eid in [eid for eid in qs if eid != 'unassigned']:
-            self.assertEqual(qs[eid]['tasks'], 0)
-            self.assertEqual(qs[eid]['queue'], 0)
+            assert qs[eid]['tasks'] == 0
+            assert qs[eid]['queue'] == 0
 
     def test_resubmit(self):
         def f():
@@ -389,7 +412,7 @@ class TestClient(ClusterTestCase):
         self._wait_for_idle()
         ahr = self.client.resubmit(ar.msg_ids)
         r2 = ahr.get(1)
-        self.assertFalse(r1 == r2)
+        assert r1 != r2
 
     def test_resubmit_chain(self):
         """resubmit resubmitted tasks"""
@@ -428,9 +451,9 @@ class TestClient(ClusterTestCase):
         h1, h2 = (r['header'] for r in records)
         for key in set(h1.keys()).union(set(h2.keys())):
             if key in ('msg_id', 'date'):
-                self.assertNotEqual(h1[key], h2[key])
+                assert h1[key] != h2[key]
             else:
-                self.assertEqual(h1[key], h2[key])
+                assert h1[key] == h2[key]
 
     def test_resubmit_aborted(self):
         def f():
@@ -446,7 +469,8 @@ class TestClient(ClusterTestCase):
         sleep = v.apply_async(time.sleep, 0.5)
         ar = v.apply_async(f)
         ar.abort()
-        self.assertRaises(error.TaskAborted, ar.get)
+        with pytest.raises(error.TaskAborted):
+            ar.get()
         # Give the Hub a chance to get up to date:
         self._wait_for_idle()
         ahr = self.client.resubmit(ar.msg_ids)
@@ -464,7 +488,8 @@ class TestClient(ClusterTestCase):
 
     def test_resubmit_badkey(self):
         """ensure KeyError on resubmit of nonexistant task"""
-        self.assertRaisesRemote(KeyError, self.client.resubmit, ['invalid'])
+        with raises_remote(KeyError):
+            self.client.resubmit(['invalid'])
 
     def test_purge_hub_results(self):
         # ensure there are some tasks
@@ -480,7 +505,7 @@ class TestClient(ClusterTestCase):
         ahr.wait(10)
         self.client.purge_hub_results(hist[-1])
         newhist = self.client.hub_history()
-        self.assertEqual(len(newhist) + 1, len(hist))
+        assert len(newhist) + 1 == len(hist)
         rc2.close()
 
     def test_purge_local_results(self):
@@ -490,19 +515,15 @@ class TestClient(ClusterTestCase):
         self.client.results[msg_id] = 5
         md = self.client.metadata[msg_id]
         before = len(self.client.results)
-        self.assertEqual(len(self.client.metadata), before)
+        assert len(self.client.metadata) == before
         self.client.purge_local_results(msg_id)
-        self.assertLessEqual(
-            len(self.client.results), before - 1, msg="Not removed from results"
-        )
-        self.assertLessEqual(
-            len(self.client.metadata), before - 1, msg="Not removed from metadata"
-        )
+        assert len(self.client.results) <= before - 1, "Not removed from results"
+        assert len(self.client.metadata) <= before - 1, "Not removed from metadata"
 
     def test_purge_local_results_outstanding(self):
         v = self.client[-1]
         ar = v.apply_async(time.sleep, 1)
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             self.client.purge_local_results(ar)
         ar.get()
         self.client.purge_local_results(ar)
@@ -510,7 +531,7 @@ class TestClient(ClusterTestCase):
     def test_purge_all_local_results_outstanding(self):
         v = self.client[-1]
         ar = v.apply_async(time.sleep, 1)
-        with self.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             self.client.purge_local_results('all')
         ar.get()
         self.client.purge_local_results('all')
@@ -518,12 +539,12 @@ class TestClient(ClusterTestCase):
     def test_purge_all_hub_results(self):
         self.client.purge_hub_results('all')
         hist = self.client.hub_history()
-        self.assertEqual(len(hist), 0)
+        assert len(hist) == 0
 
     def test_purge_all_local_results(self):
         self.client.purge_local_results('all')
-        self.assertEqual(len(self.client.results), 0, msg="Results not empty")
-        self.assertEqual(len(self.client.metadata), 0, msg="metadata not empty")
+        assert len(self.client.results) == 0, "Results not empty"
+        assert len(self.client.metadata) == 0, "metadata not empty"
 
     def test_purge_all_results(self):
         # ensure there are some tasks
@@ -532,10 +553,10 @@ class TestClient(ClusterTestCase):
         assert self.client.wait(timeout=10)
         self._wait_for_idle()
         self.client.purge_results('all')
-        self.assertEqual(len(self.client.results), 0, msg="Results not empty")
-        self.assertEqual(len(self.client.metadata), 0, msg="metadata not empty")
+        assert len(self.client.results) == 0, "Results not empty"
+        assert len(self.client.metadata) == 0, "metadata not empty"
         hist = self.client.hub_history()
-        self.assertEqual(len(hist), 0, msg="hub history not empty")
+        assert len(hist) == 0, "hub history not empty"
 
     def test_purge_everything(self):
         # ensure there are some tasks
@@ -545,41 +566,39 @@ class TestClient(ClusterTestCase):
         self._wait_for_idle()
         self.client.purge_everything()
         # The client results
-        self.assertEqual(len(self.client.results), 0, msg="Results not empty")
-        self.assertEqual(len(self.client.metadata), 0, msg="metadata not empty")
+        assert len(self.client.results) == 0, "Results not empty"
+        assert len(self.client.metadata) == 0, "metadata not empty"
         # The client "bookkeeping"
-        self.assertEqual(
-            len(self.client.session.digest_history), 0, msg="session digest not empty"
-        )
-        self.assertEqual(len(self.client.history), 0, msg="client history not empty")
+        assert len(self.client.session.digest_history) == 0, "session digest not empty"
+        assert len(self.client.history) == 0, "client history not empty"
         # the hub results
         hist = self.client.hub_history()
-        self.assertEqual(len(hist), 0, msg="hub history not empty")
+        assert len(hist) == 0, "hub history not empty"
 
     def test_activate_on_init(self):
         ip = get_ipython()
         magics = ip.magics_manager.magics
         c = self.connect_client()
-        self.assertTrue('px' in magics['line'])
-        self.assertTrue('px' in magics['cell'])
+        assert 'px' in magics['line']
+        assert 'px' in magics['cell']
         c.close()
 
     def test_activate(self):
         ip = get_ipython()
         magics = ip.magics_manager.magics
         v0 = self.client.activate(-1, '0')
-        self.assertTrue('px0' in magics['line'])
-        self.assertTrue('px0' in magics['cell'])
-        self.assertEqual(v0.targets, self.client.ids[-1])
+        assert 'px0' in magics['line']
+        assert 'px0' in magics['cell']
+        assert v0.targets == self.client.ids[-1]
         v0 = self.client.activate('all', 'all')
-        self.assertTrue('pxall' in magics['line'])
-        self.assertTrue('pxall' in magics['cell'])
-        self.assertEqual(v0.targets, 'all')
+        assert 'pxall' in magics['line']
+        assert 'pxall' in magics['cell']
+        assert v0.targets == 'all'
 
     def test_wait_interactive(self):
         ar = self.client[-1].apply_async(lambda: 1)
         self.client.wait_interactive()
-        self.assertEqual(self.client.outstanding, set())
+        assert self.client.outstanding == set()
 
     def test_await_future(self):
         f = Future()
@@ -606,17 +625,18 @@ class TestClient(ClusterTestCase):
         executor = self.client.become_dask()
         reprs = self.client[:].apply_sync(repr, Reference('distributed_worker'))
         for r in reprs:
-            self.assertIn("Worker", r)
+            assert "Worker" in r
 
         squares = executor.map(lambda x: x * x, range(10))
         tot = executor.submit(sum, squares)
-        self.assertEqual(tot.result(), 285)
+        assert tot.result() == 285
 
         # cleanup
         executor.close()
         self.client.stop_dask()
         ar = self.client[:].apply_async(lambda x: x, Reference('distributed_worker'))
-        self.assertRaisesRemote(NameError, ar.get)
+        with raises_remote(NameError):
+            ar.get()
 
     def test_warning_on_hostname_match(self):
         location = socket.gethostname()

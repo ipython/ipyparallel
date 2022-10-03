@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timedelta
 from unittest import TestCase
 
+import pytest
 from jupyter_client.session import Session
 
 from ipyparallel import util
@@ -44,14 +45,15 @@ class TaskDBTest:
         before = self.db.get_history()
         self.load_records(5)
         after = self.db.get_history()
-        self.assertEqual(len(after), len(before) + 5)
-        self.assertEqual(after[:-5], before)
+        assert len(after) == len(before) + 5
+        assert after[:-5] == before
 
     def test_drop_record(self):
         msg_id = self.load_records()[-1]
         rec = self.db.get_record(msg_id)
         self.db.drop_record(msg_id)
-        self.assertRaises(KeyError, self.db.get_record, msg_id)
+        with pytest.raises(KeyError):
+            self.db.get_record(msg_id)
 
     def _round_to_millisecond(self, dt):
         """necessary because mongodb rounds microseconds"""
@@ -66,10 +68,10 @@ class TaskDBTest:
         data = {'stdout': 'hello there', 'completed': now}
         self.db.update_record(msg_id, data)
         rec2 = self.db.get_record(msg_id)
-        self.assertEqual(rec2['stdout'], 'hello there')
-        self.assertEqual(rec2['completed'], now)
+        assert rec2['stdout'] == 'hello there'
+        assert rec2['completed'] == now
         rec1.update(data)
-        self.assertEqual(rec1, rec2)
+        assert rec1 == rec2
 
     # def test_update_record_bad(self):
     #     """test updating nonexistant records"""
@@ -84,14 +86,14 @@ class TaskDBTest:
         tic = middle['submitted']
         before = self.db.find_records({'submitted': {'$lt': tic}})
         after = self.db.find_records({'submitted': {'$gte': tic}})
-        self.assertEqual(len(before) + len(after), len(hist))
+        assert len(before) + len(after) == len(hist)
         for b in before:
-            self.assertLess(b['submitted'], tic)
+            assert b['submitted'] < tic
         for a in after:
-            self.assertGreaterEqual(a['submitted'], tic)
+            assert a['submitted'] >= tic
         same = self.db.find_records({'submitted': tic})
         for s in same:
-            self.assertEqual(s['submitted'], tic)
+            assert s['submitted'] == tic
 
     def test_find_records_keys(self):
         """test extracting subset of record keys"""
@@ -99,7 +101,7 @@ class TaskDBTest:
             {'msg_id': {'$ne': ''}}, keys=['submitted', 'completed']
         )
         for rec in found:
-            self.assertEqual(set(rec.keys()), {'msg_id', 'submitted', 'completed'})
+            assert set(rec.keys()), {'msg_id', 'submitted' == 'completed'}
 
     def test_find_records_msg_id(self):
         """ensure msg_id is always in found records"""
@@ -107,13 +109,13 @@ class TaskDBTest:
             {'msg_id': {'$ne': ''}}, keys=['submitted', 'completed']
         )
         for rec in found:
-            self.assertTrue('msg_id' in rec.keys())
+            assert 'msg_id' in rec.keys()
         found = self.db.find_records({'msg_id': {'$ne': ''}}, keys=['submitted'])
         for rec in found:
-            self.assertTrue('msg_id' in rec.keys())
+            assert 'msg_id' in rec.keys()
         found = self.db.find_records({'msg_id': {'$ne': ''}}, keys=['msg_id'])
         for rec in found:
-            self.assertTrue('msg_id' in rec.keys())
+            assert 'msg_id' in rec.keys()
 
     def test_find_records_in(self):
         """test finding records with '$in','$nin' operators"""
@@ -122,10 +124,10 @@ class TaskDBTest:
         odd = hist[1::2]
         recs = self.db.find_records({'msg_id': {'$in': even}})
         found = [r['msg_id'] for r in recs]
-        self.assertEqual(set(even), set(found))
+        assert set(even) == set(found)
         recs = self.db.find_records({'msg_id': {'$nin': even}})
         found = [r['msg_id'] for r in recs]
-        self.assertEqual(set(odd), set(found))
+        assert set(odd) == set(found)
 
     def test_get_history(self):
         msg_ids = self.db.get_history()
@@ -133,26 +135,26 @@ class TaskDBTest:
         for msg_id in msg_ids:
             rec = self.db.get_record(msg_id)
             newt = rec['submitted']
-            self.assertTrue(newt >= latest)
+            assert newt >= latest
             latest = newt
         msg_id = self.load_records(1)[-1]
-        self.assertEqual(self.db.get_history()[-1], msg_id)
+        assert self.db.get_history()[-1] == msg_id
 
     def test_datetime(self):
         """get/set timestamps with datetime objects"""
         msg_id = self.db.get_history()[-1]
         rec = self.db.get_record(msg_id)
-        self.assertTrue(isinstance(rec['submitted'], datetime))
+        assert isinstance(rec['submitted'], datetime)
         self.db.update_record(msg_id, dict(completed=util.utcnow()))
         rec = self.db.get_record(msg_id)
-        self.assertTrue(isinstance(rec['completed'], datetime))
+        assert isinstance(rec['completed'], datetime)
 
     def test_drop_matching(self):
         msg_ids = self.load_records(10)
         query = {'msg_id': {'$in': msg_ids}}
         self.db.drop_matching_records(query)
         recs = self.db.find_records(query)
-        self.assertEqual(len(recs), 0)
+        assert len(recs) == 0
 
     def test_null(self):
         """test None comparison queries"""
@@ -160,11 +162,11 @@ class TaskDBTest:
 
         query = {'msg_id': None}
         recs = self.db.find_records(query)
-        self.assertEqual(len(recs), 0)
+        assert len(recs) == 0
 
         query = {'msg_id': {'$ne': None}}
         recs = self.db.find_records(query)
-        self.assertTrue(len(recs) >= 10)
+        assert len(recs) >= 10
 
     def test_pop_safe_get(self):
         """editing query results shouldn't affect record [get]"""
@@ -174,9 +176,9 @@ class TaskDBTest:
         rec['garbage'] = 'hello'
         rec['header']['msg_id'] = 'fubar'
         rec2 = self.db.get_record(msg_id)
-        self.assertTrue('buffers' in rec2)
-        self.assertFalse('garbage' in rec2)
-        self.assertEqual(rec2['header']['msg_id'], msg_id)
+        assert 'buffers' in rec2
+        assert not 'garbage' in rec2
+        assert rec2['header']['msg_id'] == msg_id
 
     def test_pop_safe_find(self):
         """editing query results shouldn't affect record [find]"""
@@ -186,9 +188,9 @@ class TaskDBTest:
         rec['garbage'] = 'hello'
         rec['header']['msg_id'] = 'fubar'
         rec2 = self.db.find_records({'msg_id': msg_id})[0]
-        self.assertTrue('buffers' in rec2)
-        self.assertFalse('garbage' in rec2)
-        self.assertEqual(rec2['header']['msg_id'], msg_id)
+        assert 'buffers' in rec2
+        assert not 'garbage' in rec2
+        assert rec2['header']['msg_id'] == msg_id
 
     def test_pop_safe_find_keys(self):
         """editing query results shouldn't affect record [find+keys]"""
@@ -198,9 +200,9 @@ class TaskDBTest:
         rec['garbage'] = 'hello'
         rec['header']['msg_id'] = 'fubar'
         rec2 = self.db.find_records({'msg_id': msg_id})[0]
-        self.assertTrue('buffers' in rec2)
-        self.assertFalse('garbage' in rec2)
-        self.assertEqual(rec2['header']['msg_id'], msg_id)
+        assert 'buffers' in rec2
+        assert not 'garbage' in rec2
+        assert rec2['header']['msg_id'] == msg_id
 
 
 class TestDictBackend(TaskDBTest, TestCase):
@@ -212,31 +214,31 @@ class TestDictBackend(TaskDBTest, TestCase):
         self.db.record_limit = 20
         self.db.cull_fraction = 0.2
         self.load_records(20)
-        self.assertEqual(len(self.db.get_history()), 20)
+        assert len(self.db.get_history()) == 20
         self.load_records(1)
         # 0.2 * 20 = 4, 21 - 4 = 17
-        self.assertEqual(len(self.db.get_history()), 17)
+        assert len(self.db.get_history()) == 17
         self.load_records(3)
-        self.assertEqual(len(self.db.get_history()), 20)
+        assert len(self.db.get_history()) == 20
         self.load_records(1)
-        self.assertEqual(len(self.db.get_history()), 17)
+        assert len(self.db.get_history()) == 17
 
         for i in range(25):
             self.load_records(1)
-            self.assertTrue(len(self.db.get_history()) >= 17)
-            self.assertTrue(len(self.db.get_history()) <= 20)
+            assert len(self.db.get_history()) >= 17
+            assert len(self.db.get_history()) <= 20
 
     def test_cull_size(self):
         self.db = self.create_db()  # skip the load-records init from setUp
         self.db.size_limit = 1000
         self.db.cull_fraction = 0.2
         self.load_records(100, buffer_size=10)
-        self.assertEqual(len(self.db.get_history()), 100)
+        assert len(self.db.get_history()) == 100
         self.load_records(1, buffer_size=0)
-        self.assertEqual(len(self.db.get_history()), 101)
+        assert len(self.db.get_history()) == 101
         self.load_records(1, buffer_size=1)
         # 0.2 * 100 = 20, 101 - 20 = 81
-        self.assertEqual(len(self.db.get_history()), 81)
+        assert len(self.db.get_history()) == 81
 
     def test_cull_size_drop(self):
         """dropping records updates tracked buffer size"""
@@ -244,15 +246,15 @@ class TestDictBackend(TaskDBTest, TestCase):
         self.db.size_limit = 1000
         self.db.cull_fraction = 0.2
         self.load_records(100, buffer_size=10)
-        self.assertEqual(len(self.db.get_history()), 100)
+        assert len(self.db.get_history()) == 100
         self.db.drop_record(self.db.get_history()[-1])
-        self.assertEqual(len(self.db.get_history()), 99)
+        assert len(self.db.get_history()) == 99
         self.load_records(1, buffer_size=5)
-        self.assertEqual(len(self.db.get_history()), 100)
+        assert len(self.db.get_history()) == 100
         self.load_records(1, buffer_size=5)
-        self.assertEqual(len(self.db.get_history()), 101)
+        assert len(self.db.get_history()) == 101
         self.load_records(1, buffer_size=1)
-        self.assertEqual(len(self.db.get_history()), 81)
+        assert len(self.db.get_history()) == 81
 
     def test_cull_size_update(self):
         """updating records updates tracked buffer size"""
@@ -260,12 +262,12 @@ class TestDictBackend(TaskDBTest, TestCase):
         self.db.size_limit = 1000
         self.db.cull_fraction = 0.2
         self.load_records(100, buffer_size=10)
-        self.assertEqual(len(self.db.get_history()), 100)
+        assert len(self.db.get_history()) == 100
         msg_id = self.db.get_history()[-1]
         self.db.update_record(msg_id, dict(result_buffers=[os.urandom(10)], buffers=[]))
-        self.assertEqual(len(self.db.get_history()), 100)
+        assert len(self.db.get_history()) == 100
         self.db.update_record(msg_id, dict(result_buffers=[os.urandom(11)], buffers=[]))
-        self.assertEqual(len(self.db.get_history()), 79)
+        assert len(self.db.get_history()) == 79
 
 
 class TestSQLiteBackend(TaskDBTest, TestCase):

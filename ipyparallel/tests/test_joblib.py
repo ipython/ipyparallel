@@ -24,10 +24,10 @@ def neg(x):
 
 
 class TestJobLib(ClusterTestCase):
-    def setUp(self):
+    def setup(self):
         if not have_joblib:
             pytest.skip("Requires joblib >= 0.10")
-        super().setUp()
+        super().setup()
         add_engines(1, total=True)
 
     def test_default_backend(self):
@@ -41,11 +41,11 @@ class TestJobLib(ClusterTestCase):
         view = self.client.load_balanced_view()
         view.register_joblib_backend('view')
         p = Parallel(backend='view')
-        self.assertIs(p._backend._view, view)
+        assert p._backend._view is view
 
     def test_joblib_backend(self):
         view = self.client.load_balanced_view()
         view.register_joblib_backend('view')
         p = Parallel(backend='view')
         result = p(delayed(neg)(i) for i in range(10))
-        self.assertEqual(result, [neg(i) for i in range(10)])
+        assert result == [neg(i) for i in range(10)]

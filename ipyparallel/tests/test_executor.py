@@ -25,19 +25,19 @@ class AsyncResultTest(ClusterTestCase):
         assert isinstance(executor.view, LoadBalancedView)
         f = executor.submit(lambda x: 2 * x, 5)
         r = f.result()
-        self.assertEqual(r, 10)
+        assert r == 10
 
     def test_view_executor(self):
         view = self.client.load_balanced_view()
         executor = view.executor
-        self.assertIs(executor.view, view)
+        assert executor.view is view
 
     def test_executor_submit(self):
         view = self.client.load_balanced_view()
         executor = view.executor
         f = executor.submit(lambda x, y: x * y, 2, 3)
         r = f.result()
-        self.assertEqual(r, 6)
+        assert r == 6
 
     def test_executor_map(self):
         view = self.client.load_balanced_view()

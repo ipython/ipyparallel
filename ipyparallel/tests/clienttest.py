@@ -9,7 +9,6 @@ from contextlib import contextmanager
 import pytest
 import zmq
 from decorator import decorator
-from zmq.tests import BaseZMQTestCase
 
 from ipyparallel import Client, error
 from ipyparallel.tests import add_engines, launchers
@@ -120,7 +119,7 @@ def raises_remote(etype):
 
 
 @pytest.mark.usefixtures("cluster")
-class ClusterTestCase(BaseZMQTestCase):
+class ClusterTestCase:
     timeout = 10
     engine_count = 2
 
@@ -153,11 +152,6 @@ class ClusterTestCase(BaseZMQTestCase):
         """connect a client with my Context, and track its sockets for cleanup"""
         c = Client(profile='iptest', context=self.context)
         c.wait = lambda *a, **kw: self.client_wait(c, *a, **kw)
-
-        for name in filter(lambda n: n.endswith('socket'), dir(c)):
-            s = getattr(c, name)
-            s.setsockopt(zmq.LINGER, 0)
-            self.sockets.append(s)
         return c
 
     def assertRaisesRemote(self, etype, f, *args, **kwargs):
@@ -176,8 +170,8 @@ class ClusterTestCase(BaseZMQTestCase):
 
     test_timeout = 30
 
-    def setUp(self):
-        BaseZMQTestCase.setUp(self)
+    def setup(self):
+        self.context = zmq.Context.instance()
         if hasattr(signal, 'SIGALRM'):
             # use sigalarm for test timeout
             def _sigalarm(sig, frame):
@@ -196,7 +190,7 @@ class ClusterTestCase(BaseZMQTestCase):
         self.base_engine_count = len(self.client.ids)
         self.engines = []
 
-    def tearDown(self):
+    def teardown(self):
         if len(self.client):
             self.client[:].use_pickle()
 
@@ -208,7 +202,7 @@ class ClusterTestCase(BaseZMQTestCase):
         # allow flushing of incoming messages to prevent crash on socket close
         self.client.wait(timeout=2)
         self.client.close()
-        BaseZMQTestCase.tearDown(self)
         if hasattr(signal, 'SIGALRM'):
             signal.alarm(0)
             signal.signal(signal.SIGALRM, signal.SIG_DFL)
+        self.context.destroy()

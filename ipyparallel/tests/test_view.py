@@ -17,19 +17,25 @@ import ipyparallel as ipp
 from ipyparallel import AsyncHubResult, AsyncMapResult, AsyncResult, error
 from ipyparallel.util import interactive
 
-from .clienttest import ClusterTestCase, conditional_crash, skip_without, wait
+from .clienttest import (
+    ClusterTestCase,
+    conditional_crash,
+    raises_remote,
+    skip_without,
+    wait,
+)
 
 point = namedtuple("point", "x y")
 
 
 @pytest.mark.usefixtures('ipython')
 class TestView(ClusterTestCase):
-    def setUp(self):
+    def setup(self):
         # On Win XP, wait for resource cleanup, else parallel test group fails
         if platform.system() == "Windows" and platform.win32_ver()[0] == "XP":
             # 1 sec fails. 1.5 sec seems ok. Using 2 sec for margin of safety
             time.sleep(2)
-        super().setUp()
+        super().setup()
 
     def test_z_crash_mux(self):
         """test graceful handling of engine death (direct)"""
@@ -39,7 +45,8 @@ class TestView(ClusterTestCase):
         view = self.client[-2:]
         view.scatter('should_crash', [False, True], flatten=True)
         ar = view.apply_async(conditional_crash, ipp.Reference("should_crash"))
-        self.assertRaisesRemote(error.EngineError, ar.get, 10)
+        with raises_remote(error.EngineError):
+            ar.get(10)
         tic = time.perf_counter()
         while eid in self.client.ids and time.perf_counter() - tic < 5:
             time.sleep(0.05)
@@ -56,20 +63,20 @@ class TestView(ClusterTestCase):
         nengines = len(self.client)
         push({'data': data})
         d = pull('data')
-        self.assertEqual(d, data)
+        assert d == data
         self.client[:].push({'data': data})
         d = self.client[:].pull('data', block=True)
-        self.assertEqual(d, nengines * [data])
+        assert d == nengines * [data]
         ar = push({'data': data}, block=False)
-        self.assertTrue(isinstance(ar, AsyncResult))
+        assert isinstance(ar, AsyncResult)
         r = ar.get()
         ar = self.client[:].pull('data', block=False)
-        self.assertTrue(isinstance(ar, AsyncResult))
+        assert isinstance(ar, AsyncResult)
         r = ar.get()
-        self.assertEqual(r, nengines * [data])
+        assert r == nengines * [data]
         self.client[:].push(dict(a=10, b=20))
         r = self.client[:].pull(('a', 'b'), block=True)
-        self.assertEqual(r, nengines * [[10, 20]])
+        assert r, nengines * [[10 == 20]]
 
     def test_push_pull_function(self):
         "test pushing and pulling functions"
@@ -85,19 +92,19 @@ class TestView(ClusterTestCase):
         execute = v.execute
         push({'testf': testf})
         r = pull('testf')
-        self.assertEqual(r(1.0), testf(1.0))
+        assert r(1.0) == testf(1.0)
         execute('r = testf(10)')
         r = pull('r')
-        self.assertEqual(r, testf(10))
+        assert r == testf(10)
         ar = self.client[:].push({'testf': testf}, block=False)
         ar.get()
         ar = self.client[:].pull('testf', block=False)
         rlist = ar.get()
         for r in rlist:
-            self.assertEqual(r(1.0), testf(1.0))
+            assert r(1.0) == testf(1.0)
         execute("def g(x): return x*x")
         r = pull(('testf', 'g'))
-        self.assertEqual((r[0](10), r[1](10)), (testf(10), 100))
+        assert (r[0](10), r[1](10)) == (testf(10), 100)
 
     def test_push_function_globals(self):
         """test that pushed functions have access to globals"""
@@ -110,10 +117,11 @@ class TestView(ClusterTestCase):
         v = self.client[-1]
         v.block = True
         v['f'] = geta
-        self.assertRaisesRemote(NameError, v.execute, 'b=f()')
+        with raises_remote(NameError):
+            v.execute('b=f()')
         v.execute('a=5')
         v.execute('b=f()')
-        self.assertEqual(v['b'], 5)
+        assert v['b'] == 5
 
     def test_push_function_defaults(self):
         """test that pushed functions preserve default args"""
@@ -125,7 +133,7 @@ class TestView(ClusterTestCase):
         v.block = True
         v['f'] = echo
         v.execute('b=f()')
-        self.assertEqual(v['b'], 10)
+        assert v['b'] == 10
 
     def test_get_result(self):
         """test getting results from the Hub."""
@@ -138,11 +146,11 @@ class TestView(ClusterTestCase):
         # give the monitor time to notice the message
         time.sleep(0.25)
         ahr = v2.get_result(ar.msg_ids[0], owner=False)
-        self.assertIsInstance(ahr, AsyncHubResult)
-        self.assertEqual(ahr.get(), ar.get())
+        assert isinstance(ahr, AsyncHubResult)
+        assert ahr.get() == ar.get()
         ar2 = v2.get_result(ar.msg_ids[0])
-        self.assertNotIsInstance(ar2, AsyncHubResult)
-        self.assertEqual(ahr.get(), ar2.get())
+        assert not isinstance(ar2, AsyncHubResult)
+        assert ahr.get() == ar2.get()
         c.close()
 
     def test_run_newline(self):
@@ -155,7 +163,7 @@ class TestView(ClusterTestCase):
             )
         v = self.client[-1]
         v.run(f.name, block=True)
-        self.assertEqual(v.apply_sync(lambda f: f(), ipp.Reference('g')), 5)
+        assert v.apply_sync(lambda f: f(), ipp.Reference('g')) == 5
 
     def test_apply_f_kwarg(self):
         v = self.client[-1]
@@ -179,40 +187,40 @@ class TestView(ClusterTestCase):
 
         ar = echo(1, track=False)
         ar.wait_for_send(5)
-        self.assertTrue(isinstance(ar._tracker, zmq.MessageTracker))
-        self.assertTrue(ar.sent)
+        assert isinstance(ar._tracker, zmq.MessageTracker)
+        assert ar.sent
         ar = echo(track=True)
         ar.wait_for_send(5)
-        self.assertTrue(isinstance(ar._tracker, zmq.MessageTracker))
-        self.assertEqual(ar.sent, ar._tracker.done)
+        assert isinstance(ar._tracker, zmq.MessageTracker)
+        assert ar.sent == ar._tracker.done
         ar._tracker.wait()
-        self.assertTrue(ar.sent)
+        assert ar.sent
 
     def test_push_tracked(self):
         t = self.client.ids[-1]
         ns = dict(x='x' * 1024 * 1024)
         v = self.client[t]
         ar = v.push(ns, block=False, track=False)
-        self.assertTrue(ar.sent)
+        assert ar.sent
 
         ar = v.push(ns, block=False, track=True)
         ar.wait_for_send()
-        self.assertEqual(ar.sent, ar._tracker.done)
-        self.assertTrue(ar.sent)
+        assert ar.sent == ar._tracker.done
+        assert ar.sent
         ar.get()
 
     def test_scatter_tracked(self):
         t = self.client.ids
         x = 'x' * 1024 * 1024
         ar = self.client[t].scatter('x', x, block=False, track=False)
-        self.assertTrue(ar.sent)
+        assert ar.sent
 
         ar = self.client[t].scatter('x', x, block=False, track=True)
         ar._sent_event.wait()
-        self.assertTrue(isinstance(ar._tracker, zmq.MessageTracker))
-        self.assertEqual(ar.sent, ar._tracker.done)
+        assert isinstance(ar._tracker, zmq.MessageTracker)
+        assert ar.sent == ar._tracker.done
         ar.wait_for_send()
-        self.assertTrue(ar.sent)
+        assert ar.sent
         ar.get()
 
     def test_remote_reference(self):
@@ -220,15 +228,16 @@ class TestView(ClusterTestCase):
         v['a'] = 123
         ra = ipp.Reference('a')
         b = v.apply_sync(lambda x: x, ra)
-        self.assertEqual(b, 123)
+        assert b == 123
 
     def test_scatter_gather(self):
         view = self.client[:]
         seq1 = list(range(16))
         view.scatter('a', seq1)
         seq2 = view.gather('a', block=True)
-        self.assertEqual(seq2, seq1)
-        self.assertRaisesRemote(NameError, view.gather, 'asdf', block=True)
+        assert seq2 == seq1
+        with raises_remote(NameError):
+            view.gather('asdf', block=True)
 
     @skip_without('numpy')
     def test_scatter_gather_numpy(self):
@@ -247,7 +256,7 @@ class TestView(ClusterTestCase):
         x = list(range(64))
         view.scatter('x', x)
         gathered = view.gather('x', block=True)
-        self.assertEqual(gathered, x)
+        assert gathered == x
 
     @skip_without('numpy')
     def test_apply_numpy(self):
@@ -301,10 +310,10 @@ class TestView(ClusterTestCase):
         r_dtype, r_shape = view.apply_sync(
             interactive(lambda: (RR.dtype, RR.shape))  # noqa: F821
         )
-        self.assertEqual(r_dtype, R.dtype)
-        self.assertEqual(r_shape, R.shape)
-        self.assertEqual(R2.dtype, R.dtype)
-        self.assertEqual(R2.shape, R.shape)
+        assert r_dtype == R.dtype
+        assert r_shape == R.shape
+        assert R2.dtype == R.dtype
+        assert R2.shape == R.shape
         assert_array_equal(R2, R)
 
     @skip_without('pandas')
@@ -319,8 +328,8 @@ class TestView(ClusterTestCase):
         view.push(dict(ts=ts), block=True)
         rts = view['ts']
 
-        self.assertEqual(type(rts), type(ts))
-        self.assertTrue((ts == rts).all())
+        assert type(rts) == type(ts)
+        assert (ts == rts).all()
 
     def test_map(self):
         view = self.client[:]
@@ -332,12 +341,12 @@ class TestView(ClusterTestCase):
         ar = view.map_async(f, data)
         assert len(ar) == len(data)
         r = ar.get()
-        self.assertEqual(r, list(map(f, data)))
+        assert r, list(map(f == data))
 
     def test_map_empty_sequence(self):
         view = self.client[:]
         r = view.map_sync(lambda x: x, [])
-        self.assertEqual(r, [])
+        assert r == []
 
     def test_map_iterable(self):
         """test map on iterables (direct)"""
@@ -347,7 +356,7 @@ class TestView(ClusterTestCase):
         # ensure it will be an iterator, even in Python 3
         it = iter(arr)
         r = view.map_sync(lambda x: x, it)
-        self.assertEqual(r, list(arr))
+        assert r == list(arr)
 
     @skip_without('numpy')
     def test_map_numpy(self):
@@ -378,9 +387,9 @@ class TestView(ClusterTestCase):
         a = numpy.arange(64)
         view = self.client[:]
         ar = view.scatter('a', a, block=False)
-        self.assertTrue(isinstance(ar, AsyncResult))
+        assert isinstance(ar, AsyncResult)
         amr = view.gather('a', block=False)
-        self.assertTrue(isinstance(amr, AsyncMapResult))
+        assert isinstance(amr, AsyncMapResult)
         assert_array_equal(amr.get(), a)
 
     def test_execute(self):
@@ -388,12 +397,12 @@ class TestView(ClusterTestCase):
         # self.client.debug=True
         execute = view.execute
         ar = execute('c=30', block=False)
-        self.assertTrue(isinstance(ar, AsyncResult))
+        assert isinstance(ar, AsyncResult)
         ar = execute('d=[0,1,2]', block=False)
         self.client.wait(ar, 1)
-        self.assertEqual(len(ar.get()), len(self.client))
+        assert len(ar.get()) == len(self.client)
         for c in view['c']:
-            self.assertEqual(c, 30)
+            assert c == 30
 
     def test_abort(self):
         view = self.client[-1]
@@ -402,8 +411,10 @@ class TestView(ClusterTestCase):
         view.abort(ar2)
         ar3 = view.apply_async(lambda: 3)
         view.abort(ar3.msg_ids)
-        self.assertRaises(error.TaskAborted, ar2.get)
-        self.assertRaises(error.TaskAborted, ar3.get)
+        with pytest.raises(error.TaskAborted):
+            ar2.get()
+        with pytest.raises(error.TaskAborted):
+            ar3.get()
 
     def test_abort_all(self):
         """view.abort() aborts all outstanding tasks"""
@@ -412,14 +423,15 @@ class TestView(ClusterTestCase):
         view.abort()
         view.wait(timeout=5)
         for ar in ars[5:]:
-            self.assertRaises(error.TaskAborted, ar.get)
+            with pytest.raises(error.TaskAborted):
+                ar.get()
 
     def test_temp_flags(self):
         view = self.client[-1]
         view.block = True
         with view.temp_flags(block=False):
-            self.assertFalse(view.block)
-        self.assertTrue(view.block)
+            assert not view.block
+        assert view.block
 
     def test_importer(self):
         view = self.client[-1]
@@ -434,9 +446,7 @@ class TestView(ClusterTestCase):
             re = globals()['re']  # noqa: F811
             return re.findall(pat, s)
 
-        self.assertEqual(
-            view.apply_sync(findall, r'\w+', 'hello world'), 'hello world'.split()
-        )
+        assert view.apply_sync(findall, r'\w+', 'hello world') == 'hello world'.split()
 
     def test_unicode_execute(self):
         """test executing unicode strings"""
@@ -447,13 +457,13 @@ class TestView(ClusterTestCase):
         else:
             code = "a=u'é'"
         v.execute(code)
-        self.assertEqual(v['a'], 'é')
+        assert v['a'] == 'é'
 
     def test_unicode_apply_result(self):
         """test unicode apply results"""
         v = self.client[-1]
         r = v.apply_sync(lambda: 'é')
-        self.assertEqual(r, 'é')
+        assert r == 'é'
 
     def test_unicode_apply_arg(self):
         """test passing unicode arguments to apply"""
@@ -484,7 +494,7 @@ class TestView(ClusterTestCase):
         mlist = nlist[::-1]
         expected = [m * n for m, n in zip(mlist, nlist)]
         result = v.map_sync(rf, mlist, nlist)
-        self.assertEqual(result, expected)
+        assert result == expected
 
     def test_apply_reference(self):
         """view.apply(<Reference>, *args) should work"""
@@ -494,42 +504,43 @@ class TestView(ClusterTestCase):
         rf = ipp.Reference('f')
         result = v.apply_sync(rf, 5)
         expected = [5 * id for id in self.client.ids]
-        self.assertEqual(result, expected)
+        assert result == expected
 
     def test_eval_reference(self):
         v = self.client[self.client.ids[0]]
         v['g'] = list(range(5))
         rg = ipp.Reference('g[0]')
         echo = lambda x: x
-        self.assertEqual(v.apply_sync(echo, rg), 0)
+        assert v.apply_sync(echo, rg) == 0
 
     def test_reference_nameerror(self):
         v = self.client[self.client.ids[0]]
         r = ipp.Reference('elvis_has_left')
         echo = lambda x: x
-        self.assertRaisesRemote(NameError, v.apply_sync, echo, r)
+        with raises_remote(NameError):
+            v.apply_sync(echo, r)
 
     def test_single_engine_map(self):
         e0 = self.client[self.client.ids[0]]
         r = list(range(5))
         check = [-1 * i for i in r]
         result = e0.map_sync(lambda x: -1 * x, r)
-        self.assertEqual(result, check)
+        assert result == check
 
     def test_len(self):
         """len(view) makes sense"""
         e0 = self.client[self.client.ids[0]]
-        self.assertEqual(len(e0), 1)
+        assert len(e0) == 1
         v = self.client[:]
-        self.assertEqual(len(v), len(self.client.ids))
+        assert len(v) == len(self.client.ids)
         v = self.client.direct_view('all')
-        self.assertEqual(len(v), len(self.client.ids))
+        assert len(v) == len(self.client.ids)
         v = self.client[:2]
-        self.assertEqual(len(v), 2)
+        assert len(v) == 2
         v = self.client[:1]
-        self.assertEqual(len(v), 1)
+        assert len(v) == 1
         v = self.client.load_balanced_view()
-        self.assertEqual(len(v), len(self.client.ids))
+        assert len(v) == len(self.client.ids)
 
     # begin execute tests
 
@@ -538,8 +549,8 @@ class TestView(ClusterTestCase):
         e0.block = True
         ar = e0.execute("5", silent=False)
         er = ar.get()
-        self.assertEqual(str(er), "<ExecuteReply[%i]: 5>" % er.execution_count)
-        self.assertEqual(er.execute_result['data']['text/plain'], '5')
+        assert str(er) == "<ExecuteReply[%i]: 5>" % er.execution_count
+        assert er.execute_result['data']['text/plain'] == '5'
 
     def test_execute_reply_rich(self):
         e0 = self.client[self.client.ids[0]]
@@ -553,14 +564,14 @@ class TestView(ClusterTestCase):
         assert metadata == dict(width=10)
         ar = e0.execute("HTML('<b>bold</b>')", silent=False)
         er = ar.get()
-        self.assertEqual(er._repr_html_(), "<b>bold</b>")
+        assert er._repr_html_() == "<b>bold</b>"
 
     def test_execute_reply_stdout(self):
         e0 = self.client[self.client.ids[0]]
         e0.block = True
         ar = e0.execute("print (5)", silent=False)
         er = ar.get()
-        self.assertEqual(er.stdout.strip(), '5')
+        assert er.stdout.strip() == '5'
 
     def test_execute_result(self):
         """execute triggers execute_result with silent=False"""
@@ -569,14 +580,14 @@ class TestView(ClusterTestCase):
 
         expected = [{'text/plain': '5'}] * len(view)
         mimes = [out['data'] for out in ar.execute_result]
-        self.assertEqual(mimes, expected)
+        assert mimes == expected
 
     def test_execute_silent(self):
         """execute does not trigger execute_result with silent=True"""
         view = self.client[:]
         ar = view.execute("5", block=True)
         expected = [None] * len(view)
-        self.assertEqual(ar.execute_result, expected)
+        assert ar.execute_result == expected
 
     def test_execute_magic(self):
         """execute accepts IPython commands"""
@@ -587,14 +598,14 @@ class TestView(ClusterTestCase):
         ar.get(5)
         for stdout in ar.stdout:
             lines = stdout.splitlines()
-            self.assertEqual(lines[0].split(), ['Variable', 'Type', 'Data/Info'])
+            assert lines[0].split(), ['Variable', 'Type' == 'Data/Info']
             found = False
             for line in lines[2:]:
                 split = line.split()
                 if split == ['a', 'int', '5']:
                     found = True
                     break
-            self.assertTrue(found, "whos output wrong: %s" % stdout)
+            assert found, "whos output wrong: %s" % stdout
 
     def test_execute_displaypub(self):
         """execute tracks display_pub output"""
@@ -605,7 +616,7 @@ class TestView(ClusterTestCase):
         expected = [{'text/plain': str(j)} for j in range(5)]
         for outputs in ar.outputs:
             mimes = [out['data'] for out in outputs]
-            self.assertEqual(mimes, expected)
+            assert mimes == expected
 
     def test_apply_displaypub(self):
         """apply tracks display_pub output"""
@@ -622,13 +633,14 @@ class TestView(ClusterTestCase):
         expected = [{'text/plain': str(j)} for j in range(5)]
         for outputs in ar.outputs:
             mimes = [out['data'] for out in outputs]
-            self.assertEqual(mimes, expected)
+            assert mimes == expected
 
     def test_execute_raises(self):
         """exceptions in execute requests raise appropriately"""
         view = self.client[-1]
         ar = view.execute("1/0")
-        self.assertRaisesRemote(ZeroDivisionError, ar.get, 2)
+        with raises_remote(ZeroDivisionError):
+            ar.get(2)
 
     def test_remoteerror_render_exception(self):
         """RemoteErrors get nice tracebacks"""
@@ -639,7 +651,7 @@ class TestView(ClusterTestCase):
         with capture_output() as io:
             ip.run_cell("ar.get(2)")
 
-        self.assertTrue('ZeroDivisionError' in io.stdout, io.stdout)
+        assert 'ZeroDivisionError' in io.stdout, io.stdout
 
     def test_compositeerror_render_exception(self):
         """CompositeErrors get nice tracebacks"""
@@ -653,9 +665,9 @@ class TestView(ClusterTestCase):
 
         count = min(error.CompositeError.tb_limit, len(view))
 
-        self.assertEqual(io.stdout.count('ZeroDivisionError'), count * 2, io.stdout)
-        self.assertEqual(io.stdout.count('by zero'), count, io.stdout)
-        self.assertEqual(io.stdout.count(':execute'), count, io.stdout)
+        assert io.stdout.count('ZeroDivisionError'), count * 2 == io.stdout
+        assert io.stdout.count('by zero'), count == io.stdout
+        assert io.stdout.count(':execute'), count == io.stdout
 
     def test_compositeerror_truncate(self):
         """Truncate CompositeErrors with many exceptions"""
@@ -676,12 +688,12 @@ class TestView(ClusterTestCase):
         with capture_output() as io:
             e.print_traceback()
 
-        self.assertTrue("more exceptions" in lines[-1])
+        assert "more exceptions" in lines[-1]
         count = e.tb_limit
 
-        self.assertEqual(io.stdout.count('ZeroDivisionError'), 2 * count, io.stdout)
-        self.assertEqual(io.stdout.count('by zero'), count, io.stdout)
-        self.assertEqual(io.stdout.count(':execute'), count, io.stdout)
+        assert io.stdout.count('ZeroDivisionError'), 2 * count == io.stdout
+        assert io.stdout.count('by zero'), count == io.stdout
+        assert io.stdout.count(':execute'), count == io.stdout
 
     def test_magic_pylab(self):
         """%pylab works on engines"""
@@ -694,11 +706,11 @@ class TestView(ClusterTestCase):
         ar = view.execute("plot(rand(100))", silent=False)
         reply = ar.get(5)
         assert ar.wait_for_output(5)
-        self.assertEqual(len(reply.outputs), 1)
+        assert len(reply.outputs) == 1
         output = reply.outputs[0]
-        self.assertTrue("data" in output)
+        assert "data" in output
         data = output['data']
-        self.assertTrue("image/png" in data)
+        assert "image/png" in data
 
     def test_func_default_func(self):
         """interactively defined function as apply func default"""
@@ -712,7 +724,7 @@ class TestView(ClusterTestCase):
         view = self.client[-1]
         ar = view.apply_async(bar)
         r = ar.get(10)
-        self.assertEqual(r, 'foo')
+        assert r == 'foo'
 
     def test_data_pub_single(self):
         view = self.client[-1]
@@ -726,10 +738,10 @@ class TestView(ClusterTestCase):
             ),
             block=False,
         )
-        self.assertTrue(isinstance(ar.data, dict))
+        assert isinstance(ar.data, dict)
         ar.get(5)
         assert ar.wait_for_output(5)
-        self.assertEqual(ar.data, dict(i=4))
+        assert ar.data == dict(i=4)
 
     def test_data_pub(self):
         view = self.client[:]
@@ -743,10 +755,10 @@ class TestView(ClusterTestCase):
             ),
             block=False,
         )
-        self.assertTrue(all(isinstance(d, dict) for d in ar.data))
+        assert all(isinstance(d, dict) for d in ar.data)
         ar.get(5)
         assert ar.wait_for_output(5)
-        self.assertEqual(ar.data, [dict(i=4)] * len(ar))
+        assert ar.data == [dict(i=4)] * len(ar)
 
     def test_can_list_arg(self):
         """args in lists are canned"""
@@ -755,7 +767,7 @@ class TestView(ClusterTestCase):
         rA = ipp.Reference('a')
         ar = view.apply_async(lambda x: x, [rA])
         r = ar.get(5)
-        self.assertEqual(r, [128])
+        assert r == [128]
 
     def test_can_dict_arg(self):
         """args in dicts are canned"""
@@ -764,7 +776,7 @@ class TestView(ClusterTestCase):
         rA = ipp.Reference('a')
         ar = view.apply_async(lambda x: x, dict(foo=rA))
         r = ar.get(5)
-        self.assertEqual(r, dict(foo=128))
+        assert r == dict(foo=128)
 
     def test_can_list_kwarg(self):
         """kwargs in lists are canned"""
@@ -773,7 +785,7 @@ class TestView(ClusterTestCase):
         rA = ipp.Reference('a')
         ar = view.apply_async(lambda x=5: x, x=[rA])
         r = ar.get(5)
-        self.assertEqual(r, [128])
+        assert r == [128]
 
     def test_can_dict_kwarg(self):
         """kwargs in dicts are canned"""
@@ -782,7 +794,7 @@ class TestView(ClusterTestCase):
         rA = ipp.Reference('a')
         ar = view.apply_async(lambda x=5: x, dict(foo=rA))
         r = ar.get(5)
-        self.assertEqual(r, dict(foo=128))
+        assert r == dict(foo=128)
 
     def test_map_ref(self):
         """view.map works with references"""
@@ -793,7 +805,7 @@ class TestView(ClusterTestCase):
 
         amr = view.map_async(lambda x: x * 2, [rrank] * len(view))
         drank = amr.get(5)
-        self.assertEqual(drank, [r * 2 for r in ranks])
+        assert drank == [r * 2 for r in ranks]
 
     def test_nested_getitem_setitem(self):
         """get and set with view['a.b']"""
@@ -811,14 +823,14 @@ class TestView(ClusterTestCase):
         ra = ipp.Reference('a')
 
         r = view.apply_sync(lambda x: x.b, ra)
-        self.assertEqual(r, 128)
-        self.assertEqual(view['a.b'], 128)
+        assert r == 128
+        assert view['a.b'] == 128
 
         view['a.b'] = 0
 
         r = view.apply_sync(lambda x: x.b, ra)
-        self.assertEqual(r, 0)
-        self.assertEqual(view['a.b'], 0)
+        assert r == 0
+        assert view['a.b'] == 0
 
     def test_return_namedtuple(self):
         def namedtuplify(x, y):
@@ -826,8 +838,8 @@ class TestView(ClusterTestCase):
 
         view = self.client[-1]
         p = view.apply_sync(namedtuplify, 1, 2)
-        self.assertEqual(p.x, 1)
-        self.assertEqual(p.y, 2)
+        assert p.x == 1
+        assert p.y == 2
 
     def test_apply_namedtuple(self):
         def echoxy(p):
@@ -835,7 +847,7 @@ class TestView(ClusterTestCase):
 
         view = self.client[-1]
         tup = view.apply_sync(echoxy, point(1, 2))
-        self.assertEqual(tup, (2, 1))
+        assert tup, 2 == 1
 
     def test_sync_imports(self):
         view = self.client[-1]
@@ -875,7 +887,7 @@ class TestView(ClusterTestCase):
 
         # verify initial condition
         a_list = view.apply_sync(get_a)
-        self.assertEqual(a_list, ['engine'] * len(view))
+        assert a_list == ['engine'] * len(view)
 
         # enable cloudpickle
         view.use_cloudpickle()
@@ -883,16 +895,17 @@ class TestView(ClusterTestCase):
         # cloudpickle prefers client values
         __main__._a = 'client'
         a_list = view.apply_sync(get_a)
-        self.assertEqual(a_list, ['client'] * len(view))
+        assert a_list == ['client'] * len(view)
 
         # still works even if remote is undefined
         view.execute('del _a', block=True)
         a_list = view.apply_sync(get_a)
-        self.assertEqual(a_list, ['client'] * len(view))
+        assert a_list == ['client'] * len(view)
 
         # restore pickle, shouldn't resolve
         view.use_pickle()
-        self.assertRaisesRemote(NameError, view.apply_sync, get_a)
+        with raises_remote(NameError):
+            view.apply_sync(get_a)
 
     @skip_without('cloudpickle')
     def test_cloudpickle_push_pull(self):

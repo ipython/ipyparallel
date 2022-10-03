@@ -126,6 +126,7 @@ testpaths = [
 filterwarnings = [
   "error:::ipy*",
   "error:::jupyter*",
+  "ignore:zmq.eventloop.ioloop:DeprecationWarning:jupyter*",
   "ignore:unclosed event loop:ResourceWarning",
   "ignore:unclosed socket <zmq.Socket:ResourceWarning",
   "ignore:unclosed <socket.socket:ResourceWarning",

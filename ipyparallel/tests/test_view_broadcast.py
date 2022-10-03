@@ -10,8 +10,8 @@ needs_map = pytest.mark.xfail(reason="map not yet implemented")
 class TestBroadcastView(test_view.TestView):
     is_coalescing = False
 
-    def setUp(self):
-        super().setUp()
+    def setup(self):
+        super().setup()
         self._broadcast_view_used = False
         # use broadcast view for direct API
         real_direct_view = self.client.real_direct_view = self.client.direct_view
@@ -27,8 +27,8 @@ class TestBroadcastView(test_view.TestView):
 
         self.client.direct_view = broadcast_or_direct
 
-    def tearDown(self):
-        super().tearDown()
+    def teardown(self):
+        super().teardown()
         # note that a test didn't use a broadcast view
         if not self._broadcast_view_used:
             pytest.skip("No broadcast view used")

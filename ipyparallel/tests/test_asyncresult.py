@@ -30,171 +30,193 @@ class AsyncResultTest(ClusterTestCase):
         """various one-target views get the right value for single_result"""
         eid = self.client.ids[-1]
         ar = self.client[eid].apply_async(lambda: 42)
-        self.assertEqual(ar.get(), 42)
+        assert ar.get() == 42
         ar = self.client[[eid]].apply_async(lambda: 42)
-        self.assertEqual(ar.get(), [42])
+        assert ar.get() == [42]
         ar = self.client[-1:].apply_async(lambda: 42)
-        self.assertEqual(ar.get(), [42])
+        assert ar.get() == [42]
 
     def test_get_after_done(self):
         ar = self.client[-1].apply_async(lambda: 42)
         ar.wait()
-        self.assertTrue(ar.ready())
-        self.assertEqual(ar.get(), 42)
-        self.assertEqual(ar.get(), 42)
+        assert ar.ready()
+        assert ar.get() == 42
+        assert ar.get() == 42
 
     def test_get_before_done(self):
         ar = self.client[-1].apply_async(wait, 0.1)
-        self.assertRaises(TimeoutError, ar.get, 0)
+        with pytest.raises(TimeoutError):
+            ar.get(0)
         ar.wait(0)
-        self.assertFalse(ar.ready())
-        self.assertEqual(ar.get(), 0.1)
+        assert not ar.ready()
+        assert ar.get() == 0.1
 
     def test_get_after_error(self):
         ar = self.client[-1].apply_async(lambda: 1 / 0)
         ar.wait(10)
-        self.assertRaisesRemote(ZeroDivisionError, ar.get)
-        self.assertRaisesRemote(ZeroDivisionError, ar.get)
-        self.assertRaisesRemote(ZeroDivisionError, ar.get_dict)
+        with raises_remote(ZeroDivisionError):
+            ar.get()
+        with raises_remote(ZeroDivisionError):
+            ar.get()
+        with raises_remote(ZeroDivisionError):
+            ar.get_dict()
 
     def test_get_dict(self):
         n = len(self.client)
         ar = self.client[:].apply_async(lambda: 5)
-        self.assertEqual(ar.get(), [5] * n)
+        assert ar.get() == [5] * n
         d = ar.get_dict()
-        self.assertEqual(sorted(d.keys()), sorted(self.client.ids))
+        assert sorted(d.keys()) == sorted(self.client.ids)
         for eid, r in d.items():
-            self.assertEqual(r, 5)
+            assert r == 5
 
     def test_get_dict_single(self):
         view = self.client[-1]
         for v in (list(range(5)), 5, ('abc', 'def'), 'string'):
             ar = view.apply_async(echo, v)
-            self.assertEqual(ar.get(), v)
+            assert ar.get() == v
             d = ar.get_dict()
-            self.assertEqual(d, {view.targets: v})
+            assert d == {view.targets: v}
 
     def test_get_dict_bad(self):
         v = self.client.load_balanced_view()
         amr = v.map_async(lambda x: x, range(len(self.client) * 2))
-        self.assertRaises(ValueError, amr.get_dict)
+        with pytest.raises(ValueError):
+            amr.get_dict()
 
     def test_iter_amr(self):
         ar = self.client.load_balanced_view().map_async(wait, [0.125] * 5)
         for r in ar:
-            self.assertEqual(r, 0.125)
+            assert r == 0.125
 
     def test_iter_multi_result_ar(self):
         ar = self.client[:].apply(wait, 0.125)
         for r in ar:
-            self.assertEqual(r, 0.125)
+            assert r == 0.125
 
     def test_iter_error(self):
         amr = self.client[:].map_async(lambda x: 1 / (x - 2), range(5))
         # iterating through failing AMR should raise RemoteError
-        self.assertRaisesRemote(ZeroDivisionError, list, amr)
+        with raises_remote(ZeroDivisionError):
+            list(amr)
         # so should get
-        self.assertRaisesRemote(ZeroDivisionError, amr.get)
+        with raises_remote(ZeroDivisionError):
+            amr.get()
         amr.wait(10)
         # test iteration again after everything is local
-        self.assertRaisesRemote(ZeroDivisionError, list, amr)
+        with raises_remote(ZeroDivisionError):
+            list(amr)
 
     def test_getattr(self):
         ar = self.client[:].apply_async(wait, 0.5)
-        self.assertEqual(ar.completed, [None] * len(ar))
-        self.assertRaises(AttributeError, lambda: ar._foo)
-        self.assertRaises(AttributeError, lambda: ar.__length_hint__())
-        self.assertRaises(AttributeError, lambda: ar.foo)
-        self.assertFalse(hasattr(ar, '__length_hint__'))
-        self.assertFalse(hasattr(ar, 'foo'))
-        self.assertTrue(hasattr(ar, 'engine_id'))
+        assert ar.completed == [None] * len(ar)
+        with pytest.raises(AttributeError):
+            ar._foo
+        with pytest.raises(AttributeError):
+            ar.__length_hint__()
+        with pytest.raises(AttributeError):
+            ar.foo
+        assert not hasattr(ar, '__length_hint__')
+        assert not hasattr(ar, 'foo')
+        assert hasattr(ar, 'engine_id')
         ar.get(5)
-        self.assertRaises(AttributeError, lambda: ar._foo)
-        self.assertRaises(AttributeError, lambda: ar.__length_hint__())
-        self.assertRaises(AttributeError, lambda: ar.foo)
-        self.assertTrue(isinstance(ar.engine_id, list))
-        self.assertEqual(ar.engine_id, ar['engine_id'])
-        self.assertFalse(hasattr(ar, '__length_hint__'))
-        self.assertFalse(hasattr(ar, 'foo'))
-        self.assertTrue(hasattr(ar, 'engine_id'))
+        with pytest.raises(AttributeError):
+            ar._foo
+        with pytest.raises(AttributeError):
+            ar.__length_hint__()
+        with pytest.raises(AttributeError):
+            ar.foo
+        assert isinstance(ar.engine_id, list)
+        assert ar.engine_id == ar['engine_id']
+        assert not hasattr(ar, '__length_hint__')
+        assert not hasattr(ar, 'foo')
+        assert hasattr(ar, 'engine_id')
 
     def test_getitem(self):
         ar = self.client[:].apply_async(wait, 0.5)
         assert ar['completed'] == [None] * len(ar)
-        self.assertRaises(KeyError, lambda: ar['foo'])
+        with pytest.raises(KeyError):
+            ar['foo']
         ar.get(5)
-        self.assertRaises(KeyError, lambda: ar['foo'])
+        with pytest.raises(KeyError):
+            ar['foo']
         assert isinstance(ar['completed'], list)
         assert ar.completed == ar['completed']
         assert all(isinstance(dt, datetime) for dt in ar.completed)
 
     def test_single_result(self):
         ar = self.client[-1].apply_async(wait, 0.5)
-        self.assertRaises(KeyError, lambda: ar['foo'])
+        with pytest.raises(KeyError):
+            ar['foo']
         assert ar['completed'] is None
         assert ar.get(5) == 0.5
         assert isinstance(ar['completed'], datetime)
         assert isinstance(ar.completed, datetime)
-        self.assertEqual(ar.completed, ar['completed'])
+        assert ar.completed == ar['completed']
 
     def test_abort(self):
         e = self.client[-1]
         ar = e.execute('import time; time.sleep(1)', block=False)
         ar2 = e.apply_async(lambda: 2)
         ar2.abort()
-        self.assertRaises(error.TaskAborted, ar2.get)
+        with pytest.raises(error.TaskAborted):
+            ar2.get()
         ar.get()
 
     def test_len(self):
         v = self.client.load_balanced_view()
         ar = v.map_async(lambda x: x, list(range(10)))
-        self.assertEqual(len(ar), 10)
+        assert len(ar) == 10
         ar = v.apply_async(lambda x: x, list(range(10)))
-        self.assertEqual(len(ar), 1)
+        assert len(ar) == 1
         ar = self.client[:].apply_async(lambda x: x, list(range(10)))
-        self.assertEqual(len(ar), len(self.client.ids))
+        assert len(ar) == len(self.client.ids)
 
     def test_wall_time_single(self):
         v = self.client.load_balanced_view()
         ar = v.apply_async(time.sleep, 0.25)
-        self.assertRaises(TimeoutError, getattr, ar, 'wall_time')
+        with pytest.raises(TimeoutError):
+            ar.wall_time
         ar.get(2)
-        self.assertTrue(ar.wall_time < 1.0)
-        self.assertTrue(ar.wall_time > 0.2)
+        assert ar.wall_time < 1.0
+        assert ar.wall_time > 0.2
 
     def test_wall_time_multi(self):
         self.minimum_engines(4)
         v = self.client[:]
         ar = v.apply_async(time.sleep, 0.25)
-        self.assertRaises(TimeoutError, getattr, ar, 'wall_time')
+        with pytest.raises(TimeoutError):
+            ar.wall_time
         ar.get(2)
-        self.assertTrue(ar.wall_time < 1.0)
-        self.assertTrue(ar.wall_time > 0.2)
+        assert ar.wall_time < 1.0
+        assert ar.wall_time > 0.2
 
     def test_serial_time_single(self):
         v = self.client.load_balanced_view()
         ar = v.apply_async(time.sleep, 0.25)
-        self.assertRaises(TimeoutError, getattr, ar, 'serial_time')
+        with pytest.raises(TimeoutError):
+            ar.serial_time
         ar.get(2)
-        self.assertTrue(ar.serial_time < 1.0)
-        self.assertTrue(ar.serial_time > 0.2)
+        assert ar.serial_time < 1.0
+        assert ar.serial_time > 0.2
 
     def test_serial_time_multi(self):
         self.minimum_engines(4)
         v = self.client[:]
         ar = v.apply_async(time.sleep, 0.25)
-        self.assertRaises(TimeoutError, getattr, ar, 'serial_time')
+        with pytest.raises(TimeoutError):
+            ar.serial_time
         ar.get(2)
-        self.assertTrue(ar.serial_time < 2.0)
-        self.assertTrue(ar.serial_time > 0.8)
+        assert ar.serial_time < 2.0
+        assert ar.serial_time > 0.8
 
     def test_elapsed_single(self):
         v = self.client.load_balanced_view()
         ar = v.apply_async(time.sleep, 0.25)
         while not ar.ready():
             time.sleep(0.01)
-            self.assertTrue(ar.elapsed < 1)
-        self.assertTrue(ar.elapsed < 1)
+            assert ar.elapsed < 1
+        assert ar.elapsed < 1
         ar.get(2)
 
     def test_elapsed_multi(self):
@@ -202,8 +224,8 @@ class AsyncResultTest(ClusterTestCase):
         ar = v.apply_async(time.sleep, 0.25)
         while not ar.ready():
             time.sleep(0.01)
-            self.assertLess(ar.elapsed, 1)
-        self.assertLess(ar.elapsed, 1)
+            assert ar.elapsed < 1
+        assert ar.elapsed < 1
         ar.get(2)
 
     def test_hubresult_timestamps(self):
@@ -217,13 +239,12 @@ class AsyncResultTest(ClusterTestCase):
         try:
             time.sleep(0.25)
             hr = rc2.get_result(ar.msg_ids)
-            self.assertTrue(hr.elapsed > 0.0, "got bad elapsed: %s" % hr.elapsed)
+            assert hr.elapsed > 0.0, "got bad elapsed: %s" % hr.elapsed
             hr.get(1)
-            self.assertTrue(
-                hr.wall_time < ar.wall_time + 0.2,
-                f"got bad wall_time: {hr.wall_time} > {ar.wall_time}",
-            )
-            self.assertEqual(hr.serial_time, ar.serial_time)
+            assert (
+                hr.wall_time < ar.wall_time + 0.2
+            ), f"got bad wall_time: {hr.wall_time} > {ar.wall_time}"
+            assert hr.serial_time == ar.serial_time
         finally:
             rc2.close()
 
@@ -236,15 +257,15 @@ class AsyncResultTest(ClusterTestCase):
         ar.get(5)
         with capture_output() as io:
             ar.display_outputs()
-        self.assertEqual(io.stderr, '')
-        self.assertEqual('5555\n', io.stdout)
+        assert io.stderr == ''
+        assert '5555\n' == io.stdout
 
         ar = v.execute("a=5")
         ar.get(5)
         with capture_output() as io:
             ar.display_outputs()
-        self.assertEqual(io.stderr, '')
-        self.assertEqual(io.stdout, '')
+        assert io.stderr == ''
+        assert io.stdout == ''
 
     def test_display_empty_streams_type(self):
         """empty stdout/err are not displayed (groupby type)"""
@@ -255,17 +276,17 @@ class AsyncResultTest(ClusterTestCase):
         ar.get(5)
         with capture_output() as io:
             ar.display_outputs()
-        self.assertEqual(io.stderr, '')
-        self.assertEqual(io.stdout.count('5555'), len(v), io.stdout)
-        self.assertFalse('\n\n' in io.stdout, io.stdout)
-        self.assertEqual(io.stdout.count('[stdout:'), len(v), io.stdout)
+        assert io.stderr == ''
+        assert io.stdout.count('5555'), len(v) == io.stdout
+        assert not '\n\n' in io.stdout, io.stdout
+        assert io.stdout.count('[stdout:'), len(v) == io.stdout
 
         ar = v.execute("a=5")
         ar.get(5)
         with capture_output() as io:
             ar.display_outputs()
-        self.assertEqual(io.stderr, '')
-        self.assertEqual(io.stdout, '')
+        assert io.stderr == ''
+        assert io.stdout == ''
 
     def test_display_empty_streams_engine(self):
         """empty stdout/err are not displayed (groupby engine)"""
@@ -276,17 +297,17 @@ class AsyncResultTest(ClusterTestCase):
         ar.get(5)
         with capture_output() as io:
             ar.display_outputs('engine')
-        self.assertEqual(io.stderr, '')
-        self.assertEqual(io.stdout.count('5555'), len(v), io.stdout)
-        self.assertFalse('\n\n' in io.stdout, io.stdout)
-        self.assertEqual(io.stdout.count('[stdout:'), len(v), io.stdout)
+        assert io.stderr == ''
+        assert io.stdout.count('5555'), len(v) == io.stdout
+        assert not '\n\n' in io.stdout, io.stdout
+        assert io.stdout.count('[stdout:'), len(v) == io.stdout
 
         ar = v.execute("a=5")
         ar.get(5)
         with capture_output() as io:
             ar.display_outputs('engine')
-        self.assertEqual(io.stderr, '')
-        self.assertEqual(io.stdout, '')
+        assert io.stderr == ''
+        assert io.stdout == ''
 
     def test_display_output_error(self):
         """display_outputs shows output on error"""
@@ -298,8 +319,8 @@ class AsyncResultTest(ClusterTestCase):
         ar.wait_for_output(5)
         with capture_output() as io:
             ar.display_outputs()
-        self.assertEqual(io.stderr, '')
-        self.assertEqual('5555\n', io.stdout)
+        assert io.stderr == ''
+        assert '5555\n' == io.stdout
         assert 'ZeroDivisionError' not in io.stdout
 
     def test_await_data(self):
@@ -348,7 +369,7 @@ class AsyncResultTest(ClusterTestCase):
         for targets in ('all', None, ids):
             dv = self.client.direct_view(targets=targets)
             ar = dv.apply_async(lambda: 5)
-            self.assertEqual(ar.get(10), [5])
+            assert ar.get(10) == [5]
         self.client._build_targets = save_build
 
     def test_owner_pop(self):
@@ -359,8 +380,8 @@ class AsyncResultTest(ClusterTestCase):
         ar.get()
         ar.wait_for_output()
         msg_id = ar.msg_ids[0]
-        self.assertNotIn(msg_id, self.client.results)
-        self.assertNotIn(msg_id, self.client.metadata)
+        assert msg_id not in self.client.results
+        assert msg_id not in self.client.metadata
 
     def test_dir(self):
         """dir(AsyncResult)"""
@@ -368,13 +389,13 @@ class AsyncResultTest(ClusterTestCase):
         ar = view.apply_async(lambda: 1)
         ar.get()
         d = dir(ar)
-        self.assertIn('stdout', d)
-        self.assertIn('get', d)
+        assert 'stdout' in d
+        assert 'get' in d
 
     def test_wait_for_send(self):
         view = self.client[-1]
         view.track = True
-        with self.assertRaises(TimeoutError):
+        with pytest.raises(TimeoutError):
             # this test can fail if the send happens too quickly
             # e.g. the IO thread takes control for too long,
             # so run the test a few times

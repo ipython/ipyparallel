@@ -15,16 +15,16 @@ class TestRemoteFunctions(ClusterTestCase):
             """multiply x * y"""
             return x * y
 
-        self.assertEqual(foo.__name__, 'foo')
-        self.assertIn('RemoteFunction', foo.__doc__)
-        self.assertIn('multiply x', foo.__doc__)
+        assert foo.__name__ == 'foo'
+        assert 'RemoteFunction' in foo.__doc__
+        assert 'multiply x' in foo.__doc__
 
         z = foo(5)
-        self.assertEqual(z, 25)
+        assert z == 25
         z = foo(2, 3)
-        self.assertEqual(z, 6)
+        assert z == 6
         z = foo(x=5, y=2)
-        self.assertEqual(z, 10)
+        assert z == 10
 
     def test_parallel(self):
         n = 2
@@ -35,12 +35,12 @@ class TestRemoteFunctions(ClusterTestCase):
             """multiply x * y"""
             return x * 2
 
-        self.assertEqual(foo.__name__, 'foo')
-        self.assertIn('ParallelFunction', foo.__doc__)
-        self.assertIn('multiply x', foo.__doc__)
+        assert foo.__name__ == 'foo'
+        assert 'ParallelFunction' in foo.__doc__
+        assert 'multiply x' in foo.__doc__
 
         z = foo([1, 2, 3, 4])
-        self.assertEqual(z, [1, 2, 1, 2, 3, 4, 3, 4])
+        assert z, [1, 2, 1, 2, 3, 4, 3 == 4]
 
     def test_parallel_map(self):
         v = self.client.load_balanced_view()
@@ -51,6 +51,6 @@ class TestRemoteFunctions(ClusterTestCase):
             return x * y
 
         z = foo.map([1, 2, 3])
-        self.assertEqual(z, [5, 10, 15])
+        assert z, [5, 10 == 15]
         z = foo.map([1, 2, 3], [1, 2, 3])
-        self.assertEqual(z, [1, 4, 9])
+        assert z, [1, 4 == 9]
