@@ -5,9 +5,10 @@ import logging
 
 import zmq
 from jupyter_client.localinterfaces import localhost
+from tornado import ioloop
 from traitlets import Instance, List, Unicode
 from traitlets.config.configurable import LoggingConfigurable
-from zmq.eventloop import ioloop, zmqstream
+from zmq.eventloop import zmqstream
 
 
 class LogWatcher(LoggingConfigurable):

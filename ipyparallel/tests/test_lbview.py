@@ -2,22 +2,25 @@
 import time
 from itertools import count
 
+import pytest
+
 import ipyparallel as ipp
 from ipyparallel import error
 
-from .clienttest import ClusterTestCase, crash
+from .clienttest import ClusterTestCase, crash, raises_remote
 
 
 class TestLoadBalancedView(ClusterTestCase):
-    def setUp(self):
-        ClusterTestCase.setUp(self)
+    def setup(self):
+        super().setup()
         self.view = self.client.load_balanced_view()
 
     def test_z_crash(self):
         """test graceful handling of engine death (balanced)"""
         self.add_engines(1)
         ar = self.view.apply_async(crash)
-        self.assertRaisesRemote(error.EngineError, ar.get, 10)
+        with raises_remote(error.EngineError):
+            ar.get(10)
         eid = ar.engine_id
         tic = time.time()
         while eid in self.client.ids and time.time() - tic < 5:
@@ -89,15 +92,13 @@ class TestLoadBalancedView(ClusterTestCase):
         reference = list(map(f, data))
 
         amr = self.view.map_async(slow_f, data, ordered=False)
-        self.assertTrue(isinstance(amr, ipp.AsyncMapResult))
+        assert isinstance(amr, ipp.AsyncMapResult)
         # check individual elements, retrieved as they come
         # list comprehension uses __iter__
         astheycame = [r for r in amr]
         # Ensure that at least one result came out of order:
-        self.assertNotEqual(astheycame, reference, "should not have preserved order")
-        self.assertEqual(
-            sorted(astheycame, reverse=True), reference, "result corrupted"
-        )
+        assert astheycame, reference != "should not have preserved order"
+        assert sorted(astheycame, reverse=True) == reference, "result corrupted"
 
     def test_map_ordered(self):
         def f(x):
@@ -113,13 +114,13 @@ class TestLoadBalancedView(ClusterTestCase):
         reference = list(map(f, data))
 
         amr = self.view.map_async(slow_f, data)
-        self.assertTrue(isinstance(amr, ipp.AsyncMapResult))
+        assert isinstance(amr, ipp.AsyncMapResult)
         # check individual elements, retrieved as they come
         # list(amr) uses __iter__
         astheycame = list(amr)
         # Ensure that results came in order
-        self.assertEqual(astheycame, reference)
-        self.assertEqual(amr.get(), reference)
+        assert astheycame == reference
+        assert amr.get() == reference
 
     def test_map_iterable(self):
         """test map on iterables (balanced)"""
@@ -129,7 +130,7 @@ class TestLoadBalancedView(ClusterTestCase):
         # so that it will be an iterator, even in Python 3
         it = iter(arr)
         r = view.map_sync(lambda x: x, arr)
-        self.assertEqual(r, list(arr))
+        assert r == list(arr)
 
     def test_imap_max_outstanding(self):
         view = self.view
@@ -242,8 +243,10 @@ class TestLoadBalancedView(ClusterTestCase):
         ar3 = view.apply_async(lambda: 3)
         view.abort(ar2)
         view.abort(ar3.msg_ids)
-        self.assertRaises(error.TaskAborted, ar2.get)
-        self.assertRaises(error.TaskAborted, ar3.get)
+        with pytest.raises(error.TaskAborted):
+            ar2.get()
+        with pytest.raises(error.TaskAborted):
+            ar3.get()
 
     def test_retries(self):
         self.minimum_engines(3)
@@ -254,10 +257,12 @@ class TestLoadBalancedView(ClusterTestCase):
 
         for r in range(len(self.client) - 1):
             with view.temp_flags(retries=r):
-                self.assertRaisesRemote(ValueError, view.apply_sync, fail)
+                with raises_remote(ValueError):
+                    view.apply_sync(fail)
 
         with view.temp_flags(retries=len(self.client), timeout=0.1):
-            self.assertRaisesRemote(error.TaskTimeout, view.apply_sync, fail)
+            with raises_remote(error.TaskTimeout):
+                view.apply_sync(fail)
 
     def test_short_timeout(self):
         self.minimum_engines(2)
@@ -270,12 +275,14 @@ class TestLoadBalancedView(ClusterTestCase):
             raise ValueError("Failed!")
 
         with view.temp_flags(retries=1, timeout=0.01):
-            self.assertRaisesRemote(ValueError, view.apply_sync, fail)
+            with raises_remote(ValueError):
+                view.apply_sync(fail)
 
     def test_invalid_dependency(self):
         view = self.view
         with view.temp_flags(after='12345'):
-            self.assertRaisesRemote(error.InvalidDependency, view.apply_sync, lambda: 1)
+            with raises_remote(error.InvalidDependency):
+                view.apply_sync(lambda: 1)
 
     def test_impossible_dependency(self):
         self.minimum_engines(2)
@@ -290,9 +297,8 @@ class TestLoadBalancedView(ClusterTestCase):
             e2 = ar2.engine_id
 
         with view.temp_flags(follow=[ar1, ar2]):
-            self.assertRaisesRemote(
-                error.ImpossibleDependency, view.apply_sync, lambda: 1
-            )
+            with raises_remote(error.ImpossibleDependency):
+                view.apply_sync(lambda: 1)
 
     def test_follow(self):
         ar = self.view.apply_async(lambda: 1)
@@ -305,7 +311,7 @@ class TestLoadBalancedView(ClusterTestCase):
             ars.append(self.view.apply_async(lambda: 1))
         self.view.wait(ars)
         for ar in ars:
-            self.assertEqual(ar.engine_id, first_id)
+            assert ar.engine_id == first_id
 
     def test_after(self):
         view = self.view
@@ -315,6 +321,4 @@ class TestLoadBalancedView(ClusterTestCase):
 
         ar.wait()
         ar2.wait()
-        self.assertTrue(
-            ar2.started >= ar.completed, f"{ar.started} not >= {ar.completed}"
-        )
+        assert ar2.started >= ar.completed
