@@ -71,7 +71,7 @@ async function activate(
   notebookTracker: INotebookTracker,
   settingRegistry: ISettingRegistry,
   state: IStateDB,
-  labShell?: ILabShell | null
+  labShell?: ILabShell | null,
 ): Promise<void> {
   const id = "ipp-cluster-launcher";
 
@@ -82,7 +82,7 @@ async function activate(
     const editor = Private.getCurrentEditor(
       app,
       notebookTracker,
-      consoleTracker
+      consoleTracker,
     );
     if (!editor) {
       return;
@@ -123,7 +123,7 @@ async function activate(
 
   // A function to create a new client for a session.
   const createClientForSession = async (
-    session: Session.ISessionConnection | null
+    session: Session.ISessionConnection | null,
   ) => {
     if (!session) {
       return;
@@ -144,7 +144,7 @@ async function activate(
 
   // A function to recreate a client on reconnect.
   const injectOnSessionStatusChanged = async (
-    sessionContext: ISessionContext
+    sessionContext: ISessionContext,
   ) => {
     if (
       sessionContext.session &&
@@ -158,7 +158,7 @@ async function activate(
   // A function to inject a client when a new session owner is added.
   const injectOnWidgetAdded = (
     _: IWidgetTracker<SessionOwner>,
-    widget: SessionOwner
+    widget: SessionOwner,
   ) => {
     widget.sessionContext.statusChanged.connect(injectOnSessionStatusChanged);
   };
@@ -200,14 +200,14 @@ async function activate(
         tracker.forEach(async (widget) => {
           await createClientForSession(widget.sessionContext.session);
           widget.sessionContext.statusChanged.connect(
-            injectOnSessionStatusChanged
+            injectOnSessionStatusChanged,
           );
         });
       });
 
       // When the active cluster changes, reinject the client.
       sidebar.clusterManager.activeClusterChanged.connect(
-        injectOnClusterChanged
+        injectOnClusterChanged,
       );
     }
   };
@@ -237,7 +237,7 @@ async function activate(
         await sidebar.clusterManager.refresh();
         sidebar.clusterManager.setActiveCluster(cluster);
       }
-    }
+    },
   );
 
   // Add a command to inject client connection code for a given cluster model.
@@ -371,7 +371,7 @@ namespace Private {
    * if it is valid and in python.
    */
   export async function shouldUseKernel(
-    kernel: Kernel.IKernelConnection | null | undefined
+    kernel: Kernel.IKernelConnection | null | undefined,
   ): Promise<boolean> {
     if (!kernel) {
       return false;
@@ -385,7 +385,7 @@ namespace Private {
    */
   export async function createClientForKernel(
     model: IClusterModel,
-    kernel: Kernel.IKernelConnection
+    kernel: Kernel.IKernelConnection,
   ): Promise<string> {
     const code = getClientCode(model);
     const content: KernelMessage.IExecuteRequestMsg["content"] = {
@@ -408,7 +408,7 @@ namespace Private {
    */
   export function injectClientCode(
     cluster: IClusterModel,
-    editor: CodeEditor.IEditor
+    editor: CodeEditor.IEditor,
   ): void {
     const cursor = editor.getCursorPosition();
     const offset = editor.getOffsetAt(cursor);
@@ -434,7 +434,7 @@ rc`;
   export function getCurrentKernel(
     shell: ILabShell,
     notebookTracker: INotebookTracker,
-    consoleTracker: IConsoleTracker
+    consoleTracker: IConsoleTracker,
   ): Kernel.IKernelConnection | null | undefined {
     // Get a handle on the most relevant kernel,
     // whether it is attached to a notebook or a console.
@@ -463,7 +463,7 @@ rc`;
   export function getCurrentEditor(
     app: JupyterFrontEnd,
     notebookTracker: INotebookTracker,
-    consoleTracker: IConsoleTracker
+    consoleTracker: IConsoleTracker,
   ): CodeEditor.IEditor | null | undefined {
     // Get a handle on the most relevant kernel,
     // whether it is attached to a notebook or a console.
@@ -494,7 +494,7 @@ rc`;
    */
   export function clusterFromClick(
     app: JupyterFrontEnd,
-    manager: ClusterManager
+    manager: ClusterManager,
   ): IClusterModel | undefined {
     const test = (node: HTMLElement) => !!node.dataset.clusterId;
     const node = app.contextMenuHitTest(test);
