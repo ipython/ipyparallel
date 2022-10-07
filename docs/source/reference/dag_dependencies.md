@@ -97,7 +97,7 @@ So first, we start with a graph of 32 nodes, with 128 edges:
 In [11]: G = random_dag(32, 128)
 ```
 
-Then we need some jobs. In reality these would all be different, but for our toy example 
+Then we need some jobs. In reality these would all be different, but for our toy example
 we'll use a single function that sleeps for a random interval:
 
 ```{literalinclude} ../examples/dagdeps.py
@@ -192,8 +192,8 @@ In [24]: nx.draw(G, pos, nodelist=colors.keys(), node_color=list(colors.values()
 ```{figure} figs/dagdeps.*
 :width: 600px
 
-Time started on the x-axis, runtime on the y-axis, and color-coded by engine-id (in this 
-case there were four engines). Edges denote dependencies. The limits of the axes have been 
+Time started on the x-axis, runtime on the y-axis, and color-coded by engine-id (in this
+case there were four engines). Edges denote dependencies. The limits of the axes have been
 adjusted in this plot.
 ```
 
