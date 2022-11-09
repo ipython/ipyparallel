@@ -135,7 +135,9 @@ filterwarnings = [
   "ignore:unclosed file <_io.BufferedRandom>:ResourceWarning",
   # from older versions of ipykernel
   "ignore:the imp module is:DeprecationWarning",
-  "ignore:The distutils package is:DeprecationWarning"
+  "ignore:The distutils package is:DeprecationWarning",
+  # new behavior in Jupyter Core 5.0+
+  "module:Jupyter is migrating its paths to use standard platformdirs:DeprecationWarning",
 ]
 
 [tool.tbump]
