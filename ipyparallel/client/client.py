@@ -402,7 +402,6 @@ class Client(HasTraits):
         cluster=None,
         **extra_args,
     ):
-
         super_kwargs = {'debug': debug, 'cluster': cluster}
         if profile:
             super_kwargs['profile'] = profile
@@ -524,7 +523,6 @@ class Client(HasTraits):
                 and not sshserver
                 and location != socket.gethostname()
             ):
-
                 # warn if no ssh specified, but SSH is probably needed
                 # This is only a warning, because the most likely cause
                 # is a local Controller on a laptop whose IP is dynamic

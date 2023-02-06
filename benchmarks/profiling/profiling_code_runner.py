@@ -68,7 +68,6 @@ def get_tasks_to_execute(program_arguments):
 
 
 if __name__ == "__main__":
-
     print('profiling_code_runner_started')
     if '-s' not in sys.argv:
         n = int(sys.argv[1]) if len(sys.argv) > 1 else 16

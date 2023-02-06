@@ -103,7 +103,6 @@ flags.update(session_flags)
 
 
 class IPEngine(BaseParallelApplication):
-
     name = 'ipengine'
     description = _description
     examples = _examples

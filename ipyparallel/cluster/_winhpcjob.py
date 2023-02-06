@@ -55,7 +55,6 @@ def find_username():
 
 
 class WinHPCJob(Configurable):
-
     job_id = Unicode('')
     job_name = Unicode('MyJob', config=True)
     min_cores = Integer(1, config=True)
@@ -149,7 +148,6 @@ class WinHPCJob(Configurable):
 
 
 class WinHPCTask(Configurable):
-
     task_id = Unicode('')
     task_name = Unicode('')
     version = Unicode("2.000")
@@ -234,7 +232,6 @@ class IPEngineSetJob(WinHPCJob):
 
 
 class IPControllerTask(WinHPCTask):
-
     task_name = Unicode('IPController', config=True)
     controller_cmd = List(['ipcontroller.exe'], config=True)
     controller_args = List(['--log-level=40'], config=True)
@@ -262,7 +259,6 @@ class IPControllerTask(WinHPCTask):
 
 
 class IPEngineTask(WinHPCTask):
-
     task_name = Unicode('IPEngine', config=True)
     engine_cmd = List(['ipengine.exe'], config=True)
     engine_args = List(['--log-level=40'], config=True)

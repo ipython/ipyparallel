@@ -201,7 +201,6 @@ def add_no_delay_tasks_source(source, benchmark, number_of_cores):
         for result in benchmark['results']
         if not result.failed
     ]:
-
         dict_to_append_to['Duration in ms'].append(duration)
         dict_to_append_to['Number of tasks'].append(tasks_num)
         dict_to_append_to['Number of cores'].append(number_of_cores)

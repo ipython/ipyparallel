@@ -1395,7 +1395,6 @@ class SSHLauncher(LocalProcessLauncher):
 
 
 class SSHControllerLauncher(SSHLauncher, ControllerLauncher):
-
     # alias back to *non-configurable* program[_args] for use in find_args()
     # this way all Controller/EngineSetLaunchers have the same form, rather
     # than *some* having `program_args` and others `controller_args`
@@ -1421,7 +1420,6 @@ class SSHControllerLauncher(SSHLauncher, ControllerLauncher):
 
 
 class SSHEngineLauncher(SSHLauncher, EngineLauncher):
-
     # alias back to *non-configurable* program[_args] for use in find_args()
     # this way all Controller/EngineSetLaunchers have the same form, rather
     # than *some* having `program_args` and others `controller_args`
@@ -1579,7 +1577,6 @@ class SSHProxyEngineSetLauncher(SSHLauncher, EngineLauncher):
 
 
 class WindowsHPCLauncher(BaseLauncher):
-
     job_id_regexp = CRegExp(
         r'\d+',
         config=True,
@@ -1663,7 +1660,6 @@ class WindowsHPCLauncher(BaseLauncher):
 
 
 class WindowsHPCControllerLauncher(WindowsHPCLauncher):
-
     job_file_name = Unicode(
         'ipcontroller_job.xml', config=True, help="WinHPC xml job file."
     )
@@ -1687,7 +1683,6 @@ class WindowsHPCControllerLauncher(WindowsHPCLauncher):
 
 
 class WindowsHPCEngineSetLauncher(WindowsHPCLauncher):
-
     job_file_name = Unicode(
         'ipengineset_job.xml', config=True, help="jobfile for ipengines job"
     )

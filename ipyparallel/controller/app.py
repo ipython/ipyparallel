@@ -166,7 +166,6 @@ _db_shortcuts = {
 
 
 class IPController(BaseParallelApplication):
-
     name = 'ipcontroller'
     description = _description
     examples = _examples
@@ -996,7 +995,6 @@ class IPController(BaseParallelApplication):
 
     def launch_broadcast_schedulers(self, monitor_url, children):
         def launch_in_thread_or_process(scheduler_args, depth, identity):
-
             if 'Process' in self.mq_class:
                 # run the Python scheduler in a Process
                 q = Process(
@@ -1012,7 +1010,6 @@ class IPController(BaseParallelApplication):
                 launch_broadcast_scheduler(**scheduler_args)
 
         def recursively_start_schedulers(identity, depth):
-
             outgoing_id1 = identity + '0'
             outgoing_id2 = identity + '1'
             is_leaf = depth == self.broadcast_scheduler_depth

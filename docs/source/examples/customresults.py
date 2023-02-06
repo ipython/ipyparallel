@@ -58,5 +58,5 @@ while pending:
 
         # note that each job in a map always returns a list of length chunksize
         # even if chunksize == 1
-        for (count, t) in ar.get():
+        for count, t in ar.get():
             print("  item %i: slept for %.2fs" % (count, t))
