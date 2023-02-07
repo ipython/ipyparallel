@@ -19,7 +19,7 @@ def print_wordfreq(freqs, n=10):
     words, counts = freqs.keys(), freqs.values()
     items = zip(counts, words)
     items = sorted(items, reverse=True)
-    for (count, word) in items[:n]:
+    for count, word in items[:n]:
         print(word, count)
 
 

@@ -10,6 +10,7 @@ from .test_cluster import test_to_from_dict  # noqa: F401
 
 # import tests that use engine_launcher_class fixture
 
+
 # override engine_launcher_class
 @pytest.fixture
 def engine_launcher_class():

@@ -37,7 +37,6 @@ aliases.update(dict(url='LogWatcher.url', topics='LogWatcher.topics'))
 
 
 class IPLoggerApp(BaseParallelApplication):
-
     name = 'iplogger'
     description = _description
     classes = [LogWatcher, ProfileDir]

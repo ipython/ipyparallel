@@ -25,7 +25,6 @@ from .clienttest import ClusterTestCase, raises_remote, skip_without, wait
 
 @pytest.mark.usefixtures('ipython')
 class TestClient(ClusterTestCase):
-
     engine_count = 4
 
     def test_curve(self):
@@ -685,7 +684,6 @@ class TestClient(ClusterTestCase):
         sys.platform.startswith("win"), reason="Signal tests don't pass on Windows yet"
     )
     def test_signal_engines(self):
-
         view = self.client[:]
         if sys.platform.startswith("win"):
             signame = 'CTRL_C_EVENT'

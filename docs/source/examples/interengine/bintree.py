@@ -112,7 +112,6 @@ def disambiguate_dns_url(url, location):
 
 
 class BinaryTreeCommunicator:
-
     id = None
     pub = None
     sub = None

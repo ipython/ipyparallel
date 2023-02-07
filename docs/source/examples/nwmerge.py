@@ -94,7 +94,6 @@ def remote_iterator(view, name):
 
 # Main, interactive testing
 if __name__ == '__main__':
-
     rc = ipp.Client()
     view = rc[:]
     print('Engine IDs:', rc.ids)

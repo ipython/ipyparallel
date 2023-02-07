@@ -404,7 +404,6 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             self.stop_cluster_sync()
 
     def __repr__(self):
-
         fields = {
             "cluster_id": repr(self.cluster_id),
         }
@@ -1002,7 +1001,6 @@ class ClusterManager(LoggingConfigurable):
             # TODO: only if it has any ipyparallel config files
             # *or* it's the default profile
             if init_default_clusters and not cluster_files:
-
                 cluster = Cluster(profile_dir=profile_dir, cluster_id="")
                 cluster_key = self._cluster_key(cluster)
                 if cluster_key not in self.clusters:
