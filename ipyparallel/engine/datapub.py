@@ -10,7 +10,6 @@ from ipyparallel.serialize import serialize_object
 
 
 class ZMQDataPublisher(Configurable):
-
     topic = topic = CBytes(b'datapub')
     session = Instance(Session, allow_none=True)
     pub_socket = Any(allow_none=True)

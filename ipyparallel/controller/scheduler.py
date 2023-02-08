@@ -35,7 +35,6 @@ def logged(f, self, *args, **kwargs):
 
 
 class Scheduler(LoggingConfigurable):
-
     loop = Instance(ioloop.IOLoop)
 
     @default("loop")

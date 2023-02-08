@@ -89,7 +89,6 @@ class WaveSolver:
             'bc': 'vectorized',
         },
     ):
-
         nx = partitioner.global_num_cells[0]  # number of global cells in x dir
         ny = partitioner.global_num_cells[1]  # number of global cells in y dir
         dx = Lx / float(nx)

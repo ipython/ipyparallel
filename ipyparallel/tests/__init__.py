@@ -49,7 +49,6 @@ class RemoteErrorWithTB(error.RemoteError):
 
 
 def setup():
-
     error.RemoteError = RemoteErrorWithTB
 
     cluster_dir = os.path.join(get_ipython_dir(), 'profile_iptest')

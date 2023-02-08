@@ -37,7 +37,6 @@ def fetchAndParse(url, data=None):
 
 
 class DistributedSpider:
-
     # Time to wait between polling for task results.
     pollingDelay = 0.5
 

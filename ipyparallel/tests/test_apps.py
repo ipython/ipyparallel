@@ -152,7 +152,6 @@ def ipcluster_list(*args):
 
 
 def test_ipcluster_list(Cluster):
-
     # no clusters
     out = ipcluster_list()
     assert len(out.splitlines()) == 1

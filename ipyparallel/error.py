@@ -170,7 +170,7 @@ class CompositeError(RemoteError):
         """render one or all of my tracebacks to a list of lines"""
         lines = []
         if excid is None:
-            for (en, ev, etb, ei) in self.elist[: self.tb_limit]:
+            for en, ev, etb, ei in self.elist[: self.tb_limit]:
                 lines.append(self._get_engine_str(ei) + ":")
                 lines.extend((etb or 'No traceback available').splitlines())
                 lines.append('')

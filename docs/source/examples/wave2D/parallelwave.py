@@ -60,7 +60,6 @@ def wave_saver(u, x, y, t):
 
 # main program:
 if __name__ == '__main__':
-
     parser = argparse.ArgumentParser()
     paa = parser.add_argument
     paa(

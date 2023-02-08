@@ -326,7 +326,6 @@ engine_flags.update(
 
 
 class IPClusterEngines(BaseParallelApplication):
-
     name = 'ipcluster'
     description = engines_help
     examples = _engines_examples
@@ -545,7 +544,6 @@ start_aliases['clean-logs'] = 'IPClusterStart.clean_logs'
 
 
 class IPClusterStart(IPClusterEngines):
-
     name = 'ipcluster'
     description = start_help
     examples = _start_examples

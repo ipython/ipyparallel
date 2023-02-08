@@ -49,6 +49,7 @@ ar = view.apply_async(lambda: com.info)  # noqa: F821
 peers = ar.get_dict()
 # this is a dict, keyed by engine ID, of the connection info for the EngineCommunicators
 
+
 # connect the engines to each other:
 def connect(com, peers, tree, pub_url, root_id):
     """this function will be called on the engines"""
@@ -56,6 +57,7 @@ def connect(com, peers, tree, pub_url, root_id):
 
 
 view.apply_sync(connect, ipp.Reference('com'), peers, btree, pub_url, root_id)
+
 
 # functions that can be used for reductions
 # max and min builtins can be used as well

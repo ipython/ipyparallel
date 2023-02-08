@@ -3,6 +3,7 @@ from ipyparallel import Dependency
 
 client = ipp.Client()
 
+
 # this will only run on machines that can import numpy:
 @ipp.require('numpy')
 def norm(A):
@@ -31,6 +32,7 @@ def getpid():
 
 
 pid0 = client[0].apply_sync(getpid)
+
 
 # this will depend on the pid being that of target 0:
 @ipp.depend(checkpid, pid0)
