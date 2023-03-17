@@ -47,7 +47,7 @@ jobs:
             runs_on: windows-2019
           - python: "3.9"
             runs_on: macos-10.15
-          - python: "3.11.0-beta.3"
+          - python: "3.11"
 
     steps:
       - uses: actions/checkout@v3
