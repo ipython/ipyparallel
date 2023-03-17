@@ -4,6 +4,18 @@
 
 Changes in IPython Parallel
 
+## 8.5
+
+### 8.5.0
+
+A small bugfix and compatibility release.
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/8.4.1...8.5.0))
+
+- Updates dependencies in jupyterlab extension to jupyterlab 3.6
+- fix ResourceWarnings about closed clusters
+- Avoid some deprecated APIs in jupyter-client and pyzmq
+
 ## 8.4
 
 ### 8.4.1
