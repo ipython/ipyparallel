@@ -1522,10 +1522,17 @@ class Client(HasTraits):
                 if not engine_stop_future.done():
                     engine_stop_future.set_result(stop_data)
 
+            def _remove_signal_stopped(f, es):
+                try:
+                    es.stop_callbacks.remove(_signal_stopped)
+                except ValueError:
+                    # already removed
+                    pass
+
             for es in self.cluster.engines.values():
                 es.on_stop(_signal_stopped)
                 engine_stop_future.add_done_callback(
-                    lambda f: es.stop_callbacks.remove(_signal_stopped)
+                    partial(_remove_signal_stopped, es=es)
                 )
 
         future = Future()
