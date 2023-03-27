@@ -6,6 +6,14 @@ Changes in IPython Parallel
 
 ## 8.5
 
+### 8.5.1
+
+A tiny bugfix release
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/8.5.0...8.5.1))
+
+- Fix error preventing creation of new profiles via the lab extension
+
 ### 8.5.0
 
 A small bugfix and compatibility release.
