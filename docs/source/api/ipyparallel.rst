@@ -11,7 +11,7 @@ API Reference
 Classes
 -------
 
-.. autoclass:: Cluster
+.. autoconfigurable:: Cluster
     :inherited-members:
 
 .. autoclass:: Client
