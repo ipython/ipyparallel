@@ -65,7 +65,7 @@
     "@lumino/domutils": "^1.2.3",
     "@lumino/dragdrop": "^1.7.1",
     "@lumino/messaging": "^1.4.3",
-    "@lumino/polling": "^1.0.4",
+    "@lumino/polling": "^2.0.0",
     "@lumino/signaling": "^1.4.3",
     "@lumino/widgets": "^1.17.0",
     "react": "~17.0.0",

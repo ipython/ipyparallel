@@ -754,7 +754,7 @@
     "@lumino/algorithm" "^1.9.2"
     "@lumino/signaling" "^1.11.1"
 
-"@lumino/disposable@^1.10.0 || ^2.0.0-alpha.6":
+"@lumino/disposable@^1.10.0 || ^2.0.0-alpha.6", "@lumino/disposable@^2.0.0":
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/@lumino/disposable/-/disposable-2.0.0.tgz#6ad4927aaee03b8c55b870a8466fca5b759d5a1e"
   integrity sha512-2PcwxbKU1xYd02wWCsk5F/Ufh/tbNAMb+zXJEOGcRPrgOihkIz3FEDtbhOVGuGw8FtYlisKIs1m+pq37LUHL6A==
@@ -787,7 +787,7 @@
     "@lumino/algorithm" "^1.9.2"
     "@lumino/collections" "^1.9.3"
 
-"@lumino/polling@^1.0.4", "@lumino/polling@^1.9.0":
+"@lumino/polling@^1.9.0":
   version "1.11.4"
   resolved "https://registry.yarnpkg.com/@lumino/polling/-/polling-1.11.4.tgz#ddfe47da5b41af4cfa474898542c099e445c0e6c"
   integrity sha512-yC7JLssj3mqVK6TsYj7dg4AG0rcsC42YtpoDLtz9yzO84Q5flQUfmjAPQB6oPA6wZOlISs3iasF+uO2w1ls5jg==
@@ -795,6 +795,15 @@
     "@lumino/coreutils" "^1.12.1"
     "@lumino/disposable" "^1.10.4"
     "@lumino/signaling" "^1.11.1"
+
+"@lumino/polling@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@lumino/polling/-/polling-2.0.0.tgz#06a16afc0593ee08152969ee8f8c8de4c2779c16"
+  integrity sha512-riJNq0IwuZkNdCRD5e1TUM/M7AD/2k+EJtkPQHdduFKO0cZvebpXXwIJLOgs5tG9U/2gXDrpZinq6o/2unq/zQ==
+  dependencies:
+    "@lumino/coreutils" "^2.0.0"
+    "@lumino/disposable" "^2.0.0"
+    "@lumino/signaling" "^2.0.0"
 
 "@lumino/properties@^1.8.0", "@lumino/properties@^1.8.2":
   version "1.8.2"
