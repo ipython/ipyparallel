@@ -55,7 +55,7 @@
     "@jupyterlab/coreutils": "^5.0.0",
     "@jupyterlab/mainmenu": "^3.0.0",
     "@jupyterlab/nbformat": "^3.0.0",
-    "@jupyterlab/notebook": "^3.0.0",
+    "@jupyterlab/notebook": "^3.6.3",
     "@jupyterlab/services": "^6.0.0",
     "@jupyterlab/settingregistry": "^3.6.3",
     "@jupyterlab/statedb": "^3.0.0",
