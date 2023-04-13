@@ -122,7 +122,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --pre --upgrade ipyparallel[test] codecov
+          pip install --pre --upgrade ipyparallel[test]
 
       - name: Install extra Python packages
         if: ${{ ! startsWith(matrix.python, '3.11') }}
@@ -154,8 +154,7 @@ jobs:
           ${EXEC} chmod -R a+rw .coverage*
 
       - name: Submit codecov report
-        run: |
-          codecov
+        uses: codecov/codecov-action@v3
 
       - name: Report on slurm
         if: ${{ matrix.cluster_type == 'slurm' && failure() }}
