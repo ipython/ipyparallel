@@ -153,7 +153,7 @@ class AsyncResult(Future):
             stream_name = msg_content['name']
 
             if in_kernel:
-                parent_msg_id = msg['parent_header']['msg_id']
+                parent_msg_id = msg.get('parent_header', {}).get('msg_id', '')
                 display_id = f"{parent_msg_id}-{stream_name}"
                 md = msg_future.output.metadata
                 full_stream = md[stream_name]
