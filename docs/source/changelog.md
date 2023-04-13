@@ -4,6 +4,17 @@
 
 Changes in IPython Parallel
 
+## 8.6
+
+### 8.6.0
+
+A tiny release fixing issues seen building notebooks with jupyter-book.
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/8.5.1...8.6.0))
+
+- Fix KeyError on parent_header when streaming output with %%px
+- Allow disabling streaming/progress defaults with IPP_NONINTERACTIVE=1 environment variable (e.g. when building notebooks in documentation)
+
 ## 8.5
 
 ### 8.5.1

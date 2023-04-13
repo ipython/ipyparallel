@@ -2,6 +2,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 # export return_when constants
+import os
 from concurrent.futures import ALL_COMPLETED  # noqa
 from concurrent.futures import FIRST_COMPLETED  # noqa
 from concurrent.futures import FIRST_EXCEPTION  # noqa
@@ -100,3 +101,5 @@ def _load_jupyter_server_extension(app):
 
 # backward-compat
 load_jupyter_server_extension = _load_jupyter_server_extension
+
+_NONINTERACTIVE = os.getenv("IPP_NONINTERACTIVE", "") not in {"", "0"}
