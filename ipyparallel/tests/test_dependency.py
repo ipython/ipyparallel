@@ -25,8 +25,8 @@ failed = list(map(str, range(1, 10, 2)))
 
 
 class TestDependency(ClusterTestCase):
-    def setup(self):
-        super().setup()
+    def setup_method(self):
+        super().setup_method()
         self.user_ns = {'__builtins__': __builtins__}
         self.view = self.client.load_balanced_view()
         self.dview = self.client[-1]
