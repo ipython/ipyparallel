@@ -45,6 +45,7 @@ from traitlets import (
 from traitlets.config.configurable import MultipleInstanceError
 from zmq.eventloop.zmqstream import ZMQStream
 
+import ipyparallel as ipp
 from ipyparallel import error, serialize, util
 from ipyparallel.serialize import PrePickled, Reference
 
@@ -1502,7 +1503,10 @@ class Client(HasTraits):
             seconds_remaining = 1000
 
         if interactive is None:
-            interactive = get_ipython() is not None
+            if ipp._NONINTERACTIVE:
+                interactive = False
+            else:
+                interactive = get_ipython() is not None
 
         if interactive:
             progress_bar = util.progress(

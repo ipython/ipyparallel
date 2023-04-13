@@ -51,6 +51,8 @@ from IPython.core import magic_arguments
 from IPython.core.error import UsageError
 from IPython.core.magic import Magics
 
+import ipyparallel as ipp
+
 from .. import error
 
 # -----------------------------------------------------------------------------
@@ -245,7 +247,7 @@ class ParallelMagics(Magics):
     # verbose flag
     verbose = False
     # streaming output flag
-    stream_ouput = True
+    stream_output = not ipp._NONINTERACTIVE
     # seconds to wait before showing progress bar for blocking execution
     progress_after_seconds = 2
     # signal to send to engines on keyboard-interrupt
@@ -299,7 +301,7 @@ class ParallelMagics(Magics):
         if args.set_verbose is not None:
             self.verbose = args.set_verbose
         if args.stream is not None:
-            self.stream_ouput = args.stream
+            self.stream_output = args.stream
         if args.signal_on_interrupt is not None:
             self.signal_on_interrupt = self._eval_signal_str(args.signal_on_interrupt)
 
@@ -371,7 +373,7 @@ class ParallelMagics(Magics):
 
         # defaults:
         block = self.view.block if block is None else block
-        stream_output = self.stream_ouput if stream_output is None else stream_output
+        stream_output = self.stream_output if stream_output is None else stream_output
         signal_on_interrupt = (
             self.signal_on_interrupt
             if signal_on_interrupt is None
