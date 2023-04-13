@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ipyparallel"
-version = "8.6.0.dev"
+version = "8.6.0"
 authors = [{name = "IPython Development Team", email = "ipython-dev@scipy.org"}]
 license = {file = "COPYING.md"}
 readme = "README.md"
@@ -145,7 +145,7 @@ filterwarnings = [
 github_url = "https://github.com/jupyterhub/jupyterhub"
 
 [tool.tbump.version]
-current = "8.6.0.dev"
+current = "8.6.0"
 
 # pep440 regex
 regex = '''
