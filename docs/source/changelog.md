@@ -6,6 +6,16 @@ Changes in IPython Parallel
 
 ## 8.6
 
+### 8.6.1
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/8.6.0...8.6.1))
+
+### Bugs fixed
+
+- avoid errors when engine id cannot be identified [#793](https://github.com/ipython/ipyparallel/pull/793) ([@minrk](https://github.com/minrk))
+- Disable variable expansion in %px [#792](https://github.com/ipython/ipyparallel/pull/792) ([@minrk](https://github.com/minrk))
+- fix wait_interactive(return_when=FIRST_EXCEPTION) when there are no errors [#790](https://github.com/ipython/ipyparallel/pull/790) ([@minrk](https://github.com/minrk))
+
 ### 8.6.0
 
 A tiny release fixing issues seen building notebooks with jupyter-book.
