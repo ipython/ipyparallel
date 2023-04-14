@@ -170,7 +170,7 @@ class ClusterTestCase:
 
     test_timeout = 30
 
-    def setup(self):
+    def setup_method(self):
         self.context = zmq.Context.instance()
         if hasattr(signal, 'SIGALRM'):
             # use sigalarm for test timeout
@@ -190,7 +190,7 @@ class ClusterTestCase:
         self.base_engine_count = len(self.client.ids)
         self.engines = []
 
-    def teardown(self):
+    def teardown_method(self):
         if len(self.client):
             self.client[:].use_pickle()
 

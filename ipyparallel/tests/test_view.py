@@ -30,12 +30,12 @@ point = namedtuple("point", "x y")
 
 @pytest.mark.usefixtures('ipython')
 class TestView(ClusterTestCase):
-    def setup(self):
+    def setup_method(self):
         # On Win XP, wait for resource cleanup, else parallel test group fails
         if platform.system() == "Windows" and platform.win32_ver()[0] == "XP":
             # 1 sec fails. 1.5 sec seems ok. Using 2 sec for margin of safety
             time.sleep(2)
-        super().setup()
+        super().setup_method()
 
     def test_z_crash_mux(self):
         """test graceful handling of engine death (direct)"""

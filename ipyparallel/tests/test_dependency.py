@@ -24,9 +24,9 @@ completed = list(map(str, range(0, 10, 2)))
 failed = list(map(str, range(1, 10, 2)))
 
 
-class DependencyTest(ClusterTestCase):
-    def setup(self):
-        super().setup()
+class TestDependency(ClusterTestCase):
+    def setup_method(self):
+        super().setup_method()
         self.user_ns = {'__builtins__': __builtins__}
         self.view = self.client.load_balanced_view()
         self.dview = self.client[-1]
@@ -47,7 +47,7 @@ class DependencyTest(ClusterTestCase):
         ), "Dependency should be unreachable"
 
     def assertReachable(self, dep):
-        assert dep.unreachable(
+        assert not dep.unreachable(
             self.succeeded, self.failed
         ), "Dependency should be reachable"
 

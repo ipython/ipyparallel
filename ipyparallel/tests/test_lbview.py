@@ -11,8 +11,8 @@ from .clienttest import ClusterTestCase, crash, raises_remote
 
 
 class TestLoadBalancedView(ClusterTestCase):
-    def setup(self):
-        super().setup()
+    def setup_method(self):
+        super().setup_method()
         self.view = self.client.load_balanced_view()
 
     def test_z_crash(self):

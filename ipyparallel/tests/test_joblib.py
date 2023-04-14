@@ -24,10 +24,10 @@ def neg(x):
 
 
 class TestJobLib(ClusterTestCase):
-    def setup(self):
+    def setup_method(self):
         if not have_joblib:
             pytest.skip("Requires joblib >= 0.10")
-        super().setup()
+        super().setup_method()
         add_engines(1, total=True)
 
     def test_default_backend(self):
