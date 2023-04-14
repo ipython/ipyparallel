@@ -317,7 +317,6 @@ class AsyncResult(Future):
         return_exceptions : bool [default False]
             If True, return Exceptions instead of raising them.
         return_when : None, ALL_COMPLETED, or FIRST_EXCEPTION
-
             FIRST_COMPLETED is not supported, and treated the same as ALL_COMPLETED.
             See :py:func:`concurrent.futures.wait` for documentation.
 
