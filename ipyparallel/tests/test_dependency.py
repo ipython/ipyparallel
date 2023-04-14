@@ -47,7 +47,7 @@ class TestDependency(ClusterTestCase):
         ), "Dependency should be unreachable"
 
     def assertReachable(self, dep):
-        assert dep.unreachable(
+        assert not dep.unreachable(
             self.succeeded, self.failed
         ), "Dependency should be reachable"
 
