@@ -49,7 +49,7 @@ from textwrap import dedent
 
 from IPython.core import magic_arguments
 from IPython.core.error import UsageError
-from IPython.core.magic import Magics
+from IPython.core.magic import Magics, no_var_expand
 
 import ipyparallel as ipp
 
@@ -341,6 +341,7 @@ class ParallelMagics(Magics):
         self.last_result.get()
         self.last_result.display_outputs(groupby=args.groupby)
 
+    @no_var_expand
     def px(self, line=''):
         """Executes the given python command in parallel.
 
