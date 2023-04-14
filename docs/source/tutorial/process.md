@@ -339,6 +339,9 @@ You can now run the cluster with:
 
 ```python
 cluster = Cluster(profile="pbs")
+```
+
+```
 $ ipcluster start --profile=pbs -n 128
 ```
 
