@@ -179,7 +179,7 @@ class ExecuteReply(RichOutput):
         return ''.join(
             [
                 out,
-                'Out[%i:%i]: ' % (self.metadata['engine_id'], self.execution_count),
+                f"Out[{self.metadata['engine_id']}:{self.execution_count}]: ",
                 normal,
                 text_out,
             ]
@@ -507,7 +507,7 @@ class Client(HasTraits):
             'registration',
             'broadcast',
         ):
-            cfg[key] = cfg['interface'] + ':%i' % cfg[key]
+            cfg[key] = f"{cfg['interface']}:{cfg[key]}"
 
         url = cfg['registration']
 
@@ -709,7 +709,7 @@ class Client(HasTraits):
             if targets < 0:
                 targets = self.ids[targets]
             if targets not in self._ids:
-                raise IndexError("No such engine: %i" % targets)
+                raise IndexError(f"No such engine: {targets}")
             targets = [targets]
 
         if isinstance(targets, slice):

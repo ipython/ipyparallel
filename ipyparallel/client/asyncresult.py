@@ -210,7 +210,7 @@ class AsyncResult(Future):
 
         if msg_type == 'display_data':
             msg_content = msg['content']
-            _raw_text('[output:%i]' % eid)
+            _raw_text(f'[output:{eid}]')
             self._republish_displaypub(msg_content, eid)
 
     @contextmanager
@@ -578,9 +578,9 @@ class AsyncResult(Future):
         rdict = {}
         for engine_id, result in zip(engine_ids, results):
             if engine_id in rdict:
+                n_jobs = engine_ids.count(engine_id)
                 raise ValueError(
-                    "Cannot build dict, %i jobs ran on engine #%i"
-                    % (engine_ids.count(engine_id), engine_id)
+                    f"Cannot build dict, {n_jobs} jobs ran on engine #{engine_id}"
                 )
             else:
                 rdict[engine_id] = result
@@ -989,15 +989,15 @@ class AsyncResult(Future):
                 targets, stdouts, stderrs, output_lists, results, execute_results
             ):
                 if not result_only:
-                    self._display_stream(stdout, '[stdout:%i] ' % eid)
-                    self._display_stream(stderr, '[stderr:%i] ' % eid, file=sys.stderr)
+                    self._display_stream(stdout, f'[stdout:{eid}] ')
+                    self._display_stream(stderr, f'[stderr:{eid}] ', file=sys.stderr)
 
                 if get_ipython() is None:
                     # displaypub is meaningless outside IPython
                     continue
 
                 if (outputs and not result_only) or execute_result is not None:
-                    _raw_text('[output:%i]' % eid)
+                    _raw_text(f'[output:{eid}]')
 
                 if not result_only:
                     for output in outputs:
@@ -1010,11 +1010,11 @@ class AsyncResult(Future):
             if not result_only:
                 # republish stdout:
                 for eid, stdout in zip(targets, stdouts):
-                    self._display_stream(stdout, '[stdout:%i] ' % eid)
+                    self._display_stream(stdout, f'[stdout:{eid}] ')
 
                 # republish stderr:
                 for eid, stderr in zip(targets, stderrs):
-                    self._display_stream(stderr, '[stderr:%i] ' % eid, file=sys.stderr)
+                    self._display_stream(stderr, f'[stderr:{eid}] ', file=sys.stderr)
 
             if get_ipython() is None:
                 # displaypub is meaningless outside IPython
@@ -1030,13 +1030,13 @@ class AsyncResult(Future):
                         for eid in targets:
                             outputs = output_dict[eid]
                             if len(outputs) >= N:
-                                _raw_text('[output:%i]' % eid)
+                                _raw_text(f'[output:{eid}]')
                                 self._republish_displaypub(outputs[i], eid)
                 else:
                     # republish displaypub output
                     for eid, outputs in zip(targets, output_lists):
                         if outputs:
-                            _raw_text('[output:%i]' % eid)
+                            _raw_text(f'[output:{eid}]')
                         for output in outputs:
                             self._republish_displaypub(output, eid)
 
