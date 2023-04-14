@@ -36,6 +36,29 @@ class TestParallelMagics(ClusterTestCase):
         assert '\n\n' not in io.stdout
         assert io.stdout.rstrip().endswith('10')
 
+    def test_px_var_expand(self):
+        ip = get_ipython()
+        v = self.client[-1:]
+        v.activate()
+        v.block = True
+        ip.user_ns['x'] = 'client'
+        v['x'] = 'engine'
+        ip.run_line_magic('px', 'y=f"{x}"')
+        assert v['y'] == ["engine"]
+
+    def test_cell_px_var_expand(self):
+        ip = get_ipython()
+        v = self.client[-1:]
+        v.activate()
+        v.block = True
+        ip.user_ns['x'] = 'client'
+        v['x'] = 'engine'
+        ip.user_ns["out_name"] = "theoutput"
+        ip.run_cell_magic('px', '-o {out_name}', 'y=f"{x}"')
+        assert v['y'] == ["engine"]
+        assert "theoutput" in ip.user_ns
+        assert isinstance(ip.user_ns["theoutput"], ipp.AsyncResult)
+
     def _check_generated_stderr(self, stderr, n):
         expected = [
             r'\[stderr:\d+\]',
