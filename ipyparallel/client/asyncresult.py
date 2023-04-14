@@ -876,7 +876,7 @@ class AsyncResult(Future):
                 if return_when == FIRST_COMPLETED:
                     finished = bool(done)
                 elif return_when == FIRST_EXCEPTION:
-                    finished = any(not ar._success for ar in done)
+                    finished = (not pending) or any(not ar._success for ar in done)
                 else:
                     raise ValueError(f"Unrecognized return_when={return_when!r}")
 

@@ -517,6 +517,33 @@ class TestAsyncResult(ClusterTestCase):
         assert pending == set()
         assert len(done) == len(amr)
 
+    def test_wait_interactive_first_exception(self):
+        dv = self.client[:]
+
+        ar = dv.apply_async(time.sleep, 0.2)
+        ar.wait_interactive(return_when=ipp.FIRST_EXCEPTION)
+        assert ar.done()
+
+        def fail(i):
+            print(i)
+            import time
+
+            if i == 0:
+                print(1 / i)
+            time.sleep(1)
+            return i
+
+        amr = dv.map_async(fail, range(len(dv)))
+        tic = time.perf_counter()
+        amr.wait_interactive(timeout=5, return_when=ipp.FIRST_EXCEPTION)
+        toc = time.perf_counter()
+        assert toc - tic < 4
+        done, pending = amr.wait(timeout=0, return_when=ipp.FIRST_EXCEPTION)
+        assert done
+        assert len(done) == 1
+        first_done = done.pop()
+        assert first_done.msg_ids == amr.msg_ids[:1]
+
     def test_progress(self):
         dv = self.client[:]
         amr = dv.map_async(time.sleep, [0.2] * 2 * len(dv))
