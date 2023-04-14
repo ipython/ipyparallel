@@ -19,7 +19,7 @@ def echo(x):
     return x
 
 
-class AsyncResultTest(ClusterTestCase):
+class TestExecutor(ClusterTestCase):
     def test_client_executor(self):
         executor = self.client.executor()
         assert isinstance(executor.view, LoadBalancedView)

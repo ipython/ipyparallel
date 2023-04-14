@@ -24,7 +24,7 @@ completed = list(map(str, range(0, 10, 2)))
 failed = list(map(str, range(1, 10, 2)))
 
 
-class DependencyTest(ClusterTestCase):
+class TestDependency(ClusterTestCase):
     def setup(self):
         super().setup()
         self.user_ns = {'__builtins__': __builtins__}

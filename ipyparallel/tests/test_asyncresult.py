@@ -25,7 +25,7 @@ def echo(x):
     return x
 
 
-class AsyncResultTest(ClusterTestCase):
+class TestAsyncResult(ClusterTestCase):
     def test_single_result_view(self):
         """various one-target views get the right value for single_result"""
         eid = self.client.ids[-1]
