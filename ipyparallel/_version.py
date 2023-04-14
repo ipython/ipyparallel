@@ -1,6 +1,6 @@
 import re
 
-__version__ = "8.6.1"
+__version__ = "8.6.2.dev"
 
 # matches tbump regex in pyproject.toml
 _version_regex = re.compile(
