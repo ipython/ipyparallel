@@ -654,6 +654,7 @@ What keyword arguments are available depends on the view being used.
    :noindex:
 
    .. automethod:: map
+      :noindex:
 ```
 
 ```{eval-rst}
@@ -661,10 +662,10 @@ What keyword arguments are available depends on the view being used.
    :noindex:
 
    .. automethod:: map
+      :noindex:
 
    .. automethod:: imap
-
-
+      :noindex:
 ```
 
 ## Decorators and RemoteFunctions
