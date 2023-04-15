@@ -27,8 +27,8 @@ class TestBroadcastView(test_view.TestView):
 
         self.client.direct_view = broadcast_or_direct
 
-    def teardown(self):
-        super().teardown()
+    def teardown_method(self):
+        super().teardown_method()
         # note that a test didn't use a broadcast view
         if not self._broadcast_view_used:
             pytest.skip("No broadcast view used")
