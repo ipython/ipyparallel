@@ -270,6 +270,7 @@ class Cluster(AsyncFirst, LoggingConfigurable):
 
             handler = logging.StreamHandler(sys.stdout)
             log.handlers = [handler]
+            log.propagate = False
             return log
         elif self.parent and getattr(self.parent, 'log', None) is not None:
             return self.parent.log
