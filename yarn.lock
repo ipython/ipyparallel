@@ -723,6 +723,13 @@
   dependencies:
     "@lumino/algorithm" "^1.9.2"
 
+"@lumino/collections@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@lumino/collections/-/collections-2.0.0.tgz#4058a246babcd5fc3eed89513ec5316e1bf79657"
+  integrity sha512-uQvsRaQ8R8x/fTI2mk4+Z3EdUBDg/RtnqePDKtggWuu+BEjfk6vJ1jo42OGvEcurvhrrIZhFcpQJhtC+nNk4lA==
+  dependencies:
+    "@lumino/algorithm" "^2.0.0"
+
 "@lumino/commands@^1.19.0", "@lumino/commands@^1.21.1":
   version "1.21.1"
   resolved "https://registry.yarnpkg.com/@lumino/commands/-/commands-1.21.1.tgz#eda8b3cf5ef73b9c8ce93b3b5cf66bb053df2a76"
@@ -779,13 +786,21 @@
   resolved "https://registry.yarnpkg.com/@lumino/keyboard/-/keyboard-1.8.2.tgz#714dbe671f0718f516d1ec23188b31a9ccd82fb2"
   integrity sha512-Dy+XqQ1wXbcnuYtjys5A0pAqf4SpAFl9NY6owyIhXAo0Va7w3LYp3jgiP1xAaBAwMuUppiUAfrbjrysZuZ625g==
 
-"@lumino/messaging@^1.10.0", "@lumino/messaging@^1.10.3", "@lumino/messaging@^1.4.3":
+"@lumino/messaging@^1.10.0", "@lumino/messaging@^1.10.3":
   version "1.10.3"
   resolved "https://registry.yarnpkg.com/@lumino/messaging/-/messaging-1.10.3.tgz#b6227bdfc178a8542571625ecb68063691b6af3c"
   integrity sha512-F/KOwMCdqvdEG8CYAJcBSadzp6aI7a47Fr60zAKGqZATSRRRV41q53iXU7HjFPqQqQIvdn9Z7J32rBEAyQAzww==
   dependencies:
     "@lumino/algorithm" "^1.9.2"
     "@lumino/collections" "^1.9.3"
+
+"@lumino/messaging@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/@lumino/messaging/-/messaging-2.0.0.tgz#1be450af88c9cd59c086de638e66e00e52bf6b02"
+  integrity sha512-B8cMK36hrkngntsdLNic3GEPfAk4qp6HIYWDrRSC1z7pjgjH8EEKUOO2MNNYNKNq3Hzpog7FM0nhT1tLqoFAYA==
+  dependencies:
+    "@lumino/algorithm" "^2.0.0"
+    "@lumino/collections" "^2.0.0"
 
 "@lumino/polling@^1.0.4", "@lumino/polling@^1.9.0":
   version "1.11.4"
