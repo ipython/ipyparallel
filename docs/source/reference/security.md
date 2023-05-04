@@ -381,6 +381,5 @@ while still enabling user's to use the system in open networks.
 
 [openssh]: https://www.openssh.com
 [paramiko]: https://www.lag.net/paramiko
-[hmac]: https://tools.ietf.org/html/rfc2104
-[rfc5246]: https://tools.ietf.org/html/rfc5246
+[hmac]: https://datatracker.ietf.org/doc/html/rfc2104
 [curvezmq]: https://rfc.zeromq.org/spec/26/

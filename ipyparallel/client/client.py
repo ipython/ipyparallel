@@ -1350,7 +1350,6 @@ class Client(HasTraits):
 
     @property
     def ids(self):
-        """Always up-to-date ids property."""
         # always copy:
         return list(self._ids)
 

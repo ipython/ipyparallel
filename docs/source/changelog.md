@@ -242,7 +242,7 @@ New features:
 
 - New {class}`.Cluster` API for managing clusters from Python,
   including support for signaling and restarting engines.
-  See [docs](../examples/Cluster%20API.ipynb) for more.
+  See [docs](./examples/Cluster%20API.ipynb) for more.
 - New `ipcluster list` and `ipcluster clean` commands derived from the Cluster API.
 - New {meth}`.Client.send_signal` for sending signals to single engines.
 - New KernelNanny process for signaling and monitoring engines
@@ -262,7 +262,7 @@ New features:
   producing a generator of results instead of an AsyncMapResult,
   allowing for consumption of very large or infinite mapping inputs.
 
-[broadcast view documentation]: ../examples/broadcast/Broadcast%20view.ipynb
+[broadcast view documentation]: ./examples/broadcast/Broadcast%20view.ipynb
 [master's thesis]: https://urn.nb.no/URN:NBN:no-84589
 
 Improvements and other fixes:
@@ -420,7 +420,7 @@ which does all three steps above.
 
 ### Slurm support
 
-[Slurm](https://hpc.llnl.gov/training/tutorials/livermore-computing-linux-commodity-clusters-overview-part-one) support is added to ipcluster.
+[Slurm](https://hpc.llnl.gov/documentation/tutorials/livermore-computing-linux-commodity-clusters-overview-part-two) support is added to ipcluster.
 
 ### 5.1.0
 

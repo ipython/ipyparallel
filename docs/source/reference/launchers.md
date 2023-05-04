@@ -17,7 +17,7 @@ Launchers are used through the {class}`~.Cluster` API,
 which manages one ControllerLauncher and zero to many EngineLaunchers,
 each representing a set of engines.
 
-Launchers are registered via entry points ([more below](#entrypoints)),
+Launchers are registered via entry points ([more below](entrypoints)),
 and can be selected via short lowercase string naming the kind of launcher, e.g. 'mpi' or 'local':
 
 ```python
@@ -53,9 +53,11 @@ the best place to start is to look at the Launcher classes that ship with IPytho
 
 There are three key methods to implement:
 
-- [`start()`](#writing-start)
-- [`stop()`](#writing-stop)
-- [`from_dict()`](#writing-from-dict)
+- [`start()`](writing-start)
+- [`stop()`](writing-stop)
+- [`from_dict()`](writing-from-dict)
+
+(writing-start)=
 
 ### Writing start
 
@@ -78,6 +80,8 @@ which is an integer or None. If `n` is an integer,
 this many engines should be started.
 If `n` is None, a 'default' number should be used,
 e.g. the number of CPUs on a host.
+
+(writing-stop)=
 
 ### Writing stop
 
@@ -118,6 +122,8 @@ def start(self):
 
 Mark whatever properties are required to reconstruct your object from disk with this metadata.
 
+(writing-from-dict)=
+
 #### writing from_dict
 
 {meth}`~.BaseLauncher.from_dict` should be a class method which returns an instance of your Launcher class, loaded from dict.
@@ -154,7 +160,7 @@ Some useful additional methods to implement, if the base class implementations d
 
 TODO: write more docs on these
 
-=(entrypoints)
+(entrypoints)=
 
 ## Registering your Launcher via entrypoints
 
