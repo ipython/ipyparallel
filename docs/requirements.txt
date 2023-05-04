@@ -8,3 +8,4 @@ numpy
 pydata-sphinx-theme
 sphinx
 sphinx-copybutton
+sphinxext-rediraffe
