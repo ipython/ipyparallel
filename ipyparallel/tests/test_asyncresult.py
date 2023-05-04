@@ -395,13 +395,16 @@ class TestAsyncResult(ClusterTestCase):
     def test_wait_for_send(self):
         view = self.client[-1]
         view.track = True
+
         with pytest.raises(TimeoutError):
             # this test can fail if the send happens too quickly
             # e.g. the IO thread takes control for too long,
             # so run the test a few times
-            for i in range(10):
+            for i in range(3):
                 if i > 0:
                     print("Retrying test_wait_for_send")
+                # inject delay in io loop so send doesn't complete immediately
+                self.client._io_loop.add_callback(lambda: time.sleep(0.5))
                 data = os.urandom(10 * 1024 * 1024)
                 ar = view.apply_async(lambda x: x, data)
                 ar.wait_for_send(0)
