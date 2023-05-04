@@ -44,8 +44,8 @@ extensions = [
     'sphinx.ext.intersphinx',
     'sphinx.ext.napoleon',
     "sphinxext.rediraffe",
-    'myst_parser',
-    'nbsphinx',
+    # 'myst_parser',
+    'myst_nb',
     'IPython.sphinxext.ipython_console_highlighting',
     'autodoc_traits',
 ]
@@ -60,7 +60,10 @@ myst_enable_extensions = [
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
-source_suffix = ['.md', '.rst']
+source_suffix = {
+    ".rst": "restructuredtext",
+    ".ipynb": "myst-nb",
+}
 
 from traitlets.config import LoggingConfigurable
 
@@ -375,6 +378,16 @@ rediraffe_auto_redirect_perc = 80
 linkcheck_ignore = [
     r"https://github.com/[^/]*$",  # too many github usernames / searches in changelog
     "https://github.com/ipython/ipyparallel/pull/",  # too many PRs in changelog
+    "https://github.com/search",  # github search links
     "https://github.com/ipython/ipyparallel/compare/",  # too many comparisons in changelog
     r"https?://(localhost|127.0.0.1).*",  # ignore localhost references in auto-links
+]
+
+# myst_nb execution
+nb_execution_mode = "off"
+
+# avoid warning during linkcheck about image-only output
+nb_mime_priority_overrides = [
+    ("linkcheck", "text/html", 10),
+    ("linkcheck", "image/png", 99),
 ]

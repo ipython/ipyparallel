@@ -2,8 +2,8 @@
 autodoc-traits
 jinja2==3.0.*
 matplotlib
+myst-nb
 myst-parser
-nbsphinx
 numpy
 pydata-sphinx-theme
 sphinx

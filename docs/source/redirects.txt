@@ -14,3 +14,5 @@
 "task.rst" "tutorial/task.md"
 "transition.rst" "tutorial/index.md"
 "winhpc.rst" "reference/launchers.md"
+
+"examples/Index.ipynb" "examples/index.md"

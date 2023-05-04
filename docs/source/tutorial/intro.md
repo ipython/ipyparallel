@@ -7,7 +7,7 @@
 We have various example scripts and notebooks for using ipyparallel in our
 {file}`docs/source/examples` directory, as covered in the [examples][] section.
 
-[examples]: ../examples/Index.ipynb
+[examples]: ../examples/index.md
 
 ## Introduction
 
