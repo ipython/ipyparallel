@@ -100,7 +100,7 @@ reference/index
 ```{toctree}
 :maxdepth: 2
 
-examples/Index
+examples/index
 ```
 
 ```{toctree}

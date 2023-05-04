@@ -199,6 +199,8 @@ have not yet supported
 
 TODO: example writing custom Launchers
 
+(ipcluster-mpi)=
+
 ### Using IPython Parallel with MPI
 
 The mpiexec/mpirun mode is useful if:

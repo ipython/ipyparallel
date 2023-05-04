@@ -42,7 +42,7 @@ familiar. In fact, when the MongoDB backend is in use, the query is relayed dire
 When using other backends, the interface is emulated and only a subset of queries is possible.
 
 ```{seealso}
-MongoDB [query docs](https://docs.mongodb.com/manual/tutorial/query-documents/)
+MongoDB [query docs](https://www.mongodb.com/docs/manual/tutorial/query-documents/)
 ```
 
 {meth}`Client.db_query` takes a dictionary query object, with keys from the TaskRecord key list,
