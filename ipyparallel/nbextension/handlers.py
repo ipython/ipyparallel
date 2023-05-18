@@ -4,7 +4,12 @@
 import json
 import os
 
-from jupyter_server.utils import url_path_join as ujoin
+try:
+    from jupyter_server.utils import url_path_join as ujoin
+except ImportError:
+    # fallback on legacy Notebook server
+    from notebook.utils import url_path_join as ujoin
+
 from tornado import web
 
 from ..cluster import ClusterManager
