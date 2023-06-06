@@ -3,7 +3,7 @@ ci:
 
 repos:
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.2
+    rev: v3.4.0
     hooks:
       - id: pyupgrade
         args:
@@ -35,7 +35,7 @@ repos:
       - id: check-executables-have-shebangs
       - id: requirements-txt-fixer
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v8.39.0
+    rev: v8.42.0
     hooks:
       - id: eslint
         files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
