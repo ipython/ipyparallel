@@ -33,5 +33,4 @@ ipyparallel/labextension
 tsconfig.tsbuildinfo
 dask-worker-space
 .yarn
-.yarnrc.yml
 package-lock.json
