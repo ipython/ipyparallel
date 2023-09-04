@@ -795,21 +795,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jupyterlab/mainmenu@npm:^4.0.5":
-  version: 4.0.5
-  resolution: "@jupyterlab/mainmenu@npm:4.0.5"
-  dependencies:
-    "@jupyterlab/apputils": ^4.1.5
-    "@jupyterlab/translation": ^4.0.5
-    "@jupyterlab/ui-components": ^4.0.5
-    "@lumino/algorithm": ^2.0.1
-    "@lumino/commands": ^2.1.3
-    "@lumino/coreutils": ^2.1.2
-    "@lumino/widgets": ^2.3.0
-  checksum: 722518541d901c81cd87d174de96e0c61f352a326e7967702d06d5907f7b5c5b885bdf954ebbe3218819447c5940fde09ddbaa76b4a8375843a87dd239a0ffd5
-  languageName: node
-  linkType: hard
-
 "@jupyterlab/nbformat@npm:^3.0.0 || ^4.0.0-alpha.21 || ^4.0.0, @jupyterlab/nbformat@npm:^4.0.5":
   version: 4.0.5
   resolution: "@jupyterlab/nbformat@npm:4.0.5"
@@ -2387,9 +2372,9 @@ __metadata:
   linkType: hard
 
 "csstype@npm:^3.0.2":
-  version: 3.0.11
-  resolution: "csstype@npm:3.0.11"
-  checksum: 95e56abfe9ca219ae065acb4e43f61771a03170eed919127f558dfa168240867aba7629c8d98a201a0dd06d9a5ce82686f0570031c928516c61816adbc7c877f
+  version: 3.1.2
+  resolution: "csstype@npm:3.1.2"
+  checksum: e1a52e6c25c1314d6beef5168da704ab29c5186b877c07d822bd0806717d9a265e8493a2e35ca7e68d0f5d472d43fac1cdce70fd79fd0853dff81f3028d857b5
   languageName: node
   linkType: hard
 
@@ -3224,7 +3209,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"glob@npm:^7.1.3, glob@npm:~7.1.6":
+"glob@npm:^7.1.3":
+  version: 7.2.3
+  resolution: "glob@npm:7.2.3"
+  dependencies:
+    fs.realpath: ^1.0.0
+    inflight: ^1.0.4
+    inherits: 2
+    minimatch: ^3.1.1
+    once: ^1.3.0
+    path-is-absolute: ^1.0.0
+  checksum: 29452e97b38fa704dabb1d1045350fb2467cf0277e155aa9ff7077e90ad81d1ea9d53d3ee63bd37c05b09a065e90f16aec4a65f5b8de401d1dac40bc5605d133
+  languageName: node
+  linkType: hard
+
+"glob@npm:~7.1.6":
   version: 7.1.7
   resolution: "glob@npm:7.1.7"
   dependencies:
@@ -3487,7 +3486,6 @@ __metadata:
     "@jupyterlab/codeeditor": ^4.0.5
     "@jupyterlab/console": ^4.0.5
     "@jupyterlab/coreutils": ^6.0.5
-    "@jupyterlab/mainmenu": ^4.0.5
     "@jupyterlab/nbformat": ^4.0.5
     "@jupyterlab/notebook": ^4.0.5
     "@jupyterlab/services": ^7.0.5
@@ -3495,6 +3493,7 @@ __metadata:
     "@jupyterlab/statedb": ^4.0.5
     "@jupyterlab/ui-components": ^4.0.5
     "@lumino/algorithm": ^2.0.1
+    "@lumino/commands": ^2.1.3
     "@lumino/coreutils": ^2.1.2
     "@lumino/domutils": ^2.0.1
     "@lumino/dragdrop": ^2.1.3
@@ -4252,7 +4251,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimatch@npm:^3.0.4, minimatch@npm:^3.0.5, minimatch@npm:^3.1.2":
+"minimatch@npm:^3.0.4, minimatch@npm:^3.0.5, minimatch@npm:^3.1.1, minimatch@npm:^3.1.2":
   version: 3.1.2
   resolution: "minimatch@npm:3.1.2"
   dependencies:
