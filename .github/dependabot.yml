@@ -12,3 +12,8 @@ updates:
     directory: "/"
     schedule:
       interval: monthly
+    groups:
+      # one big pull request
+      lab:
+        patterns:
+          - "*"
