@@ -32,7 +32,7 @@ import { Widget, PanelLayout } from "@lumino/widgets";
 import { newClusterDialog, INewCluster } from "./dialog";
 
 import * as React from "react";
-import * as ReactDOM from "react-dom";
+import { createRoot } from "react-dom/client";
 import { CommandRegistry } from "@lumino/commands";
 
 import { CommandIDs } from "./commands";
@@ -250,8 +250,8 @@ export class ClusterManager extends Widget {
     if (!this.isVisible) {
       return;
     }
-
-    ReactDOM.render(
+    const root = createRoot(this._clusterListing.node);
+    root.render(
       <ClusterListing
         clusters={this._clusters}
         activeClusterId={(this._activeCluster && this._activeCluster.id) || ""}
@@ -267,7 +267,6 @@ export class ClusterManager extends Widget {
         setActiveById={this._setActiveById}
         injectClientCodeForCluster={this._injectClientCodeForCluster}
       />,
-      this._clusterListing.node,
     );
   }
 

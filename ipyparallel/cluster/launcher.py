@@ -1588,9 +1588,6 @@ class WindowsHPCLauncher(BaseLauncher):
         config=True,
         help="The filename of the instantiated job script.",
     )
-    # The full path to the instantiated job script. This gets made dynamically
-    # by combining the work_dir with the job_file_name.
-    job_file = Unicode('')
     scheduler = Unicode(
         '', config=True, help="The hostname of the scheduler to submit the job to."
     )

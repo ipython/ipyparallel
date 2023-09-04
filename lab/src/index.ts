@@ -78,8 +78,8 @@ async function activate(
   const isLab = !!labShell;
   const isRetroTree = PageConfig.getOption("retroPage") == "tree";
 
-  const clientCodeInjector = (model: IClusterModel) => {
-    const editor = Private.getCurrentEditor(
+  const clientCodeInjector = async (model: IClusterModel) => {
+    const editor = await Private.getCurrentEditor(
       app,
       notebookTracker,
       consoleTracker,
@@ -246,12 +246,12 @@ async function activate(
   // If either is not found, it bails.
   app.commands.addCommand(CommandIDs.injectClientCode, {
     label: "Inject IPython Client Connection Code",
-    execute: () => {
+    execute: async () => {
       const cluster = Private.clusterFromClick(app, sidebar.clusterManager);
       if (!cluster) {
         return;
       }
-      clientCodeInjector(cluster);
+      return await clientCodeInjector(cluster);
     },
   });
 
@@ -413,7 +413,7 @@ namespace Private {
     const cursor = editor.getCursorPosition();
     const offset = editor.getOffsetAt(cursor);
     const code = getClientCode(cluster);
-    editor.model.value.insert(offset, code);
+    editor.model.sharedModel.updateSource(offset, offset, code);
   }
 
   /**
@@ -460,11 +460,11 @@ rc`;
    * In the case of a notebook, it creates a new cell above the currently
    * active cell and then returns that.
    */
-  export function getCurrentEditor(
+  export async function getCurrentEditor(
     app: JupyterFrontEnd,
     notebookTracker: INotebookTracker,
     consoleTracker: IConsoleTracker,
-  ): CodeEditor.IEditor | null | undefined {
+  ): Promise<CodeEditor.IEditor | null | undefined> {
     // Get a handle on the most relevant kernel,
     // whether it is attached to a notebook or a console.
     let current = app.shell.currentWidget;
@@ -472,18 +472,22 @@ rc`;
     if (current && notebookTracker.has(current)) {
       NotebookActions.insertAbove((current as NotebookPanel).content);
       const cell = (current as NotebookPanel).content.activeCell;
+      await cell.ready;
       editor = cell && cell.editor;
     } else if (current && consoleTracker.has(current)) {
       const cell = (current as ConsolePanel).console.promptCell;
+      await cell.ready;
       editor = cell && cell.editor;
     } else if (notebookTracker.currentWidget) {
       const current = notebookTracker.currentWidget;
       NotebookActions.insertAbove(current.content);
       const cell = current.content.activeCell;
+      await cell.ready;
       editor = cell && cell.editor;
     } else if (consoleTracker.currentWidget) {
       const current = consoleTracker.currentWidget;
       const cell = current.console.promptCell;
+      await cell.ready;
       editor = cell && cell.editor;
     }
     return editor;
