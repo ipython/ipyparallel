@@ -33,10 +33,10 @@ jobs:
             cluster_type: ssh
           - python: "3.8"
             cluster_type: mpi
-          - python: "3.7"
+          - python: "3.10"
             cluster_type: slurm
             container: slurmctld
-          - python: "3.7"
+          - python: "3.8"
           - python: "3.10"
             env:
               IPP_CONTROLLER_IP: "*"
