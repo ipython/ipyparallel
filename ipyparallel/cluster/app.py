@@ -627,7 +627,13 @@ class IPClusterNBExtension(BaseParallelApplication):
 
     name = 'ipcluster-nbextension'
 
-    description = """Enable/disable IPython clusters tab in Jupyter notebook
+    description = """(DEPRECATED) Enable/disable IPython clusters tab in classic Jupyter notebook
+
+    Only for the deprecated jupyter-notebook < 7.0.
+
+    For current jupyter-server implementations (jupyterlab and jupyter-notebook 7):
+
+        jupyter server extension enable ipyparallel
 
     for Jupyter Notebook >= 4.2, you can use the new nbextension API:
 
@@ -654,16 +660,36 @@ class IPClusterNBExtension(BaseParallelApplication):
     )
 
     def start(self):
-        from ipyparallel.nbextension.install import install_extensions
-
         if len(self.extra_args) != 1:
             self.exit("Must specify 'enable' or 'disable'")
         action = self.extra_args[0].lower()
+
+        print(
+            "WARNING: `ipcluster nbextension` is deprecated. Use `jupyter server extension enable ipyparallel`",
+            file=sys.stderr,
+        )
+
+        from ipyparallel.util import _v
+
+        try:
+            import notebook
+        except ImportError:
+            self.exit(
+                "Deprecated `ipcluster nbextension` requires `notebook<7`, no `notebook` package found."
+            )
+
+        if _v(notebook.__version__) >= _v('7'):
+            self.exit(
+                "Deprecated `ipcluster nbextension` requires `notebook<7`, found `notebook=={notebook.__version__}`."
+            )
+
+        from ipyparallel.nbextension.install import install_extensions
+
         if action == 'enable':
-            print("Enabling IPython clusters tab")
+            print("Enabling IPython clusters tab", file=sys.stderr)
             install_extensions(enable=True, user=self.user)
         elif action == 'disable':
-            print("Disabling IPython clusters tab")
+            print("Disabling IPython clusters tab", file=sys.stderr)
             install_extensions(enable=False, user=self.user)
         else:
             self.exit("Must specify 'enable' or 'disable', not '%s'" % action)

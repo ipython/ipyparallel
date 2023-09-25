@@ -1,4 +1,7 @@
-"""Install the IPython clusters tab in the Jupyter notebook dashboard"""
+"""Install the IPython clusters tab in the Jupyter notebook dashboard
+
+Only applicable for notebook < 7
+"""
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 from jupyter_core.paths import jupyter_config_dir
