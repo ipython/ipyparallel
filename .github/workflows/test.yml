@@ -50,7 +50,7 @@ jobs:
           - python: "3.11"
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Cache conda environment
         uses: actions/cache@v3
