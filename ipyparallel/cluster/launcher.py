@@ -43,6 +43,7 @@ from traitlets.config.configurable import LoggingConfigurable
 
 from ..util import shlex_join
 from ._winhpcjob import IPControllerJob, IPControllerTask, IPEngineSetJob, IPEngineTask
+from .shellcmd import ShellCommandSend
 
 WINDOWS = os.name == 'nt'
 
@@ -1159,6 +1160,14 @@ class SSHLauncher(LocalProcessLauncher):
 
     _output = None
 
+    def _secure_ssh_sender(self):
+        if getattr(self, 'ssh_sender', None):
+            return self.ssh_sender
+
+        self.log.info(f'Create ShellCommandSend object ({self.ssh_cmd}, {self.ssh_args + [self.location]}, {self.remote_python} )')
+        self.ssh_sender = ShellCommandSend(self.ssh_cmd, self.ssh_args + [self.location], self.remote_python)
+        return self.ssh_sender
+
     def _reconstruct_process(self, d):
         # called in from_dict
         # override from LocalProcessLauncher which invokes psutil.Process
@@ -1192,16 +1201,17 @@ class SSHLauncher(LocalProcessLauncher):
                         self.log.info(
                             f"Removing {self.location}:{self.remote_output_file}"
                         )
-                        check_output(
-                            self.ssh_cmd
-                            + self.ssh_args
-                            + [
-                                self.location,
-                                "--",
-                                shlex_join(["rm", "-f", self.remote_output_file]),
-                            ],
-                            input=None,
-                        )
+                        # check_output(
+                        #     self.ssh_cmd
+                        #     + self.ssh_args
+                        #     + [
+                        #         self.location,
+                        #         "--",
+                        #         shlex_join(["rm", "-f", self.remote_output_file]),
+                        #     ],
+                        #     input=None,
+                        # )
+                        self.ssh_sender.cmd_remove(self.remote_output_file)
                     with open(output_file) as f:
                         self._output = f.read()
         return self._output
@@ -1217,12 +1227,8 @@ class SSHLauncher(LocalProcessLauncher):
                 break
         remote_dir = os.path.dirname(remote)
         self.log.info("ensuring remote %s:%s/ exists", self.location, remote_dir)
-        check_output(
-            self.ssh_cmd
-            + self.ssh_args
-            + [self.location, '--', 'mkdir', '-p', remote_dir],
-            input=None,
-        )
+        if not self.ssh_sender.cmd_exists(remote_dir):
+            self.ssh_sender.cmd_mkdir(remote_dir)
         self.log.info("sending %s to %s", local, full_remote)
         check_output(self.scp_cmd + self.scp_args + [local, full_remote], input=None)
 
@@ -1239,17 +1245,22 @@ class SSHLauncher(LocalProcessLauncher):
         self.log.info("fetching %s from %s", local, full_remote)
         for i in range(10 if wait else 0):
             # wait up to 10s for remote file to exist
-            check = check_output(
-                self.ssh_cmd
-                + self.ssh_args
-                + [self.location, 'test -e', remote, "&& echo 'yes' || echo 'no'"],
-                input=None,
-            )
-            check = check.decode("utf8", 'replace').strip()
-            if check == 'no':
-                time.sleep(1)
-            elif check == 'yes':
-                break
+            # check = check_output(
+            #     self.ssh_cmd
+            #     + self.ssh_args
+            #     + [self.location, 'test -e', remote, "&& echo 'yes' || echo 'no'"],
+            #     input=None,
+            # )
+            # check = check.decode("utf8", 'replace').strip()
+            # if check == 'no':
+            #     time.sleep(1)
+            # elif check == 'yes':
+            #     break
+            check = self.ssh_sender.cmd_exists(remote)
+            if check == False:
+                 time.sleep(1)
+            elif check == True:
+                 break
         local_dir = os.path.dirname(local)
         ensure_dir_exists(local_dir, 700)
         check_output(self.scp_cmd + self.scp_args + [full_remote, local])
@@ -1274,34 +1285,28 @@ class SSHLauncher(LocalProcessLauncher):
                 self.scp_args.append('-P')
                 self.scp_args.append(str(port))
 
+        self._secure_ssh_sender()
+        # do some checks that setting are correct
+        shell_info = self.ssh_sender.get_shell_info()
+        python_ok = self.ssh_sender.check_python()
+        ipython_installed = self.ssh_sender.check_ipython_package()
+
         # create remote profile dir
-        check_output(
-            self.ssh_cmd
-            + self.ssh_args
-            + [
-                self.location,
-                shlex_join(
-                    [
-                        self.remote_python,
-                        "-m",
-                        "IPython",
-                        "profile",
-                        "create",
-                        "--profile-dir",
-                        self.remote_profile_dir,
-                    ]
-                ),
-            ],
-            input=None,
-        )
+        self.ssh_sender.check_output_python(["-m", "IPython", "profile", "create", "--profile-dir", self.remote_profile_dir])
         self.send_files()
-        self.pid = sshx(
-            self.ssh_cmd + self.ssh_args + [self.location],
-            self.program + self.program_args,
-            env=self.get_env(),
-            remote_output_file=self.remote_output_file,
-            log=self.log,
-        )
+        #self.pid = sshx(
+        #    self.ssh_cmd + self.ssh_args + [self.location],
+        #    self.program + self.program_args,
+        #    env=self.get_env(),
+        #    remote_output_file=self.remote_output_file,
+        #    log=self.log,
+        #)
+        self.pid = self.ssh_sender.cmd_start(self.program + self.program_args, env=self.get_env(), output_file=self.remote_output_file)
+        if self.log:
+            remote_cmd = ' '.join(self.program + self.program_args)
+            self.log.info(f"Running `{remote_cmd}`")
+            #self.log.debug("Running script via ssh:\n%s", input_script)
+            pass
         self.notify_start({'host': self.location, 'pid': self.pid})
         self._start_waiting()
         self.fetch_files()
@@ -1334,15 +1339,16 @@ class SSHLauncher(LocalProcessLauncher):
 
     def wait_one(self, timeout):
         python_code = f"from ipyparallel.cluster.launcher import ssh_waitpid; ssh_waitpid({self.pid}, timeout={timeout})"
-        full_cmd = (
-            self.ssh_cmd
-            + self.ssh_args
-            # double-quote for ssh
-            + [self.location, "--", self.remote_python, "-c", f"'{python_code}'"]
-        )
-        out = check_output(full_cmd, input=None, start_new_session=True).decode(
-            "utf8", "replace"
-        )
+        # full_cmd = (
+        #     self.ssh_cmd
+        #     + self.ssh_args
+        #     # double-quote for ssh
+        #     + [self.location, "--", self.remote_python, "-c", f"'{python_code}'"]
+        # )
+        # out = check_output(full_cmd, input=None, start_new_session=True).decode(
+        #     "utf8", "replace"
+        # )
+        out = self._secure_ssh_sender().check_output_python(["-c", f'"{python_code}"'])
         values = _ssh_outputs(out)
         if 'process_running' not in values:
             raise RuntimeError(out)
@@ -1372,18 +1378,19 @@ class SSHLauncher(LocalProcessLauncher):
 
     def signal(self, sig):
         if self.state == 'running':
-            check_output(
-                self.ssh_cmd
-                + self.ssh_args
-                + [
-                    self.location,
-                    '--',
-                    'kill',
-                    f'-{sig}',
-                    str(self.pid),
-                ],
-                input=None,
-            )
+            self.ssh_sender.cmd_kill(self.pid, sig)
+            # check_output(
+            #     self.ssh_cmd
+            #     + self.ssh_args
+            #     + [
+            #         self.location,
+            #         '--',
+            #         'kill',
+            #         f'-{sig}',
+            #         str(self.pid),
+            #     ],
+            #     input=None,
+            # )
 
     @property
     def remote_connection_files(self):

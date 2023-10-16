@@ -11,10 +11,9 @@ Currently the following command are supported:
 * exists:  checks if a file/directory exists
 * remove:  removes a file
 """
-
-from subprocess import check_output, run, CalledProcessError
-from argparse import ArgumentParser
-import sys, re, os
+import json
+from subprocess import check_output, CalledProcessError
+import re, os
 import inspect
 import shlex
 
@@ -45,6 +44,8 @@ class ShellCommandReceive:
             if isinstance(env, str):
                 if env[0] == '"' and env[-1] == '"':
                     env = env.strip('"')    # occurs under windows cmd
+                if "\\'" in env:
+                    env = env.replace("\\'", "'")   # replace quoted
                 env_dict = eval(env)
                 assert(isinstance(env_dict, dict) is True)
                 env = env_dict
@@ -54,7 +55,10 @@ class ShellCommandReceive:
             # update environment
             for key, value in env.items():
                 if value is not None and value != '':
-                    os.environ[key] = str(value)
+                    if isinstance(value, dict):
+                        os.environ[key] = json.dumps(value)
+                    else:
+                        os.environ[key] = str(value)
                 else:
                     # unset entry if needed
                     if key in os.environ:
@@ -190,7 +194,7 @@ class ShellCommandSend:
         transfers the ShellCommandReceive class directly to 'other side'. It should also be mentioned that the
         code sending option is much faster in executing the code.
     """
-    package_name = "ipyparallel.cluster.shellcmd"    # package name for send the command
+    package_name = "ipyparallel.shellcmd"    # package name for send the command
     output_template = re.compile(r"__([a-z][a-z0-9_]+)=([a-z0-9\-\.]+)__", re.IGNORECASE)
     receiver_code = inspect.getsource(ShellCommandReceive)
     _python_chars_map =  str.maketrans( {"\\": "\\\\", "'": "\\'"} )
@@ -274,6 +278,20 @@ class ShellCommandSend:
         else:
             return param
 
+    def _dict2str(self, d):
+        tmp = {}
+        for k, v in d.items():
+            if isinstance(v, str) and v != "" and v[0] == '{' and v[-1] == '}':
+                try:
+                    v = v.replace("null", "None")
+                    v_dict = eval(v)
+                    if isinstance(v_dict, dict):
+                        v = v_dict
+                except Exception as e:
+                    pass
+            tmp[k] = v
+        return str(tmp)
+
     def _send_cmd(self, paramlist):
         if not self.use_code_sending:
             # send command through the corresponding package call
@@ -306,8 +324,9 @@ class ShellCommandSend:
             if "--debug" == paramlist[0].strip():
                 del paramlist[0]
                 debug_str += "debugging=True"
+                debug_str += "debugging=True"
 
-            py_cmd = f"import sys, os\n{self.receiver_code}\nShellCommandReceive({debug_str}).cmd_{paramlist[0]}("
+            py_cmd = f"import sys, os, json\n{self.receiver_code}\nShellCommandReceive({debug_str}).cmd_{paramlist[0]}("
             skip = False
             unnamed_params = ""
             named_params = ""
@@ -420,7 +439,7 @@ class ShellCommandSend:
         # join comands into a single parameter. otherwise
         paramlist = ["start"]   # ["--debug", "start"] # prepent debug for easier error analysis
         if env and len(env) > 0:
-            paramlist.extend(["--env", str(env)])
+            paramlist.extend(["--env", self._dict2str(env)])
         if output_file:
             paramlist.extend(["--output_file", output_file])
         if not self.is_linux:
@@ -480,67 +499,3 @@ class ShellCommandSend:
     def cmd_remove(self, p):
         """delete remote file"""
         output = self._send_cmd(["remove", p])
-
-def cmdline_start():
-    parser = ArgumentParser(description='Perform some standard shell command in a platform independent way')
-    parser.add_argument('--debug', action='store_true', help='append command line parameters to \'sys_arg.txt\'')
-    subparsers = parser.add_subparsers(dest='cmd', help='sub-command help')
-
-    # create the parser for the "a" command
-    parser_start = subparsers.add_parser('start', help='start a process into background')
-    parser_start.add_argument('--env', help='optional environment dictionary')
-    parser_start.add_argument('--output_file', help='optional output redirection (for stdout and stderr)')
-    parser_start.add_argument('start_cmd', nargs='+', help='command that help')
-
-    parser_running = subparsers.add_parser('running', help='check if a process is running')
-    parser_running.add_argument('pid', type=int, help='pid of process that should be checked')
-
-    parser_kill = subparsers.add_parser('kill', help='kill a process')
-    parser_kill.add_argument('pid', type=int, help='pid of process that should be killed')
-    parser_kill.add_argument('--sig', type=int, help='signals to send')
-
-    parser_mkdir = subparsers.add_parser('mkdir', help='create directory recursively')
-    parser_mkdir.add_argument('path', help='directory path to be created')
-
-    parser_rmdir = subparsers.add_parser('rmdir', help='remove directory recursively')
-    parser_rmdir.add_argument('path', help='directory path to be removed')
-
-    parser_exists = subparsers.add_parser('exists', help='checks if a file/directory exists')
-    parser_exists.add_argument('path', help='path to check')
-
-    parser_remove = subparsers.add_parser('remove', help='removes a file')
-    parser_remove.add_argument('path', help='path to remove')
-
-    if len(sys.argv) == 1:
-        parser.print_help()
-        sys.exit(0)
-
-    args = parser.parse_args()
-    cmd = args.__dict__.pop('cmd')
-
-    if args.debug:
-        with open("sys_arg.txt", "a") as f:
-            f.write(f"'{__file__}' started in '{os.getcwd()}':\n")
-            for idx, arg in enumerate(sys.argv[1:]):
-                f.write(f"\t{idx}:{arg}$\n")
-    del args.debug
-
-    recevier = ShellCommandReceive()
-    if cmd == "start":
-        recevier.cmd_start(**vars(args))
-    elif cmd == "running":
-        recevier.cmd_running(**vars(args))
-    elif cmd == "kill":
-        recevier.cmd_kill(**vars(args))
-    elif cmd == "mkdir":
-        recevier.cmd_mkdir(**vars(args))
-    elif cmd == "rmdir":
-        recevier.cmd_rmdir(**vars(args))
-    elif cmd == "exists":
-        recevier.cmd_exists(**vars(args))
-    elif cmd == "remove":
-        recevier.cmd_remove(**vars(args))
-
-
-if __name__ == '__main__':
-    cmdline_start()
