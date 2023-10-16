@@ -164,6 +164,20 @@ def Cluster(
 
     yield ClusterConstructor
 
+@pytest.fixture(scope="session")
+def ssh_running():
+    # check if an ssh docker container is running
+    try:
+        out = check_output(['docker', 'ps', '-q']).decode('utf8', 'replace').strip()
+    except Exception:
+        return False
+    if len(out) > 0:
+        id = out    #container id
+        return True
+
+    return False
+
+
 
 @pytest.fixture(scope="session")
 def ssh_dir(request):

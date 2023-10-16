@@ -38,7 +38,7 @@ def shellcmd_test_cmd():
 
 
 @pytest.mark.parametrize("platform, sender", senders, ids=sender_ids)
-def test_shellcmds(platform, sender, shellcmd_test_cmd):
+def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     def read_via_shell(shell, filename):
         # small helper function to read a file via shell commands
         if shell.is_linux:
@@ -64,6 +64,9 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd):
     else:
         if platform != "linux":
             pytest.skip("other platform")
+
+    if 'ssh' in sender.shell and not ssh_running:
+        pytest.skip("No ssh server running")
 
     # start tests
 
