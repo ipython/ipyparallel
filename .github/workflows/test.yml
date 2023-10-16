@@ -5,8 +5,7 @@ on:
   push:
     branches-ignore:
       - "pre-commit-ci*"
-  workflow_dispatch:
-  
+
 concurrency:
   group: >-
     ${{ github.workflow }}-
