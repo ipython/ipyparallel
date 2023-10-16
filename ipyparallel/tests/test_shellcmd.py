@@ -16,8 +16,8 @@ def setup_shellcmd_senders():
         cmd_cs = (shellcmd.ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, use_code_sending=1), None)
         ps = (shellcmd.ShellCommandSend(["powershell.exe"], ["-Command"], sys.executable), None)
         ps_cs = (shellcmd.ShellCommandSend(["powershell.exe"], ["-Command"], sys.executable, use_code_sending=1), None)
-        ssh = (shellcmd.ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@localhost"], "python"), None)
-        ssh_cs = (shellcmd.ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@localhost"], "python", use_code_sending=1), None)
+        ssh = (shellcmd.ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], "python"), None)
+        ssh_cs = (shellcmd.ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], "python", use_code_sending=1), None)
         if run(["where", "wsl"]).returncode == 0:
             #if wsl was found we can add a bash test as well (assuming that python3 is also installed)
             bash = (shellcmd.ShellCommandSend(["bash"], ["-c"], "python3", use_code_sending=1), "/home/jo/")   # use wsl to test with bash
@@ -26,7 +26,7 @@ def setup_shellcmd_senders():
         # under linux we could also test more shells
         bash = (shellcmd.ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3"), None)
         bash_cs = (shellcmd.ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3", use_code_sending=1), None)
-        ssh = (shellcmd.ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@localhost"], "python3", use_code_sending=1), None)
+        ssh = (shellcmd.ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], "python3", use_code_sending=1), None)
         senders = [bash, bash_cs, ssh]
     return senders
 
