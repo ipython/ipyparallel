@@ -88,7 +88,15 @@ jobs:
           export DOCKER_BUILDKIT=1
           export COMPOSE_DOCKER_CLI_BUILD=1
           cd ci/ssh
-          docker-compose up -d --build
+          docker-compose -f liunx_Dockerfile up -d --build
+
+          # retrieve id_rsa file for public key authentication
+          mkdir ~/.ssh/
+          docker cp ssh_sshd_1:/home/ciuser/.ssh/id_rsa ~/.ssh/id_rsa
+          cat ~/.ssh/id_rsa
+
+          #check ssh connection and accept host key
+          ssh -o "StrictHostKeyChecking no" ciuser@localhost -p 2222 -v ls /
 
       - name: Set up slurm
         if: ${{ matrix.cluster_type == 'slurm' }}
