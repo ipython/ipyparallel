@@ -1,0 +1,171 @@
+name: SSH-Test 
+
+on:
+  workflow_dispatch:
+  
+concurrency:
+  group: >-
+    ${{ github.workflow }}-
+    ${{ github.ref_type }}-
+    ${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  # UTF-8 content may be interpreted as ascii and causes errors without this.
+  LANG: C.UTF-8
+  IPP_DISABLE_JS: "1"
+  JUPYTER_PLATFORM_DIRS: "1"
+
+jobs:
+  test:
+    runs-on: ${{ matrix.runs_on || 'ubuntu-20.04' }}
+    timeout-minutes: 20
+
+    strategy:
+      # Keep running even if one variation of the job fail
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.9"
+            cluster_type: ssh
+          - python: "3.8"
+            cluster_type: ssh
+            runs_on: windows-2019
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache conda environment
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/conda
+          key: conda
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: |
+            node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Set environment variables
+        if: ${{ matrix.env }}
+        env:
+          MATRIX_ENV: ${{ toJSON(matrix.env) }}
+        run: |
+          python3 <<EOF
+          import json
+          import os
+          matrix_env = json.loads(os.environ["MATRIX_ENV"])
+          with open(os.environ["GITHUB_ENV"], "a") as f:
+              for key, value in matrix_env.items():
+                  f.write(f"{key}={value}\n")
+          EOF
+
+      - name: Set up docker-compose for ssh linux launcher
+        if: ${{ matrix.cluster_type == 'ssh' && !contains(matrix.runs_on, 'windows') }}
+        run: |
+          export DOCKER_BUILDKIT=1
+          export COMPOSE_DOCKER_CLI_BUILD=1
+          cd ci/ssh
+          docker-compose -f liunx_Dockerfile up -d --build
+          
+          # retrieve id_rsa file for public key authentication
+          mkdir ~/.ssh/
+          docker cp ssh_sshd_1:/home/ciuser/.ssh/id_rsa ~/.ssh/id_rsa
+          cat ~/.ssh/id_rsa
+          
+          #check ssh connection and accept host key
+          ssh -o "StrictHostKeyChecking no" ciuser@localhost -p 2222 -v ls /
+
+      - name: Set up docker-compose for ssh windows launcher
+        if: ${{ matrix.cluster_type == 'ssh' && contains(matrix.runs_on, 'windows') }}
+        run: |
+          cd ci/ssh-win
+          docker-compose -f win_Dockerfile up -d --build
+          
+          # retrieve id_rsa file for public key authentication
+          mkdir $env:USERPROFILE/.ssh/
+          docker run ipyparallel-sshd powershell.exe -Command "type C:\Users\ciuser\.ssh\id_rsa" | out-file -encoding ascii $env:USERPROFILE/.ssh/id_rsa
+          
+          #check ssh connection and accept host key
+          ssh -o "StrictHostKeyChecking no" ciuser@localhost -p 2222 -v ls c:\
+          
+          # copy ipyparallel code to docker container (use zip, scp and unzip)
+          ssh ciuser@localhost -p 2222 mkdir c:\src\ipyparallel
+          # zip ipyparallel files (excluding file might not be needed)
+          $exclude = @("__pycache__","node_modules")
+          $files = Get-ChildItem -Path "." -Exclude $exclude
+          Compress-Archive -Path $files -DestinationPath ipyparallel.zip -CompressionLevel Fastest
+          # copy file into docker (we need to do it over ssh since docker copy or mount doesn't work in Hyper-V)
+          scp -P 2222 ipyparallel.zip ciuser@localhost:c:\src\ipyparallel
+          # deflate ipyparallel files
+          ssh ciuser@localhost -p 2222 powershell.exe -Command "Expand-Archive -Path c:\src\ipyparallel\ipyparallel.zip -DestinationPath c:\src\ipyparallel"
+          
+          # pip install ipyparallel files
+          ssh ciuser@localhost -p 2222 dir c:\src\ipyparallel
+          ssh ciuser@localhost -p 2222 "cd c:\src\ipyparallel && pip install -e ."
+          
+          
+      - name: Set up slurm
+        if: ${{ matrix.cluster_type == 'slurm' }}
+        run: |
+          export DOCKER_BUILDKIT=1
+          export COMPOSE_DOCKER_CLI_BUILD=1
+          cd ci/slurm
+          docker-compose up -d --build
+
+      - name: Install Python (conda) ${{ matrix.python }}
+        if: ${{ matrix.cluster_type == 'mpi' }}
+        run: |
+          export MAMBA_ROOT_PREFIX=$HOME/conda
+          test -d $MAMBA_ROOT_PREFIX || mkdir $MAMBA_ROOT_PREFIX
+          wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
+          eval "$(./bin/micromamba shell hook -s posix)"
+          micromamba activate
+          micromamba install -y -c conda-forge mpich mpi4py python=${{ matrix.python }}
+          echo "PATH=$MAMBA_ROOT_PREFIX/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Install Python ${{ matrix.python }}
+        if: ${{ matrix.cluster_type != 'mpi' }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install ipyparallel itself
+        run: |
+          pip install --upgrade pip
+          pip install --no-deps .
+
+      - name: Install Python dependencies
+        run: |
+          pip install --pre --upgrade ipyparallel[test]
+
+      - name: Install extra Python packages
+        if: ${{ ! startsWith(matrix.python, '3.11') }}
+        run: |
+          pip install distributed joblib
+          pip install --only-binary :all: matplotlib || echo "no matplotlib"
+
+      - name: Show environment
+        run: pip freeze
+
+      - name: Run tests in container ${{ matrix.container }}
+        if: ${{ matrix.container }}
+        run: echo "EXEC=docker exec -i ${{ matrix.container }}" >> $GITHUB_ENV
+
+      - name: Run ${{ matrix.cluster_type }} shellcmd tests
+        if: ${{ matrix.cluster_type }}
+        run: |
+          echo "${EXEC:-} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_shellcmd.py"
+
+      - name: Run ${{ matrix.cluster_type }} tests
+        if: ${{ matrix.cluster_type }}
+        run: |
+          echo "${EXEC:-} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py"
+
+      - name: Submit codecov report
+        uses: codecov/codecov-action@v3
