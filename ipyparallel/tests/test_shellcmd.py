@@ -84,7 +84,7 @@ def test_shellcmds(platform, sender, prefix, shellcmd_test_cmd):
     else:
         test_cmd = shellcmd_test_cmd["windows"]
 
-    python_ok = sender.check_python()
+    python_ok = sender.has_python()
     assert python_ok is True
 
     test_dir = prefix + "shellcmd_test"
@@ -146,9 +146,8 @@ def test_shellcmds(platform, sender, prefix, shellcmd_test_cmd):
     python_cmd += "print('IPP_CONNECTION_INFO =',os.environ['IPP_CONNECTION_INFO'])"
 
     output_file = prefix + "stdout.txt"
-    # pid = sender.cmd_start(f'{sender.python_path} -c "{python_cmd}"', env=env_dict, output_file=output_file)
-    # sender.debugging = True
-    pid = sender.cmd_start([sender.python_path, "-c", python_cmd], env=env_dict, output_file=output_file)
+    # pid = sender.cmd_start([sender.python_path, "-c", python_cmd], env=env_dict, output_file=output_file)
+    pid = sender.cmd_start_python_code( python_cmd, env=env_dict, output_file=output_file)
 
     counter = 0
     max_counter = 5
