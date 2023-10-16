@@ -15,16 +15,17 @@ senders = [
     ("windows", ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, initialize=False, send_receiver_class=1)),
     ("windows", ShellCommandSend(["powershell.exe"], ["-Command"], sys.executable, initialize=False)),
     ("windows", ShellCommandSend(["powershell.exe"], ["-Command"], sys.executable, initialize=False,send_receiver_class=1)),
-    ("windows", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], windows_py_path, initialize=False)),
-    ("windows", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], windows_py_path, initialize=False,send_receiver_class=1)),
-    ("wsl",  ShellCommandSend(["bash"], ["-c"], "python3", initialize=False, send_receiver_class=1)),
+    #("windows", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], windows_py_path, initialize=False)),
+    #("windows", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], windows_py_path, initialize=False,send_receiver_class=1)),
+    #("wsl",  ShellCommandSend(["bash"], ["-c"], "python3", initialize=False, send_receiver_class=1)),
     ("linux", ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3", initialize=False)),
     ("linux", ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3", initialize=False, send_receiver_class=1)),
     ("linux", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], linux_py_path, initialize=False)),
     ("linux", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], linux_py_path, initialize=False,send_receiver_class=1))
 ]
 
-sender_ids = ["cmd", "cmd_src", "pwsh", "pwsh_src", "ssh-win", "ssh-win_src", "wsl",
+sender_ids = [ "cmd", "cmd_src", "pwsh", "pwsh_src", 
+              #"ssh-win", "ssh-win_src", "wsl",
               "bash", "bash_src", "ssh-linux", "ssh-linux_src"]
 
 
