@@ -79,9 +79,9 @@ class ShellCommandReceive:
             print(f'__remote_pid={p.pid}__')
         else:
             if output_file:
-                nohup_start = f"nohup {start_cmd} >{output_file} 2>&1 </dev/null & echo __remote_pid=$!__"
+                nohup_start = f"exec nohup {start_cmd} >{output_file} 2>&1 </dev/null & echo __remote_pid=$!__"
             else:
-                nohup_start = f"nohup {start_cmd} >/dev/null 2>&1 </dev/null & echo __remote_pid=$!__"
+                nohup_start = f"exec nohup {start_cmd} >/dev/null 2>&1 </dev/null & echo __remote_pid=$!__"
             os.system(nohup_start)
 
 
@@ -181,8 +181,8 @@ class ShellCommandSend:
         self.join_params = True  # join all cmd params into a single param. does NOT work with windows cmd
         self.use_code_sending = use_code_sending    # should be activated when developing...
         self.debugging = False  # for outputs to file for easier debugging
-        if "ssh" in shell:
-            self.join_params = False    #just for testing
+        #if "ssh" in shell:
+        #    self.join_params = False    #just for testing
 
     def _check_output(self, cmd):
         return check_output(cmd).decode('utf8', 'replace')

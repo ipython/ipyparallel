@@ -34,7 +34,7 @@ def shellcmd_test_cmd():
     """returns a command that runs for 5 seconds"""
     test_command = {}
     test_command["Windows"] = "ping -n 5 127.0.0.1"
-    test_command["Linux"] = "ping -c 5 127.0.0.1"
+    test_command["Linux"] = "sleep 5" #"/bin/ping -c 5 127.0.0.1"
     return test_command
 
 def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
@@ -47,6 +47,12 @@ def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
             content = shell.check_output(f"type {filename}").strip()
         content = content.replace("\r\n", "\n") #correct line endings for windows
         return content.split("\n")
+
+    def print_file(shell, filename):
+        print(f"Content of file '{filename}':")
+        lines = read_via_shell(sender, filename)
+        for idx,l in enumerate(lines):
+            print(f"{idx:3}:{l}")
 
     # go through all senders for testing
     for sender, prefix in setup_shellcmd_senders:
@@ -82,13 +88,22 @@ def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
         sender.cmd_rmdir(test_dir)
         assert sender.cmd_exists(test_dir) is False
 
+        if sender.is_linux:
+            pid = sender.cmd_start("env", output_file="output2.txt")
+            print_file(sender, "output2.txt")
+
         # do start operation test
         redirect_output_file = "output.txt"
         pid = sender.cmd_start(test_cmd, output_file=redirect_output_file)
         assert pid > 0
+        if sender.cmd_running(pid) == False:
+            print_file(sender, redirect_output_file)
         assert sender.cmd_running(pid) is True
 
         sender.cmd_kill(pid, signal.SIGTERM)
+
+        if sender.cmd_running(pid) == False:
+            print_file(sender, redirect_output_file)
 
         assert sender.cmd_running(pid) is False
         assert sender.cmd_exists(redirect_output_file) is True
