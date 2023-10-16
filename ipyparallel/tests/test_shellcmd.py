@@ -16,11 +16,12 @@ def setup_shellcmd_senders():
         cmd_cs = (shellcmd.ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, use_code_sending=1), None)
         ps = (shellcmd.ShellCommandSend(["powershell.exe"], ["-Command"], sys.executable), None)
         ps_cs = (shellcmd.ShellCommandSend(["powershell.exe"], ["-Command"], sys.executable, use_code_sending=1), None)
-        ssh = (shellcmd.ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@localhost"], "python", use_code_sending=1), None)
-        #if run(["where", "wsl"]).returncode == 0:
-        #    #if wsl was found we can add a bash test as well (assuming that python3 is also installed)
-        #    bash = (shellcmd.ShellCommandSend(["bash"], ["-c"], "python3", use_code_sending=1), "~/")   # use wsl to test with bash
-        senders = [cmd, cmd_cs, ps, ps_cs, ssh]
+        ssh = (shellcmd.ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@localhost"], "python"), None)
+        ssh_cs = (shellcmd.ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@localhost"], "python", use_code_sending=1), None)
+        if run(["where", "wsl"]).returncode == 0:
+            #if wsl was found we can add a bash test as well (assuming that python3 is also installed)
+            bash = (shellcmd.ShellCommandSend(["bash"], ["-c"], "python3", use_code_sending=1), "/home/jo/")   # use wsl to test with bash
+        senders = [cmd, cmd_cs, ps, ps_cs, ssh, ssh_cs, bash]
     else:
         # under linux we could also test more shells
         bash = (shellcmd.ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3"), None)
@@ -33,8 +34,8 @@ def setup_shellcmd_senders():
 def shellcmd_test_cmd():
     """returns a command that runs for 5 seconds"""
     test_command = {}
-    test_command["Windows"] = "timeout 5" # "ping -n 5 127.0.0.1"
-    test_command["Linux"] = "sleep 5"   # "ping -c 5 127.0.0.1" # ping doesn't work/exist on the github docker image
+    test_command["Windows"] = 'ping -n 5 127.0.0.1' # "timeout 5"
+    test_command["Linux"] =  'ping -c 30 127.0.0.1'  # "sleep 5"   # # ping doesn't work/exist on the github docker image
     return test_command
 
 def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
@@ -58,6 +59,9 @@ def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
     for sender, prefix in setup_shellcmd_senders:
         print(f"shell={sender.shell[0]} (code sending={sender.use_code_sending}: Start tests...")
 
+        if not prefix:
+            prefix = ""
+
         info = sender.get_shell_info()
         assert len(info) == 2 and info[0] and info[1]
 
@@ -69,7 +73,7 @@ def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
         python_ok = sender.check_python()
         assert python_ok is True
 
-        test_dir = "shellcmd_test"
+        test_dir = prefix+"shellcmd_test"
         test_file = "testfile.txt"
 
         # perform basic file/directory operations
@@ -96,7 +100,7 @@ def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
             print_file(sender, "env_output.txt")
 
         # do start operation test
-        redirect_output_file = "output.txt"
+        redirect_output_file = prefix+"output.txt"
         pid = sender.cmd_start(test_cmd, output_file=redirect_output_file)
         assert pid > 0
         if sender.cmd_running(pid) == False:
@@ -124,10 +128,10 @@ def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
         python_cmd += "print('IPP_PROFILE_DIR =',os.environ['IPP_PROFILE_DIR']);"
         python_cmd += "print('IPP_CONNECTION_INFO =',os.environ['IPP_CONNECTION_INFO'])"
 
-        output_file = "stdout.txt"
-        if prefix:
-            output_file = prefix + output_file
-        pid = sender.cmd_start(f'{sender.python_path} -c "{python_cmd}"', env=env_dict, output_file=output_file)
+        output_file = prefix+"stdout.txt"
+        #pid = sender.cmd_start(f'{sender.python_path} -c "{python_cmd}"', env=env_dict, output_file=output_file)
+        #sender.debugging = True
+        pid = sender.cmd_start([sender.python_path, "-c", python_cmd], env=env_dict, output_file=output_file)
 
         counter = 0
         max_counter = 5
