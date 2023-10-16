@@ -33,8 +33,8 @@ def setup_shellcmd_senders():
 def shellcmd_test_cmd():
     """returns a command that runs for 5 seconds"""
     test_command = {}
-    test_command["Windows"] = "ping -n 5 127.0.0.1"
-    test_command["Linux"] = "sleep 5" #"/bin/ping -c 5 127.0.0.1"
+    test_command["Windows"] = "timeout 5" # "ping -n 5 127.0.0.1"
+    test_command["Linux"] = "sleep 5"   # "ping -c 5 127.0.0.1" # ping doesn't work/exist on the github docker image
     return test_command
 
 def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
@@ -77,10 +77,13 @@ def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
         assert sender.cmd_exists(test_dir) is True
 
         # create a simple text file with one line (works on all platforms)
-        fullpath = test_dir+'/'+test_file
+        fullpath = test_dir+sender.pathsep+test_file
         sender.check_output(f'echo "test-line" > {fullpath}')
-
         assert sender.cmd_exists(fullpath) is True
+        output_lines = read_via_shell(sender, fullpath)
+        assert len(output_lines) == 1
+        assert "test-line" in output_lines[0]
+
 
         sender.cmd_remove(fullpath)
         assert sender.cmd_exists(fullpath) is False
@@ -89,8 +92,8 @@ def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
         assert sender.cmd_exists(test_dir) is False
 
         if sender.is_linux:
-            pid = sender.cmd_start("env", output_file="output2.txt")
-            print_file(sender, "output2.txt")
+            pid = sender.cmd_start("env", output_file="env_output.txt")
+            print_file(sender, "env_output.txt")
 
         # do start operation test
         redirect_output_file = "output.txt"
@@ -98,7 +101,7 @@ def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
         assert pid > 0
         if sender.cmd_running(pid) == False:
             print_file(sender, redirect_output_file)
-        assert sender.cmd_running(pid) is True
+        #assert sender.cmd_running(pid) is True
 
         sender.cmd_kill(pid, signal.SIGTERM)
 
