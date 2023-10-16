@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Shell helper application for OS independent shell commands
+Commandline interface to OS independent shell commands
 
 Currently the following command are supported:
 * start:   starts a process into background and returns its pid
