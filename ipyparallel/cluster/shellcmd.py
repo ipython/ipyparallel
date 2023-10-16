@@ -30,7 +30,7 @@ class Platform(enum.Enum):
     def get():
         import sys
         tmp = sys.platform.lower()
-        if "win" in tmp:
+        if tmp == "win32":
             return Platform.Windows
         elif tmp == "linux":
             return Platform.Linux
