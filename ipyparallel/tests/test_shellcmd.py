@@ -140,7 +140,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd):
     python_cmd += "print('IPP_CONNECTION_INFO =',os.environ['IPP_CONNECTION_INFO'])"
 
     output_file = prefix + "stdout.txt"
-    #pid = sender.cmd_start([sender.python_path, "-c", python_cmd], env=env_dict, output_file=output_file)
+    # pid = sender.cmd_start([sender.python_path, "-c", python_cmd], env=env_dict, output_file=output_file)
     pid = sender.cmd_start_python_code( python_cmd, env=env_dict, output_file=output_file)
 
     counter = 0
