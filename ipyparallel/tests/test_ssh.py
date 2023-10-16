@@ -21,7 +21,7 @@ def ssh_config(ssh_dir, request):
         pytest.skip("Proxy tests currently not working under Windows")
 
     if windows and "GITHUB_RUNNER" in os.environ:
-        pytest.skip("Disable windows ssh test in github runners")
+        pytest.skip("Disable windows ssh tests in github runners")
 
     c = Config()
     c.Cluster.controller_ip = '0.0.0.0'

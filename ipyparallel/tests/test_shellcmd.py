@@ -65,6 +65,11 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
             prefix = "/home/jo"
         elif platform != "windows":
             pytest.skip("other platform")
+
+        # disable test in github runners for now (see https://github.com/actions/runner/issues/595)
+        if "GITHUB_RUNNER" in os.environ:
+            pytest.skip("Disable windows shellcmd tests in github runners")
+
     elif Platform.get() == Platform.Linux:
         if platform != "linux":
             pytest.skip("other platform")
