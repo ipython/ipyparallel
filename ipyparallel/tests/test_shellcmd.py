@@ -56,7 +56,7 @@ def test_all_shellcmds(setup_shellcmd_senders, shellcmd_test_cmd):
 
     # go through all senders for testing
     for sender, prefix in setup_shellcmd_senders:
-        print(f"shell={sender.shell[0]} (code sending={sender.use_code_sending}, joining={sender.join_params}): Start tests...")
+        print(f"shell={sender.shell[0]} (code sending={sender.use_code_sending}: Start tests...")
 
         info = sender.get_shell_info()
         assert len(info) == 2 and info[0] and info[1]
