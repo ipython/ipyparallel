@@ -12,12 +12,32 @@ Currently, the following command are supported:
 * remove:  removes a file
 """
 import json
-import time
 from subprocess import check_output, CalledProcessError, TimeoutExpired
 import re, os
 import inspect
 import shlex
 import base64
+import enum
+
+
+class Platform(enum.Enum):
+    Unknown = 0,
+    Linux = 1,
+    Windows = 2,
+    MacOS = 3
+
+    @staticmethod
+    def get():
+        import sys
+        tmp = sys.platform.lower()
+        if "win" in tmp:
+            return Platform.Windows
+        elif tmp == "linux":
+            return Platform.Linux
+        elif tmp == "darwin":
+            return Platform.MacOS
+        else:
+            raise Exception(f"Unknown platform label '{sys.platform}'")
 
 
 class ShellCommandReceive:
@@ -33,7 +53,7 @@ class ShellCommandReceive:
 
     def __init__(self, debugging=False):
         self.debugging = debugging
-        self.windows = True if os.name == 'nt' else False
+        self.platform = Platform.get()
         pass
 
     def _linux_quote(self, p):
@@ -71,7 +91,7 @@ class ShellCommandReceive:
         if isinstance(start_cmd, str):
             start_cmd = [start_cmd]
 
-        if self.windows:
+        if self.platform == Platform.Windows:
             # under windows we need to remove embracing double quotes
             for idx, p in enumerate(start_cmd):
                 if not isinstance(p, str):
@@ -84,7 +104,7 @@ class ShellCommandReceive:
             with open("start_cmd.txt", "w") as f:
                 f.write(str(start_cmd))
 
-        if self.windows:
+        if self.platform == Platform.Windows:
             from subprocess import Popen
             from subprocess import CREATE_NEW_CONSOLE
             from subprocess import CREATE_BREAKAWAY_FROM_JOB
@@ -117,7 +137,7 @@ class ShellCommandReceive:
             os.system(nohup_start)
 
     def cmd_running(self, pid):
-        if self.windows:
+        if self.platform == Platform.Windows:
             # taken from https://stackoverflow.com/questions/568271/how-to-check-if-there-exists-a-process-with-a-given-pid-in-python
             import ctypes
             PROCESS_QUERY_INFROMATION = 0x1000  # if actually PROCESS_QUERY_LIMITED_INFORMATION
@@ -140,7 +160,7 @@ class ShellCommandReceive:
             os.system(ps_cmd)
 
     def cmd_kill(self, pid, sig=None):
-        if self.windows:
+        if self.platform == Platform.Windows:
             # os.kill doesn't work reliable under windows. also see
             # https://stackoverflow.com/questions/28551180/how-to-kill-subprocess-python-in-windows
 
@@ -201,6 +221,7 @@ class ShellCommandSend:
     package_name = "ipyparallel.shellcmd"  # package name for send the command
     output_template = re.compile(r"__([a-z][a-z0-9_]+)=([a-z0-9\-\.]+)__", re.IGNORECASE)
     receiver_code = inspect.getsource(ShellCommandReceive)
+    platform_code = inspect.getsource(Platform)
     _python_chars_map = str.maketrans({"\\": "\\\\", "'": "\\'"})
 
     def __init__(self, shell, args, python_path, initialize=True, send_receiver_class=False):
@@ -210,7 +231,7 @@ class ShellCommandSend:
 
         # shell dependent values. Those values are determined in the initialize function
         self.shell_info = None
-        self.is_linux = None  # flag if shell is one a linux machine
+        self.platform = Platform.Unknown  # platform enum of shell
         self.is_powershell = None  # flag if shell is windows powershell (requires special parameter quoting)
         self.join_params = True  # join all cmd params into a single param. does NOT work with windows cmd
         self.pathsep = "/"  # equivalent to os.pathsep (will be changed during initialization)
@@ -290,13 +311,13 @@ class ShellCommandSend:
             else:
                 return param
 
-        if self.is_linux:
-            paramlist = [shlex.quote(p) for p in paramlist]
-        else:
+        if self.platform == Platform.Windows:
             if self.is_powershell:
                 paramlist = [_powershell_quote(p) for p in paramlist]
             else:
                 paramlist = [_cmd_quote(p) for p in paramlist]
+        else:
+            paramlist = [shlex.quote(p) for p in paramlist]
 
         full_list = [self.python_path, "-m", self.package_name] + paramlist
         if self.join_params:
@@ -315,7 +336,7 @@ class ShellCommandSend:
         if not self.send_receiver_class:
             preamble = f"from ipyparallel.cluster.shellcmd import ShellCommandReceive\n"
         else:
-            preamble = f"import sys, os, json\n{self.receiver_code}\n"
+            preamble = f"import sys, os, enum, json\n{self.platform_code}\n{self.receiver_code}\n"
 
         # in send receiver mode it is not required that the ipyparallel.cluster.shellcmd
         # exists (or is update to date) on the 'other' side of the shell. This is particular
@@ -352,7 +373,7 @@ class ShellCommandSend:
         #   windows-powershell: OS-WIN-CMD=%OS%;OS-WIN-PW=Windows_NT;OS-LINUX=;SHELL=
         #   windows-cmd       : "OS-WIN-CMD=Windows_NT;OS-WIN-PW=$env:OS;OS-LINUX=$OSTYPE;SHELL=$SHELL"
         #   ubuntu-bash       : OS-WIN-CMD=Windows_NT;OS-WIN-PW=:OS;OS-LINUX=linux-gnu;SHELL=/bin/bash
-        #
+        #   macos 11          : OS-WIN-CMD=%OS%;OS-WIN-PW=:OS;OS-LINUX=darwin20;SHELL=/bin/bash
         cmd = self.shell + self.args + ['echo "OS-WIN-CMD=%OS%;OS-WIN-PW=$env:OS;OS-LINUX=$OSTYPE;SHELL=$SHELL"']
         timeout = 10
         try:
@@ -374,19 +395,19 @@ class ShellCommandSend:
                 system = val
                 shell = "cmd.exe"
                 self.is_powershell = False
-                self.is_linux = False
+                self.platform = Platform.Windows
                 self.join_params = False  # disable joining, since it does not work for windows cmd.exe
                 self.pathsep = "\\"
             elif key == "OS-WIN-PW":
                 system = val
                 shell = "powershell.exe"
                 self.is_powershell = True
-                self.is_linux = False
+                self.platform = Platform.Windows
                 self.pathsep = "\\"
             elif key == "OS-LINUX":
                 system = val
                 self.is_powershell = False
-                self.is_linux = True
+                self.platform = Platform.MacOS if "darwin" in val else Platform.Linux
             elif key == "SHELL":
                 shell = val
 
@@ -457,7 +478,7 @@ class ShellCommandSend:
         """
         # join commands into a single parameter. otherwise
         assert self.shell_info  # make sure that initialize was called already
-        if not self.is_linux:
+        if self.platform == Platform.Windows:
             # for windows shells we need to split program and arguments into a list
             if isinstance(cmd, str):
                 paramlist = shlex.split(cmd)
@@ -492,7 +513,7 @@ class ShellCommandSend:
         # string limit. Since the limit is typically > 2k, little code snippets should not cause any problems.
         encoded = base64.b64encode(python_code.encode())
         py_cmd = f'import base64;exec(base64.b64decode({encoded}).decode())'
-        if not self.is_linux:
+        if self.platform == Platform.Windows:
             py_cmd = '"'+py_cmd+'"'
         paramlist = [self.python_path, "-c", py_cmd]
         return self._get_pid(self._cmd_send("start", paramlist, env=env, output_file=output_file))

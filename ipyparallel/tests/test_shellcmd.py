@@ -4,7 +4,7 @@ import pytest
 import sys, os
 import time, signal
 
-from ipyparallel.cluster.shellcmd import ShellCommandSend
+from ipyparallel.cluster.shellcmd import ShellCommandSend, Platform
 from subprocess import run
 
 windows_py_path = 'python'
@@ -21,11 +21,14 @@ senders = [
     ("linux", ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3", initialize=False)),
     ("linux", ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3", initialize=False, send_receiver_class=1)),
     ("linux", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], linux_py_path, initialize=False)),
-    ("linux", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], linux_py_path, initialize=False,send_receiver_class=1))
+    ("linux", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], linux_py_path, initialize=False,send_receiver_class=1)),
+    ("macos", ShellCommandSend(["/bin/bash"], ["-c"], "python3", initialize=False)),
+    ("macos", ShellCommandSend(["/bin/bash"], ["-c"], "python3", initialize=False, send_receiver_class=1)),
 ]
 
 sender_ids = [ "cmd", "cmd_src", "pwsh", "pwsh_src", "ssh-win", "ssh-win_src", "wsl",
-              "bash", "bash_src", "ssh-linux", "ssh-linux_src"]
+               "bash", "bash_src", "ssh-linux", "ssh-linux_src",
+               "bash-macos", "bash-macos_src"]
 
 
 @pytest.fixture
@@ -33,7 +36,8 @@ def shellcmd_test_cmd():
     """returns a command that runs for 5 seconds"""
     test_command = {}
     test_command["windows"] = 'ping -n 5 127.0.0.1'
-    test_command["linux"] = 'ping -n 5 127.0.0.1'  # ping needs to be installed to the standard ubuntu docker image
+    test_command["linux"] = 'ping -c 5 127.0.0.1'  # ping needs to be installed to the standard ubuntu docker image
+    test_command["macos"] = 'ping -c 5 127.0.0.1'
     return test_command
 
 
@@ -41,10 +45,10 @@ def shellcmd_test_cmd():
 def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     def read_via_shell(shell, filename):
         # small helper function to read a file via shell commands
-        if shell.is_linux:
-            content = shell.check_output(f"cat {filename}").strip()
-        else:
+        if shell.platform == Platform.Windows:
             content = shell.check_output(f"type {filename}").strip()
+        else:
+            content = shell.check_output(f"cat {filename}").strip()
         content = content.replace("\r\n", "\n")  # correct line endings for windows
         return content.split("\n")
 
@@ -55,14 +59,17 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
             print(f"{idx:3}:{l}")
 
     prefix = ""
-    if os.name == "nt":
+    if Platform.get() == Platform.Windows:
         if platform == "wsl":
             pytest.skip("wsl deactivated")      # comment to activate wsl tests
             prefix = "/home/jo"
         elif platform != "windows":
             pytest.skip("other platform")
-    else:
+    elif Platform.get() == Platform.Linux:
         if platform != "linux":
+            pytest.skip("other platform")
+    elif Platform.get() == Platform.MacOS:
+        if platform != "macos":
             pytest.skip("other platform")
 
     if 'ssh' in sender.shell and not ssh_running:
@@ -76,10 +83,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     info = sender.get_shell_info()
     assert len(info) == 2 and info[0] and info[1]
 
-    if sender.is_linux:
-        test_cmd = shellcmd_test_cmd["linux"]
-    else:
-        test_cmd = shellcmd_test_cmd["windows"]
+    test_cmd = shellcmd_test_cmd[str(sender.platform.name.lower())]
 
     python_ok = sender.has_python()
     assert python_ok is True
@@ -105,9 +109,10 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     sender.cmd_rmdir(test_dir)
     assert sender.cmd_exists(test_dir) is False
 
-    if sender.is_linux:
-        pid = sender.cmd_start("env", output_file="env_output.txt")
-        print_file(sender, "env_output.txt")
+    # output environment (just for testing)
+    #if sender.platform != Platform.Windows:
+    #    pid = sender.cmd_start("env", output_file="env_output.txt")
+    #    print_file(sender, "env_output.txt")
 
     # do start operation test
     redirect_output_file = prefix + "output.txt"

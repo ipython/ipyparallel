@@ -18,6 +18,7 @@ env:
   LANG: C.UTF-8
   IPP_DISABLE_JS: "1"
   JUPYTER_PLATFORM_DIRS: "1"
+  GITHUB_RUNNER: "1"  # this will disable the ssh test on windows
 
 jobs:
   test:
