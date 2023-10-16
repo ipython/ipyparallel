@@ -12,15 +12,17 @@ Currently, the following command are supported:
 * remove:  removes a file
 """
 import json
+import time
 from subprocess import check_output, CalledProcessError, TimeoutExpired
 import re, os
 import inspect
 import shlex
+import base64
 
 
 class ShellCommandReceive:
     """
-    Wrapper for receiving and performing ssh shell commands
+    Helper class for receiving and performing shell commands in a platform independent form
 
     All supported shell commands have a cmd_ prefix. When adding new functions make sure that the is an
     equivalent in the ShellCommandSend class. When a command failed a non zero exit code will be returned.
@@ -178,23 +180,23 @@ class ShellCommandReceive:
 
 class ShellCommandSend:
     """
-        Wrapper for sending shell commands in generic and OS independent form
+        Helper class for sending shell commands in generic and OS independent form
 
         The class is designed to send shell commands to an ssh connection. Nevertheless, it can be
         used for send commands to different local shell as well, which is useful for testing. Since
-        the concept uses this python package (class ShellCommandReceive) for performing the commands,
-        it is necessary that a valid python installation (python_path) is provided. Calling the check
-        commands this can be evaluated. Furthermore, get_shell_info can be called to retrieve OS and
+        the concept uses the ipyparallel package (class ipyparallel.cluster.ShellCommandReceive) for
+        executing the commands, it is necessary that a valid python installation (python_path) is provided.
+        By calling has_python this can be evaluated. Furthermore, get_shell_info can be called to retrieve OS and
         shell information independent of a valid python installation.
 
-        The actual shell commands have a cmd_ prefix. When adding new functions make sure that the is an
-        equivalent in the ShellCommandReceive class.
+        Since some operation require different handling for different platforms/shells the class gathers
+        necessary information during initialization. This per default automatically at object instantiation.
+        Nevertheless, it can be postponed (initialize=False) but before any member function is called, the
+        initialize function has to be called.
 
-        The sender class supports two modes for performing the actual shell command. The standard way by starting
-        the ipyparallel.cluster.shellcmd module requires the current code on the 'other side' of the shell
-        available. When developing or debugging it is more convenient to activate the 'use_code_sending' flag. This
-        transfers the ShellCommandReceive class directly to 'other side'. It should also be mentioned that the
-        code sending option is much faster in executing the code.
+        Beside generic check_output[...] functions (equivalent to subprocess.check_output), the class provides
+        specific shell commands which have a cmd_ prefix. When adding new functions make sure that an
+        equivalent is added in the ShellCommandReceive class as well.
     """
     package_name = "ipyparallel.shellcmd"  # package name for send the command
     output_template = re.compile(r"__([a-z][a-z0-9_]+)=([a-z0-9\-\.]+)__", re.IGNORECASE)
@@ -220,8 +222,12 @@ class ShellCommandSend:
             self.initialize()
 
     @staticmethod
-    def _check_output(cmd, timeout=None):
-        return check_output(cmd, timeout=timeout).decode('utf8', 'replace')
+    def _check_output(cmd, **kwargs):
+        output = check_output(cmd, **kwargs)
+        if isinstance(output,str):
+            return output
+        else:
+            return output.decode('utf8', 'replace')
 
     @staticmethod
     def _runs_successful(cmd):
@@ -247,65 +253,50 @@ class ShellCommandSend:
         else:
             return str(param)
 
-    @staticmethod
-    def _powershell_quote(param):
-        if '"' in param or "'" in param or " " in param:
-            # we need to replace single and double quotes be two double quotes, but if we are inside a string,
-            # we need to prepend a backslash to the double quote. Otherwise it will get removed
-            quoted = ""
-            in_string = False
-            for idx, c in enumerate(param):
-                prev_c = None if idx == 0 else param[idx - 1]
-                next_c = None if idx == len(param) - 1 else param[idx + 1]
-                if c == '"' and prev_c != "\\":
-                    in_string = not in_string
-                    quoted += '"' * 2
-                    continue
-                if c == "'":
-                    if in_string:
-                        quoted += '\\"' * 2
-                    else:
+    def _cmd_send_via_shell(self, paramlist):
+        # unused/deprecated function which send a command as shell command rather than as python code (see _cmd_send)
+        # since it requires proper quoting for different shells, it's much more sensitive and complex than sending
+        # poor python code
+        def _powershell_quote(param):
+            if '"' in param or "'" in param or " " in param:
+                # we need to replace single and double quotes be two double quotes, but if we are inside a string,
+                # we need to prepend a backslash to the double quote. Otherwise it will get removed
+                quoted = ""
+                in_string = False
+                for idx, c in enumerate(param):
+                    prev_c = None if idx == 0 else param[idx - 1]
+                    next_c = None if idx == len(param) - 1 else param[idx + 1]
+                    if c == '"' and prev_c != "\\":
+                        in_string = not in_string
                         quoted += '"' * 2
-                    continue
-                quoted += c
-            return "'" + quoted + "'"
-        else:
-            return param
-
-    @staticmethod
-    def _cmd_quote(param):
-        if "'" in param:
-            tmp = param.strip()  # if already double quoted we do not need to quote
-            if tmp[0] == '"' and tmp[-1] == '"':
-                return tmp
+                        continue
+                    if c == "'":
+                        if in_string:
+                            quoted += '\\"' * 2
+                        else:
+                            quoted += '"' * 2
+                        continue
+                    quoted += c
+                return "'" + quoted + "'"
             else:
-                return '"' + tmp + '"'
-        else:
-            return param
+                return param
+        def _cmd_quote(param):
+            if "'" in param:
+                tmp = param.strip()  # if already double quoted we do not need to quote
+                if tmp[0] == '"' and tmp[-1] == '"':
+                    return tmp
+                else:
+                    return '"' + tmp + '"'
+            else:
+                return param
 
-    @staticmethod
-    def _dict2str(d):
-        tmp = {}
-        for k, v in d.items():
-            if isinstance(v, str) and v != "" and v[0] == '{' and v[-1] == '}':
-                try:
-                    v = v.replace("null", "None")
-                    v_dict = eval(v)
-                    if isinstance(v_dict, dict):
-                        v = v_dict
-                except Exception as e:
-                    pass
-            tmp[k] = v
-        return str(tmp)
-
-    def _send_shell_cmd(self, paramlist):
         if self.is_linux:
             paramlist = [shlex.quote(p) for p in paramlist]
         else:
             if self.is_powershell:
-                paramlist = [self._powershell_quote(p) for p in paramlist]
+                paramlist = [_powershell_quote(p) for p in paramlist]
             else:
-                paramlist = [self._cmd_quote(p) for p in paramlist]
+                paramlist = [_cmd_quote(p) for p in paramlist]
 
         full_list = [self.python_path, "-m", self.package_name] + paramlist
         if self.join_params:
@@ -320,20 +311,16 @@ class ShellCommandSend:
 
         return self._check_output(cmd)
 
-    def _send_python_code(self, code):
-        cmd = self.shell + self.args + [self.python_path]
-        return check_output(cmd, universal_newlines=True, input=code)
-
-    def _send_cmd(self, cmd, *args, **kwargs):
+    def _cmd_send(self, cmd, *args, **kwargs):
         if not self.send_receiver_class:
             preamble = f"from ipyparallel.cluster.shellcmd import ShellCommandReceive\n"
         else:
             preamble = f"import sys, os, json\n{self.receiver_code}\n"
 
-        # in code sending mode it is not required that the ipyparallel.cluster.shellcmd
+        # in send receiver mode it is not required that the ipyparallel.cluster.shellcmd
         # exists (or is update to date) on the 'other' side of the shell. This is particular
         # useful when doing further development without copying the adapted file before each
-        # test run
+        # test run. Furthermore, the calls are much faster.
         debug_str = ""
         if self.debugging:
             debug_str = "debugging=True"
@@ -347,7 +334,15 @@ class ShellCommandSend:
         py_cmd += ", ".join(f'{k}={self._format_for_python(v)}' for k, v in kwargs.items())
         py_cmd += ")"
         cmd = self.shell + self.args + [self.python_path]
-        return check_output(cmd, universal_newlines=True, input=py_cmd)
+        return self._check_output(cmd, universal_newlines=True, input=py_cmd)
+
+    def _get_pid(self, output):
+        # need to extract pid value
+        values = dict(self.output_template.findall(output))
+        if 'remote_pid' in values:
+            return int(values['remote_pid'])
+        else:
+            raise RuntimeError(f"Failed to get pid from output: {output}")
 
     def initialize(self):
         """initialize necessary variables by sending an echo command that works on all OS and shells"""
@@ -405,9 +400,9 @@ class ShellCommandSend:
         assert self.shell_info  # make sure that initialize was called already
         return self.shell_info
 
-    def check_python(self, python_path=None):
-        """Check if remote python can be started
-        :return: bool: flag if start was successful
+    def has_python(self, python_path=None):
+        """Check if remote python can be started ('python --version')
+        :return: bool: flag if python start was found
         """
         assert self.shell_info  # make sure that initialize was called already
         if not python_path:
@@ -415,23 +410,53 @@ class ShellCommandSend:
         cmd = self.shell + self.args + [python_path, '--version']
         return self._runs_successful(cmd)
 
-    def check_ipython_package(self):
+    def has_ipython_package(self):
         """Check if ipython package is installed in the remote python installation"""
+        assert self.shell_info  # make sure that initialize was called already
         cmd = self.shell + self.args + [self.python_path, "-m", "pip", "show", "ipython"]
         return self._runs_successful(cmd)
 
-    def check_output(self, cmd):
-        """generic subprocess.check_output call but using the shell connection"""
+    def check_output(self, cmd, **kwargs):
+        """subprocess.check_output call using the shell connection
+        :param cmd: command (str or list of strs) that should be executed
+        :param kwargs: additional parameters that are passed to subprocess.check_output
+        :return: output of executed command"""
+        assert self.shell_info  # make sure that initialize was called already
         full_cmd = self.shell + self.args + self._as_list(cmd)
-        return self._check_output(full_cmd)
+        return self._check_output(full_cmd, **kwargs)
 
-    def check_output_python_code(self, python_code):
-        """generic subprocess.check_output call and running the provided python code"""
-        return self._send_python_code(python_code)
+    def check_output_python_module(self, module_params, **kwargs):
+        """subprocess.check_output call based on python module call
+        :param module_params: python module and parameters (str or list of strs) that should be executed
+        :param kwargs: additional parameters that are passed to subprocess.check_output
+        :return: output of executed command
+        """
+        assert self.shell_info  # make sure that initialize was called already
+        cmd = self.shell + self.args + [self.python_path, "-m"] + self._as_list(module_params)
+        return self._check_output(cmd, **kwargs)
 
-    def cmd_start(self, cmd, env=None, output_file=None, log=None):
-        """start cmd into background and return remote pid"""
+    def check_output_python_code(self, python_code, **kwargs):
+        """subprocess.check_output call running the provided python code
+        :param python_code: code that should be executed
+        :param kwargs: additional parameters that are passed to subprocess.check_output
+        :return: output of executed command
+        """
+        assert self.shell_info  # make sure that initialize was called already
+        assert "input" not in kwargs                # must not be specified
+        assert "universal_newlines" not in kwargs   # must not be specified
+        cmd = self.shell + self.args + [self.python_path]
+        return self._check_output(cmd, universal_newlines=True, input=python_code, **kwargs)
+
+
+    def cmd_start(self, cmd, env=None, output_file=None):
+        """starts command into background and return remote pid
+        :param cmd: command (str or list of strs) that should be started
+        :param env: dictionary of environment variable that should be set before starting the process
+        :param output_file: stdout and stderr will be redirected to the (remote) file
+        :return: pid of started process
+        """
         # join commands into a single parameter. otherwise
+        assert self.shell_info  # make sure that initialize was called already
         if not self.is_linux:
             # for windows shells we need to split program and arguments into a list
             if isinstance(cmd, str):
@@ -441,16 +466,41 @@ class ShellCommandSend:
         else:
             paramlist = self._as_list(cmd)
 
-        output = self._send_cmd("start", paramlist, env=env, output_file=output_file)
-        # need to extract pid value
-        values = dict(self.output_template.findall(output))
-        if 'remote_pid' in values:
-            return int(values['remote_pid'])
-        else:
-            raise RuntimeError(f"Failed to get pid for {cmd}: {output}")
+        return self._get_pid(self._cmd_send("start", paramlist, env=env, output_file=output_file))
+
+    def cmd_start_python_module(self, module_params, env=None, output_file=None):
+        """start python module into background and return remote pid
+        :param module_params: python module and parameters (str or list of strs) that should be executed
+        :param env: dictionary of environment variable that should be set before starting the process
+        :param output_file: stdout and stderr will be redirected to the (remote) file
+        :return: pid of started process
+        """
+        assert self.shell_info  # make sure that initialize was called already
+        paramlist = [self.python_path, "-m"] + self._as_list(module_params)
+        return self._get_pid(self._cmd_send("start", paramlist, env=env, output_file=output_file))
+
+    def cmd_start_python_code(self, python_code, env=None, output_file=None):
+        """start python with provided code into background and return remote pid
+        :param python_code: code that should be executed
+        :param env: dictionary of environment variable that should be set before starting the process
+        :param output_file: stdout and stderr will be redirected to the (remote) file
+        :return: pid of started process
+        """
+        assert self.shell_info  # make sure that initialize was called already
+        # encoding the python code as base64 stream and decoding on the other side, remove any complicated
+        # quoting strategy. We do not check the length of the code, which could exceed the shell parameter
+        # string limit. Since the limit is typically > 2k, little code snippets should not cause any problems.
+        encoded = base64.b64encode(python_code.encode())
+        py_cmd = f'import base64;exec(base64.b64decode({encoded}).decode())'
+        if not self.is_linux:
+            py_cmd = '"'+py_cmd+'"'
+        paramlist = [self.python_path, "-c", py_cmd]
+        return self._get_pid(self._cmd_send("start", paramlist, env=env, output_file=output_file))
 
     def cmd_running(self, pid):
-        output = self._send_cmd("running", pid)
+        """check if given (remote) pid is running"""
+        assert self.shell_info  # make sure that initialize was called already
+        output = self._cmd_send("running", pid)
         # check output
         if "__running=1__" in output:
             return True
@@ -460,23 +510,27 @@ class ShellCommandSend:
             raise Exception(f"Unexpected output ({output}) returned from by the running shell command")
 
     def cmd_kill(self, pid, sig=None):
-        """kill remote process with the given pid"""
+        """kill (remote) process with the given pid"""
+        assert self.shell_info  # make sure that initialize was called already
         if sig:
-            self._send_cmd("kill", pid, sig=int(sig))
+            self._cmd_send("kill", pid, sig=int(sig))
         else:
-            self._send_cmd(["kill", str(pid)])
+            self._cmd_send("kill", pid)
 
     def cmd_mkdir(self, p):
         """make directory recursively"""
-        self._send_cmd("mkdir", p)
+        assert self.shell_info  # make sure that initialize was called already
+        self._cmd_send("mkdir", p)
 
     def cmd_rmdir(self, p):
         """remove directory recursively"""
-        self._send_cmd("rmdir", p)
+        assert self.shell_info  # make sure that initialize was called already
+        self._cmd_send("rmdir", p)
 
     def cmd_exists(self, p):
         """check if file/path exists"""
-        output = self._send_cmd("exists", p)
+        assert self.shell_info  # make sure that initialize was called already
+        output = self._cmd_send("exists", p)
         # check output
         if "__exists=1__" in output:
             return True
@@ -487,10 +541,11 @@ class ShellCommandSend:
 
     def cmd_remove(self, p):
         """delete remote file"""
-        output = self._send_cmd("remove", p)
+        assert self.shell_info  # make sure that initialize was called already
+        output = self._cmd_send("remove", p)
 
-
-#import sys
-#sender = ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, send_receiver_class=True)
-#sender.cmd_start('ping -n 5 127.0.0.1', env={"test": "jo"}, output_file="stdout.txt")
-
+# test some test code, which can be removed later on
+# import sys
+# sender = ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, send_receiver_class=1)
+# sender = ShellCommandSend(["/usr/bin/bash"], ["-c"], sys.executable, send_receiver_class=1)
+# pid = sender.cmd_start_python_code( "print('hallo johannes')", output_file="output.txt" )
