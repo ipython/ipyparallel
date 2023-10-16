@@ -14,7 +14,7 @@ from .test_cluster import test_to_from_dict  # noqa: F401
 
 
 @pytest.fixture(params=["SSH", "SSHProxy"])
-def ssh_config(request):
+def ssh_config(ssh_dir, request):
     windows = True if os.name == "nt" else False
 
     if windows and request.param == "SSHProxy":     # SSHProxy currently not working under Windows
