@@ -13,7 +13,7 @@ Currently, the following command are supported:
 """
 import json
 from subprocess import check_output, CalledProcessError, TimeoutExpired, Popen
-import re, os, time
+import re, os, time, sys
 import inspect
 import shlex
 import base64

@@ -6,6 +6,7 @@ import time, signal
 
 from ipyparallel.cluster.shellcmd import ShellCommandSend, Platform
 from subprocess import run
+import warnings
 
 windows_py_path = 'python'
 linux_py_path = '/opt/conda/bin/python3'
@@ -84,6 +85,11 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
 
     # initialize sender class
     sender.initialize()
+
+    if sender.break_away_support == False:
+        with pytest.warns(UserWarning):
+            warnings.warn("Break away process creation flag is not available (known issue for Github Runners)",
+                          UserWarning)
 
     info = sender.get_shell_info()
     assert len(info) == 2 and info[0] and info[1]
