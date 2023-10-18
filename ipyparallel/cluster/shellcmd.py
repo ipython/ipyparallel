@@ -12,13 +12,13 @@ Currently, the following command are supported:
 * remove:  removes a file
 """
 import json
-from subprocess import check_output, CalledProcessError, TimeoutExpired
-import re, os
+from subprocess import check_output, CalledProcessError, TimeoutExpired, Popen
+import re, os, time
 import inspect
 import shlex
 import base64
 import enum
-
+from tempfile import NamedTemporaryFile
 
 class Platform(enum.Enum):
     Unknown = 0,
@@ -51,9 +51,10 @@ class ShellCommandReceive:
     is written to stdout in the following form: __<key>=<value>__
     """
 
-    def __init__(self, debugging=False):
+    def __init__(self, debugging=False, use_break_way=True):
         self.debugging = debugging
         self.platform = Platform.get()
+        self.use_break_way = use_break_way
         pass
 
     def _linux_quote(self, p):
@@ -111,8 +112,9 @@ class ShellCommandReceive:
             from subprocess import DEVNULL
 
             flags = 0
-            flags |= CREATE_NEW_CONSOLE
-            flags |= CREATE_BREAKAWAY_FROM_JOB
+            if self.use_break_way != False:
+                flags |= CREATE_NEW_CONSOLE
+                flags |= CREATE_BREAKAWAY_FROM_JOB
 
             pkwargs = {
                 'close_fds': True,  # close stdin/stdout/stderr on child
@@ -127,6 +129,9 @@ class ShellCommandReceive:
             p = Popen(start_cmd, **pkwargs)
 
             print(f'__remote_pid={p.pid}__')
+            sys.stdout.flush()
+            if self.use_break_way != False:
+                p.wait()
         else:
             start_cmd = [self._linux_quote(x) for x in start_cmd]
 
@@ -233,6 +238,7 @@ class ShellCommandSend:
         self.shell_info = None
         self.platform = Platform.Unknown  # platform enum of shell
         self.is_powershell = None  # flag if shell is windows powershell (requires special parameter quoting)
+        self.break_away_support = None  # flag if process creation support the break_away flag (windows only)
         self.join_params = True  # join all cmd params into a single param. does NOT work with windows cmd
         self.pathsep = "/"  # equivalent to os.pathsep (will be changed during initialization)
 
@@ -342,11 +348,15 @@ class ShellCommandSend:
         # exists (or is update to date) on the 'other' side of the shell. This is particular
         # useful when doing further development without copying the adapted file before each
         # test run. Furthermore, the calls are much faster.
-        debug_str = ""
+        param_str = ""
         if self.debugging:
-            debug_str = "debugging=True"
+            param_str = "debugging=True"
+        if self.break_away_support == False:
+            if len(param_str) > 0:
+                param_str += ", "
+            param_str = "use_break_way=False"
 
-        py_cmd = f"{preamble}\nShellCommandReceive({debug_str}).cmd_{cmd}("
+        py_cmd = f"{preamble}\nShellCommandReceive({param_str}).cmd_{cmd}("
         assert len(args) == 1
         for a in args:
             py_cmd += self._format_for_python(a)
@@ -354,8 +364,44 @@ class ShellCommandSend:
             py_cmd += ", "
         py_cmd += ", ".join(f'{k}={self._format_for_python(v)}' for k, v in kwargs.items())
         py_cmd += ")"
-        cmd = self.shell + self.args + [self.python_path]
-        return self._check_output(cmd, universal_newlines=True, input=py_cmd)
+        cmd_args = self.shell + self.args + [self.python_path]
+        if cmd == 'start' and self.break_away_support == False:
+            assert self.platform == Platform.Windows
+            from subprocess import DETACHED_PROCESS, DEVNULL
+            # if windows platform doesn't support break away flag (e.g. Github Runner)
+            # we need to start a detached process (as work-a-round), the runs until the
+            # 'remote' process has finished. But we cannot direectly start the command as detached
+            # process, since redirection (for retreiving the pid) doesn't work. We need a detached
+            # proxy process that redirects output the to file, that can be read by current process
+            # to retrieve the pid.
+
+            tmp = NamedTemporaryFile(mode="w", delete=False)    # use python to generate a tempfile name
+            fo_name = tmp.name
+            tmp.close()
+            fi_name = fo_name+"_stdin.py"   # use tempfile name as basis for python script input
+            with open(fi_name, "w") as f:
+                f.write(py_cmd)
+
+            # simple python code that starts the actual cmd in a non detachted
+            py_detached = f"from subprocess import Popen;fo=open(r'{fo_name}','w');" \
+                          f"Popen({cmd_args}+[r'{fi_name}'], stdout=fo, stderr=fo)"
+            # now start proxy process detached
+            p = Popen([sys.executable, '-c', py_detached], close_fds=True, creationflags=DETACHED_PROCESS)
+
+            # retrieve (remote) pid from output file
+            output = ""
+            while True:
+                with open(fo_name, "r") as f:
+                    output = f.read()
+                    if len(output) > 0:
+                        break
+                    if p.poll():
+                        if p.returncode != 0:
+                            raise CalledProcessError(p.returncode, cmd)
+                time.sleep(0.1)  # wait a 0.1s and repeat
+            return output
+        else:
+            return self._check_output(cmd_args, universal_newlines=True, input=py_cmd)
 
     def _get_pid(self, output):
         # need to extract pid value
@@ -364,6 +410,20 @@ class ShellCommandSend:
             return int(values['remote_pid'])
         else:
             raise RuntimeError(f"Failed to get pid from output: {output}")
+
+    def _check_for_break_away_flag(self):
+        assert self.platform == Platform.Windows    # test only relevant for windows
+        assert self.python_path is not None
+        cmd = [self.python_path, "-c",
+               "import subprocess; subprocess.Popen(['cmd.exe', '/C'], close_fds=True, \
+               creationflags=subprocess.CREATE_BREAKAWAY_FROM_JOB)"]
+        try:
+            # non-zero return code, if break_away test fails
+            self._check_output(cmd).strip()
+        except Exception:
+            return False
+
+        return True
 
     def initialize(self):
         """initialize necessary variables by sending an echo command that works on all OS and shells"""
@@ -410,6 +470,9 @@ class ShellCommandSend:
                 self.platform = Platform.MacOS if "darwin" in val else Platform.Linux
             elif key == "SHELL":
                 shell = val
+
+        if self.platform == Platform.Windows and self.python_path is not None:
+            self.break_away_support = self._check_for_break_away_flag()
 
         self.shell_info = (system, shell)
 
@@ -566,7 +629,10 @@ class ShellCommandSend:
         output = self._cmd_send("remove", p)
 
 # test some test code, which can be removed later on
-# import sys
-# sender = ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, send_receiver_class=1)
+#import sys
+#sender = ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, send_receiver_class=1)
+#sender.break_away_support = False
 # sender = ShellCommandSend(["/usr/bin/bash"], ["-c"], sys.executable, send_receiver_class=1)
-# pid = sender.cmd_start_python_code( "print('hallo johannes')", output_file="output.txt" )
+#pid = sender.cmd_start_python_code( "print('hallo johannes')", output_file="output.txt" )
+#pid = sender.cmd_start( ['ping', '-n', '30', '127.0.0.1'], output_file="output.txt" )
+#print(f"pid={pid}")
