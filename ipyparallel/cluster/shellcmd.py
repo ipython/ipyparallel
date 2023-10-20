@@ -130,7 +130,7 @@ class ShellCommandReceive:
 
             print(f'__remote_pid={p.pid}__')
             sys.stdout.flush()
-            if self.use_break_way != False:
+            if self.use_break_way == False:
                 p.wait()
         else:
             start_cmd = [self._linux_quote(x) for x in start_cmd]
@@ -383,8 +383,11 @@ class ShellCommandSend:
                 f.write(py_cmd)
 
             # simple python code that starts the actual cmd in a non detachted
-            py_detached = f"from subprocess import Popen;fo=open(r'{fo_name}','w');" \
-                          f"Popen({cmd_args}+[r'{fi_name}'], stdout=fo, stderr=fo)"
+            cmd_args_str = ", ".join(f'{self._format_for_python(c)}' for c in cmd_args)
+            py_detached = f"from subprocess import Popen,PIPE;fo=open(r'{fo_name}','w');" \
+                          f"fi=open(r'{fi_name}','r');input=fi.read();"\
+                          f"p=Popen(["+cmd_args_str+"], stdin=PIPE, stdout=fo, stderr=fo, universal_newlines=True);" \
+                          f"p.stdin.write(input);p.stdin.flush();p.communicate()"
             # now start proxy process detached
             p = Popen([sys.executable, '-c', py_detached], close_fds=True, creationflags=DETACHED_PROCESS)
 
@@ -395,9 +398,12 @@ class ShellCommandSend:
                     output = f.read()
                     if len(output) > 0:
                         break
-                    if p.poll():
+                    if p.poll() is not None:
                         if p.returncode != 0:
                             raise CalledProcessError(p.returncode, cmd)
+                        else:
+                            raise Exception("internal error: no pid returned, although exit code of process was 0")
+
                 time.sleep(0.1)  # wait a 0.1s and repeat
             return output
         else:
@@ -631,8 +637,9 @@ class ShellCommandSend:
 # test some test code, which can be removed later on
 #import sys
 #sender = ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, send_receiver_class=1)
+#sender = ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], "python", send_receiver_class=1)
 #sender.break_away_support = False
-# sender = ShellCommandSend(["/usr/bin/bash"], ["-c"], sys.executable, send_receiver_class=1)
+#sender = ShellCommandSend(["/usr/bin/bash"], ["-c"], sys.executable, send_receiver_class=1)
 #pid = sender.cmd_start_python_code( "print('hallo johannes')", output_file="output.txt" )
 #pid = sender.cmd_start( ['ping', '-n', '30', '127.0.0.1'], output_file="output.txt" )
 #print(f"pid={pid}")
