@@ -1,4 +1,5 @@
 """test shell command classes"""
+import subprocess
 
 import pytest
 import sys, os
@@ -30,7 +31,6 @@ senders = [
 sender_ids = [ "cmd", "cmd_src", "pwsh", "pwsh_src", "ssh-win", "ssh-win_src", "wsl",
                "bash", "bash_src", "ssh-linux", "ssh-linux_src",
                "bash-macos", "bash-macos_src"]
-
 
 @pytest.fixture
 def shellcmd_test_cmd():
@@ -91,6 +91,8 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
             warnings.warn("Break away process creation flag is not available (known issue for Github Runners)",
                           UserWarning)
 
+    #sender.break_away_support = False  # just for testing
+
     info = sender.get_shell_info()
     assert len(info) == 2 and info[0] and info[1]
 
@@ -98,6 +100,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
 
     python_ok = sender.has_python()
     assert python_ok is True
+
 
     test_dir = prefix + "shellcmd_test"
     test_file = "testfile.txt"
