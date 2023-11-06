@@ -1,5 +1,6 @@
-from functools import partial
 import os
+from functools import partial
+
 import pytest
 from traitlets.config import Config
 
@@ -17,11 +18,10 @@ from .test_cluster import test_to_from_dict  # noqa: F401
 def ssh_config(ssh_dir, request):
     windows = True if os.name == "nt" else False
 
-    if windows and request.param == "SSHProxy":     # SSHProxy currently not working under Windows
+    if (
+        windows and request.param == "SSHProxy"
+    ):  # SSHProxy currently not working under Windows
         pytest.skip("Proxy tests currently not working under Windows")
-
-    if windows and "GITHUB_RUNNER" in os.environ:
-        pytest.skip("Disable windows ssh tests in github runners")
 
     c = Config()
     c.Cluster.controller_ip = '0.0.0.0'

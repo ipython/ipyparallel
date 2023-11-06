@@ -1,8 +1,8 @@
-name: SSH-Test 
+name: SSH-Test
 
 on:
   workflow_dispatch:
-  
+
 concurrency:
   group: >-
     ${{ github.workflow }}-
@@ -19,7 +19,7 @@ env:
 jobs:
   test:
     runs-on: ${{ matrix.runs_on || 'ubuntu-20.04' }}
-    timeout-minutes: 20
+    timeout-minutes: 45
 
     strategy:
       # Keep running even if one variation of the job fail
@@ -65,6 +65,11 @@ jobs:
                   f.write(f"{key}={value}\n")
           EOF
 
+      - name: Docker infos
+        run: |
+          docker version
+          docker images
+
       - name: Set up docker-compose for ssh linux launcher
         if: ${{ matrix.cluster_type == 'ssh' && !contains(matrix.runs_on, 'windows') }}
         run: |
@@ -72,44 +77,71 @@ jobs:
           export COMPOSE_DOCKER_CLI_BUILD=1
           cd ci/ssh
           docker-compose -f linux_docker-compose.yaml up -d --build
-          
+
           # retrieve id_rsa file for public key authentication
           mkdir ~/.ssh/
           docker cp ssh_sshd_1:/home/ciuser/.ssh/id_rsa ~/.ssh/id_rsa
           cat ~/.ssh/id_rsa
-          
+
           #check ssh connection and accept host key
-          ssh -o "StrictHostKeyChecking no" ciuser@localhost -p 2222 -v ls /
+          ssh -o "StrictHostKeyChecking no" ciuser@127.0.0.1 -p 2222 -v ls /
+
+          # just to see the ip-address of runner vm
+          ifconfig
 
       - name: Set up docker-compose for ssh windows launcher
         if: ${{ matrix.cluster_type == 'ssh' && contains(matrix.runs_on, 'windows') }}
+        env:
+          SSH_HOST: ciuser@127.0.0.1
+          SSH_PORT: 2222
+          CODE_ROOT: c:\src\ipyparallel
         run: |
-          cd ci/ssh-win
+          cd ci/ssh
+          # determine host ip and place it as 'static' env variables in corresponding docker compose file (win_Dockerfile_template -> win_Dockerfile)
+          $env:docker_host_ip=(Get-NetIPConfiguration -InterfaceAlias "Ethernet*").IPv4Address.IPAddress.Trim()
+          $content = Get-Content "win_Dockerfile_template"
+          $content | ForEach-Object { 
+             $_ -replace '\${docker_host_ip}', $env:docker_host_ip -replace '\${docker_host_name}', $env:computername
+          } | Set-Content "win_Dockerfile"
           docker-compose -f win_docker-compose.yaml up -d --build
-          
+
           # retrieve id_rsa file for public key authentication
           mkdir $env:USERPROFILE/.ssh/
           docker run ipyparallel-sshd powershell.exe -Command "type C:\Users\ciuser\.ssh\id_rsa" | out-file -encoding ascii $env:USERPROFILE/.ssh/id_rsa
-          
+
+          # install newer version of openssh (removes "GetConsoleMode on STD_INPUT_HANDLE failed with 6" error in pytest)
+          choco install openssh --pre
+          mv C:\Windows\System32\OpenSSH C:\Windows\System32\_OpenSSH
+
           #check ssh connection and accept host key
-          ssh -o "StrictHostKeyChecking no" ciuser@localhost -p 2222 -v ls c:\
-          
+          ssh -o "StrictHostKeyChecking no" $env:SSH_HOST -p $env:SSH_PORT -v dir c:\
+
           # copy ipyparallel code to docker container (use zip, scp and unzip)
-          ssh ciuser@localhost -p 2222 mkdir c:\src\ipyparallel
-          # zip ipyparallel files (excluding file might not be needed)
+          ssh $env:SSH_HOST -p $env:SSH_PORT mkdir $env:CODE_ROOT
+
+          # zip ipyparallel files (excluding files probably not needed)
+          cd ../..
           $exclude = @("__pycache__","node_modules")
           $files = Get-ChildItem -Path "." -Exclude $exclude
           Compress-Archive -Path $files -DestinationPath ipyparallel.zip -CompressionLevel Fastest
           # copy file into docker (we need to do it over ssh since docker copy or mount doesn't work in Hyper-V)
-          scp -P 2222 ipyparallel.zip ciuser@localhost:c:\src\ipyparallel
+          scp -P $env:SSH_PORT ipyparallel.zip ${env:SSH_HOST}:${env:CODE_ROOT}
           # deflate ipyparallel files
-          ssh ciuser@localhost -p 2222 powershell.exe -Command "Expand-Archive -Path c:\src\ipyparallel\ipyparallel.zip -DestinationPath c:\src\ipyparallel"
-          
+          ssh $env:SSH_HOST -p $env:SSH_PORT powershell.exe -Command "Expand-Archive -Path $env:CODE_ROOT\ipyparallel.zip -DestinationPath $env:CODE_ROOT"
+
           # pip install ipyparallel files
-          ssh ciuser@localhost -p 2222 dir c:\src\ipyparallel
-          ssh ciuser@localhost -p 2222 "cd c:\src\ipyparallel && pip install -e ."
-          
-          
+          #ssh $env:SSH_HOST -p $env:SSH_PORT "cd $env:CODE_ROOT && pip install -e ."
+          ssh $env:SSH_HOST -p $env:SSH_PORT "pip install -e file://c:/src/ipyparallel#egg=ipyparallel[test]"
+
+          # we need to disable the windows firewall for github runners otherwise the ipyparallel engines cannot connect to the controller.
+          # obviously, a more precautious adaption of the firewall would be desirable. since an adaption of the firewall is NOT necessary 
+          # for a local standard windows environment, no further improvements were made.  
+          echo "Disable Firewall:"
+          Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled False
+
+          echo "Check if container can ping the docker host (requires adapted hosts file and firewall disabled)"
+          docker run ipyparallel-sshd ping -n 1 $env:computername
+
       - name: Set up slurm
         if: ${{ matrix.cluster_type == 'slurm' }}
         run: |
@@ -160,12 +192,12 @@ jobs:
       - name: Run ${{ matrix.cluster_type }} shellcmd tests
         if: ${{ matrix.cluster_type }}
         run: |
-          echo "${EXEC:-} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_shellcmd.py"
+          pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_shellcmd.py
 
       - name: Run ${{ matrix.cluster_type }} tests
         if: ${{ matrix.cluster_type }}
         run: |
-          echo "${EXEC:-} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py"
+          pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
 
-      - name: Submit codecov report
-        uses: codecov/codecov-action@v3
+      #- name: Submit codecov report
+      #  uses: codecov/codecov-action@v3

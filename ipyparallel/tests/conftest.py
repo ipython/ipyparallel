@@ -5,7 +5,7 @@ import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from subprocess import check_call, check_output
+from subprocess import check_output
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest import mock
 
@@ -164,6 +164,7 @@ def Cluster(
 
     yield ClusterConstructor
 
+
 @pytest.fixture(scope="session")
 def ssh_running():
     # check if an ssh docker container is running
@@ -172,11 +173,10 @@ def ssh_running():
     except Exception:
         return False
     if len(out) > 0:
-        id = out    #container id
+        id = out  # container id
         return True
 
     return False
-
 
 
 @pytest.fixture(scope="session")
@@ -214,7 +214,7 @@ def ssh_dir(request):
     return ssh_dir
 
 
-# ssh_key fixture not needed any more, since id_rsa is copied during docker-compose
+# ssh_key fixture not needed any more, since id_rsa is copied during docker-compose stage
 # @pytest.fixture
 # def ssh_key(tmpdir, ssh_dir):
 #     key_file = tmpdir.join("id_rsa")

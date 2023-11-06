@@ -1,43 +1,129 @@
 """test shell command classes"""
-import subprocess
+import signal
+import sys
+import time
+import warnings
 
 import pytest
-import sys, os
-import time, signal
 
-from ipyparallel.cluster.shellcmd import ShellCommandSend, Platform
-from subprocess import run
-import warnings
+from ipyparallel.cluster.shellcmd import Platform, ShellCommandSend
 
 windows_py_path = 'python'
 linux_py_path = '/opt/conda/bin/python3'
 
 senders = [
-    ("windows", ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, initialize=False)),
-    ("windows", ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, initialize=False, send_receiver_class=1)),
-    ("windows", ShellCommandSend(["powershell.exe"], ["-Command"], sys.executable, initialize=False)),
-    ("windows", ShellCommandSend(["powershell.exe"], ["-Command"], sys.executable, initialize=False,send_receiver_class=1)),
-    ("windows", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], windows_py_path, initialize=False)),
-    ("windows", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], windows_py_path, initialize=False,send_receiver_class=1)),
-    ("wsl",  ShellCommandSend(["bash"], ["-c"], "python3", initialize=False, send_receiver_class=1)),
+    (
+        "windows",
+        ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, initialize=False),
+    ),
+    (
+        "windows",
+        ShellCommandSend(
+            ["cmd.exe"], ["/C"], sys.executable, initialize=False, send_receiver_class=1
+        ),
+    ),
+    (
+        "windows",
+        ShellCommandSend(
+            ["powershell.exe"], ["-Command"], sys.executable, initialize=False
+        ),
+    ),
+    (
+        "windows",
+        ShellCommandSend(
+            ["powershell.exe"],
+            ["-Command"],
+            sys.executable,
+            initialize=False,
+            send_receiver_class=1,
+        ),
+    ),
+    (
+        "windows",
+        ShellCommandSend(
+            ["ssh"],
+            ["-p", "2222", "ciuser@127.0.0.1"],
+            windows_py_path,
+            initialize=False,
+        ),
+    ),
+    (
+        "windows",
+        ShellCommandSend(
+            ["ssh"],
+            ["-p", "2222", "ciuser@127.0.0.1"],
+            windows_py_path,
+            initialize=False,
+            send_receiver_class=1,
+        ),
+    ),
+    (
+        "wsl",
+        ShellCommandSend(
+            ["bash"], ["-c"], "python3", initialize=False, send_receiver_class=1
+        ),
+    ),
     ("linux", ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3", initialize=False)),
-    ("linux", ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3", initialize=False, send_receiver_class=1)),
-    ("linux", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], linux_py_path, initialize=False)),
-    ("linux", ShellCommandSend(["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], linux_py_path, initialize=False,send_receiver_class=1)),
+    (
+        "linux",
+        ShellCommandSend(
+            ["/usr/bin/bash"],
+            ["-c"],
+            "python3",
+            initialize=False,
+            send_receiver_class=1,
+        ),
+    ),
+    (
+        "linux",
+        ShellCommandSend(
+            ["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], linux_py_path, initialize=False
+        ),
+    ),
+    (
+        "linux",
+        ShellCommandSend(
+            ["ssh"],
+            ["-p", "2222", "ciuser@127.0.0.1"],
+            linux_py_path,
+            initialize=False,
+            send_receiver_class=1,
+        ),
+    ),
     ("macos", ShellCommandSend(["/bin/bash"], ["-c"], "python3", initialize=False)),
-    ("macos", ShellCommandSend(["/bin/bash"], ["-c"], "python3", initialize=False, send_receiver_class=1)),
+    (
+        "macos",
+        ShellCommandSend(
+            ["/bin/bash"], ["-c"], "python3", initialize=False, send_receiver_class=1
+        ),
+    ),
 ]
 
-sender_ids = [ "cmd", "cmd_src", "pwsh", "pwsh_src", "ssh-win", "ssh-win_src", "wsl",
-               "bash", "bash_src", "ssh-linux", "ssh-linux_src",
-               "bash-macos", "bash-macos_src"]
+sender_ids = [
+    "cmd",
+    "cmd_src",
+    "pwsh",
+    "pwsh_src",
+    "ssh-win",
+    "ssh-win_src",
+    "wsl",
+    "bash",
+    "bash_src",
+    "ssh-linux",
+    "ssh-linux_src",
+    "bash-macos",
+    "bash-macos_src",
+]
+
 
 @pytest.fixture
 def shellcmd_test_cmd():
     """returns a command that runs for 5 seconds"""
     test_command = {}
     test_command["windows"] = 'ping -n 5 127.0.0.1'
-    test_command["linux"] = 'ping -c 5 127.0.0.1'  # ping needs to be installed to the standard ubuntu docker image
+    test_command[
+        "linux"
+    ] = 'ping -c 5 127.0.0.1'  # ping needs to be installed to the standard ubuntu docker image
     test_command["macos"] = 'ping -c 5 127.0.0.1'
     return test_command
 
@@ -62,14 +148,10 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     prefix = ""
     if Platform.get() == Platform.Windows:
         if platform == "wsl":
-            pytest.skip("wsl deactivated")      # comment to activate wsl tests
+            pytest.skip("wsl deactivated")  # comment to activate wsl tests
             prefix = "/home/jo"
         elif platform != "windows":
             pytest.skip("other platform")
-
-        #  work-a-round established that tests work in github runners (see https://github.com/actions/runner/issues/595)
-        #if "GITHUB_RUNNER" in os.environ:
-        #    pytest.skip("Disable windows shellcmd tests in github runners")
 
     elif Platform.get() == Platform.Linux:
         if platform != "linux":
@@ -88,10 +170,12 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
 
     if sender.break_away_support == False:
         with pytest.warns(UserWarning):
-            warnings.warn("Break away process creation flag is not available (known issue for Github Runners)",
-                          UserWarning)
+            warnings.warn(
+                "Break away process creation flag is not available (known issue for Github Runners)",
+                UserWarning,
+            )
 
-    #sender.break_away_support = False  # just for testing
+    # sender.break_away_support = False  # just for testing
 
     info = sender.get_shell_info()
     assert len(info) == 2 and info[0] and info[1]
@@ -100,7 +184,6 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
 
     python_ok = sender.has_python()
     assert python_ok is True
-
 
     test_dir = prefix + "shellcmd_test"
     test_file = "testfile.txt"
@@ -124,7 +207,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     assert sender.cmd_exists(test_dir) is False
 
     # output environment (just for testing)
-    #if sender.platform != Platform.Windows:
+    # if sender.platform != Platform.Windows:
     #    pid = sender.cmd_start("env", output_file="env_output.txt")
     #    print_file(sender, "env_output.txt")
 
@@ -147,14 +230,28 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
 
     # do environment setting test
     # we have a dictionary of three environment entries, where the first one is empty
-    env_dict = {"IPP_CLUSTER_ID": "",
-                "IPP_PROFILE_DIR": r"~/.ipython/profile_ssh",
-                "IPP_CONNECTION_INFO": {"ssh": "", "interface": "tcp://*", "registration": 60691, "control": 60692,
-                                        "mux": 60693, "task": 60694, "iopub": 60695, "hb_ping": 60696, "hb_pong": 60697,
-                                        "broadcast": [60698, 60699], "key": "169b682b-337c645951e7d47723061090",
-                                        "curve_serverkey": "null", "location": "host", "pack": "json", "unpack": "json",
-                                        "signature_scheme": "hmac-sha256"},
-                }
+    env_dict = {
+        "IPP_CLUSTER_ID": "",
+        "IPP_PROFILE_DIR": r"~/.ipython/profile_ssh",
+        "IPP_CONNECTION_INFO": {
+            "ssh": "",
+            "interface": "tcp://*",
+            "registration": 60691,
+            "control": 60692,
+            "mux": 60693,
+            "task": 60694,
+            "iopub": 60695,
+            "hb_ping": 60696,
+            "hb_pong": 60697,
+            "broadcast": [60698, 60699],
+            "key": "169b682b-337c645951e7d47723061090",
+            "curve_serverkey": "null",
+            "location": "host",
+            "pack": "json",
+            "unpack": "json",
+            "signature_scheme": "hmac-sha256",
+        },
+    }
     # we use a small python script to output provided environment setting
     python_cmd = "import os;"
     python_cmd += "print('IPP_CLUSTER_ID set =', 'IPP_CLUSTER_ID' in os.environ);"
@@ -163,7 +260,9 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
 
     output_file = prefix + "stdout.txt"
     # pid = sender.cmd_start([sender.python_path, "-c", python_cmd], env=env_dict, output_file=output_file)
-    pid = sender.cmd_start_python_code( python_cmd, env=env_dict, output_file=output_file)
+    pid = sender.cmd_start_python_code(
+        python_cmd, env=env_dict, output_file=output_file
+    )
 
     counter = 0
     max_counter = 5

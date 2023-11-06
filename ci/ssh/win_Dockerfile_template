@@ -2,10 +2,16 @@
 FROM mcr.microsoft.com/windows/servercore:ltsc2019
 SHELL ["powershell"]
 
+# we use the native windows cpython installer
 ENV PYTHON_VERSION 3.8.10
 ENV PYTHON_RELEASE 3.8.10
 
-# RUN --mount=type=bind,source=D:/swdvlp64_cmake/external/ipyparallel,target=C:/src/ipyparallel
+# the following env variable values will be 'statically' replaced by the corresponding github workflow script
+# if the values aren't replaced the container hosts file isn't changed which is typically no problem in a local
+# environment. but it's a necessity for github runners, since the host name resolution inside the container doesn't
+# work correctly while trying to register with the ipyparallel controller (for linux runners this isn't an issue)
+ENV docker_host_ip   ${docker_host_ip}
+ENV docker_host_name ${docker_host_name}
 
 #download and install latest node js version
 RUN $baseurl = 'https://nodejs.org/dist/latest/'; \
@@ -29,7 +35,20 @@ RUN $baseurl = 'https://nodejs.org/dist/latest/'; \
 	Write-Host 'Removing setup file...'; \
 	Remove-Item node.msi -Force; \
 	\
-	Write-Host 'Complete.'
+	Write-Host 'Complete.'; \
+	\
+#add the docker host name and ip to the container hosts file (needed for the github runners since the docker host name resolution doesn't work there)
+	$hostsfile='C:\Windows\System32\drivers\etc\hosts'; \
+	$line=\"$env:docker_host_ip $env:docker_host_name\"; \
+	if ($line.Trim().Length -eq 0) { \
+		Write-Host 'Environment variables docker_host_[name|ip] not set. Hosts file unchanged!'; \
+	} else { \
+		Write-Host 'Adapting hosts file '; \
+		$h=(Get-Content $hostsfile)+$line; \
+		echo $h | out-file -encoding ASCII $hostsfile; \
+		type $hostsfile; \
+	}
+
 
 #download and install python
 RUN $url = ('https://www.python.org/ftp/python/{0}/python-{1}-amd64.exe' -f $env:PYTHON_RELEASE, $env:PYTHON_VERSION); \
@@ -54,8 +73,8 @@ RUN $url = ('https://www.python.org/ftp/python/{0}/python-{1}-amd64.exe' -f $env
 #the installer updated PATH, so we should refresh our local value
 	$env:PATH = [Environment]::GetEnvironmentVariable('PATH', [EnvironmentVariableTarget]::Machine); \
 	\
-	Write-Host 'Verifying install ...'; \
-	Write-Host '  python --version'; python --version; \
+	Write-Host 'Verifying python version ...'; \
+	python --version; \
 	\
 	Write-Host 'Upgrade pip ...'; \
 	python -m pip install --upgrade pip; \
@@ -89,8 +108,7 @@ RUN Write-Host 'Create key pair and copy public key...';\
 # switch back to the admin user 
 USER containeradministrator
 
-# this was the only way i found, to keep the sshd running 
-# running it the context of a user (even if its the admin doesn't, back of some right issues)
+# This is apparently the only way to keep the sshd service running.
+# Running sshd in the foreground in the context of a user (as it is done for linux), doesn't work under Windows.
+# Even if it is started as admin user, errors occur during logon (lack of some system rights)
 CMD powershell -NoExit -Command "Start-Service sshd"
-
-

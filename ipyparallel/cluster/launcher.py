@@ -1164,8 +1164,15 @@ class SSHLauncher(LocalProcessLauncher):
         if getattr(self, 'ssh_sender', None):
             return self.ssh_sender
 
-        self.log.info(f'Create ShellCommandSend object ({self.ssh_cmd}, {self.ssh_args + [self.location]}, {self.remote_python} )')
-        self.ssh_sender = ShellCommandSend(self.ssh_cmd, self.ssh_args + [self.location], self.remote_python)
+        self.log.info(
+            f'Create ShellCommandSend object ({self.ssh_cmd}, {self.ssh_args + [self.location]}, {self.remote_python} )'
+        )
+        self.ssh_sender = ShellCommandSend(
+            self.ssh_cmd,
+            self.ssh_args + [self.location],
+            self.remote_python,
+            log=self.log,
+        )
         return self.ssh_sender
 
     def _reconstruct_process(self, d):
@@ -1208,7 +1215,7 @@ class SSHLauncher(LocalProcessLauncher):
 
     def _send_file(self, local, remote, wait=True):
         """send a single file"""
-        full_remote = f"{self.location}:{remote}"
+        full_remote = f"{self.location}:{remote}".replace("\\", "/")
         for i in range(10 if wait else 0):
             if not os.path.exists(local):
                 self.log.debug("waiting for %s" % local)
@@ -1231,7 +1238,7 @@ class SSHLauncher(LocalProcessLauncher):
 
     def _fetch_file(self, remote, local, wait=True):
         """fetch a single file"""
-        full_remote = f"{self.location}:{remote}"
+        full_remote = f"{self.location}:{remote}".replace("\\", "/")
         self.log.info("fetching %s from %s", local, full_remote)
         for i in range(10 if wait else 0):
             # wait up to 10s for remote file to exist
@@ -1269,15 +1276,25 @@ class SSHLauncher(LocalProcessLauncher):
         shell_info = self.ssh_sender.get_shell_info()
         python_ok = self.ssh_sender.has_python()
         ipython_installed = self.ssh_sender.has_ipython_package()
+        if self.log:
+            self.log.info(
+                f"ssh sender object initiated (break_away_support={self.ssh_sender.break_away_support})"
+            )
 
         # create remote profile dir
-        self.ssh_sender.check_output_python_module(["IPython", "profile", "create", "--profile-dir", self.remote_profile_dir])
+        self.ssh_sender.check_output_python_module(
+            ["IPython", "profile", "create", "--profile-dir", self.remote_profile_dir]
+        )
         self.send_files()
-        self.pid = self.ssh_sender.cmd_start(self.program + self.program_args, env=self.get_env(), output_file=self.remote_output_file)
+        self.pid = self.ssh_sender.cmd_start(
+            self.program + self.program_args,
+            env=self.get_env(),
+            output_file=self.remote_output_file,
+        )
         if self.log:
             remote_cmd = ' '.join(self.program + self.program_args)
             self.log.info(f"Running `{remote_cmd}`")
-            #self.log.debug("Running script via ssh:\n%s", input_script)
+            # self.log.debug("Running script via ssh:\n%s", input_script)
             pass
         self.notify_start({'host': self.location, 'pid': self.pid})
         self._start_waiting()
