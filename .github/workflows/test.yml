@@ -205,12 +205,12 @@ jobs:
         run: |
           EXEC='docker exec -i ${{ matrix.container }}'
           echo "EXEC=${EXEC}" >> $GITHUB_ENV
-          echo "${EXEC} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py"
           ${EXEC} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
 
       - name: Run ${{ matrix.cluster_type }} tests
         if: ${{ matrix.cluster_type && !matrix.container }}
         run: |
+          # ${EXEC:-} syntax doesn't work under windows. hence, the slurm test was move to the previous step
           pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
 
       - name: Run tests
