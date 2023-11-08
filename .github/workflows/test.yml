@@ -200,15 +200,16 @@ jobs:
       - name: Show environment
         run: pip freeze
 
-      - name: Run tests in container ${{ matrix.container }}
-        if: ${{ matrix.container }}
-        run: echo "EXEC=docker exec -i ${{ matrix.container }}" >> $GITHUB_ENV
+      - name: Run ${{ matrix.cluster_type }} tests in container ${{ matrix.container }}
+        if: ${{ matrix.cluster_type && matrix.container }}
+        run: \
+          echo "EXEC=docker exec -i ${{ matrix.container }}" >> $GITHUB_ENV
+          echo "${EXEC:-} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py"
+          ${EXEC:-} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
 
       - name: Run ${{ matrix.cluster_type }} tests
         if: ${{ matrix.cluster_type }}
         run: |
-          # ${EXEC:-} pytest... doesn't work under windows. Is ${EXEC:-} realy necessary?
-          echo "${EXEC:-} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py"
           pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
 
       - name: Run tests
