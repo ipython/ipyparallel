@@ -11,27 +11,45 @@ Currently the following command are supported:
 * exists:  checks if a file/directory exists
 * remove:  removes a file
 """
+import os
+import sys
 from argparse import ArgumentParser
-import sys, os
 
 from .cluster.shellcmd import ShellCommandReceive
 
+
 def main():
-    parser = ArgumentParser(description='Perform some standard shell command in a platform independent way')
-    parser.add_argument('--debug', action='store_true', help='append command line parameters to \'sys_arg.txt\'')
+    parser = ArgumentParser(
+        description='Perform some standard shell command in a platform independent way'
+    )
+    parser.add_argument(
+        '--debug',
+        action='store_true',
+        help='append command line parameters to \'sys_arg.txt\'',
+    )
     subparsers = parser.add_subparsers(dest='cmd', help='sub-command help')
 
     # create the parser for the "a" command
-    parser_start = subparsers.add_parser('start', help='start a process into background')
+    parser_start = subparsers.add_parser(
+        'start', help='start a process into background'
+    )
     parser_start.add_argument('--env', help='optional environment dictionary')
-    parser_start.add_argument('--output_file', help='optional output redirection (for stdout and stderr)')
+    parser_start.add_argument(
+        '--output_file', help='optional output redirection (for stdout and stderr)'
+    )
     parser_start.add_argument('start_cmd', nargs='+', help='command that help')
 
-    parser_running = subparsers.add_parser('running', help='check if a process is running')
-    parser_running.add_argument('pid', type=int, help='pid of process that should be checked')
+    parser_running = subparsers.add_parser(
+        'running', help='check if a process is running'
+    )
+    parser_running.add_argument(
+        'pid', type=int, help='pid of process that should be checked'
+    )
 
     parser_kill = subparsers.add_parser('kill', help='kill a process')
-    parser_kill.add_argument('pid', type=int, help='pid of process that should be killed')
+    parser_kill.add_argument(
+        'pid', type=int, help='pid of process that should be killed'
+    )
     parser_kill.add_argument('--sig', type=int, help='signals to send')
 
     parser_mkdir = subparsers.add_parser('mkdir', help='create directory recursively')
@@ -40,7 +58,9 @@ def main():
     parser_rmdir = subparsers.add_parser('rmdir', help='remove directory recursively')
     parser_rmdir.add_argument('path', help='directory path to be removed')
 
-    parser_exists = subparsers.add_parser('exists', help='checks if a file/directory exists')
+    parser_exists = subparsers.add_parser(
+        'exists', help='checks if a file/directory exists'
+    )
     parser_exists.add_argument('path', help='path to check')
 
     parser_remove = subparsers.add_parser('remove', help='removes a file')
