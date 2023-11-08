@@ -203,9 +203,10 @@ jobs:
       - name: Run ${{ matrix.cluster_type }} tests in container ${{ matrix.container }}
         if: ${{ matrix.cluster_type && matrix.container }}
         run: \
-          echo "EXEC=docker exec -i ${{ matrix.container }}" >> $GITHUB_ENV
-          echo "${EXEC:-} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py"
-          ${EXEC:-} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
+          EXEC='docker exec -i ${{ matrix.container }}'
+          echo "EXEC=${EXEC}" >> $GITHUB_ENV
+          echo "${EXEC} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py"
+          ${EXEC} pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
 
       - name: Run ${{ matrix.cluster_type }} tests
         if: ${{ matrix.cluster_type }}
