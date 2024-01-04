@@ -591,7 +591,7 @@ def compare_datetimes(a, b):
 
 def utcnow():
     """Timezone-aware UTC timestamp"""
-    return datetime.utcnow().replace(tzinfo=utc)
+    return datetime.now(utc)
 
 
 def _v(version_s):
