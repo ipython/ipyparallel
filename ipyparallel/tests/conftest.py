@@ -5,7 +5,7 @@ import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from subprocess import check_call, check_output
+from subprocess import check_output
 from tempfile import NamedTemporaryFile, TemporaryDirectory
 from unittest import mock
 
@@ -166,6 +166,20 @@ def Cluster(
 
 
 @pytest.fixture(scope="session")
+def ssh_running():
+    # check if an ssh docker container is running
+    try:
+        out = check_output(['docker', 'ps', '-q']).decode('utf8', 'replace').strip()
+    except Exception:
+        return False
+    if len(out) > 0:
+        id = out  # container id
+        return True
+
+    return False
+
+
+@pytest.fixture(scope="session")
 def ssh_dir(request):
     """Start the ssh service with docker-compose
 
@@ -176,8 +190,13 @@ def ssh_dir(request):
     ssh_dir = os.path.join(ci_directory, "ssh")
 
     # only run ssh test if service was started before
+    if os.name == "nt":
+        yaml_file = "win_docker-compose.yaml"
+    else:
+        yaml_file = "linux_docker-compose.yaml"
+
     try:
-        out = check_output(['docker-compose', 'ps', '-q'], cwd=ssh_dir)
+        out = check_output(['docker-compose', '-f', yaml_file, 'ps', '-q'], cwd=ssh_dir)
     except Exception:
         pytest.skip("Needs docker compose")
     else:
@@ -195,21 +214,22 @@ def ssh_dir(request):
     return ssh_dir
 
 
-@pytest.fixture
-def ssh_key(tmpdir, ssh_dir):
-    key_file = tmpdir.join("id_rsa")
-    check_call(
-        # this should be `docker compose cp sshd:...`
-        # but docker-compose 1.x doesn't support `cp` yet
-        [
-            'docker',
-            'cp',
-            'ssh_sshd_1:/home/ciuser/.ssh/id_rsa',
-            key_file,
-        ],
-        cwd=ssh_dir,
-    )
-    os.chmod(key_file, 0o600)
-    with key_file.open('r') as f:
-        assert 'PRIVATE KEY' in f.readline()
-    return str(key_file)
+# ssh_key fixture not needed any more, since id_rsa is copied during docker-compose stage
+# @pytest.fixture
+# def ssh_key(tmpdir, ssh_dir):
+#     key_file = tmpdir.join("id_rsa")
+#     check_call(
+#         # this should be `docker compose cp sshd:...`
+#         # but docker-compose 1.x doesn't support `cp` yet
+#         [
+#             'docker',
+#             'cp',
+#             'ssh_sshd_1:/home/ciuser/.ssh/id_rsa',
+#             key_file,
+#         ],
+#         cwd=ssh_dir,
+#     )
+#     os.chmod(key_file, 0o600)
+#     with key_file.open('r') as f:
+#         assert 'PRIVATE KEY' in f.readline()
+#     return str(key_file)
