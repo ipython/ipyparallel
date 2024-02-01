@@ -18,7 +18,7 @@
     "strict": true,
     "strictNullChecks": false,
     "target": "es2018",
-    "types": []
+    "types": [],
   },
-  "include": ["lab/src/*"]
+  "include": ["lab/src/*"],
 }
