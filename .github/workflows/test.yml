@@ -53,14 +53,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Cache conda environment
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/conda
           key: conda
 
       - name: Cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             node_modules
