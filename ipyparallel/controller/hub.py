@@ -3,6 +3,7 @@
 This is the master object that handles connections from engines and clients,
 and monitors traffic through the various queues.
 """
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import inspect

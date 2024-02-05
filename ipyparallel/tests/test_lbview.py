@@ -1,4 +1,5 @@
 """test LoadBalancedView objects"""
+
 import time
 from itertools import count
 

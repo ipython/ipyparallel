@@ -16,6 +16,7 @@ At this point, you can use it with::
 
 .. versionadded:: 5.1
 """
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 from joblib.parallel import register_parallel_backend

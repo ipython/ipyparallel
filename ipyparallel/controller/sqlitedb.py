@@ -1,4 +1,5 @@
 """A TaskRecord backend using sqlite3"""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json

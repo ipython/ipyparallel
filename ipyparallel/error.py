@@ -5,6 +5,7 @@ Inheritance diagram:
 .. inheritance-diagram:: ipyparallel.error
     :parts: 3
 """
+
 import builtins
 import sys
 import traceback

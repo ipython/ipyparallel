@@ -1,4 +1,5 @@
 """Test Parallel magics"""
+
 import re
 import signal
 import sys

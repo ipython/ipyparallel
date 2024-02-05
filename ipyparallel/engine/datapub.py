@@ -1,4 +1,5 @@
 """Publishing native (typically pickled) objects."""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 from ipykernel.jsonutil import json_clean

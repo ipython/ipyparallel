@@ -1,4 +1,5 @@
 """Deprecated import for ipyparallel.cluster.launcher"""
+
 import warnings
 
 from ipyparallel.cluster.launcher import *  # noqa

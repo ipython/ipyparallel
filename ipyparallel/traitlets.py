@@ -1,4 +1,5 @@
 """Custom ipyparallel trait types"""
+
 import entrypoints
 from traitlets import List, TraitError, Type
 
