@@ -327,8 +327,12 @@ class BaseLauncher(LoggingConfigurable):
         output = self.get_output(remove=True)
         if self.output_limit:
             output = "".join(output.splitlines(True)[-self.output_limit :])
+
+        log = self.log.debug
+        if stop_data and stop_data.get("exit_code", 0) != 0:
+            log = self.log.warning
         if output:
-            self.log.debug(f"Output for {self.identifier}:\n{output}")
+            log("Output for %s:\n%s", self.identifier, output)
 
 
 class ControllerLauncher(BaseLauncher):
@@ -794,6 +798,11 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
 
             self.notify_stop(self.stop_data)
 
+    def _log_output(self, stop_data=None):
+        # avoid double-logging output, already logged by each engine
+        # that will be a lot if all 100 engines fail!
+        pass
+
     def get_output(self, remove=False):
         """Get the output of all my child Launchers"""
         for identifier, launcher in self.launchers.items():
@@ -866,9 +875,13 @@ class MPILauncher(LocalProcessLauncher):
 
     def _log_output(self, stop_data):
         """Try to log mpiexec error output, if any, at warning level"""
-        super()._log_output()
-        if self.log.getEffectiveLevel() <= logging.DEBUG:
+        super()._log_output(stop_data)
+
+        if stop_data and self.stop_data.get("exit_code", 0) != 0:
+            # if this is True, super()._log_output would have already logged the full output
+            # no need to extract from MPI
             return
+
         output = self.get_output(remove=False)
         mpiexec_lines = []
 
