@@ -3,6 +3,7 @@
 Doesn't actually start any subprocesses, but goes through the motions of constructing
 objects, which should test basic config.
 """
+
 import logging
 import os
 import sys

@@ -1,4 +1,5 @@
 """Jupyter server extension(s)"""
+
 import warnings
 
 

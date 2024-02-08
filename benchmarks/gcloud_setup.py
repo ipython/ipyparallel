@@ -50,11 +50,15 @@ def delete_all_instances():
 def gcloud_run(*args, block=True):
     cmd = ["gcloud", "compute"] + list(args)
     print(f'$ {" ".join(cmd)}')
-    check_call(
-        cmd
-        # stdout=open(get_gcloud_log_file_name(instance_name) + ".log", "a+"),
-        # stderr=open(f"{get_gcloud_log_file_name(instance_name)}_error.out", "a+"),
-    ) if block else Popen(cmd)
+    (
+        check_call(
+            cmd
+            # stdout=open(get_gcloud_log_file_name(instance_name) + ".log", "a+"),
+            # stderr=open(f"{get_gcloud_log_file_name(instance_name)}_error.out", "a+"),
+        )
+        if block
+        else Popen(cmd)
+    )
 
 
 def copy_files_to_instance(instance_name, *file_names, directory="~"):

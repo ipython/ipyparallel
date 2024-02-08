@@ -1,6 +1,7 @@
 """
 The Base Application class for ipyparallel apps
 """
+
 import logging
 import os
 import re

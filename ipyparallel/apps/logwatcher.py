@@ -1,6 +1,7 @@
 """
 A logger object that consolidates messages incoming from ipcluster processes.
 """
+
 import logging
 
 import zmq

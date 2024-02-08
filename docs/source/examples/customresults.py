@@ -9,6 +9,7 @@ Authors
 -------
 * MinRK
 """
+
 import random
 
 import ipyparallel as ipp

@@ -1,4 +1,5 @@
 """test BroadcastView objects"""
+
 import pytest
 
 from . import test_view

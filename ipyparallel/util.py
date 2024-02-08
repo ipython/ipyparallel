@@ -1,4 +1,5 @@
 """Some generic utilities for dealing with classes, urls, and serialization."""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -488,9 +489,9 @@ def become_dask_worker(address, nanny=False, **kwargs):
         w = Nanny(address, **kwargs)
     else:
         w = Worker(address, **kwargs)
-    shell.user_ns['dask_worker'] = shell.user_ns[
-        'distributed_worker'
-    ] = kernel.distributed_worker = w
+    shell.user_ns['dask_worker'] = shell.user_ns['distributed_worker'] = (
+        kernel.distributed_worker
+    ) = w
     kernel.io_loop.add_callback(w.start)
 
 

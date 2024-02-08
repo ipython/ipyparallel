@@ -1,4 +1,5 @@
 """Custom build script for hatch backend"""
+
 import glob
 import os
 import subprocess

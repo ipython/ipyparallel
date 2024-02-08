@@ -1,4 +1,5 @@
 """base class for parallel client tests"""
+
 import os
 import signal
 import sys
