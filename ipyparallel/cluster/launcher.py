@@ -353,11 +353,26 @@ class ControllerLauncher(BaseLauncher):
         help="""command-line args to pass to ipcontroller""",
     )
 
-    async def get_connection_info(self, timeout=60):
+    connection_info_timeout = Float(
+        60,
+        config=True,
+        help="""
+        Default timeout (in seconds) for get_connection_info
+        
+        .. versionadded:: 8.7
+        """,
+    )
+
+    async def get_connection_info(self, timeout=None):
         """Retrieve connection info for the controller
 
         Default implementation assumes profile_dir and cluster_id are local.
+
+        .. versionchanged:: 8.7
+            Accept `timeout=None` (default) to use `.connection_info_timeout` config.
         """
+        if timeout is None:
+            timeout = self.connection_info_timeout
         connection_files = self.connection_files
         paths = list(connection_files.values())
         start_time = time.monotonic()
