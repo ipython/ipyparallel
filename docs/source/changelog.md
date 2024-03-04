@@ -4,6 +4,44 @@
 
 Changes in IPython Parallel
 
+## 8.7
+
+### 8.7.0 - 2024-03-04
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/8.6.1...8.7.0))
+
+8.7 is a small release, with a few improvements and updates, mostly related to compatibility with different versions of JupyterLab, Notebook, and Jupyter Server.
+
+Highlights:
+
+- JupyterLab 4 compatibility for the lab extension
+- Improved logging and deprecation messages for different versions of Jupyter Server and Notebook
+
+#### New features added
+
+- Update labextension to jupyterlab 4 [#833](https://github.com/ipython/ipyparallel/pull/833) ([@minrk](https://github.com/minrk))
+- add `ControllerLauncher.connection_info_timeout` config [#872](https://github.com/ipython/ipyparallel/pull/872) ([@minrk](https://github.com/minrk))
+
+#### Enhancements made
+
+- log launcher output at warning-level in case of nonzero exit code [#866](https://github.com/ipython/ipyparallel/pull/866) ([@minrk](https://github.com/minrk))
+- improve deprecation messaging around `ipcluster nbextension` [#835](https://github.com/ipython/ipyparallel/pull/835) ([@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- Use pre-3.10 serialization code on PyPy3.10 [#846](https://github.com/ipython/ipyparallel/pull/846) ([@mgorny](https://github.com/mgorny), [@minrk](https://github.com/minrk))
+- fallback import when using notebook and jupyter_server is unavailable [#808](https://github.com/ipython/ipyparallel/pull/808) ([@minrk](https://github.com/minrk))
+- don't propagate logs in IPython [#797](https://github.com/ipython/ipyparallel/pull/797) ([@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/ipython/ipyparallel/graphs/contributors?from=2023-04-14&to=2024-03-04&type=c))
+
+@ellert ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Aellert+updated%3A2023-04-14..2024-03-04&type=Issues)) | @hroncok ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Ahroncok+updated%3A2023-04-14..2024-03-04&type=Issues)) | @mgorny ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Amgorny+updated%3A2023-04-14..2024-03-04&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Aminrk+updated%3A2023-04-14..2024-03-04&type=Issues)) | @ottointhesky ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Aottointhesky+updated%3A2023-04-14..2024-03-04&type=Issues)) | @tornaria ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Atornaria+updated%3A2023-04-14..2024-03-04&type=Issues)) | @WernerFS ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3AWernerFS+updated%3A2023-04-14..2024-03-04&type=Issues))
+
 ## 8.6
 
 ### 8.6.1
