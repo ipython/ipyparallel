@@ -461,6 +461,8 @@ class TestAsyncResult(ClusterTestCase):
         # get doubly-nested lists because these are
         split_results = [ar.get(timeout=10) for ar in children]
         assert split_results == result
+        joined = ipp.AsyncResult.join(*children)
+        assert joined.get(timeout=1) == result
 
     def test_split_map_result(self):
         v = self.client.load_balanced_view()
