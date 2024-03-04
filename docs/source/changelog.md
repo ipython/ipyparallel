@@ -20,6 +20,7 @@ Highlights:
 #### New features added
 
 - Update labextension to jupyterlab 4 [#833](https://github.com/ipython/ipyparallel/pull/833) ([@minrk](https://github.com/minrk))
+- add `ControllerLauncher.connection_info_timeout` config [#872](https://github.com/ipython/ipyparallel/pull/872) ([@minrk](https://github.com/minrk))
 
 #### Enhancements made
 
