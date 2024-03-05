@@ -416,8 +416,8 @@ class AsyncResult(Future):
             client=first._client,
             fname=first._fname,
             return_exceptions=first._return_exceptions,
-            children=list(chain(ar._children for ar in async_results)),
-            targets=list(chain(ar._targets for ar in async_results)),
+            children=list(chain(*(ar._children for ar in async_results))),
+            targets=list(chain(*(ar._targets for ar in async_results))),
             owner=False,
         )
 
