@@ -570,6 +570,7 @@ class Client(HasTraits):
             )
             raise ValueError(msg.format(exc.message))
 
+        util._disable_session_extract_dates()
         self.session = Session(**extra_args)
 
         self._query_socket = self._context.socket(zmq.DEALER)

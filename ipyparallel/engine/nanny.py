@@ -68,6 +68,7 @@ class KernelNanny:
         self.curve_secretkey = curve_secretkey
         self.config = config
         self.pipe = pipe
+        util._disable_session_extract_dates()
         self.session = Session(config=self.config)
 
         self.log = local_logger(f"{self.__class__.__name__}.{engine_id}", log_level)
