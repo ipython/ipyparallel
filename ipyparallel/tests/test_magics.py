@@ -474,9 +474,9 @@ class TestParallelMagics(ClusterTestCase):
         ip.run_line_magic("pxconfig_tst", "-t 1")
         assert v.targets == 1
         ip.run_line_magic("pxconfig_tst", "--block")
-        assert v.block == True
+        assert v.block is True
         ip.run_line_magic("pxconfig_tst", "--noblock")
-        assert v.block == False
+        assert v.block is False
 
     def test_cellpx_targets(self):
         """%%px --targets doesn't change defaults"""
@@ -509,7 +509,7 @@ class TestParallelMagics(ClusterTestCase):
                 except ipp.RemoteError:
                     pass
             assert 'Async' not in io.stdout
-            assert view.block == False
+            assert view.block is False
 
     def cellpx_keyboard_interrupt_test_helper(self, sig=None):
         """%%px with Keyboard Interrupt on blocking execution"""

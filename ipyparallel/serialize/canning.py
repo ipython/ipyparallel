@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 import copy
 import functools
+import pickle
 import sys
 from types import FunctionType
 
@@ -87,9 +88,10 @@ def use_pickle():
 
     Reverts custom serialization enabled by use_dill|cloudpickle.
     """
+
     from . import serialize
 
-    serialize.pickle = serialize._stdlib_pickle
+    serialize.pickle = pickle
 
     # restore special function handling
     can_map[FunctionType] = _original_can_map[FunctionType]

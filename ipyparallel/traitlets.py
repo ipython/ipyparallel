@@ -25,9 +25,7 @@ class Launcher(Type):
         chunks.append("Currently installed: ")
         for key, entry_point in self.load_entry_points().items():
             chunks.append(
-                "  - {}: {}.{}".format(
-                    key, entry_point.module_name, entry_point.object_name
-                )
+                f"  - {key}: {entry_point.module_name}.{entry_point.object_name}"
             )
         return '\n'.join(chunks)
 

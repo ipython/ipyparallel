@@ -1,5 +1,7 @@
 import os
 
+c = get_config()  # noqa
+
 c.Cluster.controller_ip = '0.0.0.0'
 c.Cluster.engine_launcher_class = 'SSH'
 

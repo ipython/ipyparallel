@@ -26,12 +26,11 @@ Usage
 
 """
 
-import time
-from contextlib import nullcontext
-
 import inspect
 import re
 import sys
+import time
+from contextlib import nullcontext
 from textwrap import dedent
 
 from IPython.core import magic_arguments
@@ -568,7 +567,7 @@ class ParallelMagics(Magics):
         else:
             try:
                 self.parallel_execute(cell)
-            except:
+            except Exception:
                 self.shell.showtraceback()
                 return True
             else:

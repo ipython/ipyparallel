@@ -249,7 +249,7 @@ class DictDB(BaseDB):
         """Get a specific Task Record, by msg_id."""
         if msg_id in self._culled_ids:
             raise KeyError("Record %r has been culled for size" % msg_id)
-        if not msg_id in self._records:
+        if msg_id not in self._records:
             raise KeyError("No such msg_id %r" % (msg_id))
         return deepcopy(self._records[msg_id])
 

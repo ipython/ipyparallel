@@ -362,7 +362,7 @@ class Hub(LoggingConfigurable):
         try:
             if handler is None:
                 raise KeyError("Bad Message Type: %r" % msg_type)
-        except:
+        except Exception:
             content = error.wrap_exception()
             self.log.error("Bad Message Type: %r", msg_type, exc_info=True)
             self.session.send(
@@ -898,7 +898,7 @@ class Hub(LoggingConfigurable):
         if uuid.encode("utf8") in self.by_ident:
             try:
                 raise KeyError("uuid %r in use" % uuid)
-            except:
+            except Exception:
                 content = error.wrap_exception()
                 self.log.error("uuid %r in use", uuid, exc_info=True)
         else:
@@ -906,14 +906,14 @@ class Hub(LoggingConfigurable):
                 if uuid == heart_id:
                     try:
                         raise KeyError("heart_id %r in use" % uuid)
-                    except:
+                    except Exception:
                         self.log.error("heart_id %r in use", uuid, exc_info=True)
                         content = error.wrap_exception()
                     break
                 elif uuid == ec.uuid:
                     try:
                         raise KeyError("uuid %r in use" % uuid)
-                    except:
+                    except Exception:
                         self.log.error("uuid %r in use", uuid, exc_info=True)
                         content = error.wrap_exception()
                     break
@@ -948,7 +948,7 @@ class Hub(LoggingConfigurable):
         """Unregister an engine that explicitly requested to leave."""
         try:
             eid = msg['content']['id']
-        except:
+        except Exception:
             self.log.error(
                 f"registration::bad request for engine for unregistration: {msg['content']}",
             )
@@ -1012,7 +1012,7 @@ class Hub(LoggingConfigurable):
                 raise error.EngineError(
                     f"Engine {eid!r} died while running task {msg_id!r}"
                 )
-            except:
+            except Exception:
                 content = error.wrap_exception()
             # build a fake header:
             header = {}
@@ -1158,7 +1158,7 @@ class Hub(LoggingConfigurable):
         try:
             targets = content['targets']
             targets = self._validate_targets(targets)
-        except:
+        except Exception:
             content = error.wrap_exception()
             self.session.send(
                 self.query, "hub_error", content=content, ident=client_id, parent=msg
@@ -1188,7 +1188,7 @@ class Hub(LoggingConfigurable):
         targets = content['targets']
         try:
             targets = self._validate_targets(targets)
-        except:
+        except Exception:
             content = error.wrap_exception()
             self.session.send(
                 self.query, "hub_error", content=content, ident=client_id, parent=msg
@@ -1231,7 +1231,7 @@ class Hub(LoggingConfigurable):
             if pending:
                 try:
                     raise IndexError("msg pending: %r" % pending[0])
-                except:
+                except Exception:
                     reply = error.wrap_exception()
                     self.log.exception("Error dropping records")
             else:
@@ -1247,7 +1247,7 @@ class Hub(LoggingConfigurable):
                     if eid not in self.engines:
                         try:
                             raise IndexError("No such engine: %i" % eid)
-                        except:
+                        except Exception:
                             reply = error.wrap_exception()
                             self.log.exception("Error dropping records")
                         break
@@ -1430,7 +1430,7 @@ class Hub(LoggingConfigurable):
             else:
                 try:
                     raise KeyError('No such message: ' + msg_id)
-                except:
+                except Exception:
                     content = error.wrap_exception()
                 break
         self.session.send(

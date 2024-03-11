@@ -316,7 +316,7 @@ class TaskScheduler(Scheduler):
                 raise error.EngineError(
                     f"Engine {engine!r} died while running task {msg_id!r}"
                 )
-            except:
+            except error.EngineError:
                 content = error.wrap_exception()
             # build fake metadata
             md = dict(status='error', engine=engine.decode('ascii'), date=util.utcnow())
@@ -467,7 +467,7 @@ class TaskScheduler(Scheduler):
 
         try:
             raise why()
-        except:
+        except Exception:
             content = error.wrap_exception()
         self.log.debug(
             "task %r failing as unreachable with: %s", msg_id, content['ename']

@@ -442,7 +442,7 @@ class IPClusterEngines(BaseParallelApplication):
     async def start_engines(self):
         try:
             await self.cluster.start_engines()
-        except:
+        except BaseException:
             self.log.exception("Engine start failed")
             self.exit(1)
 

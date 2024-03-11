@@ -194,7 +194,8 @@ if __name__ == '__main__':
     )
 
     # lambda for calling solver.solve:
-    _solve = lambda *args, **kwargs: solver.solve(*args, **kwargs)
+    def _solve(*args, **kwargs):
+        return solver.solve(*args, **kwargs)
 
     if ns.scalar:
         impl['inner'] = 'scalar'

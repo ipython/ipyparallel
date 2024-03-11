@@ -118,7 +118,7 @@ class View(HasTraits):
 
         self.set_flags(**flags)
 
-        assert not self.__class__ is View, "Don't use base View objects, use subclasses"
+        assert self.__class__ is not View, "Don't use base View objects, use subclasses"
 
     def __repr__(self):
         strtargets = str(self.targets)
@@ -470,8 +470,9 @@ class DirectView(View):
                 if not quiet:
                     if fromlist:
                         print(
-                            "importing %s from %s on engine(s)"
-                            % (','.join(fromlist), name)
+                            "importing {} from {} on engine(s)".format(
+                                ','.join(fromlist), name
+                            )
                         )
                     else:
                         print("importing %s on engine(s)" % name)

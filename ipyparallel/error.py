@@ -182,7 +182,7 @@ class CompositeError(RemoteError):
         else:
             try:
                 en, ev, etb, ei = self.elist[excid]
-            except:
+            except Exception:
                 raise IndexError("an exception with index %i does not exist" % excid)
             else:
                 lines.append(self._get_engine_str(ei) + ":")
@@ -196,7 +196,7 @@ class CompositeError(RemoteError):
     def raise_exception(self, excid=0):
         try:
             en, ev, etb, ei = self.elist[excid]
-        except:
+        except Exception:
             raise IndexError("an exception with index %i does not exist" % excid)
         else:
             raise RemoteError(en, ev, etb, ei)

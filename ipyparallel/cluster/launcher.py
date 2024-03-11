@@ -1677,7 +1677,7 @@ class WindowsHPCLauncher(BaseLauncher):
                 [self.job_cmd] + args, env=os.environ, cwd=self.work_dir, stderr=STDOUT
             )
             output = output.decode("utf8", 'replace')
-        except:
+        except Exception:
             output = 'The job already appears to be stopped: %r' % self.job_id
         self.notify_stop(
             dict(job_id=self.job_id, output=output)
@@ -2539,7 +2539,7 @@ def find_launcher_class(name, kind):
     return registry[name.lower()].load()
 
 
-@lru_cache()
+@lru_cache
 def abbreviate_launcher_class(cls):
     """Abbreviate a launcher class back to its entrypoint name"""
     cls_key = f"{cls.__module__}.{cls.__name__}"

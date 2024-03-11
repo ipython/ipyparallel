@@ -121,7 +121,7 @@ class BroadcastScheduler(Scheduler):
         try:
             idents, msg_list = self.session.feed_identities(raw_msg, copy=False)
             msg = self.session.deserialize(msg_list, content=False, copy=False)
-        except:
+        except Exception:
             self.log.error(
                 f'broadcast::Invalid broadcast msg: {raw_msg}', exc_info=True
             )

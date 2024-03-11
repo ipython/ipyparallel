@@ -276,8 +276,7 @@ class SQLiteDB(BaseDB):
             i += 1
             self.table = first_table + '_%i' % i
             self.log.warning(
-                "Table %s exists and doesn't match db format, trying %s"
-                % (previous_table, self.table)
+                f"Table {previous_table} exists and doesn't match db format, trying {self.table}"
             )
             previous_table = self.table
 

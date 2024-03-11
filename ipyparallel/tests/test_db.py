@@ -178,7 +178,7 @@ class TaskDBTest:
         rec['header']['msg_id'] = 'fubar'
         rec2 = self.db.get_record(msg_id)
         assert 'buffers' in rec2
-        assert not 'garbage' in rec2
+        assert 'garbage' not in rec2
         assert rec2['header']['msg_id'] == msg_id
 
     def test_pop_safe_find(self):
@@ -190,7 +190,7 @@ class TaskDBTest:
         rec['header']['msg_id'] = 'fubar'
         rec2 = self.db.find_records({'msg_id': msg_id})[0]
         assert 'buffers' in rec2
-        assert not 'garbage' in rec2
+        assert 'garbage' not in rec2
         assert rec2['header']['msg_id'] == msg_id
 
     def test_pop_safe_find_keys(self):
@@ -202,7 +202,7 @@ class TaskDBTest:
         rec['header']['msg_id'] = 'fubar'
         rec2 = self.db.find_records({'msg_id': msg_id})[0]
         assert 'buffers' in rec2
-        assert not 'garbage' in rec2
+        assert 'garbage' not in rec2
         assert rec2['header']['msg_id'] == msg_id
 
 
@@ -288,5 +288,5 @@ class TestSQLiteBackend(TaskDBTest, TestCase):
         self.db.close()
         try:
             os.remove(self.temp_db)
-        except:
+        except Exception:
             pass

@@ -279,7 +279,7 @@ class TestAsyncResult(ClusterTestCase):
             ar.display_outputs()
         assert io.stderr == ''
         assert io.stdout.count('5555'), len(v) == io.stdout
-        assert not '\n\n' in io.stdout, io.stdout
+        assert '\n\n' not in io.stdout, io.stdout
         assert io.stdout.count('[stdout:'), len(v) == io.stdout
 
         ar = v.execute("a=5")
@@ -300,7 +300,7 @@ class TestAsyncResult(ClusterTestCase):
             ar.display_outputs('engine')
         assert io.stderr == ''
         assert io.stdout.count('5555'), len(v) == io.stdout
-        assert not '\n\n' in io.stdout, io.stdout
+        assert '\n\n' not in io.stdout, io.stdout
         assert io.stdout.count('[stdout:'), len(v) == io.stdout
 
         ar = v.execute("a=5")
@@ -494,7 +494,7 @@ class TestAsyncResult(ClusterTestCase):
         assert len(done) == 1
         first_done = done.pop()
         assert first_done.msg_ids == amr.msg_ids[:1]
-        assert amr.wait(timeout=10) == True
+        assert amr.wait(timeout=10) is True
         done, pending = amr.wait(timeout=0, return_when=ipp.FIRST_EXCEPTION)
         assert pending == set()
         assert len(done) == len(amr)
@@ -518,7 +518,7 @@ class TestAsyncResult(ClusterTestCase):
         assert len(done) == 1
         first_done = done.pop()
         assert first_done.msg_ids == amr.msg_ids[:1]
-        assert amr.wait(timeout=10) == True
+        assert amr.wait(timeout=10) is True
         done, pending = amr.wait(timeout=0, return_when=ipp.FIRST_EXCEPTION)
         assert pending == set()
         assert len(done) == len(amr)
