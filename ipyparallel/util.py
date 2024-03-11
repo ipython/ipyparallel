@@ -600,7 +600,7 @@ def _v(version_s):
     return tuple(int(s) for s in re.findall(r"\d+", version_s))
 
 
-@lru_cache()
+@lru_cache
 def _disable_session_extract_dates():
     """Monkeypatch jupyter_client.extract_dates to be a no-op
 
