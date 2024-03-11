@@ -1,5 +1,4 @@
-"""Example showing how to merge multiple remote data streams.
-"""
+"""Example showing how to merge multiple remote data streams."""
 
 # Slightly modified version of:
 # https://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/511509

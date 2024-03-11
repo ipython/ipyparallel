@@ -2310,7 +2310,7 @@ class LSFLauncher(BatchSystemLauncher):
         # Here we save profile_dir in the context so they
         # can be used in the batch script template as {profile_dir}
         self.write_batch_script(n)
-        piped_cmd = self.args[0] + '<\"' + self.args[1] + '\"'
+        piped_cmd = self.args[0] + '<"' + self.args[1] + '"'
         self.log.debug("Starting %s: %s", self.__class__.__name__, piped_cmd)
         p = Popen(piped_cmd, shell=True, env=os.environ, stdout=PIPE)
         output, err = p.communicate()

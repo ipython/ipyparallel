@@ -21,6 +21,7 @@ Authors
  * Min Ragan-Kelley
 
 """
+
 import argparse
 import time
 
@@ -125,9 +126,13 @@ if __name__ == '__main__':
     else:
         num_procs = min(num_procs, partition[0] * partition[1])
 
-    assert (
-        partition[0] * partition[1] == num_procs
-    ), "can't map partition %s to %i engines" % (partition, num_procs)
+    assert partition[0] * partition[1] == num_procs, (
+        "can't map partition %s to %i engines"
+        % (
+            partition,
+            num_procs,
+        )
+    )
 
     # construct the View:
     view = rc[:num_procs]

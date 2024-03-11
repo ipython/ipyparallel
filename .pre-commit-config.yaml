@@ -2,31 +2,17 @@ ci:
   autoupdate_schedule: monthly
 
 repos:
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.15.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.2
     hooks:
-      - id: pyupgrade
-        args:
-          - --py36-plus
-        exclude: setupbase.py
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
-        exclude: setupbase.py
-  - repo: https://github.com/psf/black
-    rev: 24.1.1
-    hooks:
-      - id: black
-        exclude: setupbase.py
+      # - id: ruff
+      #   args:
+      #     - "--fix"
+      - id: ruff-format
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
       - id: prettier
-  - repo: https://github.com/PyCQA/flake8
-    rev: "7.0.0"
-    hooks:
-      - id: flake8
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.5.0
     hooks:

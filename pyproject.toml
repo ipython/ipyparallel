@@ -140,6 +140,12 @@ filterwarnings = [
   "module:Jupyter is migrating its paths to use standard platformdirs:DeprecationWarning",
 ]
 
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "preserve"
+
 [tool.tbump]
 # Uncomment this if your project is hosted on GitHub:
 github_url = "https://github.com/jupyterhub/jupyterhub"

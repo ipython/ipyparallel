@@ -15,6 +15,7 @@ Authors
  * Min Ragan-Kelley
 
 """
+
 from numpy import ascontiguousarray, frombuffer, zeros
 
 try:

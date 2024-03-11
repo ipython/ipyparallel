@@ -70,9 +70,9 @@ class BroadcastScheduler(Scheduler):
             targets_for_scheduler = targets_by_scheduler[i]
             if is_coalescing:
                 if targets_for_scheduler:
-                    self.accumulated_targets[original_msg_id][
-                        scheduler_id
-                    ] = targets_for_scheduler
+                    self.accumulated_targets[original_msg_id][scheduler_id] = (
+                        targets_for_scheduler
+                    )
                 else:
                     del self.accumulated_replies[original_msg_id][scheduler_id]
             msg['metadata']['targets'] = targets_for_scheduler

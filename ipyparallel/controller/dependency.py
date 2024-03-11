@@ -1,5 +1,4 @@
-"""Dependency utilities
-"""
+"""Dependency utilities"""
 
 from types import ModuleType
 

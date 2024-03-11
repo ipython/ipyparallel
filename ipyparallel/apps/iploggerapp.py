@@ -2,6 +2,7 @@
 """
 A simple IPython logger application
 """
+
 from IPython.core.profiledir import ProfileDir
 from traitlets import Dict
 

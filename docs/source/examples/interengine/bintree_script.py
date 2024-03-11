@@ -4,18 +4,19 @@ Script for setting up and using [all]reduce with a binary-tree engine interconne
 
 usage: `python bintree_script.py`
 
-This spanning tree strategy ensures that a single node node mailbox will never 
-receive more that 2 messages at once. This is very important to scale to large 
-clusters (e.g. 1000 nodes) since if you have many incoming messages of a couple 
-of megabytes you might saturate the network interface of a single node and 
-potentially its memory buffers if the messages are not consumed in a streamed 
+This spanning tree strategy ensures that a single node node mailbox will never
+receive more that 2 messages at once. This is very important to scale to large
+clusters (e.g. 1000 nodes) since if you have many incoming messages of a couple
+of megabytes you might saturate the network interface of a single node and
+potentially its memory buffers if the messages are not consumed in a streamed
 manner.
 
-Note that the AllReduce scheme implemented with the spanning tree strategy 
-impose the aggregation function to be commutative and distributive. It might 
-not be the case if you implement the naive gather / reduce / broadcast strategy 
+Note that the AllReduce scheme implemented with the spanning tree strategy
+impose the aggregation function to be commutative and distributive. It might
+not be the case if you implement the naive gather / reduce / broadcast strategy
 where you can reorder the partial data before performing the reduce.
 """
+
 import ipyparallel as ipp
 
 # connect client and create views
