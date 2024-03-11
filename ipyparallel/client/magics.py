@@ -27,21 +27,7 @@ Usage
 """
 
 import time
-from contextlib import contextmanager
-
-
-# Python 3.6 doesn't have nullcontext, so we define our own
-@contextmanager
-def nullcontext():
-    yield
-
-
-# -----------------------------------------------------------------------------
-#  Copyright (C) 2008 The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-# -----------------------------------------------------------------------------
+from contextlib import nullcontext
 
 import inspect
 import re
