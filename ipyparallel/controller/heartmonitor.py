@@ -18,6 +18,7 @@ from traitlets.config.configurable import LoggingConfigurable
 from zmq.devices import ThreadDevice, ThreadMonitoredQueue
 from zmq.eventloop.zmqstream import ZMQStream
 
+from ipyparallel import util
 from ipyparallel.util import bind, connect, log_errors, set_hwm
 
 
@@ -120,6 +121,7 @@ class HeartMonitor(LoggingConfigurable):
 
     @default("session")
     def _default_session(self):
+        util._disable_session_extract_dates()
         return Session(parent=self)
 
     loop = Instance(ioloop.IOLoop)

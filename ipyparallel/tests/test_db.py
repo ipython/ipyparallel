@@ -21,6 +21,7 @@ from ipyparallel.util import utc
 
 class TaskDBTest:
     def setUp(self):
+        util._disable_session_extract_dates()
         self.session = Session()
         self.db = self.create_db()
         self.load_records(16)

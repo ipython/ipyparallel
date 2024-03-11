@@ -46,6 +46,7 @@ class Scheduler(LoggingConfigurable):
 
     @default("session")
     def _default_session(self):
+        util._disable_session_extract_dates()
         return jupyter_client.session.Session(parent=self)
 
     client_stream = Instance(
