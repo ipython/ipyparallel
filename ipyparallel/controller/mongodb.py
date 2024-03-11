@@ -1,5 +1,4 @@
-"""A TaskRecord backend using mongodb
-"""
+"""A TaskRecord backend using mongodb"""
 
 try:
     from pymongo import MongoClient

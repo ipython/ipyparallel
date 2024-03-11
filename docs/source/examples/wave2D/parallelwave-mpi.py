@@ -21,6 +21,7 @@ Authors
  * Min Ragan-Kelley
 
 """
+
 import argparse
 import time
 
@@ -118,9 +119,13 @@ if __name__ == '__main__':
     if partition is None:
         partition = [1, num_procs]
 
-    assert (
-        partition[0] * partition[1] == num_procs
-    ), "can't map partition %s to %i engines" % (partition, num_procs)
+    assert partition[0] * partition[1] == num_procs, (
+        "can't map partition %s to %i engines"
+        % (
+            partition,
+            num_procs,
+        )
+    )
 
     view = rc[:]
     print(f"Running {grid} system on {partition} processes until {tstop:f}")
@@ -189,7 +194,8 @@ if __name__ == '__main__':
     )
 
     # lambda for calling solver.solve:
-    _solve = lambda *args, **kwargs: solver.solve(*args, **kwargs)
+    def _solve(*args, **kwargs):
+        return solver.solve(*args, **kwargs)
 
     if ns.scalar:
         impl['inner'] = 'scalar'

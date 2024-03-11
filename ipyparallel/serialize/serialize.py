@@ -3,14 +3,7 @@
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 
-try:
-    import cPickle
-
-    pickle = cPickle
-except:
-    cPickle = None
-    import pickle
-_stdlib_pickle = pickle
+import pickle
 
 try:
     PICKLE_PROTOCOL = pickle.DEFAULT_PROTOCOL

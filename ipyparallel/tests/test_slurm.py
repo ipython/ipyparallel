@@ -4,11 +4,13 @@ import pytest
 from traitlets.config import Config
 
 from .conftest import temporary_ipython_dir
-from .test_cluster import test_get_output  # noqa: F401
-from .test_cluster import test_restart_engines  # noqa: F401
-from .test_cluster import test_signal_engines  # noqa: F401
-from .test_cluster import test_start_stop_cluster  # noqa: F401
-from .test_cluster import test_to_from_dict  # noqa: F401
+from .test_cluster import (
+    test_get_output,  # noqa: F401
+    test_restart_engines,  # noqa: F401
+    test_signal_engines,  # noqa: F401
+    test_start_stop_cluster,  # noqa: F401
+    test_to_from_dict,  # noqa: F401
+)
 
 
 # put ipython dir on shared filesystem

@@ -2,6 +2,7 @@
 """
 A simple IPython logger application
 """
+
 from IPython.core.profiledir import ProfileDir
 from traitlets import Dict
 
@@ -50,7 +51,7 @@ class IPLoggerApp(BaseParallelApplication):
     def init_watcher(self):
         try:
             self.watcher = LogWatcher(parent=self, log=self.log)
-        except:
+        except BaseException:
             self.log.error("Couldn't start the LogWatcher", exc_info=True)
             self.exit(1)
         self.log.info("Listening for log messages on %r" % self.watcher.url)

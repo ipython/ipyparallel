@@ -421,7 +421,7 @@ class AsyncResult(Future):
             owner=False,
         )
 
-    @lru_cache()
+    @lru_cache
     def split(self):
         """Split an AsyncResult
 
@@ -742,11 +742,11 @@ class AsyncResult(Future):
             # already done
             yield from rlist
 
-    @lru_cache()
+    @lru_cache
     def __len__(self):
         return self._count_chunks(*self.msg_ids)
 
-    @lru_cache()
+    @lru_cache
     def _count_chunks(self, *msg_ids):
         """Count the granular tasks"""
         return sum(self._chunk_sizes.setdefault(msg_id, 1) for msg_id in msg_ids)

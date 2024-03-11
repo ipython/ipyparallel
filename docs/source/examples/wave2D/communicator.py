@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 """A simple Communicator class that has N,E,S,W neighbors connected via 0MQ PEER sockets"""
+
 import socket
 
 import zmq

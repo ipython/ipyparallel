@@ -2,7 +2,6 @@
 
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
-import sys
 import warnings
 from inspect import signature
 
@@ -61,11 +60,11 @@ def getname(f):
     """
     try:
         return f.__name__
-    except:
+    except Exception:
         pass
     try:
         return f.name
-    except:
+    except Exception:
         pass
 
     return str(f)
@@ -126,10 +125,7 @@ class RemoteFunction:
         # of decorated functions
         self.__name__ = getname(f)
         if getattr(f, '__doc__', None):
-            self.__doc__ = '{} wrapping:\n{}'.format(
-                self.__class__.__name__,
-                f.__doc__,
-            )
+            self.__doc__ = f'{self.__class__.__name__} wrapping:\n{f.__doc__}'
         if getattr(f, '__signature__', None):
             self.__signature__ = f.__signature__
         else:
@@ -145,10 +141,10 @@ class RemoteFunction:
             return self.view.apply(self.func, *args, **kwargs)
 
 
-if sys.version_info[0] >= 3:
-    _map = lambda f, *sequences: list(map(f, *sequences))
-else:
-    _map = map
+def _map(f, *sequences):
+    return list(map(f, *sequences))
+
+
 _prepickled_map = None
 
 

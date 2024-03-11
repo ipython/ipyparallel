@@ -67,7 +67,7 @@ def unpack_message(f, self, msg_parts):
     idents, msg = self.session.feed_identities(msg_parts, copy=False)
     try:
         msg = self.session.deserialize(msg, content=True, copy=False)
-    except:
+    except Exception:
         self.log.error("Invalid Message", exc_info=True)
     else:
         if self.debug:
@@ -606,7 +606,7 @@ class Client(HasTraits):
 
         try:
             self._connect(sshserver, ssh_kwargs, timeout)
-        except:
+        except Exception:
             self.close(linger=0)
             raise
 
@@ -887,7 +887,7 @@ class Client(HasTraits):
                 raise error.EngineError(
                     f"Engine {eid!r} died while running task {msg_id!r}"
                 )
-            except:
+            except Exception:
                 content = error.wrap_exception()
             # build a fake message:
             msg = self.session.msg('apply_reply', content=content)

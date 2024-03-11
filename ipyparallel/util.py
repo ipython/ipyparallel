@@ -199,7 +199,7 @@ def is_ip(location):
     return bool(re.match(location, r'(\d+\.){3}\d+'))
 
 
-@lru_cache()
+@lru_cache
 def ip_for_host(host):
     """Get the ip address for a host
 

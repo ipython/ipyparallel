@@ -1677,7 +1677,7 @@ class WindowsHPCLauncher(BaseLauncher):
                 [self.job_cmd] + args, env=os.environ, cwd=self.work_dir, stderr=STDOUT
             )
             output = output.decode("utf8", 'replace')
-        except:
+        except Exception:
             output = 'The job already appears to be stopped: %r' % self.job_id
         self.notify_stop(
             dict(job_id=self.job_id, output=output)
@@ -2310,7 +2310,7 @@ class LSFLauncher(BatchSystemLauncher):
         # Here we save profile_dir in the context so they
         # can be used in the batch script template as {profile_dir}
         self.write_batch_script(n)
-        piped_cmd = self.args[0] + '<\"' + self.args[1] + '\"'
+        piped_cmd = self.args[0] + '<"' + self.args[1] + '"'
         self.log.debug("Starting %s: %s", self.__class__.__name__, piped_cmd)
         p = Popen(piped_cmd, shell=True, env=os.environ, stdout=PIPE)
         output, err = p.communicate()
@@ -2539,7 +2539,7 @@ def find_launcher_class(name, kind):
     return registry[name.lower()].load()
 
 
-@lru_cache()
+@lru_cache
 def abbreviate_launcher_class(cls):
     """Abbreviate a launcher class back to its entrypoint name"""
     cls_key = f"{cls.__module__}.{cls.__name__}"
