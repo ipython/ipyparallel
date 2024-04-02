@@ -3,7 +3,7 @@ ci:
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.2
+    rev: v0.3.5
     hooks:
       - id: ruff
         args:
@@ -21,7 +21,7 @@ repos:
       - id: check-executables-have-shebangs
       - id: requirements-txt-fixer
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.0.0-alpha.2
+    rev: v9.0.0-rc.0
     hooks:
       - id: eslint
         files: \.[jt]sx?$ # *.js, *.jsx, *.ts and *.tsx
