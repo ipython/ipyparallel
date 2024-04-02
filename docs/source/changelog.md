@@ -4,6 +4,27 @@
 
 Changes in IPython Parallel
 
+## 8.8
+
+### 8.8.0 - 2024-04-02
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/8.7.0...8.8.0))
+
+8.8 is a small release.
+
+New:
+
+- `BroadcastView.map` is defined for API compatibility, but is not particularly efficient or recommended.
+
+Fixed:
+
+- `AsyncResult.join` is fixed.
+
+Improved:
+
+- Performance optimization disabling timestamp parsing in `jupyter_client` is not applied until ipyparallel classes are instantiated,
+  rather than at import time.
+
 ## 8.7
 
 ### 8.7.0 - 2024-03-04
