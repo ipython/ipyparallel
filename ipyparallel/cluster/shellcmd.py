@@ -11,6 +11,7 @@ Currently, the following command are supported:
 * exists:  checks if a file/directory exists
 * remove:  removes a file
 """
+
 import base64
 import enum
 import inspect
@@ -672,9 +673,7 @@ class ShellCommandSend:
                 shell = val
 
         if self.platform == Platform.Windows and self.python_path is not None:
-            self.break_away_support = (
-                self._check_for_break_away_flag()
-            )  # check if break away flag is available (its not in windows github runners)
+            self.break_away_support = self._check_for_break_away_flag()  # check if break away flag is available (its not in windows github runners)
 
         self.shell_info = (system, shell)
 

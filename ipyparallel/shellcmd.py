@@ -11,6 +11,7 @@ Currently the following command are supported:
 * exists:  checks if a file/directory exists
 * remove:  removes a file
 """
+
 import os
 import sys
 from argparse import ArgumentParser
