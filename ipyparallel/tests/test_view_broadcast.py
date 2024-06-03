@@ -1,4 +1,5 @@
 """test BroadcastView objects"""
+
 import pytest
 
 from . import test_view
@@ -32,30 +33,6 @@ class TestBroadcastView(test_view.TestView):
         # note that a test didn't use a broadcast view
         if not self._broadcast_view_used:
             pytest.skip("No broadcast view used")
-
-    @needs_map
-    def test_map(self):
-        pass
-
-    @needs_map
-    def test_map_ref(self):
-        pass
-
-    @needs_map
-    def test_map_reference(self):
-        pass
-
-    @needs_map
-    def test_map_iterable(self):
-        pass
-
-    @needs_map
-    def test_map_empty_sequence(self):
-        pass
-
-    @needs_map
-    def test_map_numpy(self):
-        pass
 
     @pytest.mark.xfail(reason="Tracking gets disconnected from original message")
     def test_scatter_tracked(self):

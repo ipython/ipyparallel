@@ -2,6 +2,7 @@
 """
 The IPython engine application
 """
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
@@ -37,6 +38,7 @@ from traitlets import (
 from traitlets.config import Config
 from zmq.eventloop import zmqstream
 
+from ipyparallel import util
 from ipyparallel.apps.baseapp import (
     BaseParallelApplication,
     base_aliases,
@@ -407,6 +409,7 @@ class IPEngine(BaseParallelApplication):
 
         config.Session.packer = d['pack']
         config.Session.unpacker = d['unpack']
+        util._disable_session_extract_dates()
         self.session = Session(parent=self)
 
         self.log.debug("Config changed:")

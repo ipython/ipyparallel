@@ -6,6 +6,7 @@ use from bintree_script.py
 Provides parallel [all]reduce functionality
 
 """
+
 import re
 import socket
 from functools import reduce

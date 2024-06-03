@@ -1,4 +1,5 @@
 """tests for async utilities"""
+
 import pytest
 
 from ipyparallel._async import AsyncFirst

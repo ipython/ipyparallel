@@ -7,6 +7,7 @@ we need to automate all of this so that functions themselves can be pickled.
 
 Reference: A. Tremols, P Cogolo, "Python Cookbook," p 302-305
 """
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import copyreg
@@ -27,7 +28,8 @@ _code_attr_map = {
 }
 # pass every supported arg to the code constructor
 # this should be more forward-compatible
-if sys.version_info >= (3, 10):
+# (broken on pypy: https://github.com/ipython/ipyparallel/issues/845)
+if sys.version_info >= (3, 10) and not hasattr(sys, "pypy_version_info"):
     _code_attr_names = tuple(
         _code_attr_map.get(name, name)
         for name, param in inspect.signature(types.CodeType).parameters.items()

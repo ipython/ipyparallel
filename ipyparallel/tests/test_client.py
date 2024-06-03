@@ -1,4 +1,5 @@
 """Tests for parallel client.py"""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import os
@@ -90,11 +91,11 @@ class TestClient(ClusterTestCase):
     def test_lbview_targets(self):
         """test load_balanced_view targets"""
         v = self.client.load_balanced_view()
-        assert v.targets == None
+        assert v.targets is None
         v = self.client.load_balanced_view(-1)
         assert v.targets == [self.client.ids[-1]]
         v = self.client.load_balanced_view('all')
-        assert v.targets == None
+        assert v.targets is None
 
     def test_dview_targets(self):
         """test direct_view targets"""

@@ -1,4 +1,5 @@
 """Parallel histogram function"""
+
 from ipyparallel import Reference
 
 

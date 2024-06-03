@@ -10,6 +10,7 @@ Authors
  * Min Ragan-Kelley
 
 """
+
 import time
 
 from numpy import arange, newaxis, sqrt, zeros

@@ -1,4 +1,5 @@
 """Some generic utilities for dealing with classes, urls, and serialization."""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -23,6 +24,7 @@ from dateutil.tz import tzlocal
 from IPython import get_ipython
 from IPython.core.profiledir import ProfileDir, ProfileDirError
 from IPython.paths import get_ipython_dir
+from jupyter_client import session
 from jupyter_client.localinterfaces import is_public_ip, localhost, public_ips
 from tornado.ioloop import IOLoop
 from traitlets.log import get_logger
@@ -197,7 +199,7 @@ def is_ip(location):
     return bool(re.match(location, r'(\d+\.){3}\d+'))
 
 
-@lru_cache()
+@lru_cache
 def ip_for_host(host):
     """Get the ip address for a host
 
@@ -488,9 +490,9 @@ def become_dask_worker(address, nanny=False, **kwargs):
         w = Nanny(address, **kwargs)
     else:
         w = Worker(address, **kwargs)
-    shell.user_ns['dask_worker'] = shell.user_ns[
-        'distributed_worker'
-    ] = kernel.distributed_worker = w
+    shell.user_ns['dask_worker'] = shell.user_ns['distributed_worker'] = (
+        kernel.distributed_worker
+    ) = w
     kernel.io_loop.add_callback(w.start)
 
 
@@ -591,28 +593,20 @@ def compare_datetimes(a, b):
 
 def utcnow():
     """Timezone-aware UTC timestamp"""
-    return datetime.utcnow().replace(tzinfo=utc)
+    return datetime.now(utc)
 
 
 def _v(version_s):
     return tuple(int(s) for s in re.findall(r"\d+", version_s))
 
 
-def _patch_jupyter_client_dates():
-    """Monkeypatch jupyter_client.extract_dates to be nondestructive wrt timezone info"""
-    import jupyter_client
+@lru_cache
+def _disable_session_extract_dates():
+    """Monkeypatch jupyter_client.extract_dates to be a no-op
 
-    if _v(jupyter_client.__version__) < _v('5.0'):
-        from jupyter_client import session
-
-        if hasattr(session, '_save_extract_dates'):
-            return
-        session._save_extract_dates = session.extract_dates
-        session.extract_dates = extract_dates
-
-
-# FIXME: remove patch when we require jupyter_client 5.0
-_patch_jupyter_client_dates()
+    avoids performance problem parsing unused timestamp strings
+    """
+    session.extract_dates = lambda obj: obj
 
 
 def progress(*args, widget=None, **kwargs):

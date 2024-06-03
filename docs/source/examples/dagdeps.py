@@ -6,6 +6,7 @@ Authors
 -------
 * MinRK
 """
+
 from random import randint
 
 import networkx as nx
@@ -75,10 +76,7 @@ def validate_tree(G, results):
         started = results[node].metadata.started
         for parent in G.predecessors(node):
             finished = results[parent].metadata.completed
-            assert started > finished, "{} should have happened after {}".format(
-                node,
-                parent,
-            )
+            assert started > finished, f"{node} should have happened after {parent}"
 
 
 def main(nodes, edges):

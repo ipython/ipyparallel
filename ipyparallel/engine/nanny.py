@@ -13,6 +13,7 @@ but has key differences, justifying both existing:
   only engine *sets*
 - Cluster API can efficiently signal all engines via mpiexec
 """
+
 import asyncio
 import logging
 import os
@@ -67,6 +68,7 @@ class KernelNanny:
         self.curve_secretkey = curve_secretkey
         self.config = config
         self.pipe = pipe
+        util._disable_session_extract_dates()
         self.session = Session(config=self.config)
 
         self.log = local_logger(f"{self.__class__.__name__}.{engine_id}", log_level)

@@ -1,5 +1,5 @@
-"""Dependency utilities
-"""
+"""Dependency utilities"""
+
 from types import ModuleType
 
 from ipyparallel.client.asyncresult import AsyncResult

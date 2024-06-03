@@ -2,6 +2,7 @@
 """
 The IPython controller application.
 """
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import json
@@ -923,9 +924,9 @@ class IPController(BaseParallelApplication):
             # save to new json config files
             base = {
                 'key': self.session.key.decode('ascii'),
-                'curve_serverkey': self.curve_publickey.decode("ascii")
-                if self.enable_curve
-                else None,
+                'curve_serverkey': (
+                    self.curve_publickey.decode("ascii") if self.enable_curve else None
+                ),
                 'location': self.location,
                 'pack': self.session.packer,
                 'unpack': self.session.unpacker,
@@ -982,9 +983,9 @@ class IPController(BaseParallelApplication):
             'mon_addr': monitor_url,
             'not_addr': disambiguate_url(self.client_url('notification')),
             'reg_addr': disambiguate_url(self.client_url('registration')),
-            'identity': identity
-            if identity is not None
-            else bytes(scheduler_name, 'utf8'),
+            'identity': (
+                identity if identity is not None else bytes(scheduler_name, 'utf8')
+            ),
             'logname': logname,
             'loglevel': self.log_level,
             'log_url': self.log_url,

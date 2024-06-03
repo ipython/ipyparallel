@@ -1,11 +1,12 @@
 """Place to put the base Handler"""
+
 import warnings
 from functools import lru_cache
 
 _APIHandler = None
 
 
-@lru_cache()
+@lru_cache
 def _guess_api_handler():
     """Fallback to guess API handler by availability"""
     try:

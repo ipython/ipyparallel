@@ -1,4 +1,5 @@
 """test View objects"""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import base64
@@ -510,13 +511,19 @@ class TestView(ClusterTestCase):
         v = self.client[self.client.ids[0]]
         v['g'] = list(range(5))
         rg = ipp.Reference('g[0]')
-        echo = lambda x: x
+
+        def echo(x):
+            return x
+
         assert v.apply_sync(echo, rg) == 0
 
     def test_reference_nameerror(self):
         v = self.client[self.client.ids[0]]
         r = ipp.Reference('elvis_has_left')
-        echo = lambda x: x
+
+        def echo(x):
+            return x
+
         with raises_remote(NameError):
             v.apply_sync(echo, r)
 
@@ -949,6 +956,6 @@ class TestView(ClusterTestCase):
         case a BroadcastView
         """
         view = self.client.broadcast_view(block=True)
-        assert view.block == True
+        assert view.block is True
         # Execute something as a sanity check
         view.execute("5", silent=False)

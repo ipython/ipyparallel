@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ipyparallel"
-version = "8.7.0.dev"
+version = "8.9.0.dev"
 authors = [{name = "IPython Development Team", email = "ipython-dev@scipy.org"}]
 license = {file = "COPYING.md"}
 readme = "README.md"
@@ -41,7 +41,7 @@ dependencies = [
     "pyzmq>=18",
     "traitlets>=4.3",
     "ipython>=4",
-    "jupyter_client",
+    "jupyter_client>=5",
     "ipykernel>=4.4",
     "tornado>=5.1",
     "psutil",
@@ -140,12 +140,37 @@ filterwarnings = [
   "module:Jupyter is migrating its paths to use standard platformdirs:DeprecationWarning",
 ]
 
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "preserve"
+
+[tool.ruff.lint]
+ignore = [
+    "F841", # unused variable
+    "E741", # ambiguous names
+    "E743", # ambiguous names
+]
+select = [
+    "E7", # comparisons
+    "E9", # syntax
+    "I", # isort
+    "UP", # pyupgrade
+    "F", # flake8
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["F841", "E741", "F401"]
+"**/__init__.py" = ["I", "F4"]
+"docs/source" = ["F402"]
+
 [tool.tbump]
 # Uncomment this if your project is hosted on GitHub:
 github_url = "https://github.com/jupyterhub/jupyterhub"
 
 [tool.tbump.version]
-current = "8.7.0.dev"
+current = "8.9.0.dev"
 
 # pep440 regex
 regex = '''

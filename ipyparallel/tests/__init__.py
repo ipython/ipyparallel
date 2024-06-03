@@ -1,4 +1,5 @@
 """toplevel setup/teardown for parallel tests."""
+
 import asyncio
 import os
 import time
@@ -137,5 +138,5 @@ def teardown():
             try:
                 print('cleaning up test process...')
                 p.signal(SIGKILL)
-            except:
+            except Exception:
                 print("couldn't shutdown process: ", p)

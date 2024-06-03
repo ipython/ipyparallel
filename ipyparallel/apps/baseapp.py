@@ -1,6 +1,7 @@
 """
 The Base Application class for ipyparallel apps
 """
+
 import logging
 import os
 import re
@@ -15,6 +16,8 @@ from jupyter_client.session import Session
 from tornado.ioloop import IOLoop
 from traitlets import Bool, Instance, Unicode, default, observe
 from traitlets.config.application import LevelFormatter, catch_config_error
+
+from ipyparallel import util
 
 from .._version import __version__
 
@@ -135,6 +138,7 @@ class BaseParallelApplication(BaseIPythonApplication):
     @catch_config_error
     def initialize(self, argv=None):
         """initialize the app"""
+        util._disable_session_extract_dates()
         self.init_config_from_env()
         super().initialize(argv)
         self.init_deprecated_config()

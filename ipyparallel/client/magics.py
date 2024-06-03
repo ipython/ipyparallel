@@ -25,26 +25,12 @@ Usage
 {CONFIG_DOC}
 
 """
-import time
-from contextlib import contextmanager
-
-
-# Python 3.6 doesn't have nullcontext, so we define our own
-@contextmanager
-def nullcontext():
-    yield
-
-
-# -----------------------------------------------------------------------------
-#  Copyright (C) 2008 The IPython Development Team
-#
-#  Distributed under the terms of the BSD License.  The full license is in
-#  the file COPYING, distributed as part of this software.
-# -----------------------------------------------------------------------------
 
 import inspect
 import re
 import sys
+import time
+from contextlib import nullcontext
 from textwrap import dedent
 
 from IPython.core import magic_arguments
@@ -581,7 +567,7 @@ class ParallelMagics(Magics):
         else:
             try:
                 self.parallel_execute(cell)
-            except:
+            except Exception:
                 self.shell.showtraceback()
                 return True
             else:

@@ -10,8 +10,10 @@ RUN --mount=type=cache,target=/var/cache/apt \
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV PATH=$MAMBA_ROOT_PREFIX/bin:$PATH
 ENV IPP_DISABLE_JS=1
-RUN wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba \
- && mv bin/micromamba /usr/local/bin/micromamba
+# x86_64 -> 64, aarch64 unmodified
+RUN ARCH=$(uname -m | sed s@x86_@@) \
+ && wget -qO- https://github.com/mamba-org/micromamba-releases/releases/latest/download/micromamba-linux-${ARCH} > /usr/local/bin/micromamba \
+ && chmod +x /usr/local/bin/micromamba
 
 RUN --mount=type=cache,target=${MAMBA_ROOT_PREFIX}/pkgs \
     micromamba install -y -p $MAMBA_ROOT_PREFIX -c conda-forge \

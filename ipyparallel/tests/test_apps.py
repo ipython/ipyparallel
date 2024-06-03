@@ -1,4 +1,5 @@
 """Test CLI application behavior"""
+
 import glob
 import json
 import os

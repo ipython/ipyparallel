@@ -1,4 +1,5 @@
 """Facilities for launching IPython Parallel processes asynchronously."""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import asyncio
@@ -328,8 +329,12 @@ class BaseLauncher(LoggingConfigurable):
         output = self.get_output(remove=True)
         if self.output_limit:
             output = "".join(output.splitlines(True)[-self.output_limit :])
+
+        log = self.log.debug
+        if stop_data and stop_data.get("exit_code", 0) != 0:
+            log = self.log.warning
         if output:
-            self.log.debug(f"Output for {self.identifier}:\n{output}")
+            log("Output for %s:\n%s", self.identifier, output)
 
 
 class ControllerLauncher(BaseLauncher):
@@ -349,11 +354,26 @@ class ControllerLauncher(BaseLauncher):
         help="""command-line args to pass to ipcontroller""",
     )
 
-    async def get_connection_info(self, timeout=60):
+    connection_info_timeout = Float(
+        60,
+        config=True,
+        help="""
+        Default timeout (in seconds) for get_connection_info
+        
+        .. versionadded:: 8.7
+        """,
+    )
+
+    async def get_connection_info(self, timeout=None):
         """Retrieve connection info for the controller
 
         Default implementation assumes profile_dir and cluster_id are local.
+
+        .. versionchanged:: 8.7
+            Accept `timeout=None` (default) to use `.connection_info_timeout` config.
         """
+        if timeout is None:
+            timeout = self.connection_info_timeout
         connection_files = self.connection_files
         paths = list(connection_files.values())
         start_time = time.monotonic()
@@ -795,6 +815,11 @@ class LocalEngineSetLauncher(LocalEngineLauncher):
 
             self.notify_stop(self.stop_data)
 
+    def _log_output(self, stop_data=None):
+        # avoid double-logging output, already logged by each engine
+        # that will be a lot if all 100 engines fail!
+        pass
+
     def get_output(self, remove=False):
         """Get the output of all my child Launchers"""
         for identifier, launcher in self.launchers.items():
@@ -867,9 +892,13 @@ class MPILauncher(LocalProcessLauncher):
 
     def _log_output(self, stop_data):
         """Try to log mpiexec error output, if any, at warning level"""
-        super()._log_output()
-        if self.log.getEffectiveLevel() <= logging.DEBUG:
+        super()._log_output(stop_data)
+
+        if stop_data and self.stop_data.get("exit_code", 0) != 0:
+            # if this is True, super()._log_output would have already logged the full output
+            # no need to extract from MPI
             return
+
         output = self.get_output(remove=False)
         mpiexec_lines = []
 
@@ -1632,7 +1661,7 @@ class WindowsHPCLauncher(BaseLauncher):
                 [self.job_cmd] + args, env=os.environ, cwd=self.work_dir, stderr=STDOUT
             )
             output = output.decode("utf8", 'replace')
-        except:
+        except Exception:
             output = 'The job already appears to be stopped: %r' % self.job_id
         self.notify_stop(
             dict(job_id=self.job_id, output=output)
@@ -2265,7 +2294,7 @@ class LSFLauncher(BatchSystemLauncher):
         # Here we save profile_dir in the context so they
         # can be used in the batch script template as {profile_dir}
         self.write_batch_script(n)
-        piped_cmd = self.args[0] + '<\"' + self.args[1] + '\"'
+        piped_cmd = self.args[0] + '<"' + self.args[1] + '"'
         self.log.debug("Starting %s: %s", self.__class__.__name__, piped_cmd)
         p = Popen(piped_cmd, shell=True, env=os.environ, stdout=PIPE)
         output, err = p.communicate()
@@ -2494,7 +2523,7 @@ def find_launcher_class(name, kind):
     return registry[name.lower()].load()
 
 
-@lru_cache()
+@lru_cache
 def abbreviate_launcher_class(cls):
     """Abbreviate a launcher class back to its entrypoint name"""
     cls_key = f"{cls.__module__}.{cls.__name__}"

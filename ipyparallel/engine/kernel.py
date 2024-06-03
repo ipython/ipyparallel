@@ -1,4 +1,5 @@
 """IPython kernel for parallel computing"""
+
 import asyncio
 import inspect
 import sys
@@ -151,7 +152,7 @@ class IPythonParallelKernel(IPythonKernel):
             content = parent['content']
             bufs = parent['buffers']
             msg_id = parent['header']['msg_id']
-        except:
+        except Exception:
             self.log.error("Got bad msg: %s", parent, exc_info=True)
             return
 

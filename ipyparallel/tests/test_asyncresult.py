@@ -1,4 +1,5 @@
 """Tests for asyncresult.py"""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import os
@@ -278,7 +279,7 @@ class TestAsyncResult(ClusterTestCase):
             ar.display_outputs()
         assert io.stderr == ''
         assert io.stdout.count('5555'), len(v) == io.stdout
-        assert not '\n\n' in io.stdout, io.stdout
+        assert '\n\n' not in io.stdout, io.stdout
         assert io.stdout.count('[stdout:'), len(v) == io.stdout
 
         ar = v.execute("a=5")
@@ -299,7 +300,7 @@ class TestAsyncResult(ClusterTestCase):
             ar.display_outputs('engine')
         assert io.stderr == ''
         assert io.stdout.count('5555'), len(v) == io.stdout
-        assert not '\n\n' in io.stdout, io.stdout
+        assert '\n\n' not in io.stdout, io.stdout
         assert io.stdout.count('[stdout:'), len(v) == io.stdout
 
         ar = v.execute("a=5")
@@ -460,6 +461,8 @@ class TestAsyncResult(ClusterTestCase):
         # get doubly-nested lists because these are
         split_results = [ar.get(timeout=10) for ar in children]
         assert split_results == result
+        joined = ipp.AsyncResult.join(*children)
+        assert joined.get(timeout=1) == result
 
     def test_split_map_result(self):
         v = self.client.load_balanced_view()
@@ -491,7 +494,7 @@ class TestAsyncResult(ClusterTestCase):
         assert len(done) == 1
         first_done = done.pop()
         assert first_done.msg_ids == amr.msg_ids[:1]
-        assert amr.wait(timeout=10) == True
+        assert amr.wait(timeout=10) is True
         done, pending = amr.wait(timeout=0, return_when=ipp.FIRST_EXCEPTION)
         assert pending == set()
         assert len(done) == len(amr)
@@ -515,7 +518,7 @@ class TestAsyncResult(ClusterTestCase):
         assert len(done) == 1
         first_done = done.pop()
         assert first_done.msg_ids == amr.msg_ids[:1]
-        assert amr.wait(timeout=10) == True
+        assert amr.wait(timeout=10) is True
         done, pending = amr.wait(timeout=0, return_when=ipp.FIRST_EXCEPTION)
         assert pending == set()
         assert len(done) == len(amr)

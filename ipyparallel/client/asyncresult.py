@@ -1,4 +1,5 @@
 """AsyncResult objects for the client"""
+
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import concurrent.futures
@@ -415,12 +416,12 @@ class AsyncResult(Future):
             client=first._client,
             fname=first._fname,
             return_exceptions=first._return_exceptions,
-            children=list(chain(ar._children for ar in async_results)),
-            targets=list(chain(ar._targets for ar in async_results)),
+            children=list(chain(*(ar._children for ar in async_results))),
+            targets=list(chain(*(ar._targets for ar in async_results))),
             owner=False,
         )
 
-    @lru_cache()
+    @lru_cache
     def split(self):
         """Split an AsyncResult
 
@@ -741,11 +742,11 @@ class AsyncResult(Future):
             # already done
             yield from rlist
 
-    @lru_cache()
+    @lru_cache
     def __len__(self):
         return self._count_chunks(*self.msg_ids)
 
-    @lru_cache()
+    @lru_cache
     def _count_chunks(self, *msg_ids):
         """Count the granular tasks"""
         return sum(self._chunk_sizes.setdefault(msg_id, 1) for msg_id in msg_ids)
