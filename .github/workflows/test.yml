@@ -150,6 +150,12 @@ jobs:
           echo "Disable Firewall:"
           Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled False
 
+          # just see were pip is installed and what libraries are install 
+          echo "Check pip inside container"
+          ssh $env:SSH_HOST -p $env:SSH_PORT "where pip"
+          ssh $env:SSH_HOST -p $env:SSH_PORT "pip list"
+          ssh $env:SSH_HOST -p $env:SSH_PORT "python3 -c 'import ipyparallel;print(""""ipyparallel is ok"""")'"
+
           echo "Check if container can ping the docker host (requires adapted hosts file and firewall disabled)"
           docker run ipyparallel-sshd ping -n 1 $env:computername
 
@@ -173,7 +179,7 @@ jobs:
           echo "PATH=$MAMBA_ROOT_PREFIX/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install Python ${{ matrix.python }}
-        if: ${{ matrix.cluster_type != 'mpi' && !contains(matrix.runs_on, 'windows') }}
+        if: ${{ matrix.cluster_type != 'mpi' }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
