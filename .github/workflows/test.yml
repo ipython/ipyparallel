@@ -154,7 +154,7 @@ jobs:
           echo "Check pip inside container"
           ssh $env:SSH_HOST -p $env:SSH_PORT "where pip"
           ssh $env:SSH_HOST -p $env:SSH_PORT "pip list"
-          ssh $env:SSH_HOST -p $env:SSH_PORT "python3 -c 'import ipyparallel;print(""""ipyparallel is ok"""")'"
+          ssh $env:SSH_HOST -p $env:SSH_PORT "python -c 'import ipyparallel;print(""""ipyparallel is ok"""")'"
 
           echo "Check if container can ping the docker host (requires adapted hosts file and firewall disabled)"
           docker run ipyparallel-sshd ping -n 1 $env:computername
