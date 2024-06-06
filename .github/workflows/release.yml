@@ -53,6 +53,7 @@ jobs:
 
       # ref: https://github.com/actions/upload-artifact#readme
       - uses: actions/upload-artifact@v4
+        if: false # disabled for now
         with:
           name: ipyparallel-${{ github.sha }}
           path: "dist/*"
