@@ -26,12 +26,12 @@ RUN $baseurl = 'https://nodejs.org/dist/latest/'; \
 	Write-Host 'Installing Node.js...'; \
 	Start-Process msiexec.exe -Wait -ArgumentList '/I node.msi /quiet'; \
 	\
-	Write-Host 'Path1=$env:PATH'; \
+	Write-Host 'Path1 =' $env:PATH; \
 	\
 #the installer updated PATH, so we should refresh our local value
 	$env:PATH = [Environment]::GetEnvironmentVariable('PATH', [EnvironmentVariableTarget]::Machine); \
 	\
-	Write-Host 'Path2=$env:PATH'; \
+	Write-Host 'Path2 =' $env:PATH; \
 	\
 	Write-Host 'Verifying install ...'; \
 	Write-Host '  node --version'; node --version; \

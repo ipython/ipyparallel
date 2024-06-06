@@ -173,7 +173,7 @@ jobs:
           echo "PATH=$MAMBA_ROOT_PREFIX/bin:$PATH" >> $GITHUB_ENV
 
       - name: Install Python ${{ matrix.python }}
-        if: ${{ matrix.cluster_type != 'mpi' }}
+        if: ${{ matrix.cluster_type != 'mpi' && !contains(matrix.runs_on, 'windows') }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
