@@ -1,4 +1,5 @@
 """test shell command classes"""
+
 import signal
 import sys
 import time
@@ -121,9 +122,9 @@ def shellcmd_test_cmd():
     """returns a command that runs for 5 seconds"""
     test_command = {}
     test_command["windows"] = 'ping -n 5 127.0.0.1'
-    test_command[
-        "linux"
-    ] = 'ping -c 5 127.0.0.1'  # ping needs to be installed to the standard ubuntu docker image
+    test_command["linux"] = (
+        'ping -c 5 127.0.0.1'  # ping needs to be installed to the standard ubuntu docker image
+    )
     test_command["macos"] = 'ping -c 5 127.0.0.1'
     return test_command
 
