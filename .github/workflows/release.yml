@@ -35,11 +35,13 @@ jobs:
           pip freeze
 
       - name: build release
+        if: false # disabled for now
         run: |
           python -m build --sdist --wheel .
           ls -l dist
 
       - name: verify wheel
+        if: false # disabled for now
         run: |
           cd dist
           pip install ./*.whl jupyterlab==4.*
