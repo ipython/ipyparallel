@@ -18,7 +18,7 @@ from .test_cluster import (
 
 @pytest.fixture(params=["SSH", "SSHProxy"])
 def ssh_config(ssh_dir, request):
-    windows = True if os.name == "nt" else False
+    windows = os.name == "nt"
 
     if (
         windows and request.param == "SSHProxy"
