@@ -28,9 +28,9 @@ from tempfile import NamedTemporaryFile
 
 
 class Platform(enum.Enum):
-    Unknown = (0,)
-    Linux = (1,)
-    Windows = (2,)
+    Unknown = 0
+    Linux = 1
+    Windows = 2
     MacOS = 3
 
     @staticmethod
