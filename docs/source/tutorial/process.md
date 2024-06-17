@@ -786,7 +786,9 @@ c.IPEngine.work_dir = u'/path/to/scratch/'
 ```
 
 [^cite_mongodb]: MongoDB database <https://www.mongodb.com/>
+
 [^cite_pbs]: Portable Batch System <https://www.mcs.anl.gov/research/projects/openpbs/>
+
 [^cite_ssh]: SSH-Agent <https://en.wikipedia.org/wiki/Ssh-agent>
 
 [pymongo]: https://pymongo.readthedocs.io
