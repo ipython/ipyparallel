@@ -169,7 +169,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     # initialize sender class
     sender.initialize()
 
-    if sender.break_away_support == False:
+    if not sender.breakaway_support:
         with pytest.warns(UserWarning):
             warnings.warn(
                 "Break away process creation flag is not available (known issue for Github Runners)",
@@ -216,13 +216,13 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     redirect_output_file = prefix + "output.txt"
     pid = sender.cmd_start(test_cmd, output_file=redirect_output_file)
     assert pid > 0
-    if sender.cmd_running(pid) == False:
+    if not sender.cmd_running(pid):
         print_file(sender, redirect_output_file)
     # assert sender.cmd_running(pid) is True
 
     sender.cmd_kill(pid, signal.SIGTERM)
 
-    if sender.cmd_running(pid) == False:
+    if not sender.cmd_running(pid):
         print_file(sender, redirect_output_file)
 
     assert sender.cmd_running(pid) is False

@@ -1247,7 +1247,7 @@ class SSHLauncher(LocalProcessLauncher):
         full_remote = f"{self.location}:{remote}".replace("\\", "/")
         for i in range(10 if wait else 0):
             if not os.path.exists(local):
-                self.log.debug("waiting for %s" % local)
+                self.log.debug(f"waiting for {local}")
                 time.sleep(1)
             else:
                 break
@@ -1272,9 +1272,9 @@ class SSHLauncher(LocalProcessLauncher):
         for i in range(10 if wait else 0):
             # wait up to 10s for remote file to exist
             check = self.ssh_sender.cmd_exists(remote)
-            if check == False:
+            if check is False:
                 time.sleep(1)
-            elif check == True:
+            elif check is True:
                 break
         local_dir = os.path.dirname(local)
         ensure_dir_exists(local_dir, 700)
@@ -1307,7 +1307,7 @@ class SSHLauncher(LocalProcessLauncher):
         ipython_installed = self.ssh_sender.has_ipython_package()
         if self.log:
             self.log.info(
-                f"ssh sender object initiated (break_away_support={self.ssh_sender.break_away_support})"
+                f"ssh sender object initiated (break_away_support={self.ssh_sender.breakaway_support})"
             )
 
         # create remote profile dir
@@ -1626,9 +1626,9 @@ class WindowsHPCLauncher(BaseLauncher):
         if m is not None:
             job_id = m.group()
         else:
-            raise LauncherError("Job id couldn't be determined: %s" % output)
+            raise LauncherError(f"Job id couldn't be determined: {output}")
         self.job_id = job_id
-        self.log.info('Job started with id: %r', job_id)
+        self.log.info(f'Job started with id: {job_id}')
         return job_id
 
     def start(self, n):
@@ -1636,8 +1636,8 @@ class WindowsHPCLauncher(BaseLauncher):
         self.write_job_file(n)
         args = [
             'submit',
-            '/jobfile:%s' % self.job_file,
-            '/scheduler:%s' % self.scheduler,
+            f'/jobfile:{self.job_file}',
+            f'/scheduler:{self.scheduler}',
         ]
         self.log.debug(
             "Starting Win HPC Job: {}".format(self.job_cmd + ' ' + ' '.join(args))
@@ -1652,7 +1652,7 @@ class WindowsHPCLauncher(BaseLauncher):
         return job_id
 
     def stop(self):
-        args = ['cancel', self.job_id, '/scheduler:%s' % self.scheduler]
+        args = ['cancel', self.job_id, f'/scheduler:{self.scheduler}']
         self.log.info(
             "Stopping Win HPC Job: {}".format(self.job_cmd + ' ' + ' '.join(args))
         )
@@ -1662,7 +1662,7 @@ class WindowsHPCLauncher(BaseLauncher):
             )
             output = output.decode("utf8", 'replace')
         except Exception:
-            output = 'The job already appears to be stopped: %r' % self.job_id
+            output = f'The job already appears to be stopped: {self.job_id}'
         self.notify_stop(
             dict(job_id=self.job_id, output=output)
         )  # Pass the output of the kill cmd
@@ -1876,7 +1876,7 @@ class BatchSystemLauncher(BaseLauncher):
         if m is not None:
             job_id = m.group(self.job_id_regexp_group)
         else:
-            raise LauncherError("Job id couldn't be determined: %s" % output)
+            raise LauncherError(f"Job id couldn't be determined: {output}")
         self.job_id = job_id
         self.log.info('Job submitted with job id: %r', job_id)
         return job_id

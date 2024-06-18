@@ -93,11 +93,12 @@ class ShellCommandReceive:
             return
         self.log.info(f"[id={self.ranid}] {msg}")
 
-    def __init__(self, debugging=False, use_break_way=True, log=None):
+    def __init__(self, debugging=False, use_breakaway=True, log=None):
         self.debugging = debugging
         self.log = None
         self.platform = Platform.get()
-        self.use_break_way = use_break_way
+        self.use_breakaway = use_breakaway
+        assert isinstance(self.use_breakaway, bool)
         if log:
             if isinstance(log, str):
                 self.log = SimpleLog(log)
@@ -160,7 +161,7 @@ class ShellCommandReceive:
                 if p[0] == '"' and p[-1] == '"':
                     start_cmd[idx] = p.strip('"')
 
-        self._log(f"start_cmd={start_cmd}  (use_break_way={self.use_break_way})")
+        self._log(f"start_cmd={start_cmd}  (use_breakaway={self.use_breakaway})")
 
         if self.platform == Platform.Windows:
             from subprocess import (
@@ -171,10 +172,7 @@ class ShellCommandReceive:
             )
 
             flags = 0
-            assert (
-                self.use_break_way is not None
-            )  # make sure that use_break_way is True or False
-            if self.use_break_way:
+            if self.use_breakaway:
                 flags |= CREATE_NEW_CONSOLE
                 flags |= CREATE_BREAKAWAY_FROM_JOB
 
@@ -194,10 +192,7 @@ class ShellCommandReceive:
 
             print(f'__remote_pid={p.pid}__')
             sys.stdout.flush()
-            assert (
-                self.use_break_way is not None
-            )  # make sure that use_break_way is True or False
-            if not self.use_break_way:
+            if not self.use_breakaway:
                 self._log("before wait")
                 p.wait()
                 self._log("after wait")
@@ -344,7 +339,7 @@ class ShellCommandSend:
         self.shell_info = None
         self.platform = Platform.Unknown  # platform enum of shell
         self.is_powershell = None  # flag if shell is windows powershell (requires special parameter quoting)
-        self.break_away_support = (
+        self.breakaway_support = (
             None  # flag if process creation support the break_away flag (windows only)
         )
         self.join_params = True  # join all cmd params into a single param. does NOT work with windows cmd
@@ -470,8 +465,8 @@ class ShellCommandSend:
 
         if self.debugging:
             receiver_params.append("debugging=True")
-        if self.break_away_support is not None and not self.break_away_support:
-            receiver_params.append("use_break_way=False")
+        if self.breakaway_support is not None and not self.breakaway_support:
+            receiver_params.append("use_breakaway=False")
         if self.log:
             receiver_params.append("log='${userdir}/shellcmd.log'")
 
@@ -490,8 +485,8 @@ class ShellCommandSend:
         cmd_args = self.shell + self.args + [self.python_path]
         if (
             cmd == 'start'
-            and self.break_away_support is not None
-            and not self.break_away_support
+            and self.breakaway_support is not None
+            and not self.breakaway_support
         ):
             assert self.platform == Platform.Windows
             from subprocess import DETACHED_PROCESS
@@ -684,7 +679,7 @@ class ShellCommandSend:
                 shell = val
 
         if self.platform == Platform.Windows and self.python_path is not None:
-            self.break_away_support = self._check_for_break_away_flag()  # check if break away flag is available (its not in windows github runners)
+            self.breakaway_support = self._check_for_break_away_flag()  # check if break away flag is available (its not in windows github runners)
 
         self.shell_info = (system, shell)
 
