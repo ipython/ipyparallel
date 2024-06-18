@@ -81,10 +81,10 @@ class ShellCommandReceive:
     """
     Helper class for receiving and performing shell commands in a platform independent form
 
-    All supported shell commands have a cmd_ prefix. When adding new functions make sure that the is an
-    equivalent in the ShellCommandSend class. When a command failed a non zero exit code will be returned.
+    All supported shell commands have a cmd_ prefix. When adding new functions make sure that there is an
+    equivalent in the ShellCommandSend class. When a command failed a non-zero exit code will be returned.
     Hence, the ShellCommandSend class always uses subprocess.check_output for assessing if the command was
-    successfull. Some command require information to be returned (cmd_exists, cmd_start, cmd_running) which
+    successful. Some command require information to be returned (cmd_exists, cmd_start, cmd_running) which
     is written to stdout in the following form: __<key>=<value>__
     """
 
@@ -129,11 +129,12 @@ class ShellCommandReceive:
                     env = env.strip('"')  # occurs under windows cmd
                 if "\\'" in env:
                     env = env.replace("\\'", "'")  # replace quoted
-                env_dict = eval(env)
-                assert isinstance(env_dict, dict) is True
-                env = env_dict
+                env = eval(
+                    env
+                )  # converts string into dict (if given in the correct syntax)
 
-            assert isinstance(env, dict) is True  # make sure that env is a dictionary
+            if not isinstance(env, dict):
+                raise TypeError(f"env must be a dict, got {env!r}")
 
             # update environment
             for key, value in env.items():
@@ -170,7 +171,10 @@ class ShellCommandReceive:
             )
 
             flags = 0
-            if self.use_break_way != False:
+            assert (
+                self.use_break_way is not None
+            )  # make sure that use_break_way is True or False
+            if self.use_break_way:
                 flags |= CREATE_NEW_CONSOLE
                 flags |= CREATE_BREAKAWAY_FROM_JOB
 
@@ -190,7 +194,10 @@ class ShellCommandReceive:
 
             print(f'__remote_pid={p.pid}__')
             sys.stdout.flush()
-            if self.use_break_way == False:
+            assert (
+                self.use_break_way is not None
+            )  # make sure that use_break_way is True or False
+            if not self.use_break_way:
                 self._log("before wait")
                 p.wait()
                 self._log("after wait")
@@ -463,7 +470,7 @@ class ShellCommandSend:
 
         if self.debugging:
             receiver_params.append("debugging=True")
-        if self.break_away_support == False:
+        if self.break_away_support is not None and not self.break_away_support:
             receiver_params.append("use_break_way=False")
         if self.log:
             receiver_params.append("log='${userdir}/shellcmd.log'")
@@ -481,7 +488,11 @@ class ShellCommandSend:
         )
         py_cmd += ")"
         cmd_args = self.shell + self.args + [self.python_path]
-        if cmd == 'start' and self.break_away_support == False:
+        if (
+            cmd == 'start'
+            and self.break_away_support is not None
+            and not self.break_away_support
+        ):
             assert self.platform == Platform.Windows
             from subprocess import DETACHED_PROCESS
 
