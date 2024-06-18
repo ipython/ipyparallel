@@ -6,6 +6,12 @@ SHELL ["powershell"]
 ENV PYTHON_VERSION 3.8.10
 ENV PYTHON_RELEASE 3.8.10
 
+# using docker env doesn't seem to work fully correctly. The environment variable is set in the powershell
+# but somehow it is not present during pip install process, which will cause the ipyparallel installation
+# to fail. Therefore, we use the SetEnvironmentVariable command (for the machine) to make this 'permanent'.
+# See run command below.
+# ENV IPP_DISABLE_JS=1
+
 # the following env variable values will be 'statically' replaced by the corresponding github workflow script
 # if the values aren't replaced the container hosts file isn't changed which is typically no problem in a local
 # environment. but it's a necessity for github runners, since the host name resolution inside the container doesn't
@@ -13,8 +19,11 @@ ENV PYTHON_RELEASE 3.8.10
 ENV docker_host_ip   ${docker_host_ip}
 ENV docker_host_name ${docker_host_name}
 
+# set IPP_DISABLE_JS=1 and install latest node js version
+RUN [System.Environment]::SetEnvironmentVariable('IPP_DISABLE_JS','1', [EnvironmentVariableTarget]::Machine); \
+    \
 #download and install latest node js version
-RUN $baseurl = 'https://nodejs.org/dist/latest/'; \
+    $baseurl = 'https://nodejs.org/dist/latest/'; \
 	$line = Invoke-WebRequest -UseBasicParsing -Uri $baseurl | Select-Object -ExpandProperty Content | ForEach-Object { $_.Split(\"`r`n\") } | Select-String -Pattern '-x64.msi'; \
 	$filename = ($line -split '>' -split '<')[2]; \
 	Write-Host ('Latest node.js installer {0}' -f $filename); \

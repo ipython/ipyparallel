@@ -121,7 +121,8 @@ jobs:
           docker run ipyparallel-sshd powershell.exe -Command "type C:\Users\ciuser\.ssh\id_rsa" | out-file -encoding ascii $env:USERPROFILE/.ssh/id_rsa
 
           # install newer version of openssh (removes "GetConsoleMode on STD_INPUT_HANDLE failed with 6" error in pytest)
-          choco install openssh --pre
+          # also disable download progress to keep github runner output more compact
+          choco install openssh --pre --no-progress
           mv C:\Windows\System32\OpenSSH C:\Windows\System32\_OpenSSH
 
           #check ssh connection and accept host key (with arbitrary windows command)
@@ -132,7 +133,7 @@ jobs:
 
           # zip ipyparallel files (excluding files probably not needed)
           cd ../..
-          $exclude = @("__pycache__","node_modules")
+          $exclude = @("__pycache__", "node_modules", ".yarn")
           $files = Get-ChildItem -Path "." -Exclude $exclude
           Compress-Archive -Path $files -DestinationPath ipyparallel.zip -CompressionLevel Fastest
           # copy file into docker (we need to do it over ssh since docker copy or mount doesn't work in Hyper-V)
@@ -141,7 +142,7 @@ jobs:
           ssh $env:SSH_HOST -p $env:SSH_PORT powershell.exe -Command "Expand-Archive -Path $env:CODE_ROOT\ipyparallel.zip -DestinationPath $env:CODE_ROOT"
 
           # pip install ipyparallel files
-          #ssh $env:SSH_HOST -p $env:SSH_PORT "cd $env:CODE_ROOT && pip install -e ."
+          #ssh $env:SSH_HOST -p $env:SSH_PORT "echo IPP_DISABLE_JS=$env:IPP_DISABLE_JS"
           ssh $env:SSH_HOST -p $env:SSH_PORT "pip install -e file://c:/src/ipyparallel#egg=ipyparallel[test]"
 
           # we need to disable the windows firewall for github runners otherwise the ipyparallel engines cannot connect to the controller.
@@ -154,7 +155,6 @@ jobs:
           echo "Check pip inside container"
           ssh $env:SSH_HOST -p $env:SSH_PORT "where pip"
           ssh $env:SSH_HOST -p $env:SSH_PORT "pip list"
-          ssh $env:SSH_HOST -p $env:SSH_PORT "python -c 'import ipyparallel;print(""""ipyparallel is ok"""")'"
 
           echo "Check if container can ping the docker host (requires adapted hosts file and firewall disabled)"
           docker run ipyparallel-sshd ping -n 1 $env:computername
