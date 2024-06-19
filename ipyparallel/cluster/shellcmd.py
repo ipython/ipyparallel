@@ -140,12 +140,12 @@ class ShellCommandReceive:
         if isinstance(start_cmd, str):
             start_cmd = [start_cmd]
 
+        if not all(isinstance(item, str) for item in start_cmd):
+            raise TypeError(f"Only str in start_cmd allowed ({start_cmd!r})")
+
         if self.platform == Platform.Windows:
             # under windows we need to remove embracing double quotes
             for idx, p in enumerate(start_cmd):
-                if not isinstance(p, str):
-                    start_cmd[idx] = str(p)
-                    continue
                 if p[0] == '"' and p[-1] == '"':
                     start_cmd[idx] = p.strip('"')
 
