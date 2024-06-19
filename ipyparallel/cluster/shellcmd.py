@@ -115,12 +115,6 @@ class ShellCommandReceive:
         if self.log:
             self._log("ShellCommandReceive instance deleted")
 
-    def _linux_quote(self, p):
-        if "'" in p:
-            return '"' + p + '"'
-        else:
-            return p
-
     def cmd_start(self, start_cmd, env=None, output_file=None):
         if env:
             self._log(f"env={env!r}")
@@ -385,7 +379,7 @@ class ShellCommandSend:
         elif isinstance(cmd, list):
             return cmd
         else:
-            raise Exception("Unknown command type")
+            raise TypeError(f"Unknown command type: {cmd!r}")
 
     @staticmethod
     def _format_for_python(param):
@@ -504,8 +498,8 @@ class ShellCommandSend:
 
             # if windows platform doesn't support break away flag (e.g. Github Runner)
             # we need to start a detached process (as work-a-round), the runs until the
-            # 'remote' process has finished. But we cannot direectly start the command as detached
-            # process, since redirection (for retreiving the pid) doesn't work. We need a detached
+            # 'remote' process has finished. But we cannot directly start the command as detached
+            # process, since redirection (for retrieving the pid) doesn't work. We need a detached
             # proxy process that redirects output the to file, that can be read by current process
             # to retrieve the pid.
 
@@ -520,7 +514,7 @@ class ShellCommandSend:
             with open(fi_name, "w") as f:
                 f.write(py_cmd)
 
-            # simple python code that starts the actual cmd in a non detachted
+            # simple python code that starts the actual cmd in a detached process
             cmd_args_str = ", ".join(f'{self._format_for_python(c)}' for c in cmd_args)
             if self.log:
                 detach_log = SimpleLog("${userdir}/detach.log").filename
