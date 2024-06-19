@@ -197,13 +197,17 @@ class ShellCommandReceive:
                 p.wait()
                 self._log("after wait")
         else:
-            start_cmd = [self._linux_quote(x) for x in start_cmd]
+            from subprocess import DEVNULL, Popen
 
+            fo = DEVNULL
             if output_file:
-                nohup_start = f"nohup {' '.join(start_cmd)} >{output_file} 2>&1 </dev/null & echo __remote_pid=$!__"
-            else:
-                nohup_start = f"nohup {' '.join(start_cmd)} >/dev/null 2>&1 </dev/null & echo __remote_pid=$!__"
-            os.system(nohup_start)
+                fo = open(output_file, "w")
+
+            p = Popen(
+                start_cmd, start_new_session=True, stdout=fo, stderr=fo, stdin=DEVNULL
+            )
+            print(f'__remote_pid={p.pid}__')
+            sys.stdout.flush()
 
     def cmd_running(self, pid):
         self._log(f"Check if pid {pid} is running")
@@ -232,8 +236,12 @@ class ShellCommandReceive:
                     print('__running=0__')
                 ctypes.windll.kernel32.CloseHandle(processHandle)
         else:
-            ps_cmd = f'ps -p {pid} > /dev/null && echo "__running=1__" || echo "__running=0__"'
-            os.system(ps_cmd)
+            try:
+                # use os.kill with signal 0 to check if process is still running
+                os.kill(pid, 0)
+                print('__running=1__')
+            except OSError:
+                print('__running=0__')
 
     def cmd_kill(self, pid, sig=None):
         self._log(f"Kill pid {pid} (signal={sig})")
@@ -311,6 +319,13 @@ class ShellCommandSend:
     Beside generic check_output[...] functions (equivalent to subprocess.check_output), the class provides
     specific shell commands which have a cmd_ prefix. When adding new functions make sure that an
     equivalent is added in the ShellCommandReceive class as well.
+
+    To start processes through an ssh connection on a windows server that stays alife after the ssh connection
+    is closed, the process must be started with the breakaway creation flag set. Which works fine on 'normal'
+    machine and VMs is denied on windows github runners (I guess because of security reasons). Hence, it was
+    necessary to implement a work-a-round to enable CI in github. In case breakaway is not supported, a detached
+    ssh connection is started (by the ShellCommandSend object) which stays open until the process to start has
+    finished. see _cmd_send for further details.
     """
 
     package_name = "ipyparallel.shellcmd"  # package name for send the command
@@ -339,9 +354,7 @@ class ShellCommandSend:
         self.shell_info = None
         self.platform = Platform.Unknown  # platform enum of shell
         self.is_powershell = None  # flag if shell is windows powershell (requires special parameter quoting)
-        self.breakaway_support = (
-            None  # flag if process creation support the break_away flag (windows only)
-        )
+        self.breakaway_support = None  # flag if process creation support the break_away flag (relevant for windows only; None under linux)
         self.join_params = True  # join all cmd params into a single param. does NOT work with windows cmd
         self.pathsep = (
             "/"  # equivalent to os.pathsep (will be changed during initialization)
@@ -465,7 +478,7 @@ class ShellCommandSend:
 
         if self.debugging:
             receiver_params.append("debugging=True")
-        if self.breakaway_support is not None and not self.breakaway_support:
+        if self.breakaway_support is False:
             receiver_params.append("use_breakaway=False")
         if self.log:
             receiver_params.append("log='${userdir}/shellcmd.log'")
@@ -483,11 +496,7 @@ class ShellCommandSend:
         )
         py_cmd += ")"
         cmd_args = self.shell + self.args + [self.python_path]
-        if (
-            cmd == 'start'
-            and self.breakaway_support is not None
-            and not self.breakaway_support
-        ):
+        if cmd == 'start' and self.breakaway_support is False:
             assert self.platform == Platform.Windows
             from subprocess import DETACHED_PROCESS
 
@@ -756,12 +765,8 @@ class ShellCommandSend:
         """
         # join commands into a single parameter. otherwise
         assert self.shell_info  # make sure that initialize was called already
-        if self.platform == Platform.Windows:
-            # for windows shells we need to split program and arguments into a list
-            if isinstance(cmd, str):
-                paramlist = shlex.split(cmd)
-            else:
-                paramlist = self._as_list(cmd)
+        if isinstance(cmd, str):
+            paramlist = shlex.split(cmd)
         else:
             paramlist = self._as_list(cmd)
 
