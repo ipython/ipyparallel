@@ -15,7 +15,6 @@ Currently, the following command are supported:
 import base64
 import enum
 import inspect
-import json
 import os
 import re
 import shlex
@@ -124,26 +123,15 @@ class ShellCommandReceive:
 
     def cmd_start(self, start_cmd, env=None, output_file=None):
         if env:
-            # add provided entries to environment
-            if isinstance(env, str):
-                if env[0] == '"' and env[-1] == '"':
-                    env = env.strip('"')  # occurs under windows cmd
-                if "\\'" in env:
-                    env = env.replace("\\'", "'")  # replace quoted
-                env = eval(
-                    env
-                )  # converts string into dict (if given in the correct syntax)
-
+            self._log(f"env={env!r}")
             if not isinstance(env, dict):
                 raise TypeError(f"env must be a dict, got {env!r}")
 
             # update environment
             for key, value in env.items():
                 if value is not None and value != '':
-                    if isinstance(value, dict):
-                        os.environ[key] = json.dumps(value)
-                    else:
-                        os.environ[key] = str(value)
+                    # set entry
+                    os.environ[key] = str(value)
                 else:
                     # unset entry if needed
                     if key in os.environ:
@@ -476,6 +464,20 @@ class ShellCommandSend:
         receiver_params = []
         param_str = ""
 
+        # make sure that env is a dictionary with only str entries (for key and value; value can be null as well)
+        if "env" in kwargs and kwargs["env"]:
+            env = kwargs["env"]
+            assert isinstance(env, dict)
+            for key, value in env.items():
+                if not isinstance(key, str):
+                    raise TypeError(
+                        f"str expected in env dict: inappropriate key type ({key!r})."
+                    )
+                if value and not isinstance(value, str):
+                    raise TypeError(
+                        f"str expected in env dict: inappropriate value type ({value!r}) for key '{key}'"
+                    )
+
         if self.debugging:
             receiver_params.append("debugging=True")
         if self.breakaway_support is False:
@@ -759,7 +761,7 @@ class ShellCommandSend:
     def cmd_start(self, cmd, env=None, output_file=None):
         """starts command into background and return remote pid
         :param cmd: command (str or list of strs) that should be started
-        :param env: dictionary of environment variable that should be set before starting the process
+        :param env: dictionary of environment variable that should be set/unset before starting the process
         :param output_file: stdout and stderr will be redirected to the (remote) file
         :return: pid of started process
         """

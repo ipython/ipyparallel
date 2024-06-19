@@ -1,5 +1,6 @@
 """test shell command classes"""
 
+import json
 import signal
 import sys
 import time
@@ -150,7 +151,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     if Platform.get() == Platform.Windows:
         if platform == "wsl":
             pytest.skip("wsl deactivated")  # comment to activate wsl tests
-            prefix = "/home/jo"
+            prefix = "/home/johannes/"
         elif platform != "windows":
             pytest.skip("other platform")
 
@@ -231,27 +232,28 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
 
     # do environment setting test
     # we have a dictionary of three environment entries, where the first one is empty
+    ci_dict = {
+        "ssh": "",
+        "interface": "tcp://*",
+        "registration": 60691,
+        "control": 60692,
+        "mux": 60693,
+        "task": 60694,
+        "iopub": 60695,
+        "hb_ping": 60696,
+        "hb_pong": 60697,
+        "broadcast": [60698, 60699],
+        "key": "169b682b-337c645951e7d47723061090",
+        "curve_serverkey": "null",
+        "location": "host",
+        "pack": "json",
+        "unpack": "json",
+        "signature_scheme": "hmac-sha256",
+    }
     env_dict = {
         "IPP_CLUSTER_ID": "",
         "IPP_PROFILE_DIR": r"~/.ipython/profile_ssh",
-        "IPP_CONNECTION_INFO": {
-            "ssh": "",
-            "interface": "tcp://*",
-            "registration": 60691,
-            "control": 60692,
-            "mux": 60693,
-            "task": 60694,
-            "iopub": 60695,
-            "hb_ping": 60696,
-            "hb_pong": 60697,
-            "broadcast": [60698, 60699],
-            "key": "169b682b-337c645951e7d47723061090",
-            "curve_serverkey": "null",
-            "location": "host",
-            "pack": "json",
-            "unpack": "json",
-            "signature_scheme": "hmac-sha256",
-        },
+        "IPP_CONNECTION_INFO": json.dumps(ci_dict),
     }
     # we use a small python script to output provided environment setting
     python_cmd = "import os;"
