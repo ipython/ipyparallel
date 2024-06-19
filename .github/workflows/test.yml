@@ -218,6 +218,7 @@ jobs:
         run: |
           # ${EXEC:-} syntax doesn't work under windows. hence, the slurm test was move to the previous step
           pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
+          pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_shellcmd.py
 
       - name: Run tests
         if: ${{ ! matrix.cluster_type }}
