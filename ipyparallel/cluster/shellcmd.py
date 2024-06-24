@@ -606,12 +606,16 @@ class ShellCommandSend:
     def _check_for_break_away_flag(self):
         assert self.platform == Platform.Windows  # test only relevant for windows
         assert self.python_path is not None
-        cmd = [
-            self.python_path,
-            "-c",
-            "import subprocess; subprocess.Popen(['cmd.exe', '/C'], close_fds=True, \
-               creationflags=subprocess.CREATE_BREAKAWAY_FROM_JOB)",
-        ]
+        py_code = "import subprocess; subprocess.Popen(['cmd.exe', '/C'], close_fds=True, creationflags=subprocess.CREATE_BREAKAWAY_FROM_JOB)"
+        cmd = (
+            self.shell
+            + self.args
+            + [
+                self.python_path,
+                '-c',
+                f'"{py_code}"',
+            ]
+        )
         try:
             # non-zero return code, if break_away test fails
             self._check_output(cmd).strip()
