@@ -177,8 +177,8 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
             stacklevel=2,
         )
 
-    if Platform.get() == Platform.Windows:
-        sender.breakaway_support = False  # just for testing
+    # if Platform.get() == Platform.Windows:
+    #    sender.breakaway_support = False  # just for testing
 
     info = sender.get_shell_info()
     assert len(info) == 2 and info[0] and info[1]

@@ -606,23 +606,23 @@ class ShellCommandSend:
     def _check_for_break_away_flag(self):
         assert self.platform == Platform.Windows  # test only relevant for windows
         assert self.python_path is not None
-        py_code = "import subprocess; subprocess.Popen(['cmd.exe', '/C'], close_fds=True, creationflags=subprocess.CREATE_BREAKAWAY_FROM_JOB)"
+        py_code = "import subprocess; subprocess.Popen(['cmd.exe', '/C'], close_fds=True, creationflags=subprocess.CREATE_BREAKAWAY_FROM_JOB); print('successful')"
         cmd = (
             self.shell
             + self.args
             + [
                 self.python_path,
                 '-c',
-                f'"{py_code}"',
+                f'{py_code}',
             ]
         )
         try:
             # non-zero return code, if break_away test fails
-            self._check_output(cmd).strip()
+            output = self._check_output(cmd).strip()
         except Exception:
-            return False
+            output = ""
 
-        return True
+        return output == "successful"
 
     def initialize(self):
         """initialize necessary variables by sending an echo command that works on all OS and shells"""
