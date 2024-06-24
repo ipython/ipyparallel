@@ -1,6 +1,7 @@
 """test shell command classes"""
 
 import json
+import os
 import signal
 import sys
 import time
@@ -151,7 +152,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     if Platform.get() == Platform.Windows:
         if platform == "wsl":
             pytest.skip("wsl deactivated")  # comment to activate wsl tests
-            prefix = "/home/johannes/"
+            prefix = "/home/" + os.environ["USERNAME"] + "/"
         elif platform != "windows":
             pytest.skip("other platform")
 
