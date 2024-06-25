@@ -529,11 +529,10 @@ class Client(HasTraits):
                 # This is only a warning, because the most likely cause
                 # is a local Controller on a laptop whose IP is dynamic
                 warnings.warn(
-                    """
+                    f"""
             Controller appears to be listening on localhost, but not on this machine.
-            If this is true, you should specify Client(...,sshserver='you@%s')
-            or instruct your controller to listen on an external IP."""
-                    % location,
+            If this is true, you should specify Client(...,sshserver='you@{location}')
+            or instruct your controller to listen on an external IP.""",
                     RuntimeWarning,
                 )
         elif not sshserver:
@@ -552,7 +551,7 @@ class Client(HasTraits):
             if tunnel.try_passwordless_ssh(sshserver, sshkey, paramiko):
                 password = False
             else:
-                password = getpass("SSH Password for %s: " % sshserver)
+                password = getpass(f"SSH Password for {sshserver}: ")
         ssh_kwargs = dict(keyfile=sshkey, password=password, paramiko=paramiko)
 
         # configure and construct the session
@@ -706,7 +705,7 @@ class Client(HasTraits):
             if targets.lower() == 'all':
                 targets = self._ids
             else:
-                raise TypeError("%r not valid str target, must be 'all'" % (targets))
+                raise TypeError(f"{targets!r} not valid str target, must be 'all'")
         elif isinstance(targets, int):
             if targets < 0:
                 targets = self.ids[targets]
@@ -721,7 +720,7 @@ class Client(HasTraits):
 
         if not isinstance(targets, (tuple, list, range)):
             raise TypeError(
-                "targets by int/slice/collection of ints only, not %s" % (type(targets))
+                f"targets by int/slice/collection of ints only, not {type(targets)}"
             )
 
         return [self._engines[t].encode("utf8") for t in targets], list(targets)
@@ -790,7 +789,7 @@ class Client(HasTraits):
         else:
             self._connected = False
             tb = '\n'.join(content.get('traceback', []))
-            raise Exception("Failed to connect! %s" % tb)
+            raise Exception(f"Failed to connect! {tb}")
 
         self._start_io_thread()
 
@@ -910,9 +909,9 @@ class Client(HasTraits):
         future = self._futures.get(msg_id, None)
         if msg_id not in self.outstanding:
             if msg_id in self.history:
-                print("got stale result: %s" % msg_id)
+                print(f"got stale result: {msg_id}")
             else:
-                print("got unknown result: %s" % msg_id)
+                print(f"got unknown result: {msg_id}")
         else:
             self.outstanding.remove(msg_id)
 
@@ -971,11 +970,11 @@ class Client(HasTraits):
         future = self._futures.get(msg_id, None)
         if msg_id not in self.outstanding:
             if msg_id in self.history:
-                print("got stale result: %s" % msg_id)
+                print(f"got stale result: {msg_id}")
                 print(self.results[msg_id])
                 print(msg)
             else:
-                print("got unknown result: %s" % msg_id)
+                print(f"got unknown result: {msg_id}")
         else:
             self.outstanding.remove(msg_id)
         content = msg['content']
@@ -1102,7 +1101,7 @@ class Client(HasTraits):
         msg_type = msg['header']['msg_type']
         handler = self._notification_handlers.get(msg_type, None)
         if handler is None:
-            raise KeyError("Unhandled notification message type: %s" % msg_type)
+            raise KeyError(f"Unhandled notification message type: {msg_type}")
         else:
             handler(msg)
 
@@ -1112,7 +1111,7 @@ class Client(HasTraits):
         msg_type = msg['header']['msg_type']
         handler = self._queue_handlers.get(msg_type, None)
         if handler is None:
-            raise KeyError("Unhandled reply message type: %s" % msg_type)
+            raise KeyError(f"Unhandled reply message type: {msg_type}")
         else:
             handler(msg)
 
@@ -1332,7 +1331,7 @@ class Client(HasTraits):
         Must be int, slice, or list/tuple/range of ints"""
         if not isinstance(key, (int, slice, tuple, list, range)):
             raise TypeError(
-                "key by int/slice/iterable of ints only, not %s" % (type(key))
+                f"key by int/slice/iterable of ints only, not {type(key)}"
             )
         else:
             return self.direct_view(key)
@@ -1744,7 +1743,7 @@ class Client(HasTraits):
         bad_ids = [obj for obj in jobs if not isinstance(obj, (str, AsyncResult))]
         if bad_ids:
             raise TypeError(
-                "Invalid msg_id type %r, expected str or AsyncResult" % bad_ids[0]
+                f"Invalid msg_id type {bad_ids[0]!r}, expected str or AsyncResult"
             )
         for j in jobs:
             if isinstance(j, AsyncResult):
@@ -1945,13 +1944,13 @@ class Client(HasTraits):
 
         # validate arguments
         if not callable(f) and not isinstance(f, (Reference, PrePickled)):
-            raise TypeError("f must be callable, not %s" % type(f))
+            raise TypeError(f"f must be callable, not {type(f)}")
         if not isinstance(args, (tuple, list)):
-            raise TypeError("args must be tuple or list, not %s" % type(args))
+            raise TypeError(f"args must be tuple or list, not {type(args)}")
         if not isinstance(kwargs, dict):
-            raise TypeError("kwargs must be dict, not %s" % type(kwargs))
+            raise TypeError(f"kwargs must be dict, not {type(kwargs)}")
         if not isinstance(metadata, dict):
-            raise TypeError("metadata must be dict, not %s" % type(metadata))
+            raise TypeError(f"metadata must be dict, not {type(metadata)}")
 
         bufs = serialize.pack_apply_message(
             f,
@@ -1996,9 +1995,9 @@ class Client(HasTraits):
 
         # validate arguments
         if not isinstance(code, str):
-            raise TypeError("code must be text, not %s" % type(code))
+            raise TypeError(f"code must be text, not {type(code)}")
         if not isinstance(metadata, dict):
-            raise TypeError("metadata must be dict, not %s" % type(metadata))
+            raise TypeError(f"metadata must be dict, not {type(metadata)}")
 
         content = dict(code=code, silent=bool(silent), user_expressions={})
 
@@ -2281,7 +2280,7 @@ class Client(HasTraits):
                     elif header['msg_type'] == 'execute_reply':
                         res = ExecuteReply(msg_id, rcontent, md)
                     else:
-                        raise KeyError("unhandled msg type: %r" % header['msg_type'])
+                        raise KeyError("unhandled msg type: {!r}".format(header['msg_type']))
                 else:
                     res = self._unwrap_exception(rcontent)
                     failures.append(res)
@@ -2354,7 +2353,7 @@ class Client(HasTraits):
             elif isinstance(job, AsyncResult):
                 msg_ids.extend(job.msg_ids)
             else:
-                raise TypeError("Expected msg_id, int, or AsyncResult, got %r" % job)
+                raise TypeError(f"Expected msg_id, int, or AsyncResult, got {job!r}")
         return msg_ids
 
     def _asyncresult_from_jobs(self, jobs=None, owner=False):
@@ -2387,7 +2386,7 @@ class Client(HasTraits):
                 else:
                     msg_ids.extend(job.msg_ids)
             else:
-                raise TypeError("Expected msg_id, int, or AsyncResult, got %r" % job)
+                raise TypeError(f"Expected msg_id, int, or AsyncResult, got {job!r}")
         if msg_ids:
             if single:
                 msg_ids = msg_ids[0]
@@ -2431,7 +2430,7 @@ class Client(HasTraits):
         if jobs == 'all':
             if self.outstanding:
                 raise RuntimeError(
-                    "Can't purge outstanding tasks: %s" % self.outstanding
+                    f"Can't purge outstanding tasks: {self.outstanding}"
                 )
             self.results.clear()
             self.metadata.clear()
@@ -2444,7 +2443,7 @@ class Client(HasTraits):
             still_outstanding = self.outstanding.intersection(msg_ids)
             if still_outstanding:
                 raise RuntimeError(
-                    "Can't purge outstanding tasks: %s" % still_outstanding
+                    f"Can't purge outstanding tasks: {still_outstanding}"
                 )
             for mid in msg_ids:
                 self.results.pop(mid, None)

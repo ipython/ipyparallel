@@ -34,7 +34,7 @@ class IPythonParallelKernel(IPythonKernel):
 
     def _topic(self, topic):
         """prefixed topic for IOPub messages"""
-        base = "engine.%s" % self.engine_id
+        base = f"engine.{self.engine_id}"
 
         return f"{base}.{topic}".encode()
 

@@ -263,7 +263,7 @@ class ParallelMagics(Magics):
 
     def _eval_target_str(self, ts):
         if ':' in ts:
-            targets = eval("self.view.client.ids[%s]" % ts)
+            targets = eval(f"self.view.client.ids[{ts}]")
         elif 'all' in ts:
             targets = 'all'
         else:
@@ -375,7 +375,7 @@ class ParallelMagics(Magics):
         else:
             str_targets = str(targets)
         if self.verbose:
-            print(base + " execution on engine(s): %s" % str_targets)
+            print(base + f" execution on engine(s): {str_targets}")
 
         result = self.view.execute(cell, silent=False, block=False)
         result._fname = "%px"

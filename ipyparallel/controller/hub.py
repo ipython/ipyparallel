@@ -306,7 +306,7 @@ class Hub(LoggingConfigurable):
         targets = _targets
         bad_targets = [t for t in targets if t not in self.ids]
         if bad_targets:
-            raise IndexError("No Such Engine: %r" % bad_targets)
+            raise IndexError(f"No Such Engine: {bad_targets!r}")
         if not targets:
             raise IndexError("No Engines Registered")
         return targets
@@ -361,7 +361,7 @@ class Hub(LoggingConfigurable):
         handler = self.query_handlers.get(msg_type, None)
         try:
             if handler is None:
-                raise KeyError("Bad Message Type: %r" % msg_type)
+                raise KeyError(f"Bad Message Type: {msg_type!r}")
         except Exception:
             content = error.wrap_exception()
             self.log.error("Bad Message Type: %r", msg_type, exc_info=True)
@@ -838,7 +838,7 @@ class Hub(LoggingConfigurable):
         elif msg_type in ('display_data', 'execute_result'):
             d[msg_type] = content
         elif msg_type == 'data_pub':
-            self.log.info("ignored data_pub message for %s" % msg_id)
+            self.log.info(f"ignored data_pub message for {msg_id}")
         else:
             self.log.warning("unhandled iopub msg_type: %r", msg_type)
 
@@ -897,7 +897,7 @@ class Hub(LoggingConfigurable):
         # check if requesting available IDs:
         if uuid.encode("utf8") in self.by_ident:
             try:
-                raise KeyError("uuid %r in use" % uuid)
+                raise KeyError(f"uuid {uuid!r} in use")
             except Exception:
                 content = error.wrap_exception()
                 self.log.error("uuid %r in use", uuid, exc_info=True)
@@ -905,14 +905,14 @@ class Hub(LoggingConfigurable):
             for heart_id, ec in self.incoming_registrations.items():
                 if uuid == heart_id:
                     try:
-                        raise KeyError("heart_id %r in use" % uuid)
+                        raise KeyError(f"heart_id {uuid!r} in use")
                     except Exception:
                         self.log.error("heart_id %r in use", uuid, exc_info=True)
                         content = error.wrap_exception()
                     break
                 elif uuid == ec.uuid:
                     try:
-                        raise KeyError("uuid %r in use" % uuid)
+                        raise KeyError(f"uuid {uuid!r} in use")
                     except Exception:
                         self.log.error("uuid %r in use", uuid, exc_info=True)
                         content = error.wrap_exception()
@@ -1092,7 +1092,7 @@ class Hub(LoggingConfigurable):
         """save engine mapping to JSON file"""
         if not self.engine_state_file:
             return
-        self.log.debug("save engine state to %s" % self.engine_state_file)
+        self.log.debug(f"save engine state to {self.engine_state_file}")
         state = {}
         engines = {}
         for eid, ec in self.engines.items():
@@ -1110,7 +1110,7 @@ class Hub(LoggingConfigurable):
         if not os.path.exists(self.engine_state_file):
             return
 
-        self.log.info("loading engine state from %s" % self.engine_state_file)
+        self.log.info(f"loading engine state from {self.engine_state_file}")
 
         with open(self.engine_state_file) as f:
             state = json.load(f)
@@ -1230,7 +1230,7 @@ class Hub(LoggingConfigurable):
             pending = [m for m in msg_ids if (m in self.pending)]
             if pending:
                 try:
-                    raise IndexError("msg pending: %r" % pending[0])
+                    raise IndexError(f"msg pending: {pending[0]!r}")
                 except Exception:
                     reply = error.wrap_exception()
                     self.log.exception("Error dropping records")
@@ -1304,7 +1304,7 @@ class Hub(LoggingConfigurable):
         elif len(records) < len(msg_ids):
             missing = [m for m in msg_ids if m not in found_ids]
             try:
-                raise KeyError("No such msg(s): %r" % missing)
+                raise KeyError(f"No such msg(s): {missing!r}")
             except KeyError:
                 self.log.exception("Failed to resubmit task")
                 return finish(error.wrap_exception())
