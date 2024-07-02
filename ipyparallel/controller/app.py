@@ -712,9 +712,9 @@ class IPController(BaseParallelApplication):
             ccfg = json.loads(f.read())
 
         for key in ('key', 'registration', 'pack', 'unpack', 'signature_scheme'):
-            assert ccfg[key] == ecfg[key], (
-                f"mismatch between engine and client info: {key!r}"
-            )
+            assert (
+                ccfg[key] == ecfg[key]
+            ), f"mismatch between engine and client info: {key!r}"
 
         xport, ip = ccfg['interface'].split('://')
 

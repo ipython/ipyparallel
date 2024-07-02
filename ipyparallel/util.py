@@ -140,9 +140,13 @@ def validate_url(url):
     proto_addr = url.split('://')
     assert len(proto_addr) == 2, f'Invalid url: {url!r}'
     proto, addr = proto_addr
-    assert proto in ['tcp', 'pgm', 'epgm', 'ipc', 'inproc'], (
-        f"Invalid protocol: {proto!r}"
-    )
+    assert proto in [
+        'tcp',
+        'pgm',
+        'epgm',
+        'ipc',
+        'inproc',
+    ], f"Invalid protocol: {proto!r}"
 
     # domain pattern adapted from http://www.regexlib.com/REDetails.aspx?regexp_id=391
     # author: Remi Sabourin

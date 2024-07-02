@@ -354,9 +354,7 @@ class TestAsyncResult(ClusterTestCase):
 
         ar.get(5)
         assert 4 in found
-        assert len(found) > 1, (
-            f"should have seen data multiple times, but got: {found}"
-        )
+        assert len(found) > 1, f"should have seen data multiple times, but got: {found}"
 
     def test_not_single_result(self):
         save_build = self.client._build_targets

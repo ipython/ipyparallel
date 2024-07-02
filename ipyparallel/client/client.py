@@ -1330,9 +1330,7 @@ class Client(HasTraits):
 
         Must be int, slice, or list/tuple/range of ints"""
         if not isinstance(key, (int, slice, tuple, list, range)):
-            raise TypeError(
-                f"key by int/slice/iterable of ints only, not {type(key)}"
-            )
+            raise TypeError(f"key by int/slice/iterable of ints only, not {type(key)}")
         else:
             return self.direct_view(key)
 
@@ -2280,7 +2278,9 @@ class Client(HasTraits):
                     elif header['msg_type'] == 'execute_reply':
                         res = ExecuteReply(msg_id, rcontent, md)
                     else:
-                        raise KeyError("unhandled msg type: {!r}".format(header['msg_type']))
+                        raise KeyError(
+                            "unhandled msg type: {!r}".format(header['msg_type'])
+                        )
                 else:
                     res = self._unwrap_exception(rcontent)
                     failures.append(res)
@@ -2429,9 +2429,7 @@ class Client(HasTraits):
 
         if jobs == 'all':
             if self.outstanding:
-                raise RuntimeError(
-                    f"Can't purge outstanding tasks: {self.outstanding}"
-                )
+                raise RuntimeError(f"Can't purge outstanding tasks: {self.outstanding}")
             self.results.clear()
             self.metadata.clear()
             self._futures.clear()
