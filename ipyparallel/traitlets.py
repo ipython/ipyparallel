@@ -1,6 +1,10 @@
 """Custom ipyparallel trait types"""
 
-import entrypoints
+try:
+    from importlib.metadata import entry_points
+except ImportError:
+    from importlib_metadata import entry_points
+
 from traitlets import List, TraitError, Type
 
 
@@ -24,9 +28,7 @@ class Launcher(Type):
         chunks = [self._original_help]
         chunks.append("Currently installed: ")
         for key, entry_point in self.load_entry_points().items():
-            chunks.append(
-                f"  - {key}: {entry_point.module_name}.{entry_point.object_name}"
-            )
+            chunks.append(f"  - {key}: {entry_point.value}")
         return '\n'.join(chunks)
 
     @help.setter
@@ -35,10 +37,10 @@ class Launcher(Type):
 
     def load_entry_points(self):
         """Load my entry point group"""
-        # load the group
-        group = entrypoints.get_group_named(self.entry_point_group)
-        # make it case-insensitive
-        return {key.lower(): value for key, value in group.items()}
+        return {
+            entry_point.name.lower(): entry_point
+            for entry_point in entry_points(group=self.entry_point_group)
+        }
 
     def validate(self, obj, value):
         if isinstance(value, str):

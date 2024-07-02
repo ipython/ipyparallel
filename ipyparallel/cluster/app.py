@@ -11,7 +11,11 @@ import signal
 import sys
 from functools import partial
 
-import entrypoints
+try:
+    from importlib.metadata import entry_points
+except ImportError:
+    from importlib_metadata import entry_points
+
 import zmq
 from IPython.core.profiledir import ProfileDir
 from traitlets import Bool, CaselessStrEnum, Dict, Integer, List, default
@@ -339,13 +343,14 @@ class IPClusterEngines(BaseParallelApplication):
         launcher_classes = []
         for kind in ('controller', 'engine'):
             group_name = f'ipyparallel.{kind}_launchers'
-            group = entrypoints.get_group_named(group_name)
-            for key, value in group.items():
+            group = entry_points(group=group_name)
+            for entrypoint in group:
+                key = entrypoint.name
                 try:
-                    cls = value.load()
+                    cls = entrypoint.load()
                 except Exception as e:
                     self.log.error(
-                        f"Failed to load entrypoint {group_name}: {key} = {value}\n{e}"
+                        f"Failed to load entrypoint {group_name}: {key} = {entrypoint.value}\n{e}"
                     )
                 else:
                     launcher_classes.append(cls)
