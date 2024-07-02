@@ -35,7 +35,7 @@ class TestProcessLauncher(LocalProcessLauncher):
             self.notify_start(self.process.pid)
             self.poll = self.process.poll
         else:
-            s = 'The process was already started and has state: %r' % self.state
+            s = f'The process was already started and has state: {self.state!r}'
             raise ProcessStateError(s)
 
 
@@ -73,7 +73,7 @@ def setup():
     tic = time.time()
     while not os.path.exists(engine_json) or not os.path.exists(client_json):
         if cp.poll() is not None:
-            raise RuntimeError("The test controller exited with status %s" % cp.poll())
+            raise RuntimeError(f"The test controller exited with status {cp.poll()}")
         elif time.time() - tic > 15:
             raise RuntimeError("Timeout waiting for the test controller to start.")
         time.sleep(0.1)
@@ -96,7 +96,7 @@ def add_engines(n=1, profile='iptest', total=False):
     for i in range(n):
         ep = TestProcessLauncher()
         ep.cmd_and_args = ipengine_cmd_argv + [
-            '--profile=%s' % profile,
+            f'--profile={profile}',
             '--InteractiveShell.colors=nocolor',
             '--log-level=10',
         ]

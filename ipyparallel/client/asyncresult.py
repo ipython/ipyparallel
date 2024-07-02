@@ -124,7 +124,7 @@ class AsyncResult(Future):
                         future.set_result(result)
                         future.output.set_result(None)
                 if not future:
-                    raise KeyError("No Future or result for msg_id: %s" % msg_id)
+                    raise KeyError(f"No Future or result for msg_id: {msg_id}")
                 self._children.append(future)
 
         self._result_future = multi_future(self._children)
@@ -703,7 +703,7 @@ class AsyncResult(Future):
                 return values
         else:
             raise TypeError(
-                "Invalid key type %r, must be 'int','slice', or 'str'" % type(key)
+                f"Invalid key type {type(key)!r}, must be 'int','slice', or 'str'"
             )
 
     def __getattr__(self, key):
@@ -1048,7 +1048,7 @@ class AsyncResult(Future):
 
         else:
             raise ValueError(
-                "groupby must be one of 'type', 'engine', 'collate', not %r" % groupby
+                f"groupby must be one of 'type', 'engine', 'collate', not {groupby!r}"
             )
 
 

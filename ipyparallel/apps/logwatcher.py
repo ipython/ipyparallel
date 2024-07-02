@@ -28,7 +28,7 @@ class LogWatcher(LoggingConfigurable):
     url = Unicode(config=True, help="ZMQ url on which to listen for log messages")
 
     def _url_default(self):
-        return 'tcp://%s:20202' % localhost()
+        return f'tcp://{localhost()}:20202'
 
     # internals
     stream = Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
@@ -65,7 +65,7 @@ class LogWatcher(LoggingConfigurable):
             self.stream.setsockopt(zmq.SUBSCRIBE, '')
         else:
             for topic in self.topics:
-                self.log.debug("Subscribing to: %r" % (topic))
+                self.log.debug(f"Subscribing to: {topic!r}")
                 self.stream.setsockopt(zmq.SUBSCRIBE, topic)
 
     def _extract_level(self, topic_str):
@@ -86,7 +86,7 @@ class LogWatcher(LoggingConfigurable):
     def log_message(self, raw):
         """receive and parse a message, then log it."""
         if len(raw) != 2 or '.' not in raw[0]:
-            self.log.error("Invalid log message: %s" % raw)
+            self.log.error(f"Invalid log message: {raw}")
             return
         else:
             topic, msg = raw

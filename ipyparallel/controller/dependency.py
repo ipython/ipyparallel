@@ -69,7 +69,7 @@ def _require(*modules, **mapping):
     user_ns = globals()
     for name in modules:
         try:
-            exec('import %s' % name, user_ns)
+            exec(f'import {name}', user_ns)
         except ImportError:
             raise UnmetDependency(name)
 
@@ -117,7 +117,7 @@ def require(*objects, **mapping):
         else:
             raise TypeError(
                 "Objects other than modules and functions "
-                "must be passed by kwarg, but got: %s" % type(obj)
+                f"must be passed by kwarg, but got: {type(obj)}"
             )
 
     for name, obj in mapping.items():
@@ -168,7 +168,7 @@ class Dependency(set):
             elif isinstance(d, AsyncResult):
                 ids.extend(d.msg_ids)
             else:
-                raise TypeError("invalid dependency type: %r" % type(d))
+                raise TypeError(f"invalid dependency type: {type(d)!r}")
 
         set.__init__(self, ids)
         self.all = all

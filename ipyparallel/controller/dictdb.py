@@ -239,7 +239,7 @@ class DictDB(BaseDB):
     def add_record(self, msg_id, rec):
         """Add a new Task Record, by msg_id."""
         if msg_id in self._records:
-            raise KeyError("Already have msg_id %r" % (msg_id))
+            raise KeyError(f"Already have msg_id {msg_id!r}")
         self._check_dates(rec)
         self._records[msg_id] = rec
         self._add_bytes(rec)
@@ -248,15 +248,15 @@ class DictDB(BaseDB):
     def get_record(self, msg_id):
         """Get a specific Task Record, by msg_id."""
         if msg_id in self._culled_ids:
-            raise KeyError("Record %r has been culled for size" % msg_id)
+            raise KeyError(f"Record {msg_id!r} has been culled for size")
         if msg_id not in self._records:
-            raise KeyError("No such msg_id %r" % (msg_id))
+            raise KeyError(f"No such msg_id {msg_id!r}")
         return deepcopy(self._records[msg_id])
 
     def update_record(self, msg_id, rec):
         """Update the data in an existing record."""
         if msg_id in self._culled_ids:
-            raise KeyError("Record %r has been culled for size" % msg_id)
+            raise KeyError(f"Record {msg_id!r} has been culled for size")
         self._check_dates(rec)
         _rec = self._records[msg_id]
         self._drop_bytes(_rec)

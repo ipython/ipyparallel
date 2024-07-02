@@ -1240,7 +1240,7 @@ class SSHLauncher(LocalProcessLauncher):
         full_remote = f"{self.location}:{remote}"
         for i in range(10 if wait else 0):
             if not os.path.exists(local):
-                self.log.debug("waiting for %s" % local)
+                self.log.debug(f"waiting for {local}")
                 time.sleep(1)
             else:
                 break
@@ -1642,7 +1642,7 @@ class WindowsHPCLauncher(BaseLauncher):
         if m is not None:
             job_id = m.group()
         else:
-            raise LauncherError("Job id couldn't be determined: %s" % output)
+            raise LauncherError(f"Job id couldn't be determined: {output}")
         self.job_id = job_id
         self.log.info('Job started with id: %r', job_id)
         return job_id
@@ -1652,8 +1652,8 @@ class WindowsHPCLauncher(BaseLauncher):
         self.write_job_file(n)
         args = [
             'submit',
-            '/jobfile:%s' % self.job_file,
-            '/scheduler:%s' % self.scheduler,
+            f'/jobfile:{self.job_file}',
+            f'/scheduler:{self.scheduler}',
         ]
         self.log.debug(
             "Starting Win HPC Job: {}".format(self.job_cmd + ' ' + ' '.join(args))
@@ -1668,7 +1668,7 @@ class WindowsHPCLauncher(BaseLauncher):
         return job_id
 
     def stop(self):
-        args = ['cancel', self.job_id, '/scheduler:%s' % self.scheduler]
+        args = ['cancel', self.job_id, f'/scheduler:{self.scheduler}']
         self.log.info(
             "Stopping Win HPC Job: {}".format(self.job_cmd + ' ' + ' '.join(args))
         )
@@ -1678,7 +1678,7 @@ class WindowsHPCLauncher(BaseLauncher):
             )
             output = output.decode("utf8", 'replace')
         except Exception:
-            output = 'The job already appears to be stopped: %r' % self.job_id
+            output = f'The job already appears to be stopped: {self.job_id!r}'
         self.notify_stop(
             dict(job_id=self.job_id, output=output)
         )  # Pass the output of the kill cmd
@@ -1892,7 +1892,7 @@ class BatchSystemLauncher(BaseLauncher):
         if m is not None:
             job_id = m.group(self.job_id_regexp_group)
         else:
-            raise LauncherError("Job id couldn't be determined: %s" % output)
+            raise LauncherError(f"Job id couldn't be determined: {output}")
         self.job_id = job_id
         self.log.info('Job submitted with job id: %r', job_id)
         return job_id

@@ -244,7 +244,7 @@ def collect_exceptions(rdict_or_list, method='unspecified'):
     if len(elist) == 0:
         return rdict_or_list
     else:
-        msg = "one or more exceptions raised in: %s" % (method)
+        msg = f"one or more exceptions raised in: {method}"
         err = CompositeError(msg, elist)
         raise err
 

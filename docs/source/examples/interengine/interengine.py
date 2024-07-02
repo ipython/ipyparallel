@@ -20,10 +20,10 @@ view.apply_sync(lambda pdict: com.connect(pdict), peers)  # noqa: F821
 def broadcast(client, sender, msg_name, dest_name=None, block=None):
     """broadcast a message from one engine to all others."""
     dest_name = msg_name if dest_name is None else dest_name
-    client[sender].execute('com.publish(%s)' % msg_name, block=None)
+    client[sender].execute(f'com.publish({msg_name})', block=None)
     targets = client.ids
     targets.remove(sender)
-    return client[targets].execute('%s=com.consume()' % dest_name, block=None)
+    return client[targets].execute(f'{dest_name}=com.consume()', block=None)
 
 
 def send(client, sender, targets, msg_name, dest_name=None, block=None):
@@ -36,4 +36,4 @@ def send(client, sender, targets, msg_name, dest_name=None, block=None):
 
     client[sender].apply_async(_send, targets, msg_name)
 
-    return client[targets].execute('%s=com.recv()' % dest_name, block=None)
+    return client[targets].execute(f'{dest_name}=com.recv()', block=None)

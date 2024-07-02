@@ -712,9 +712,9 @@ class IPController(BaseParallelApplication):
             ccfg = json.loads(f.read())
 
         for key in ('key', 'registration', 'pack', 'unpack', 'signature_scheme'):
-            assert ccfg[key] == ecfg[key], (
-                "mismatch between engine and client info: %r" % key
-            )
+            assert (
+                ccfg[key] == ecfg[key]
+            ), f"mismatch between engine and client info: {key!r}"
 
         xport, ip = ccfg['interface'].split('://')
 
@@ -746,7 +746,7 @@ class IPController(BaseParallelApplication):
             try:
                 self.load_config_from_json()
             except (AssertionError, OSError) as e:
-                self.log.error("Could not load config from JSON: %s" % e)
+                self.log.error(f"Could not load config from JSON: {e}")
             else:
                 # successfully loaded config from JSON, and reuse=True
                 # no need to write back the same file
@@ -943,7 +943,7 @@ class IPController(BaseParallelApplication):
             edict.update(base)
             self.save_connection_dict(self.engine_json_file, edict)
 
-        fname = "engines%s.json" % self.cluster_id
+        fname = f"engines{self.cluster_id}.json"
         self.hub.engine_state_file = os.path.join(self.profile_dir.log_dir, fname)
         if self.restore_engines:
             self.hub._load_engine_state()
@@ -1156,7 +1156,7 @@ class IPController(BaseParallelApplication):
             self.log.warning("task::using no Task scheduler")
 
         else:
-            self.log.info("task::using Python %s Task scheduler" % scheme)
+            self.log.info(f"task::using Python {scheme} Task scheduler")
             self.launch_python_scheduler(
                 'TaskScheduler',
                 self.get_python_scheduler_args('task', TaskScheduler, monitor_url),
@@ -1207,7 +1207,7 @@ class IPController(BaseParallelApplication):
 
     def forward_logging(self):
         if self.log_url:
-            self.log.info("Forwarding logging to %s" % self.log_url)
+            self.log.info(f"Forwarding logging to {self.log_url}")
             context = zmq.Context.instance()
             lsock = context.socket(zmq.PUB)
             lsock.connect(self.log_url)

@@ -151,7 +151,7 @@ class View(HasTraits):
         """
         for name, value in kwargs.items():
             if name not in self._flag_names:
-                raise KeyError("Invalid name: %r" % name)
+                raise KeyError(f"Invalid name: {name!r}")
             else:
                 setattr(self, name, value)
 
@@ -475,7 +475,7 @@ class DirectView(View):
                             )
                         )
                     else:
-                        print("importing %s on engine(s)" % name)
+                        print(f"importing {name} on engine(s)")
                 results.append(self.apply_async(remote_import, name, fromlist, level))
             # restore override
             builtins.__import__ = save_import
@@ -722,7 +722,7 @@ class DirectView(View):
         targets = targets if targets is not None else self.targets
         # applier = self.apply_sync if block else self.apply_async
         if not isinstance(ns, dict):
-            raise TypeError("Must be a dict, not %s" % type(ns))
+            raise TypeError(f"Must be a dict, not {type(ns)}")
         return self._really_apply(
             util._push, kwargs=ns, block=block, track=track, targets=targets
         )
@@ -748,9 +748,9 @@ class DirectView(View):
         elif isinstance(names, (list, tuple, set)):
             for key in names:
                 if not isinstance(key, str):
-                    raise TypeError("keys must be str, not type %r" % type(key))
+                    raise TypeError(f"keys must be str, not type {type(key)!r}")
         else:
-            raise TypeError("names must be strs, not %r" % names)
+            raise TypeError(f"names must be strs, not {names!r}")
         return self._really_apply(util._pull, (names,), block=block, targets=targets)
 
     def scatter(
@@ -1264,14 +1264,14 @@ class LoadBalancedView(View):
                 if self._validate_dependency(value):
                     setattr(self, name, value)
                 else:
-                    raise ValueError("Invalid dependency: %r" % value)
+                    raise ValueError(f"Invalid dependency: {value!r}")
         if 'timeout' in kwargs:
             t = kwargs['timeout']
             if not isinstance(t, (int, float, type(None))):
-                raise TypeError("Invalid type for timeout: %r" % type(t))
+                raise TypeError(f"Invalid type for timeout: {type(t)!r}")
             if t is not None:
                 if t < 0:
-                    raise ValueError("Invalid timeout: %s" % t)
+                    raise ValueError(f"Invalid timeout: {t}")
 
             self.timeout = t
 
@@ -1346,7 +1346,7 @@ class LoadBalancedView(View):
         targets = self.targets if targets is None else targets
 
         if not isinstance(retries, int):
-            raise TypeError('retries must be int, not %r' % type(retries))
+            raise TypeError(f'retries must be int, not {type(retries)!r}')
 
         if targets is None:
             idents = []

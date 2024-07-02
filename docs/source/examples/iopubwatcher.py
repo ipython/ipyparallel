@@ -83,5 +83,5 @@ if __name__ == '__main__':
         # This gets the security file for the default profile:
         pattern = 'ipcontroller-client.json'
     cf = find_connection_file(pattern)
-    print("Using connection file %s" % cf)
+    print(f"Using connection file {cf}")
     main(cf)

@@ -251,8 +251,8 @@ class IPControllerTask(WinHPCTask):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         the_uuid = uuid.uuid1()
-        self.std_out_file_path = os.path.join('log', 'ipcontroller-%s.out' % the_uuid)
-        self.std_err_file_path = os.path.join('log', 'ipcontroller-%s.err' % the_uuid)
+        self.std_out_file_path = os.path.join('log', f'ipcontroller-{the_uuid}.out')
+        self.std_err_file_path = os.path.join('log', f'ipcontroller-{the_uuid}.err')
 
     @property
     def command_line(self):
@@ -278,8 +278,8 @@ class IPEngineTask(WinHPCTask):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         the_uuid = uuid.uuid1()
-        self.std_out_file_path = os.path.join('log', 'ipengine-%s.out' % the_uuid)
-        self.std_err_file_path = os.path.join('log', 'ipengine-%s.err' % the_uuid)
+        self.std_out_file_path = os.path.join('log', f'ipengine-{the_uuid}.out')
+        self.std_err_file_path = os.path.join('log', f'ipengine-{the_uuid}.err')
 
     @property
     def command_line(self):

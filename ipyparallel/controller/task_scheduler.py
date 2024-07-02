@@ -169,7 +169,7 @@ class TaskScheduler(Scheduler):
 
     @observe('scheme_name')
     def _scheme_name_changed(self, change):
-        self.log.debug("Using scheme %r" % change['new'])
+        self.log.debug("Using scheme {!r}".format(change['new']))
         self.scheme = globals()[change['new']]
 
     # input arguments:
@@ -207,7 +207,7 @@ class TaskScheduler(Scheduler):
             registration_notification=self._register_engine,
             unregistration_notification=self._unregister_engine,
         )
-        self.log.info("Task scheduler started [%s]" % self.scheme_name)
+        self.log.info(f"Task scheduler started [{self.scheme_name}]")
         self.notifier_stream.on_recv(self.dispatch_notification)
 
     # -----------------------------------------------------------------------
@@ -224,7 +224,7 @@ class TaskScheduler(Scheduler):
         try:
             msg = self.session.deserialize(msg)
         except ValueError:
-            self.log.warning("task::Unauthorized message from: %r" % idents)
+            self.log.warning(f"task::Unauthorized message from: {idents!r}")
             return
 
         content = msg['content']
@@ -242,14 +242,14 @@ class TaskScheduler(Scheduler):
         try:
             msg = self.session.deserialize(msg)
         except ValueError:
-            self.log.warning("task::Unauthorized message from: %r" % idents)
+            self.log.warning(f"task::Unauthorized message from: {idents!r}")
             return
 
         msg_type = msg['header']['msg_type']
 
         handler = self._notification_handlers.get(msg_type, None)
         if handler is None:
-            self.log.error("Unhandled message type: %r" % msg_type)
+            self.log.error(f"Unhandled message type: {msg_type!r}")
         else:
             try:
                 handler(msg['content']['uuid'].encode("utf8"))
@@ -344,7 +344,7 @@ class TaskScheduler(Scheduler):
             idents, msg = self.session.feed_identities(raw_msg, copy=False)
             msg = self.session.deserialize(msg, content=False, copy=False)
         except Exception:
-            self.log.error("task::Invaid task msg: %r" % raw_msg, exc_info=True)
+            self.log.error(f"task::Invaid task msg: {raw_msg!r}", exc_info=True)
             return
 
         # send to monitor

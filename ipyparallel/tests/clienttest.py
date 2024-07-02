@@ -81,10 +81,10 @@ def skip_without(*names):
             try:
                 __import__(name)
             except ImportError:
-                pytest.skip("Test requires %s" % name)
+                pytest.skip(f"Test requires {name}")
             except Exception as e:
                 warnings.warn(f"Unexpected exception importing {name}: {e}")
-                pytest.skip("Test requires %s" % name)
+                pytest.skip(f"Test requires {name}")
         return f(*args, **kwargs)
 
     return skip_without_names
