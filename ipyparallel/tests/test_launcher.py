@@ -10,7 +10,11 @@ import sys
 import time
 from subprocess import Popen
 
-import entrypoints
+try:
+    from importlib.metadata import entry_points
+except ImportError:
+    from importlib_metadata import entry_points
+
 import pytest
 from traitlets.config import Config
 
@@ -156,9 +160,10 @@ def test_ssh_waitpid(capsys):
 @pytest.mark.parametrize("kind", ("controller", "engine"))
 def test_entrypoints(kind):
     group_name = f"ipyparallel.{kind}_launchers"
-    group = entrypoints.get_group_named(group_name)
+    group = entry_points(group=group_name)
     assert len(group) > 2
-    for key, entrypoint in group.items():
+    for entrypoint in group:
+        key = entrypoint.name
         # verify entrypoints are valid
         cls = entrypoint.load()
 
