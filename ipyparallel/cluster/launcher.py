@@ -23,7 +23,6 @@ from subprocess import PIPE, STDOUT, Popen, check_output
 from tempfile import TemporaryDirectory
 from textwrap import indent
 
-import entrypoints
 import psutil
 from IPython.utils.path import ensure_dir_exists, get_home_dir
 from IPython.utils.text import EvalFormatter
@@ -42,6 +41,7 @@ from traitlets import (
 )
 from traitlets.config.configurable import LoggingConfigurable
 
+from ..traitlets import entry_points
 from ..util import shlex_join
 from ._winhpcjob import IPControllerJob, IPControllerTask, IPEngineSetJob, IPEngineTask
 from .shellcmd import ShellCommandSend
@@ -2505,16 +2505,16 @@ def find_launcher_class(name, kind):
         group_name = 'ipyparallel.controller_launchers'
     else:
         raise ValueError(f"kind must be 'engine' or 'controller', not {kind!r}")
-    group = entrypoints.get_group_named(group_name)
+    group = entry_points(group=group_name)
     # make it case-insensitive
-    registry = {key.lower(): value for key, value in group.items()}
+    registry = {entrypoint.name.lower(): entrypoint for entrypoint in group}
     return registry[name.lower()].load()
 
 
 @lru_cache
 def abbreviate_launcher_class(cls):
     """Abbreviate a launcher class back to its entrypoint name"""
-    cls_key = f"{cls.__module__}.{cls.__name__}"
+    cls_key = f"{cls.__module__}:{cls.__name__}"
     # allow entrypoint_name attribute in case the definition module
     # is not the same as the 'import' module
     if getattr(cls, 'entrypoint_name', None):
@@ -2522,8 +2522,8 @@ def abbreviate_launcher_class(cls):
 
     for kind in ('controller', 'engine'):
         group_name = f'ipyparallel.{kind}_launchers'
-        group = entrypoints.get_group_named(group_name)
-        for key, value in group.items():
-            if f"{value.module_name}.{value.object_name}" == cls_key:
-                return key.lower()
+        group = entry_points(group=group_name)
+        for entrypoint in group:
+            if entrypoint.value == cls_key:
+                return entrypoint.name.lower()
     return cls_key

@@ -10,11 +10,11 @@ import sys
 import time
 from subprocess import Popen
 
-import entrypoints
 import pytest
 from traitlets.config import Config
 
 from ipyparallel.cluster import launcher as launcher_mod
+from ipyparallel.traitlets import entry_points
 
 # -------------------------------------------------------------------------------
 # TestCase Mixins
@@ -156,9 +156,10 @@ def test_ssh_waitpid(capsys):
 @pytest.mark.parametrize("kind", ("controller", "engine"))
 def test_entrypoints(kind):
     group_name = f"ipyparallel.{kind}_launchers"
-    group = entrypoints.get_group_named(group_name)
+    group = entry_points(group=group_name)
     assert len(group) > 2
-    for key, entrypoint in group.items():
+    for entrypoint in group:
+        key = entrypoint.name
         # verify entrypoints are valid
         cls = entrypoint.load()
 
