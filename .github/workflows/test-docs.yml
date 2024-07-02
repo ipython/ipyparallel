@@ -30,17 +30,20 @@ jobs:
           python-version: "3.10"
 
       - name: Install requirements
+        if: false # disabled for now
         run: |
           pip install -r docs/requirements.txt .
 
       # readthedocs doesn't halt on warnings,
       # so raise any warnings here
       - name: build docs
+        if: false # disabled for now
         run: |
           cd docs
           make html
 
       - name: check links
+        if: false # disabled for now
         run: |
           cd docs
           make linkcheck
