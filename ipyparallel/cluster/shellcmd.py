@@ -54,7 +54,7 @@ class SimpleLog:
         platform = Platform.get()
         if platform == Platform.Windows:
             userdir = os.environ["USERPROFILE"]
-        elif platform == Platform.Linux:
+        else:
             userdir = os.environ["HOME"] if "HOME" in os.environ else ""
         self.filename = filename.replace(
             "${userdir}", userdir
