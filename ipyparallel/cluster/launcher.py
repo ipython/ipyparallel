@@ -1189,20 +1189,24 @@ class SSHLauncher(LocalProcessLauncher):
 
     _output = None
 
-    def _secure_ssh_sender(self):
-        if getattr(self, 'ssh_sender', None):
-            return self.ssh_sender
+    _ssh_sender = None
+
+    @property
+    def ssh_sender(self):
+        """instantiate ShellCommandSend object if needed"""
+        if self._ssh_sender:
+            return self._ssh_sender
 
         self.log.info(
             f'Create ShellCommandSend object ({self.ssh_cmd}, {self.ssh_args + [self.location]}, {self.remote_python} )'
         )
-        self.ssh_sender = ShellCommandSend(
+        self._ssh_sender = ShellCommandSend(
             self.ssh_cmd,
             self.ssh_args + [self.location],
             self.remote_python,
             log=self.log,
         )
-        return self.ssh_sender
+        return self._ssh_sender
 
     def _reconstruct_process(self, d):
         # called in from_dict
@@ -1300,7 +1304,6 @@ class SSHLauncher(LocalProcessLauncher):
                 self.scp_args.append('-P')
                 self.scp_args.append(str(port))
 
-        self._secure_ssh_sender()
         # do some checks that setting are correct
         shell_info = self.ssh_sender.get_shell_info()
         python_ok = self.ssh_sender.has_python()
@@ -1366,7 +1369,7 @@ class SSHLauncher(LocalProcessLauncher):
         # out = check_output(full_cmd, input=None, start_new_session=True).decode(
         #     "utf8", "replace"
         # )
-        out = self._secure_ssh_sender().check_output_python_code(python_code)
+        out = self.ssh_sender.check_output_python_code(python_code)
         values = _ssh_outputs(out)
         if 'process_running' not in values:
             raise RuntimeError(out)
