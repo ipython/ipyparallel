@@ -18,6 +18,7 @@ import inspect
 import os
 import re
 import shlex
+import shutil
 import sys
 import time
 import warnings
@@ -29,9 +30,8 @@ from tempfile import NamedTemporaryFile
 
 class Platform(enum.Enum):
     Unknown = 0
-    Linux = 1
+    Posix = 1
     Windows = 2
-    MacOS = 3
 
     @staticmethod
     def get():
@@ -40,22 +40,16 @@ class Platform(enum.Enum):
         tmp = sys.platform.lower()
         if tmp == "win32":
             return Platform.Windows
-        elif tmp == "linux":
-            return Platform.Linux
-        elif tmp == "darwin":
-            return Platform.MacOS
         else:
-            raise Exception(f"Unknown platform label '{sys.platform}'")
+            return Platform.Posix
 
 
 class SimpleLog:
     def __init__(self, filename):
         userdir = ""
-        platform = Platform.get()
-        if platform == Platform.Windows:
-            userdir = os.environ["USERPROFILE"]
-        else:
-            userdir = os.environ["HOME"] if "HOME" in os.environ else ""
+        import pathlib
+
+        userdir = str(pathlib.Path.home())
         self.filename = filename.replace(
             "${userdir}", userdir
         )  # replace possible ${userdir} placeholder
@@ -86,6 +80,10 @@ class ShellCommandReceive:
     Hence, the ShellCommandSend class always uses subprocess.check_output for assessing if the command was
     successful. Some command require information to be returned (cmd_exists, cmd_start, cmd_running) which
     is written to stdout in the following form: __<key>=<value>__
+
+    Note: when additional imports for member function code is required, import them just before usage or add
+    them to the preamble string in ShellCommandSend._cmd_send (and of course to the import section the top
+    of the file), otherwise the code send mode of this class will not work.
     """
 
     def _log(self, msg):
@@ -261,8 +259,6 @@ class ShellCommandReceive:
     def cmd_rmdir(self, path):
         self._log(f"Remove directory '{path}'")
 
-        import shutil
-
         shutil.rmtree(path)
 
     def cmd_exists(self, path):
@@ -275,10 +271,6 @@ class ShellCommandReceive:
 
     def cmd_remove(self, path):
         self._log(f"Remove file '{path}'")
-
-        # if self.debugging == True: # make file backup to retrieve it later
-        # import shutil
-        # shutil.copyfile(path, path+".debug_backup")
 
         os.remove(path)
 
@@ -448,7 +440,7 @@ class ShellCommandSend:
             preamble = "from ipyparallel.cluster.shellcmd import ShellCommandReceive\n"
         else:
             preamble = (
-                f"import sys, os, enum, json\nfrom datetime import datetime\nfrom random import randint\n"
+                f"import sys, os, enum, json, shutil\nfrom datetime import datetime\nfrom random import randint\n"
                 f"{self.platform_code}\n{self.simple_log_code}\n{self.receiver_code}\n"
             )
 
@@ -690,7 +682,7 @@ class ShellCommandSend:
             elif key == "OS-LINUX":
                 system = val
                 self.is_powershell = False
-                self.platform = Platform.MacOS if "darwin" in val else Platform.Linux
+                self.platform = Platform.Posix
             elif key == "SHELL":
                 shell = val
 

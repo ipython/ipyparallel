@@ -124,10 +124,9 @@ def shellcmd_test_cmd():
     """returns a command that runs for 5 seconds"""
     test_command = {}
     test_command["windows"] = 'ping -n 5 127.0.0.1'
-    test_command["linux"] = (
+    test_command["posix"] = (
         'ping -c 5 127.0.0.1'  # ping needs to be installed to the standard ubuntu docker image
     )
-    test_command["macos"] = 'ping -c 5 127.0.0.1'
     return test_command
 
 
@@ -151,16 +150,14 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     prefix = ""
     if Platform.get() == Platform.Windows:
         if platform == "wsl":
-            pytest.skip("wsl deactivated")  # comment to activate wsl tests
+            # pytest.skip("wsl deactivated")  # comment to activate wsl tests
             prefix = "/home/" + os.environ["USERNAME"] + "/"
         elif platform != "windows":
             pytest.skip("other platform")
 
-    elif Platform.get() == Platform.Linux:
-        if platform != "linux":
-            pytest.skip("other platform")
-    elif Platform.get() == Platform.MacOS:
-        if platform != "macos":
+    else:
+        # posix platform
+        if platform != "linux" or platform != "macos":
             pytest.skip("other platform")
 
     if 'ssh' in sender.shell and not ssh_running:
@@ -209,11 +206,6 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
 
     sender.cmd_rmdir(test_dir)
     assert sender.cmd_exists(test_dir) is False
-
-    # output environment (just for testing)
-    # if sender.platform != Platform.Windows:
-    #    pid = sender.cmd_start("env", output_file="env_output.txt")
-    #    print_file(sender, "env_output.txt")
 
     # do start operation test
     redirect_output_file = prefix + "output.txt"
