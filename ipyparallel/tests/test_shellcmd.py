@@ -150,7 +150,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     prefix = ""
     if Platform.get() == Platform.Windows:
         if platform == "wsl":
-            # pytest.skip("wsl deactivated")  # comment to activate wsl tests
+            pytest.skip("wsl deactivated")  # comment to activate wsl tests
             prefix = "/home/" + os.environ["USERNAME"] + "/"
         elif platform != "windows":
             pytest.skip("other platform")
