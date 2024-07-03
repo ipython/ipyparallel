@@ -13,266 +13,17 @@ Currently, the following command are supported:
 """
 
 import base64
-import enum
 import inspect
-import os
+import pathlib
 import re
 import shlex
-import shutil
 import sys
 import time
 import warnings
-from datetime import datetime
-from random import randint
 from subprocess import CalledProcessError, Popen, TimeoutExpired, check_output
 from tempfile import NamedTemporaryFile
 
-
-class Platform(enum.Enum):
-    Unknown = 0
-    Posix = 1
-    Windows = 2
-
-    @staticmethod
-    def get():
-        import sys
-
-        tmp = sys.platform.lower()
-        if tmp == "win32":
-            return Platform.Windows
-        else:
-            return Platform.Posix
-
-
-class SimpleLog:
-    def __init__(self, filename):
-        userdir = ""
-        import pathlib
-
-        userdir = str(pathlib.Path.home())
-        self.filename = filename.replace(
-            "${userdir}", userdir
-        )  # replace possible ${userdir} placeholder
-
-    def _output_msg(self, level, msg):
-        with open(self.filename, "a") as f:
-            f.write(f"{level:8} {datetime.now()} {msg}\n")
-
-    def info(self, msg):
-        self._output_msg("info", msg)
-
-    def warning(self, msg):
-        self._output_msg("warning", msg)
-
-    def error(self, msg):
-        self._output_msg("error", msg)
-
-    def debug(self, msg):
-        self._output_msg("debug", msg)
-
-
-class ShellCommandReceive:
-    """
-    Helper class for receiving and performing shell commands in a platform independent form
-
-    All supported shell commands have a cmd_ prefix. When adding new functions make sure that there is an
-    equivalent in the ShellCommandSend class. When a command failed a non-zero exit code will be returned.
-    Hence, the ShellCommandSend class always uses subprocess.check_output for assessing if the command was
-    successful. Some command require information to be returned (cmd_exists, cmd_start, cmd_running) which
-    is written to stdout in the following form: __<key>=<value>__
-
-    Note: when additional imports for member function code is required, import them just before usage or add
-    them to the preamble string in ShellCommandSend._cmd_send (and of course to the import section the top
-    of the file), otherwise the code send mode of this class will not work.
-    """
-
-    def _log(self, msg):
-        if not self.log:
-            return
-        self.log.info(f"[id={self.ranid}] {msg}")
-
-    def __init__(self, debugging=False, use_breakaway=True, log=None):
-        self.debugging = debugging
-        self.log = None
-        self.platform = Platform.get()
-        self.use_breakaway = use_breakaway
-        assert isinstance(self.use_breakaway, bool)
-        if log:
-            if isinstance(log, str):
-                self.log = SimpleLog(log)
-            else:
-                self.log = log
-        elif "SHELLCMD_LOG" in os.environ:
-            self.log = SimpleLog(os.environ["SHELLCMD_LOG"])
-
-        self.ranid = None
-        if self.log:
-            self.ranid = randint(0, 999)
-            self._log("ShellCommandReceive instance created")
-
-    def __del__(self):
-        if self.log:
-            self._log("ShellCommandReceive instance deleted")
-
-    def cmd_start(self, start_cmd, env=None, output_file=None):
-        if env:
-            self._log(f"env={env!r}")
-            if not isinstance(env, dict):
-                raise TypeError(f"env must be a dict, got {env!r}")
-
-            # update environment
-            for key, value in env.items():
-                if value is not None and value != '':
-                    # set entry
-                    os.environ[key] = str(value)
-                else:
-                    # unset entry if needed
-                    if key in os.environ:
-                        del os.environ[key]
-
-        if isinstance(start_cmd, str):
-            start_cmd = [start_cmd]
-
-        if not all(isinstance(item, str) for item in start_cmd):
-            raise TypeError(f"Only str in start_cmd allowed ({start_cmd!r})")
-
-        if self.platform == Platform.Windows:
-            # under windows we need to remove embracing double quotes
-            for idx, p in enumerate(start_cmd):
-                if p[0] == '"' and p[-1] == '"':
-                    start_cmd[idx] = p.strip('"')
-
-        self._log(f"start_cmd={start_cmd}  (use_breakaway={self.use_breakaway})")
-
-        if self.platform == Platform.Windows:
-            from subprocess import (
-                CREATE_BREAKAWAY_FROM_JOB,
-                CREATE_NEW_CONSOLE,
-                DEVNULL,
-                Popen,
-            )
-
-            flags = 0
-            if self.use_breakaway:
-                flags |= CREATE_NEW_CONSOLE
-                flags |= CREATE_BREAKAWAY_FROM_JOB
-
-            pkwargs = {
-                'close_fds': True,  # close stdin/stdout/stderr on child
-                'creationflags': flags,
-            }
-            if output_file:
-                fo = open(output_file, "w")
-                pkwargs['stdout'] = fo
-                pkwargs['stderr'] = fo
-                pkwargs['stdin'] = DEVNULL
-
-            self._log(f"Popen(**pkwargs={pkwargs}")
-            p = Popen(start_cmd, **pkwargs)
-            self._log(f"pid={p.pid}")
-
-            print(f'__remote_pid={p.pid}__')
-            sys.stdout.flush()
-            if not self.use_breakaway:
-                self._log("before wait")
-                p.wait()
-                self._log("after wait")
-        else:
-            from subprocess import DEVNULL, Popen
-
-            fo = DEVNULL
-            if output_file:
-                fo = open(output_file, "w")
-
-            p = Popen(
-                start_cmd, start_new_session=True, stdout=fo, stderr=fo, stdin=DEVNULL
-            )
-            print(f'__remote_pid={p.pid}__')
-            sys.stdout.flush()
-
-    def cmd_running(self, pid):
-        self._log(f"Check if pid {pid} is running")
-
-        if self.platform == Platform.Windows:
-            # taken from https://stackoverflow.com/questions/568271/how-to-check-if-there-exists-a-process-with-a-given-pid-in-python
-            import ctypes
-
-            PROCESS_QUERY_INFROMATION = (
-                0x1000  # if actually PROCESS_QUERY_LIMITED_INFORMATION
-            )
-            STILL_ACTIVE = 259
-            processHandle = ctypes.windll.kernel32.OpenProcess(
-                PROCESS_QUERY_INFROMATION, 0, pid
-            )
-            if processHandle == 0:
-                print('__running=0__')
-            else:
-                i = ctypes.c_int(0)
-                pi = ctypes.pointer(i)
-                if ctypes.windll.kernel32.GetExitCodeProcess(processHandle, pi) == 0:
-                    print('__running=0__')
-                if i.value == STILL_ACTIVE:
-                    print('__running=1__')
-                else:
-                    print('__running=0__')
-                ctypes.windll.kernel32.CloseHandle(processHandle)
-        else:
-            try:
-                # use os.kill with signal 0 to check if process is still running
-                os.kill(pid, 0)
-                print('__running=1__')
-            except OSError:
-                print('__running=0__')
-
-    def cmd_kill(self, pid, sig=None):
-        self._log(f"Kill pid {pid} (signal={sig})")
-
-        if self.platform == Platform.Windows:
-            # os.kill doesn't work reliable under windows. also see
-            # https://stackoverflow.com/questions/28551180/how-to-kill-subprocess-python-in-windows
-
-            # solution using taskill
-            # import subprocess
-            # subprocess.call(['taskkill', '/F', '/T', '/PID',  str(pid)])  # /T kills all child processes as well
-
-            # use windows api to kill process (doesn't kill children processes)
-            # To kill all children process things are more complicated. see e.g.
-            # http://mackeblog.blogspot.com/2012/05/killing-subprocesses-on-windows-in.html
-            import ctypes
-
-            PROCESS_TERMINATE = 0x0001
-            kernel32 = ctypes.windll.kernel32
-            processHandle = kernel32.OpenProcess(PROCESS_TERMINATE, 0, pid)
-            if processHandle:
-                kernel32.TerminateProcess(
-                    processHandle, 3
-                )  # 3 is just an arbitrary exit code
-                kernel32.CloseHandle(processHandle)
-        else:
-            os.kill(pid, sig)
-
-    def cmd_mkdir(self, path):
-        self._log(f"Make directory '{path}'")
-
-        os.makedirs(path, exist_ok=True)  # we allow that the directory already exists
-
-    def cmd_rmdir(self, path):
-        self._log(f"Remove directory '{path}'")
-
-        shutil.rmtree(path)
-
-    def cmd_exists(self, path):
-        self._log(f"Check if path exists '{path}'")
-
-        if os.path.exists(path):
-            print("__exists=1__")
-        else:
-            print("__exists=0__")
-
-    def cmd_remove(self, path):
-        self._log(f"Remove file '{path}'")
-
-        os.remove(path)
+from .shellcmd_receive import Platform, ShellCommandReceive, SimpleLog
 
 
 class ShellCommandSend:
@@ -287,7 +38,7 @@ class ShellCommandSend:
     shell information independent of a valid python installation.
 
     Since some operation require different handling for different platforms/shells the class gathers
-    necessary information during initialization. This per default automatically at object instantiation.
+    necessary information during initialization. This is done per default at object instantiation.
     Nevertheless, it can be postponed (initialize=False) but before any member function is called, the
     initialize function has to be called.
 
@@ -301,15 +52,19 @@ class ShellCommandSend:
     necessary to implement a work-a-round to enable CI in github. In case breakaway is not supported, a detached
     ssh connection is started (by the ShellCommandSend object) which stays open until the process to start has
     finished. see _cmd_send for further details.
+
+    The class supports a special send receiver mode (see self.send_receiver_code), which allows command sending
+    without ipyparallel being installed on the 'other side'. In this mode basically the shellcmd_receive.py file
+    is also transferred, which makes development and testing much easier.
     """
 
     package_name = "ipyparallel.shellcmd"  # package name for send the command
     output_template = re.compile(
         r"__([a-z][a-z0-9_]+)=([a-z0-9\-\.]+)__", re.IGNORECASE
     )
-    receiver_code = inspect.getsource(ShellCommandReceive)
-    platform_code = inspect.getsource(Platform)
-    simple_log_code = inspect.getsource(SimpleLog)
+    receiver_code = pathlib.Path(
+        inspect.getfile(ShellCommandReceive)
+    ).read_text()  # get full code of receiver side
     _python_chars_map = str.maketrans({"\\": "\\\\", "'": "\\'"})
 
     def __init__(
@@ -318,7 +73,7 @@ class ShellCommandSend:
         args,
         python_path,
         initialize=True,
-        send_receiver_class=False,
+        send_receiver_code=False,
         log=None,
     ):
         self.shell = shell
@@ -335,8 +90,8 @@ class ShellCommandSend:
             "/"  # equivalent to os.pathsep (will be changed during initialization)
         )
 
-        self.send_receiver_class = (
-            send_receiver_class  # should be activated when developing...
+        self.send_receiver_code = (
+            send_receiver_code  # should be activated when developing...
         )
         self.debugging = False  # for outputs to file for easier debugging
         self.log = None
@@ -435,14 +190,106 @@ class ShellCommandSend:
 
         return self._check_output(cmd)
 
+    def _cmd_start_windows_no_breakaway(self, cmd_args, py_cmd, cmd):
+        # if windows platform doesn't support breakaway flag (e.g. Github Runner)
+        # we need to start a detached process (as work-a-round), the runs until the
+        # 'remote' process has finished. But we cannot directly start the command as detached
+        # process, since redirection (for retrieving the pid) doesn't work. We need a detached
+        # proxy process that redirects output the to file, that can be read by current process
+        # to retrieve the pid.
+
+        assert self.platform == Platform.Windows
+        from subprocess import DETACHED_PROCESS
+
+        tmp = NamedTemporaryFile(
+            mode="w", delete=False
+        )  # use python to generate a tempfile name
+        fo_name = tmp.name
+        tmp.close()
+        fi_name = (
+            fo_name + "_stdin.py"
+        )  # use tempfile name as basis for python script input
+        with open(fi_name, "w") as f:
+            f.write(py_cmd)
+
+        # simple python code that starts the actual cmd in a detached process
+        cmd_args_str = ", ".join(f'{self._format_for_python(c)}' for c in cmd_args)
+        if self.log:
+            detach_log = SimpleLog("${userdir}/detach.log").filename
+            tmp = str(cmd_args_str).replace("'", "")
+            py_detached = (
+                f"from subprocess import Popen,PIPE;fo=open(r'{fo_name}','w');"
+                f"fi=open(r'{fi_name}','r');input=fi.read();del fi;"
+                "from random import randint;from datetime import datetime;ranid=randint(0,999);"
+                f"log=open(r'{detach_log}','a');log.write(f'{{datetime.now()}} [{{ranid}}] Popen({tmp})\\n');"
+                "p=Popen(["
+                + cmd_args_str
+                + "], stdin=PIPE, stdout=fo, stderr=fo, universal_newlines=True);"
+                "log.write(f'{{datetime.now()}} [{{ranid}}] after Popen\\n');"
+                "p.stdin.write(input);p.stdin.flush();p.communicate();"
+                "log.write(f'{{datetime.now()}} [{{ranid}}] after communicate\\n');"
+            )
+        else:
+            py_detached = (
+                f"from subprocess import Popen,PIPE;fo=open(r'{fo_name}','w');"
+                f"fi=open(r'{fi_name}','r');input=fi.read();del fi;"
+                f"p=Popen(["
+                + cmd_args_str
+                + "], stdin=PIPE, stdout=fo, stderr=fo, universal_newlines=True);"
+                "p.stdin.write(input);p.stdin.flush();p.communicate()"
+            )
+        # now start proxy process detached
+        # print(datetime.now(), " [py_detached] ", py_detached)
+        if self.log:
+            self.log.info("[ShellCommandSend._cmd_send] starting detached process...")
+            self.log.debug("[ShellCommandSend._cmd_send] python command: \n" + py_cmd)
+        try:
+            p = Popen(
+                [sys.executable, '-c', py_detached],
+                close_fds=True,
+                creationflags=DETACHED_PROCESS,
+            )
+        except Exception as e:
+            if self.log:
+                self.log.error(
+                    f"[ShellCommandSend._cmd_send] detached process failed: {str(e)}"
+                )
+            raise e
+        if self.log:
+            self.log.info(
+                "[ShellCommandSend._cmd_send] detached process started successful. Waiting for redirected output (pid)..."
+            )
+
+        # retrieve (remote) pid from output file
+        output = ""
+        while True:
+            with open(fo_name) as f:
+                output = f.read()
+                if len(output) > 0:
+                    break
+                if p.poll() is not None:
+                    if p.returncode != 0:
+                        raise CalledProcessError(p.returncode, cmd)
+                    else:
+                        raise Exception(
+                            "internal error: no pid returned, although exit code of process was 0"
+                        )
+
+            time.sleep(0.1)  # wait a 0.1s and repeat
+
+        if self.log:
+            if len(output) == 0:
+                self.log.error("[ShellCommandSend._cmd_send] not output received!")
+            else:
+                self.log.info("[ShellCommandSend._cmd_send] output received: " + output)
+
+        return output
+
     def _cmd_send(self, cmd, *args, **kwargs):
-        if not self.send_receiver_class:
+        if not self.send_receiver_code:
             preamble = "from ipyparallel.cluster.shellcmd import ShellCommandReceive\n"
         else:
-            preamble = (
-                f"import sys, os, enum, json, shutil\nfrom datetime import datetime\nfrom random import randint\n"
-                f"{self.platform_code}\n{self.simple_log_code}\n{self.receiver_code}\n"
-            )
+            preamble = f"{self.receiver_code}\n"
 
         # in send receiver mode it is not required that the ipyparallel.cluster.shellcmd
         # exists (or is update to date) on the 'other' side of the shell. This is particular
@@ -486,105 +333,7 @@ class ShellCommandSend:
         py_cmd += ")"
         cmd_args = self.shell + self.args + [self.python_path]
         if cmd == 'start' and self.breakaway_support is False:
-            assert self.platform == Platform.Windows
-            from subprocess import DETACHED_PROCESS
-
-            # if windows platform doesn't support break away flag (e.g. Github Runner)
-            # we need to start a detached process (as work-a-round), the runs until the
-            # 'remote' process has finished. But we cannot directly start the command as detached
-            # process, since redirection (for retrieving the pid) doesn't work. We need a detached
-            # proxy process that redirects output the to file, that can be read by current process
-            # to retrieve the pid.
-
-            tmp = NamedTemporaryFile(
-                mode="w", delete=False
-            )  # use python to generate a tempfile name
-            fo_name = tmp.name
-            tmp.close()
-            fi_name = (
-                fo_name + "_stdin.py"
-            )  # use tempfile name as basis for python script input
-            with open(fi_name, "w") as f:
-                f.write(py_cmd)
-
-            # simple python code that starts the actual cmd in a detached process
-            cmd_args_str = ", ".join(f'{self._format_for_python(c)}' for c in cmd_args)
-            if self.log:
-                detach_log = SimpleLog("${userdir}/detach.log").filename
-                tmp = str(cmd_args_str).replace("'", "")
-                py_detached = (
-                    f"from subprocess import Popen,PIPE;fo=open(r'{fo_name}','w');"
-                    f"fi=open(r'{fi_name}','r');input=fi.read();del fi;"
-                    "from random import randint;from datetime import datetime;ranid=randint(0,999);"
-                    f"log=open(r'{detach_log}','a');log.write(f'{{datetime.now()}} [{{ranid}}] Popen({tmp})\\n');"
-                    "p=Popen(["
-                    + cmd_args_str
-                    + "], stdin=PIPE, stdout=fo, stderr=fo, universal_newlines=True);"
-                    "log.write(f'{{datetime.now()}} [{{ranid}}] after Popen\\n');"
-                    "p.stdin.write(input);p.stdin.flush();p.communicate();"
-                    "log.write(f'{{datetime.now()}} [{{ranid}}] after communicate\\n');"
-                )
-            else:
-                py_detached = (
-                    f"from subprocess import Popen,PIPE;fo=open(r'{fo_name}','w');"
-                    f"fi=open(r'{fi_name}','r');input=fi.read();del fi;"
-                    f"p=Popen(["
-                    + cmd_args_str
-                    + "], stdin=PIPE, stdout=fo, stderr=fo, universal_newlines=True);"
-                    "p.stdin.write(input);p.stdin.flush();p.communicate()"
-                )
-            # now start proxy process detached
-            # print(datetime.now(), " [py_detached] ", py_detached)
-            if self.log:
-                self.log.info(
-                    "[ShellCommandSend._cmd_send] starting detached process..."
-                )
-                self.log.debug(
-                    "[ShellCommandSend._cmd_send] python command: \n" + py_cmd
-                )
-            try:
-                p = Popen(
-                    [sys.executable, '-c', py_detached],
-                    close_fds=True,
-                    creationflags=DETACHED_PROCESS,
-                )
-            except Exception as e:
-                if self.log:
-                    self.log.error(
-                        f"[ShellCommandSend._cmd_send] detached process failed: {str(e)}"
-                    )
-                raise e
-            if self.log:
-                self.log.info(
-                    "[ShellCommandSend._cmd_send] detached process started successful. Waiting for redirected output (pid)..."
-                )
-
-            # retrieve (remote) pid from output file
-            output = ""
-            while True:
-                with open(fo_name) as f:
-                    output = f.read()
-                    if len(output) > 0:
-                        break
-                    if p.poll() is not None:
-                        if p.returncode != 0:
-                            raise CalledProcessError(p.returncode, cmd)
-                        else:
-                            raise Exception(
-                                "internal error: no pid returned, although exit code of process was 0"
-                            )
-
-                time.sleep(0.1)  # wait a 0.1s and repeat
-
-            if self.log:
-                if len(output) == 0:
-                    self.log.error("[ShellCommandSend._cmd_send] not output received!")
-                else:
-                    self.log.info(
-                        "[ShellCommandSend._cmd_send] output received: " + output
-                    )
-
-            return output
+            return self._cmd_start_windows_no_breakaway(cmd_args, py_cmd, cmd)
         else:
             return self._check_output(cmd_args, universal_newlines=True, input=py_cmd)
 

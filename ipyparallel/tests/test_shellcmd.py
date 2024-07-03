@@ -22,7 +22,7 @@ senders = [
     (
         "windows",
         ShellCommandSend(
-            ["cmd.exe"], ["/C"], sys.executable, initialize=False, send_receiver_class=1
+            ["cmd.exe"], ["/C"], sys.executable, initialize=False, send_receiver_code=1
         ),
     ),
     (
@@ -38,7 +38,7 @@ senders = [
             ["-Command"],
             sys.executable,
             initialize=False,
-            send_receiver_class=1,
+            send_receiver_code=1,
         ),
     ),
     (
@@ -57,13 +57,13 @@ senders = [
             ["-p", "2222", "ciuser@127.0.0.1"],
             windows_py_path,
             initialize=False,
-            send_receiver_class=1,
+            send_receiver_code=1,
         ),
     ),
     (
         "wsl",
         ShellCommandSend(
-            ["bash"], ["-c"], "python3", initialize=False, send_receiver_class=1
+            ["bash"], ["-c"], "python3", initialize=False, send_receiver_code=1
         ),
     ),
     ("linux", ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3", initialize=False)),
@@ -74,7 +74,7 @@ senders = [
             ["-c"],
             "python3",
             initialize=False,
-            send_receiver_class=1,
+            send_receiver_code=1,
         ),
     ),
     (
@@ -90,14 +90,14 @@ senders = [
             ["-p", "2222", "ciuser@127.0.0.1"],
             linux_py_path,
             initialize=False,
-            send_receiver_class=1,
+            send_receiver_code=1,
         ),
     ),
     ("macos", ShellCommandSend(["/bin/bash"], ["-c"], "python3", initialize=False)),
     (
         "macos",
         ShellCommandSend(
-            ["/bin/bash"], ["-c"], "python3", initialize=False, send_receiver_class=1
+            ["/bin/bash"], ["-c"], "python3", initialize=False, send_receiver_code=1
         ),
     ),
 ]
