@@ -93,7 +93,7 @@ class ShellCommandSend:
         self.send_receiver_code = (
             send_receiver_code  # should be activated when developing...
         )
-        self.debugging = False  # for outputs to file for easier debugging
+        self.debugging = False  # if activated an output log (${userdir}/shellcmd.log) is created on reciever side
         self.log = None
         if log:
             if isinstance(log, str):
@@ -316,13 +316,10 @@ class ShellCommandSend:
             receiver_params.append("debugging=True")
         if self.breakaway_support is False:
             receiver_params.append("use_breakaway=False")
-        if self.log:
+        if self.debugging:
             receiver_params.append("log='${userdir}/shellcmd.log'")
 
-        py_cmd = (
-            f"{preamble}\nShellCommandReceive({', '.join(receiver_params)}).cmd_{cmd}("
-        )
-        assert len(args) == 1
+        py_cmd = f"{preamble}\nShellCommandReceive({', '.join(receiver_params)}).{cmd}("
         for a in args:
             py_cmd += self._format_for_python(a)
         if len(kwargs) > 0:
@@ -336,6 +333,9 @@ class ShellCommandSend:
             return self._cmd_start_windows_no_breakaway(cmd_args, py_cmd, cmd)
         else:
             return self._check_output(cmd_args, universal_newlines=True, input=py_cmd)
+
+    def close(self):
+        return self._cmd_send("close")
 
     def _get_pid(self, output):
         # need to extract pid value
@@ -519,7 +519,7 @@ class ShellCommandSend:
             paramlist = self._as_list(cmd)
 
         return self._get_pid(
-            self._cmd_send("start", paramlist, env=env, output_file=output_file)
+            self._cmd_send("cmd_start", paramlist, env=env, output_file=output_file)
         )
 
     def cmd_start_python_module(self, module_params, env=None, output_file=None):
@@ -532,7 +532,7 @@ class ShellCommandSend:
         assert self.shell_info  # make sure that initialize was called already
         paramlist = [self.python_path, "-m"] + self._as_list(module_params)
         return self._get_pid(
-            self._cmd_send("start", paramlist, env=env, output_file=output_file)
+            self._cmd_send("cmd_start", paramlist, env=env, output_file=output_file)
         )
 
     def cmd_start_python_code(self, python_code, env=None, output_file=None):
@@ -552,13 +552,13 @@ class ShellCommandSend:
             py_cmd = '"' + py_cmd + '"'
         paramlist = [self.python_path, "-c", py_cmd]
         return self._get_pid(
-            self._cmd_send("start", paramlist, env=env, output_file=output_file)
+            self._cmd_send("cmd_start", paramlist, env=env, output_file=output_file)
         )
 
     def cmd_running(self, pid):
         """check if given (remote) pid is running"""
         assert self.shell_info  # make sure that initialize was called already
-        output = self._cmd_send("running", pid)
+        output = self._cmd_send("cmd_running", pid)
         # check output
         if "__running=1__" in output:
             return True
@@ -573,24 +573,24 @@ class ShellCommandSend:
         """kill (remote) process with the given pid"""
         assert self.shell_info  # make sure that initialize was called already
         if sig:
-            self._cmd_send("kill", pid, sig=int(sig))
+            self._cmd_send("cmd_kill", pid, sig=int(sig))
         else:
-            self._cmd_send("kill", pid)
+            self._cmd_send("cmd_kill", pid)
 
     def cmd_mkdir(self, p):
         """make directory recursively"""
         assert self.shell_info  # make sure that initialize was called already
-        self._cmd_send("mkdir", p)
+        self._cmd_send("cmd_mkdir", p)
 
     def cmd_rmdir(self, p):
         """remove directory recursively"""
         assert self.shell_info  # make sure that initialize was called already
-        self._cmd_send("rmdir", p)
+        self._cmd_send("cmd_rmdir", p)
 
     def cmd_exists(self, p):
         """check if file/path exists"""
         assert self.shell_info  # make sure that initialize was called already
-        output = self._cmd_send("exists", p)
+        output = self._cmd_send("cmd_exists", p)
         # check output
         if "__exists=1__" in output:
             return True
@@ -604,4 +604,4 @@ class ShellCommandSend:
     def cmd_remove(self, p):
         """delete remote file"""
         assert self.shell_info  # make sure that initialize was called already
-        output = self._cmd_send("remove", p)
+        output = self._cmd_send("cmd_remove", p)
