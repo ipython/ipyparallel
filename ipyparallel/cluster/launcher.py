@@ -1208,6 +1208,13 @@ class SSHLauncher(LocalProcessLauncher):
         )
         return self._ssh_sender
 
+    def _ssh_sender_stopped(self, data):
+        if self._ssh_sender:
+            self.log.info("Closing SSHLauncher::ssh_sender object")
+            self.ssh_sender.close()
+        else:
+            self.log.warning("SSHLauncher::ssh_sender was never initialized")
+
     def _reconstruct_process(self, d):
         # called in from_dict
         # override from LocalProcessLauncher which invokes psutil.Process
@@ -1312,6 +1319,7 @@ class SSHLauncher(LocalProcessLauncher):
             self.log.info(
                 f"ssh sender object initiated (break_away_support={self.ssh_sender.breakaway_support})"
             )
+        self.on_stop(self._ssh_sender_stopped)
 
         # create remote profile dir
         self.ssh_sender.check_output_python_module(
@@ -1325,7 +1333,7 @@ class SSHLauncher(LocalProcessLauncher):
         )
         if self.log:
             remote_cmd = ' '.join(self.program + self.program_args)
-            self.log.info(f"Running `{remote_cmd}`")
+            self.log.info(f"Running `{remote_cmd}` (pid={self.pid})")
             # self.log.debug("Running script via ssh:\n%s", input_script)
             pass
         self.notify_start({'host': self.location, 'pid': self.pid})
