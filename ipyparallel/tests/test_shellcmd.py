@@ -279,5 +279,3 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
         if isinstance(env_dict[key], dict):  # convert to dictionary if needed
             value = eval(value)
         assert env_dict[key] == value
-
-    sender.close()

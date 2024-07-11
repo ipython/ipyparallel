@@ -15,6 +15,7 @@ import pathlib
 import shutil
 import sys
 from abc import ABCMeta, abstractmethod
+from contextlib import contextmanager
 from datetime import datetime
 from random import randint
 from subprocess import DEVNULL, Popen
@@ -37,6 +38,13 @@ class Platform(enum.Enum):
 
 
 class SimpleLog:
+    """Simple file logging class
+
+    In case commands are not working correctly on the receiver side, it can tricky to find the problem
+    especially in case of github runners. Activating the debugging flag on the ShellCommandSend object
+    will trigger writting such a log on the receiver side.
+    """
+
     def __init__(self, filename):
         userdir = str(pathlib.Path.home())
         self.filename = filename.replace(
@@ -96,9 +104,9 @@ class ShellCommandReceiveBase(metaclass=ABCMeta):
             self._log("ShellCommandReceiveBase instance created")
 
     def close(self):
-        # perform possible clean up actions (currently not required/used)
+        # perform possible clean up actions (currently not required)
         if self.log:
-            self._log("ShellCommandReceiveBase close called")
+            self._log("ShellCommandReceiveBase closed")
 
     def _prepare_cmd_start(self, start_cmd, env):
         if env:
@@ -288,9 +296,14 @@ class ShellCommandReceivePosix(ShellCommandReceiveBase):
         os.kill(pid, sig)
 
 
+@contextmanager
 def ShellCommandReceive(debugging=False, use_breakaway=True, log=None):
-    """Factory function returning the corresponding platform dependent ShellCommandReceive object"""
+    """Generator returning the corresponding platform dependent ShellCommandReceive object (as Context Manager)"""
     if Platform.get() == Platform.Windows:
-        return ShellCommandReceiveWindows(debugging, use_breakaway, log)
+        receiver = ShellCommandReceiveWindows(debugging, use_breakaway, log)
     else:
-        return ShellCommandReceivePosix(debugging, log)
+        receiver = ShellCommandReceivePosix(debugging, log)
+    try:
+        yield receiver
+    finally:
+        receiver.close()
