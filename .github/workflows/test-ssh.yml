@@ -22,7 +22,6 @@ env:
 jobs:
   test:
     runs-on: ${{ matrix.runs_on || 'ubuntu-20.04' }}
-    cluster_type: ssh # actually not needed any more
     timeout-minutes: 45
 
     strategy:
@@ -175,12 +174,10 @@ jobs:
         run: pip freeze
 
       - name: Run shellcmd tests
-        if: ${{ matrix.cluster_type }}
         run: |
           pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_shellcmd.py
 
       - name: Run ssh tests
-        if: ${{ matrix.cluster_type }}
         run: |
           pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_ssh.py
 
