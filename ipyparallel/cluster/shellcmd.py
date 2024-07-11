@@ -63,7 +63,7 @@ class ShellCommandSend:
         r"__([a-z][a-z0-9_]+)=([a-z0-9\-\.]+)__", re.IGNORECASE
     )
     receiver_code = pathlib.Path(
-        inspect.getfile(ShellCommandReceive)
+        inspect.getfile(inspect.getmodule(ShellCommandReceive))
     ).read_text()  # get full code of receiver side
     _python_chars_map = str.maketrans({"\\": "\\\\", "'": "\\'"})
 
@@ -93,7 +93,7 @@ class ShellCommandSend:
         self.send_receiver_code = (
             send_receiver_code  # should be activated when developing...
         )
-        self.debugging = False  # if activated an output log (${userdir}/shellcmd.log) is created on reciever side
+        self.debugging = False  # if activated an output log (${userdir}/shellcmd.log) is created on receiver side
         self.log = None
         if log:
             if isinstance(log, str):
@@ -319,7 +319,7 @@ class ShellCommandSend:
         if self.debugging:
             receiver_params.append("log='${userdir}/shellcmd.log'")
 
-        py_cmd = f"{preamble}\nShellCommandReceive({', '.join(receiver_params)}).{cmd}("
+        py_cmd = f"{preamble}\nwith ShellCommandReceive({', '.join(receiver_params)}) as r:\n    r.{cmd}("
         for a in args:
             py_cmd += self._format_for_python(a)
         if len(kwargs) > 0:
@@ -333,9 +333,6 @@ class ShellCommandSend:
             return self._cmd_start_windows_no_breakaway(cmd_args, py_cmd, cmd)
         else:
             return self._check_output(cmd_args, universal_newlines=True, input=py_cmd)
-
-    def close(self):
-        return self._cmd_send("close")
 
     def _get_pid(self, output):
         # need to extract pid value
