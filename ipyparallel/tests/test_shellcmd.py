@@ -66,11 +66,11 @@ senders = [
             ["bash"], ["-c"], "python3", initialize=False, send_receiver_code=1
         ),
     ),
-    ("linux", ShellCommandSend(["/usr/bin/bash"], ["-c"], "python3", initialize=False)),
+    ("posix", ShellCommandSend(["bash"], ["-c"], "python3", initialize=False)),
     (
-        "linux",
+        "posix",
         ShellCommandSend(
-            ["/usr/bin/bash"],
+            ["bash"],
             ["-c"],
             "python3",
             initialize=False,
@@ -78,26 +78,19 @@ senders = [
         ),
     ),
     (
-        "linux",
+        "posix",
         ShellCommandSend(
             ["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], linux_py_path, initialize=False
         ),
     ),
     (
-        "linux",
+        "posix",
         ShellCommandSend(
             ["ssh"],
             ["-p", "2222", "ciuser@127.0.0.1"],
             linux_py_path,
             initialize=False,
             send_receiver_code=1,
-        ),
-    ),
-    ("macos", ShellCommandSend(["/bin/bash"], ["-c"], "python3", initialize=False)),
-    (
-        "macos",
-        ShellCommandSend(
-            ["/bin/bash"], ["-c"], "python3", initialize=False, send_receiver_code=1
         ),
     ),
 ]
@@ -114,8 +107,6 @@ sender_ids = [
     "bash_src",
     "ssh-linux",
     "ssh-linux_src",
-    "bash-macos",
-    "bash-macos_src",
 ]
 
 
@@ -157,7 +148,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
 
     else:
         # posix platform
-        if platform != "linux" or platform != "macos":
+        if platform != "posix":
             pytest.skip("other platform")
 
     if 'ssh' in sender.shell and not ssh_running:
@@ -168,9 +159,9 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     # initialize sender class
     sender.initialize()
 
-    if not sender.breakaway_support:
+    if sender.breakaway_support is not None and not sender.breakaway_support:
         warnings.warn(
-            "Break away process creation flag is not available (known issue for Github Runners)",
+            "Break away process creation flag is not available (known issue for Github Windows Runners)",
             UserWarning,
             stacklevel=2,
         )
