@@ -1,4 +1,4 @@
-name: SSH-Test
+name: Test ssh
 
 on:
   pull_request:
