@@ -30,7 +30,6 @@ jobs:
       matrix:
         include:
           - python: "3.9"
-            cluster_type: ssh
           - python: "3.8"
             cluster_type: mpi
           - python: "3.10"
