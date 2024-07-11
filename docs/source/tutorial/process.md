@@ -413,10 +413,14 @@ a single location:
 c.SSHEngineSetLauncher.engine_args = ['--profile-dir=/path/to/profile_ssh']
 ```
 
-Current limitations of the SSH mode of {command}`ipcluster` are:
+Consideration of SSH mode of {command}`ipcluster` under Windows:
 
-- Untested and unsupported on Windows. Would require a working {command}`ssh` on Windows.
-  Also, we are using shell scripts to setup and execute commands on remote hosts.
+- After installing `OpenSSH` server and `python` (including `ipyparallel`)
+  on all cluster machines, an SSH cluster can be set up via {command}`ipcluster`
+  without limitations.
+- Although, Microsoft provides a specific `OpenSSH` installer, it uses an quite
+  old version of `OpenSSH`. Therefore, it is highly recommended to install the latest
+  version from [Win32-OpenSSH in Github](https://github.com/PowerShell/Win32-OpenSSH)
 
 #### Moving files with SSH
 
