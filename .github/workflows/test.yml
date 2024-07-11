@@ -30,7 +30,6 @@ jobs:
       matrix:
         include:
           - python: "3.9"
-            cluster_type: ssh
           - python: "3.8"
             cluster_type: mpi
           - python: "3.10"
@@ -82,14 +81,6 @@ jobs:
                   f.write(f"{key}={value}\n")
           EOF
 
-      - name: Set up docker-compose for ssh launcher
-        if: ${{ matrix.cluster_type == 'ssh' }}
-        run: |
-          export DOCKER_BUILDKIT=1
-          export COMPOSE_DOCKER_CLI_BUILD=1
-          cd ci/ssh
-          docker-compose up -d --build
-
       - name: Set up slurm
         if: ${{ matrix.cluster_type == 'slurm' }}
         run: |
@@ -128,7 +119,11 @@ jobs:
         if: ${{ ! startsWith(matrix.python, '3.11') }}
         run: |
           pip install distributed joblib
-          pip install --only-binary :all: matplotlib || echo "no matplotlib"
+          # pip install --only-binary :all: matplotlib || echo "no matplotlib"#
+          # the || syntax doesn't work under windows powershell, but since the command (currently) works for all
+          # python version (>3.8), the "||" branch can be simply removed. Otherwise we would need a splitted
+          # step for Windows and Linux (as for the docker-compose command)
+          pip install --only-binary :all: matplotlib
 
       - name: Show environment
         run: pip freeze

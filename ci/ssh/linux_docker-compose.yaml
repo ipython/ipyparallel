@@ -1,8 +1,9 @@
+version: "3"
 services:
   sshd:
     image: ipyparallel-sshd
     build:
       context: ../..
-      dockerfile: ci/ssh/Dockerfile
+      dockerfile: ci/ssh/linux_Dockerfile
     ports:
       - "2222:22"
