@@ -1,7 +1,10 @@
 name: SSH-Test
 
 on:
-  workflow_dispatch:
+  pull_request:
+  push:
+    branches-ignore:
+      - "pre-commit-ci*"
 
 concurrency:
   group: >-
@@ -19,6 +22,7 @@ env:
 jobs:
   test:
     runs-on: ${{ matrix.runs_on || 'ubuntu-20.04' }}
+    cluster_type: ssh # actually not needed any more
     timeout-minutes: 45
 
     strategy:
@@ -27,9 +31,7 @@ jobs:
       matrix:
         include:
           - python: "3.9"
-            cluster_type: ssh
           - python: "3.8"
-            cluster_type: ssh
             runs_on: windows-2019
 
     steps:
@@ -65,13 +67,13 @@ jobs:
                   f.write(f"{key}={value}\n")
           EOF
 
-      - name: Docker infos
+      - name: Get Docker infos
         run: |
           docker version
           docker images
 
       - name: Set up docker-compose for ssh linux launcher
-        if: ${{ matrix.cluster_type == 'ssh' && !contains(matrix.runs_on, 'windows') }}
+        if: ${{ !contains(matrix.runs_on, 'windows') }}
         run: |
           export DOCKER_BUILDKIT=1
           export COMPOSE_DOCKER_CLI_BUILD=1
@@ -83,14 +85,11 @@ jobs:
           docker cp ssh_sshd_1:/home/ciuser/.ssh/id_rsa ~/.ssh/id_rsa
           cat ~/.ssh/id_rsa
 
-          #check ssh connection and accept host key
-          ssh -o "StrictHostKeyChecking no" ciuser@127.0.0.1 -p 2222 -v ls /
-
-          # just to see the ip-address of runner vm
-          ifconfig
+          #check ssh connection and accept host key (for future ssh commands)
+          ssh -o "StrictHostKeyChecking no" ciuser@127.0.0.1 -p 2222 -v echo "ssh connection to container succeeded"
 
       - name: Set up docker-compose for ssh windows launcher
-        if: ${{ matrix.cluster_type == 'ssh' && contains(matrix.runs_on, 'windows') }}
+        if: ${{ contains(matrix.runs_on, 'windows') }}
         env:
           SSH_HOST: ciuser@127.0.0.1
           SSH_PORT: 2222
@@ -100,7 +99,7 @@ jobs:
           # determine host ip and place it as 'static' env variables in corresponding docker compose file (win_Dockerfile_template -> win_Dockerfile)
           $env:docker_host_ip=(Get-NetIPConfiguration -InterfaceAlias "Ethernet*").IPv4Address.IPAddress.Trim()
           $content = Get-Content "win_Dockerfile_template"
-          $content | ForEach-Object { 
+          $content | ForEach-Object {
              $_ -replace '\${docker_host_ip}', $env:docker_host_ip -replace '\${docker_host_name}', $env:computername
           } | Set-Content "win_Dockerfile"
           docker-compose -f win_docker-compose.yaml up -d --build
@@ -110,18 +109,19 @@ jobs:
           docker run ipyparallel-sshd powershell.exe -Command "type C:\Users\ciuser\.ssh\id_rsa" | out-file -encoding ascii $env:USERPROFILE/.ssh/id_rsa
 
           # install newer version of openssh (removes "GetConsoleMode on STD_INPUT_HANDLE failed with 6" error in pytest)
-          choco install openssh --pre
+          # also disable download progress to keep github runner output more compact
+          choco install openssh --pre --no-progress
           mv C:\Windows\System32\OpenSSH C:\Windows\System32\_OpenSSH
 
-          #check ssh connection and accept host key
-          ssh -o "StrictHostKeyChecking no" $env:SSH_HOST -p $env:SSH_PORT -v dir c:\
+          #check ssh connection and accept host key (with arbitrary windows command)
+          ssh -o "StrictHostKeyChecking no" $env:SSH_HOST -p $env:SSH_PORT -v echo "ssh connection to container succeeded"
 
           # copy ipyparallel code to docker container (use zip, scp and unzip)
           ssh $env:SSH_HOST -p $env:SSH_PORT mkdir $env:CODE_ROOT
 
           # zip ipyparallel files (excluding files probably not needed)
           cd ../..
-          $exclude = @("__pycache__","node_modules")
+          $exclude = @("__pycache__", "node_modules", ".yarn")
           $files = Get-ChildItem -Path "." -Exclude $exclude
           Compress-Archive -Path $files -DestinationPath ipyparallel.zip -CompressionLevel Fastest
           # copy file into docker (we need to do it over ssh since docker copy or mount doesn't work in Hyper-V)
@@ -130,39 +130,24 @@ jobs:
           ssh $env:SSH_HOST -p $env:SSH_PORT powershell.exe -Command "Expand-Archive -Path $env:CODE_ROOT\ipyparallel.zip -DestinationPath $env:CODE_ROOT"
 
           # pip install ipyparallel files
-          #ssh $env:SSH_HOST -p $env:SSH_PORT "cd $env:CODE_ROOT && pip install -e ."
+          #ssh $env:SSH_HOST -p $env:SSH_PORT "echo IPP_DISABLE_JS=$env:IPP_DISABLE_JS"
           ssh $env:SSH_HOST -p $env:SSH_PORT "pip install -e file://c:/src/ipyparallel#egg=ipyparallel[test]"
 
           # we need to disable the windows firewall for github runners otherwise the ipyparallel engines cannot connect to the controller.
-          # obviously, a more precautious adaption of the firewall would be desirable. since an adaption of the firewall is NOT necessary 
-          # for a local standard windows environment, no further improvements were made.  
+          # obviously, a more precautious adaption of the firewall would be desirable. since an adaption of the firewall is NOT necessary
+          # for a local standard windows environment, no further improvements were made.
           echo "Disable Firewall:"
           Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled False
+
+          # just see were pip is installed and what libraries are install 
+          echo "Check pip inside container"
+          ssh $env:SSH_HOST -p $env:SSH_PORT "where pip"
+          ssh $env:SSH_HOST -p $env:SSH_PORT "pip list"
 
           echo "Check if container can ping the docker host (requires adapted hosts file and firewall disabled)"
           docker run ipyparallel-sshd ping -n 1 $env:computername
 
-      - name: Set up slurm
-        if: ${{ matrix.cluster_type == 'slurm' }}
-        run: |
-          export DOCKER_BUILDKIT=1
-          export COMPOSE_DOCKER_CLI_BUILD=1
-          cd ci/slurm
-          docker-compose up -d --build
-
-      - name: Install Python (conda) ${{ matrix.python }}
-        if: ${{ matrix.cluster_type == 'mpi' }}
-        run: |
-          export MAMBA_ROOT_PREFIX=$HOME/conda
-          test -d $MAMBA_ROOT_PREFIX || mkdir $MAMBA_ROOT_PREFIX
-          wget -qO- https://micro.mamba.pm/api/micromamba/linux-64/latest | tar -xvj bin/micromamba
-          eval "$(./bin/micromamba shell hook -s posix)"
-          micromamba activate
-          micromamba install -y -c conda-forge mpich mpi4py python=${{ matrix.python }}
-          echo "PATH=$MAMBA_ROOT_PREFIX/bin:$PATH" >> $GITHUB_ENV
-
       - name: Install Python ${{ matrix.python }}
-        if: ${{ matrix.cluster_type != 'mpi' }}
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
@@ -180,24 +165,24 @@ jobs:
         if: ${{ ! startsWith(matrix.python, '3.11') }}
         run: |
           pip install distributed joblib
-          pip install --only-binary :all: matplotlib || echo "no matplotlib"
+          # pip install --only-binary :all: matplotlib || echo "no matplotlib"#
+          # the || syntax doesn't work under windows powershell, but since the command (currently) works for all
+          # python version (>3.8), the "||" branch can be simply removed. Otherwise we would need a splitted
+          # step for Windows and Linux (as for the docker-compose command)
+          # pip install --only-binary :all: matplotlib || echo "no matplotlib"
 
       - name: Show environment
         run: pip freeze
 
-      - name: Run tests in container ${{ matrix.container }}
-        if: ${{ matrix.container }}
-        run: echo "EXEC=docker exec -i ${{ matrix.container }}" >> $GITHUB_ENV
-
-      - name: Run ${{ matrix.cluster_type }} shellcmd tests
+      - name: Run shellcmd tests
         if: ${{ matrix.cluster_type }}
         run: |
           pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_shellcmd.py
 
-      - name: Run ${{ matrix.cluster_type }} tests
+      - name: Run ssh tests
         if: ${{ matrix.cluster_type }}
         run: |
-          pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_${{ matrix.cluster_type }}.py
+          pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_ssh.py
 
       #- name: Submit codecov report
-      #  uses: codecov/codecov-action@v3
+      #  uses: codecov/codecov-action@v4
