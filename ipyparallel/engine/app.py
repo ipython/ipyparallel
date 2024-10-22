@@ -747,10 +747,11 @@ class IPEngine(BaseParallelApplication):
             )
 
             # FIXME: This is a hack until IPKernelApp and IPEngineApp can be fully merged
-            self.init_signal()
-            app = IPKernelApp(
+            app = self.kernel_app = IPKernelApp(
                 parent=self, shell=self.kernel.shell, kernel=self.kernel, log=self.log
             )
+            self.init_signal()
+
             if self.use_mpi and self.init_mpi:
                 app.exec_lines.insert(0, self.init_mpi)
             app.init_profile_dir()
@@ -942,7 +943,12 @@ class IPEngine(BaseParallelApplication):
         self.forward_logging()
 
     def init_signal(self):
-        signal.signal(signal.SIGINT, self._signal_sigint)
+        if ipykernel.version_info >= (7,):
+            # ipykernel 7 changes SIGINT handling
+            # to the app instead of the kernel
+            self.kernel_app.init_signal()
+        else:
+            signal.signal(signal.SIGINT, self._signal_sigint)
         signal.signal(signal.SIGTERM, self._signal_stop)
 
     def _signal_sigint(self, sig, frame):

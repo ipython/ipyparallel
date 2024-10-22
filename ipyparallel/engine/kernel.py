@@ -161,7 +161,11 @@ class IPythonParallelKernel(IPythonKernel):
             return
 
         md = self.init_metadata(parent)
-        reply_content, result_buf = self.do_apply(content, bufs, msg_id, md)
+        self.shell_is_blocking = True
+        try:
+            reply_content, result_buf = self.do_apply(content, bufs, msg_id, md)
+        finally:
+            self.shell_is_blocking = False
 
         # put 'ok'/'error' status in header, for scheduler introspection:
         md = self.finish_metadata(parent, md, reply_content)
