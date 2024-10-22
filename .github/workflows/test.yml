@@ -122,11 +122,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --pre --upgrade ipyparallel[test]
-
-      - name: "[temporary] Install ipykernel branch"
-        run: |
-          pip install https://github.com/minrk/ipykernel/archive/parallel.tar.gz
+          pip install --pre --upgrade ipyparallel[test] 'https://github.com/minrk/ipykernel/archive/parallel.tar.gz#egg=ipykernel'
 
       - name: Install extra Python packages
         if: ${{ ! startsWith(matrix.python, '3.11') }}
