@@ -5,6 +5,7 @@ The IPython engine application
 
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
 import json
 import os
 import signal
@@ -14,6 +15,7 @@ from getpass import getpass
 from io import FileIO, TextIOWrapper
 from logging import StreamHandler
 
+import ipykernel
 import zmq
 from ipykernel.kernelapp import IPKernelApp
 from ipykernel.zmqshell import ZMQInteractiveShell
@@ -52,6 +54,10 @@ from .kernel import IPythonParallelKernel as Kernel
 from .log import EnginePUBHandler
 from .nanny import start_nanny
 
+try:
+    from ipykernel.control import ControlThread
+except ImportError:
+    ControlThread = None
 # -----------------------------------------------------------------------------
 # Module level variables
 # -----------------------------------------------------------------------------
@@ -270,7 +276,7 @@ class IPEngine(BaseParallelApplication):
             self.log.debug("MPI rank = %i", MPI.COMM_WORLD.rank)
             return MPI.COMM_WORLD.rank
 
-    registrar = Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
+    registrar = Instance('zmq.Socket', allow_none=True)
     kernel = Instance(Kernel, allow_none=True)
     hb_check_period = Integer()
 
@@ -348,6 +354,8 @@ class IPEngine(BaseParallelApplication):
         if not self.curve_secretkey or not self.curve_publickey:
             self.log.info("Generating new CURVE credentials")
             self.curve_publickey, self.curve_secretkey = zmq.curve_keypair()
+
+    _kernel_start_future = None
 
     def find_connection_file(self):
         """Set the url file.
@@ -523,7 +531,7 @@ class IPEngine(BaseParallelApplication):
 
         return connect, maybe_tunnel
 
-    def register(self):
+    async def register(self):
         """send the registration_request"""
         if self.use_mpi and self.id and self.id >= 100 and self.mpi_registration_delay:
             # Some launchres implement delay at the Launcher level,
@@ -539,36 +547,36 @@ class IPEngine(BaseParallelApplication):
         self.log.info("Registering with controller at %s" % self.registration_url)
         ctx = self.context
         connect, maybe_tunnel = self.init_connector()
-        reg = ctx.socket(zmq.DEALER)
-        reg.setsockopt(zmq.IDENTITY, self.bident)
+        reg = self.registrar = ctx.socket(zmq.DEALER)
+        reg.IDENTITY = self.bident
         connect(reg, self.registration_url)
-
-        self.registrar = zmqstream.ZMQStream(reg, self.loop)
 
         content = dict(uuid=self.ident)
         if self.id is not None:
             self.log.info("Requesting id: %i", self.id)
             content['id'] = self.id
-        self._registration_completed = False
-        self.registrar.on_recv(
-            lambda msg: self.complete_registration(msg, connect, maybe_tunnel)
-        )
 
-        self.session.send(self.registrar, "registration_request", content=content)
+        self.session.send(reg, "registration_request", content=content)
+        # wait for reply
+        poller = zmq.asyncio.Poller()
+        poller.register(reg, zmq.POLLIN)
+        events = dict(await poller.poll(timeout=self.timeout))
+        if events:
+            msg = reg.recv_multipart()
+            try:
+                await self.complete_registration(msg, connect, maybe_tunnel)
+            except Exception as e:
+                self.log.critical(f"Error completing registration: {e}", exc_info=True)
+                self.exit(255)
+        else:
+            self.abort()
 
     def _report_ping(self, msg):
         """Callback for when the heartmonitor.Heart receives a ping"""
         # self.log.debug("Received a ping: %s", msg)
         self._hb_last_pinged = time.time()
 
-    def complete_registration(self, msg, connect, maybe_tunnel):
-        try:
-            self._complete_registration(msg, connect, maybe_tunnel)
-        except Exception as e:
-            self.log.critical(f"Error completing registration: {e}", exc_info=True)
-            self.exit(255)
-
-    def _complete_registration(self, msg, connect, maybe_tunnel):
+    async def complete_registration(self, msg, connect, maybe_tunnel):
         ctx = self.context
         loop = self.loop
         identity = self.bident
@@ -608,16 +616,15 @@ class IPEngine(BaseParallelApplication):
             self.log.info(f'Shell_addrs: {shell_addrs}')
 
             # Use only one shell stream for mux and tasks
-            stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
-            stream.setsockopt(zmq.IDENTITY, identity)
+            shell_socket = ctx.socket(zmq.ROUTER)
+            shell_socket.setsockopt(zmq.IDENTITY, identity)
             # TODO: enable PROBE_ROUTER when schedulers can handle the empty message
             # stream.setsockopt(zmq.PROBE_ROUTER, 1)
             self.log.debug("Setting shell identity %r", identity)
 
-            shell_streams = [stream]
             for addr in shell_addrs:
                 self.log.info("Connecting shell to %s", addr)
-                connect(stream, addr)
+                connect(shell_socket, addr)
 
             # control stream:
             control_url = url('control')
@@ -629,9 +636,9 @@ class IPEngine(BaseParallelApplication):
                 control_url = nanny_url
                 # nanny uses our curve_publickey, not the controller's publickey
                 curve_serverkey = self.curve_publickey
-            control_stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
-            control_stream.setsockopt(zmq.IDENTITY, identity)
-            connect(control_stream, control_url, curve_serverkey=curve_serverkey)
+            control_socket = ctx.socket(zmq.ROUTER)
+            control_socket.setsockopt(zmq.IDENTITY, identity)
+            connect(control_socket, control_url, curve_serverkey=curve_serverkey)
 
             # create iopub stream:
             iopub_addr = url('iopub')
@@ -713,17 +720,26 @@ class IPEngine(BaseParallelApplication):
 
             self.session.send = send_with_metadata
 
+            kernel_kwargs = {}
+            if ipykernel.version_info >= (6,):
+                kernel_kwargs["control_thread"] = ControlThread(daemon=True)
+            if ipykernel.version_info >= (7,):
+                kernel_kwargs["shell_socket"] = zmq.asyncio.Socket(shell_socket)
+                kernel_kwargs["control_socket"] = zmq.asyncio.Socket(control_socket)
+            else:
+                kernel_kwargs["control_stream"] = zmqstream.ZMQStream(control_socket)
+
+                kernel_kwargs["shell_streams"] = [zmqstream.ZMQStream(shell_socket)]
+
             self.kernel = Kernel.instance(
                 parent=self,
                 engine_id=self.id,
                 ident=self.ident,
                 session=self.session,
-                control_stream=control_stream,
-                shell_streams=shell_streams,
                 iopub_socket=iopub_socket,
-                loop=loop,
                 user_ns=self.user_ns,
                 log=self.log,
+                **kernel_kwargs,
             )
 
             self.kernel.shell.display_pub.topic = f"engine.{self.id}.displaypub".encode(
@@ -740,7 +756,10 @@ class IPEngine(BaseParallelApplication):
             app.init_profile_dir()
             app.init_code()
 
-            self.kernel.start()
+            # ipykernel 7, kernel.start is the long-running main loop
+            start_future = self.kernel.start()
+            if start_future is not None:
+                self._kernel_start_future = asyncio.ensure_future(start_future)
         else:
             self.log.fatal("Registration Failed: %s" % msg)
             raise Exception("Registration Failed: %s" % msg)
@@ -752,7 +771,6 @@ class IPEngine(BaseParallelApplication):
             identity,
         )
         self.log.info("Completed registration with id %i" % self.id)
-        self.loop.remove_timeout(self._abort_timeout)
 
     def start_nanny(self, control_url):
         self.log.info("Starting nanny")
@@ -932,24 +950,29 @@ class IPEngine(BaseParallelApplication):
 
     def _signal_stop(self, sig, frame):
         self.log.critical(f"received signal {sig}, stopping")
+        self.loop.add_callback_from_signal(self.kernel.stop)
         self.loop.add_callback_from_signal(self.loop.stop)
 
     def start(self):
         if self.id is not None:
             self.log.name += f".{self.id}"
-        loop = self.loop
+        asyncio.run(self._start())
 
-        def _start():
-            self.register()
-            self._abort_timeout = loop.add_timeout(
-                loop.time() + self.timeout, self.abort
-            )
-
-        self.loop.add_callback(_start)
-        try:
-            self.loop.start()
-        except KeyboardInterrupt:
-            self.log.critical("Engine Interrupted, shutting down...\n")
+    async def _start(self):
+        await self.register()
+        # run forever
+        if self._kernel_start_future is None:
+            while True:
+                try:
+                    await asyncio.sleep(60)
+                except asyncio.CancelledError:
+                    pass
+        else:
+            self.log.info("awaiting start future")
+            try:
+                await self._kernel_start_future
+            except asyncio.CancelledError:
+                pass
 
 
 main = launch_new_instance = IPEngine.launch_instance

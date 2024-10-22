@@ -7,7 +7,7 @@ from functools import partial
 
 import ipykernel
 from ipykernel.ipkernel import IPythonKernel
-from traitlets import Integer, Type
+from traitlets import Integer, Set, Type
 
 from ipyparallel.serialize import serialize_object, unpack_apply_message
 from ipyparallel.util import utcnow
@@ -19,6 +19,8 @@ class IPythonParallelKernel(IPythonKernel):
     """Extend IPython kernel for parallel computing"""
 
     engine_id = Integer(-1)
+
+    aborted = Set()
 
     @property
     def int_id(self):
@@ -34,9 +36,7 @@ class IPythonParallelKernel(IPythonKernel):
 
     def _topic(self, topic):
         """prefixed topic for IOPub messages"""
-        base = "engine.%s" % self.engine_id
-
-        return f"{base}.{topic}".encode()
+        return f"engine.{self.engine_id}.{topic}".encode()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -52,6 +52,7 @@ class IPythonParallelKernel(IPythonKernel):
     def _abort_queues(self):
         # forward-port ipython/ipykernel#853
         # may remove after requiring ipykernel 6.9.1
+        # incompatible again with ipykernel 7
 
         # while this flag is true,
         # execute requests will be aborted
@@ -74,9 +75,12 @@ class IPythonParallelKernel(IPythonKernel):
             # 10 is SHELL priority in ipykernel 5.x
             streams = self.shell_streams
             schedule_stop_aborting = partial(self.schedule_dispatch, 10, stop_aborting)
-        else:
+        elif ipykernel.version_info < (7,):
             streams = [self.shell_stream]
             schedule_stop_aborting = partial(self.schedule_dispatch, stop_aborting)
+        else:
+            # ipykernel 7: how to flush?
+            streams = []
 
         # flush streams, so all currently waiting messages
         # are added to the queue
