@@ -493,7 +493,7 @@ def become_dask_worker(address, nanny=False, **kwargs):
     shell.user_ns['dask_worker'] = shell.user_ns['distributed_worker'] = (
         kernel.distributed_worker
     ) = w
-    kernel.io_loop.add_callback(w.start)
+    asyncio.get_running_loop().call_soon(w.start)
 
 
 def stop_distributed_worker():
