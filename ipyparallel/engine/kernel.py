@@ -59,7 +59,9 @@ class IPythonParallelKernel(IPythonKernel):
         if msg_id in self.aborted:
             # is it safe to assume a msg_id will not be resubmitted?
             self.aborted.remove(msg_id)
-            self._send_abort_reply(stream, msg, idents)
+            f = self._send_abort_reply(stream, msg, idents)
+            if inspect.isawaitable(f):
+                asyncio.ensure_future(f)
             return False
         self.log.info(f"Handling {msg_type}: {msg_id}")
         return True
