@@ -600,7 +600,7 @@ class IPEngine(BaseParallelApplication):
                     f"Did not get the requested id: {self.id} != {requested_id}"
                 )
                 self.log.name = self.log.name.rsplit(".", 1)[0] + f".{self.id}"
-            elif self.id is None:
+            elif self.id is not None:
                 self.log.name += f".{self.id}"
 
             # create Shell Connections (MUX, Task, etc.):
