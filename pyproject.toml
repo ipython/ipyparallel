@@ -153,6 +153,7 @@ ignore = [
     "F841", # unused variable
     "E741", # ambiguous names
     "E743", # ambiguous names
+    "UP031", # %-formatting - wait until we don't have large outstanding PRs
 ]
 select = [
     "E7", # comparisons

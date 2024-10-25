@@ -564,7 +564,9 @@ class LocalProcessLauncher(BaseLauncher):
         if self._wait_thread is not None:
             self._wait_thread.join(timeout=timeout)
             if self._wait_thread.is_alive():
-                raise TimeoutError(f"Process {self.process.pid} did not exit in {timeout} seconds.")
+                raise TimeoutError(
+                    f"Process {self.process.pid} did not exit in {timeout} seconds."
+                )
 
     def _stream_file(self, path):
         """Stream one file"""
