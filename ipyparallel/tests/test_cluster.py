@@ -163,8 +163,13 @@ async def test_restart_engines(Cluster):
         before_pids = rc[:].apply_sync(os.getpid)
         await cluster.restart_engines()
         # wait for unregister
+        deadline = time.monotonic() + _timeout
         while any(eid in rc.ids for eid in range(n)):
             await asyncio.sleep(0.1)
+            if time.monotonic() > deadline:
+                raise TimeoutError(
+                    f"timeout waiting for engines 0-{n-1} to unregister, {rc.ids=}"
+                )
         # wait for register
         rc.wait_for_engines(n, timeout=_timeout)
         after_pids = rc[:].apply_sync(os.getpid)

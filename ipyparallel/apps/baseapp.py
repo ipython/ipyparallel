@@ -7,7 +7,6 @@ import os
 import re
 import sys
 
-import traitlets
 from IPython.core.application import BaseIPythonApplication
 from IPython.core.application import base_aliases as base_ip_aliases
 from IPython.core.application import base_flags as base_ip_flags
@@ -20,15 +19,6 @@ from traitlets.config.application import LevelFormatter, catch_config_error
 from ipyparallel import util
 
 from .._version import __version__
-
-# FIXME: CUnicode is needed for cli parsing
-# with traitlets 4
-# bump when we require traitlets 5, which requires Python 3.7
-if int(traitlets.__version__.split(".", 1)[0]) < 5:
-    from traitlets import CUnicode
-else:
-    # don't need CUnicode with traitlets 4
-    CUnicode = Unicode
 
 # -----------------------------------------------------------------------------
 # Module errors
@@ -107,7 +97,7 @@ class BaseParallelApplication(BaseIPythonApplication):
         '', config=True, help="The ZMQ URL of the iplogger to aggregate logging."
     )
 
-    cluster_id = CUnicode(
+    cluster_id = Unicode(
         '',
         config=True,
         help="""String id to add to runtime files, to prevent name collisions when

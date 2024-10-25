@@ -493,7 +493,17 @@ def become_dask_worker(address, nanny=False, **kwargs):
     shell.user_ns['dask_worker'] = shell.user_ns['distributed_worker'] = (
         kernel.distributed_worker
     ) = w
-    kernel.io_loop.add_callback(w.start)
+
+    # call_soon doesn't launch coroutines
+    def _log_error(f):
+        kernel.log.info(f"dask start finished {f=}")
+        try:
+            f.result()
+        except Exception:
+            kernel.log.error("Error starting dask worker", exc_info=True)
+
+    f = asyncio.ensure_future(w.start())
+    f.add_done_callback(_log_error)
 
 
 def stop_distributed_worker():

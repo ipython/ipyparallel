@@ -453,10 +453,7 @@ class TestView(ClusterTestCase):
         """test executing unicode strings"""
         v = self.client[-1]
         v.block = True
-        if sys.version_info[0] >= 3:
-            code = "a='é'"
-        else:
-            code = "a=u'é'"
+        code = "a='é'"
         v.execute(code)
         assert v['a'] == 'é'
 

@@ -286,6 +286,7 @@ class TestParallelMagics(ClusterTestCase):
         printed_tb = "\n".join(exc_info.value.render_traceback())
         assert printed_tb.count("RuntimeError:") >= ipp.error.CompositeError.tb_limit
 
+    @pytest.mark.skip("ordering issues in ipykernel 7")
     def test_cellpx_stream(self):
         """%%px --stream"""
         self.minimum_engines(6)
