@@ -161,8 +161,8 @@ jobs:
         run: |
           set -x
           docker ps -a
-          docker logs slurmctld
           docker exec -i slurmctld squeue --states=all
           docker exec -i slurmctld sinfo
+          docker logs slurmctld
           docker logs c1
           docker logs c2
