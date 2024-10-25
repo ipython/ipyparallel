@@ -560,7 +560,7 @@ class IPEngine(BaseParallelApplication):
         # wait for reply
         poller = zmq.asyncio.Poller()
         poller.register(reg, zmq.POLLIN)
-        events = dict(await poller.poll(timeout=self.timeout))
+        events = dict(await poller.poll(timeout=int(self.timeout * 1_000)))
         if events:
             msg = reg.recv_multipart()
             try:
