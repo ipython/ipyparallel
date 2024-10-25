@@ -3,9 +3,7 @@
 import asyncio
 import inspect
 import sys
-from functools import partial
 
-import ipykernel
 from ipykernel.ipkernel import IPythonKernel
 from traitlets import Integer, Set, Type
 
@@ -48,56 +46,6 @@ class IPythonParallelKernel(IPythonKernel):
         data_pub.session = self.session
         data_pub.pub_socket = self.iopub_socket
         self.aborted = set()
-
-    def _abort_queues(self):
-        # forward-port ipython/ipykernel#853
-        # may remove after requiring ipykernel 6.9.1
-        # incompatible again with ipykernel 7
-
-        # while this flag is true,
-        # execute requests will be aborted
-        self._aborting = True
-        self.log.info("Aborting queue")
-
-        # Callback to signal that we are done aborting
-        def stop_aborting():
-            self.log.info("Finishing abort")
-            self._aborting = False
-            # must be awaitable for ipykernel >= 3.6
-            # must also be sync for ipykernel < 3.6
-            f = asyncio.Future()
-            f.set_result(None)
-            return f
-
-        # put stop_aborting on the message queue
-        # so that it's handled after processing of already-pending messages
-        if ipykernel.version_info < (6,):
-            # 10 is SHELL priority in ipykernel 5.x
-            streams = self.shell_streams
-            schedule_stop_aborting = partial(self.schedule_dispatch, 10, stop_aborting)
-        elif ipykernel.version_info < (7,):
-            streams = [self.shell_stream]
-            schedule_stop_aborting = partial(self.schedule_dispatch, stop_aborting)
-        else:
-            # ipykernel 7: how to flush?
-            streams = []
-
-        # flush streams, so all currently waiting messages
-        # are added to the queue
-        for stream in streams:
-            stream.flush()
-
-        # if we have a delay, give messages this long to arrive on the queue
-        # before we start accepting requests
-        asyncio.get_running_loop().call_later(
-            self.stop_on_error_timeout, schedule_stop_aborting
-        )
-
-        # for compatibility, return a completed Future
-        # so this is still awaitable
-        f = asyncio.Future()
-        f.set_result(None)
-        return f
 
     def should_handle(self, stream, msg, idents):
         """Check whether a shell-channel message should be handled
@@ -253,7 +201,7 @@ class IPythonParallelKernel(IPythonKernel):
 
         return reply_content, result_buf
 
-    async def _do_execute_async(self, *args, **kwargs):
+    async def do_execute(self, *args, **kwargs):
         super_execute = super().do_execute(*args, **kwargs)
         if inspect.isawaitable(super_execute):
             reply_content = await super_execute
@@ -263,15 +211,6 @@ class IPythonParallelKernel(IPythonKernel):
         if reply_content['status'] == 'error':
             reply_content["engine_info"] = self.get_engine_info(method="execute")
         return reply_content
-
-    def do_execute(self, *args, **kwargs):
-        coro = self._do_execute_async(*args, **kwargs)
-        if ipykernel.version_info < (6,):
-            # ipykernel 5 uses gen.maybe_future which doesn't accept async def coroutines,
-            # but it does accept asyncio.Futures
-            return asyncio.ensure_future(coro)
-        else:
-            return coro
 
     # Control messages for msgspec extensions:
 
@@ -299,25 +238,4 @@ class IPythonParallelKernel(IPythonKernel):
         content = dict(status='ok')
         self.session.send(
             stream, 'clear_reply', ident=idents, parent=parent, content=content
-        )
-
-    def _send_abort_reply(self, stream, msg, idents):
-        """Send a reply to an aborted request"""
-        # FIXME: forward-port ipython/ipykernel#684
-        self.log.info(
-            f"Aborting {msg['header']['msg_id']}: {msg['header']['msg_type']}"
-        )
-        reply_type = msg["header"]["msg_type"].rsplit("_", 1)[0] + "_reply"
-        status = {"status": "aborted"}
-        md = self.init_metadata(msg)
-        md = self.finish_metadata(msg, md, status)
-        md.update(status)
-
-        self.session.send(
-            stream,
-            reply_type,
-            metadata=md,
-            content=status,
-            parent=msg,
-            ident=idents,
         )
