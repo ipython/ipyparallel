@@ -1890,6 +1890,17 @@ class BatchSystemLauncher(BaseLauncher):
         # trigger program_changed to populate default context arguments
         self._program_changed()
 
+    def _run_command(self, command, **kwargs):
+        joined_command = shlex_join(command)
+        self.log.debug("Running command: %s", joined_command)
+        output = check_output(
+            command,
+            stdin=None,
+            **kwargs,
+        ).decode("utf8", "replace")
+        self.log.debug("Command %s output: %s", command[0], output)
+        return output
+
     def parse_job_id(self, output):
         """Take the output of the submit command and return the job id."""
         m = self.job_id_regexp.search(output)
@@ -1964,26 +1975,15 @@ class BatchSystemLauncher(BaseLauncher):
 
         env = os.environ.copy()
         env.update(self.get_env())
-        output = check_output(self.args, env=env)
-        output = output.decode("utf8", 'replace')
-        self.log.debug(f"Submitted {shlex_join(self.args)}. Output: {output}")
+        output = self._run_command(self.args, env=env)
 
         job_id = self.parse_job_id(output)
         self.notify_start(job_id)
         return job_id
 
     def stop(self):
-        try:
-            output = check_output(
-                self.delete_command + [self.job_id],
-                stdin=None,
-            ).decode("utf8", 'replace')
-        except Exception:
-            self.log.exception(
-                "Problem stopping cluster with command: %s"
-                % (self.delete_command + [self.job_id])
-            )
-            output = ""
+        command = self.delete_command + [self.job_id]
+        output = self._run_command(command)
 
         self.notify_stop(
             dict(job_id=self.job_id, output=output)
@@ -1991,15 +1991,8 @@ class BatchSystemLauncher(BaseLauncher):
         return output
 
     def signal(self, sig):
-        cmd = self.signal_command + [str(sig), self.job_id]
-        try:
-            output = check_output(
-                cmd,
-                stdin=None,
-            ).decode("utf8", 'replace')
-        except Exception:
-            self.log.exception("Problem sending signal with: {shlex_join(cmd)}")
-            output = ""
+        command = self.signal_command + [str(sig), self.job_id]
+        self._run_command(command)
 
     # same local-file implementation as LocalProcess
     # should this be on the base class?

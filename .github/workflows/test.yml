@@ -160,6 +160,7 @@ jobs:
         if: ${{ matrix.cluster_type == 'slurm' && failure() }}
         run: |
           set -x
+          squeue --all
           docker ps -a
           docker logs slurmctld
           docker exec -i slurmctld squeue --states=all
