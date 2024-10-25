@@ -938,6 +938,9 @@ class IPEngine(BaseParallelApplication):
 
     @catch_config_error
     def initialize(self, argv=None):
+        if "PYDEVD_DISABLE_FILE_VALIDATION" not in os.environ:
+            # suppress irrelevant debugger warnings by default
+            os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
         super().initialize(argv)
         self.init_engine()
         self.forward_logging()
