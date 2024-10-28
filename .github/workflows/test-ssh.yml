@@ -21,7 +21,7 @@ env:
 
 jobs:
   test:
-    runs-on: ${{ matrix.runs_on || 'ubuntu-20.04' }}
+    runs-on: ${{ matrix.runs_on || 'ubuntu-22.04' }}
     timeout-minutes: 45
 
     strategy:
@@ -34,37 +34,7 @@ jobs:
             runs_on: windows-2019
 
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Cache conda environment
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/conda
-          key: conda
-
-      - name: Cache node_modules
-        uses: actions/cache@v3
-        with:
-          path: |
-            node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-yarn-
-
-      - name: Set environment variables
-        if: ${{ matrix.env }}
-        env:
-          MATRIX_ENV: ${{ toJSON(matrix.env) }}
-        run: |
-          python3 <<EOF
-          import json
-          import os
-          matrix_env = json.loads(os.environ["MATRIX_ENV"])
-          with open(os.environ["GITHUB_ENV"], "a") as f:
-              for key, value in matrix_env.items():
-                  f.write(f"{key}={value}\n")
-          EOF
+      - uses: actions/checkout@v4
 
       - name: Get Docker infos
         run: |
@@ -150,6 +120,7 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python }}
+          cache: pip
 
       - name: Install ipyparallel itself
         run: |
@@ -158,17 +129,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --pre --upgrade ipyparallel[test]
-
-      - name: Install extra Python packages
-        if: ${{ ! startsWith(matrix.python, '3.11') }}
-        run: |
-          pip install distributed joblib
-          # pip install --only-binary :all: matplotlib || echo "no matplotlib"#
-          # the || syntax doesn't work under windows powershell, but since the command (currently) works for all
-          # python version (>3.8), the "||" branch can be simply removed. Otherwise we would need a splitted
-          # step for Windows and Linux (as for the docker-compose command)
-          # pip install --only-binary :all: matplotlib || echo "no matplotlib"
+          pip install --upgrade ipyparallel[test]
 
       - name: Show environment
         run: pip freeze
