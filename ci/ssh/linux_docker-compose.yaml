@@ -1,4 +1,3 @@
-version: "3"
 services:
   sshd:
     image: ipyparallel-sshd

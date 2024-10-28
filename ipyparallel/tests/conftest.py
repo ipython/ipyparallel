@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from subprocess import check_output
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from textwrap import dedent
 from unittest import mock
 
 import IPython.paths
@@ -167,20 +168,6 @@ def Cluster(
 
 
 @pytest.fixture(scope="session")
-def ssh_running():
-    # check if an ssh docker container is running
-    try:
-        out = check_output(['docker', 'ps', '-q']).decode('utf8', 'replace').strip()
-    except Exception:
-        return False
-    if len(out) > 0:
-        id = out  # container id
-        return True
-
-    return False
-
-
-@pytest.fixture(scope="session")
 def ssh_dir(request):
     """Start the ssh service with docker-compose
 
@@ -215,3 +202,34 @@ def ssh_dir(request):
     # # shutdown service when we exit
     # request.addfinalizer(lambda: check_call(["docker-compose", "down"], cwd=ssh_dir))
     return ssh_dir
+
+
+@pytest.fixture
+def ssh_key(tmpdir, ssh_dir):
+    key_file = tmpdir.join("id_rsa")
+
+    home = "C:/Users/ciuser" if sys.platform.startswith("win") else "/home/ciuser"
+    # docker cp not available on Windows
+    # exec a command that outputs to stdout
+    key_content = check_output(
+        [
+            'docker',
+            'exec',
+            '-i',
+            'ssh-sshd-1',
+            'python',
+            '-c',
+            dedent(f"""
+        from pathlib import Path
+        
+        with Path('{home}/.ssh/id_rsa').expanduser().open() as f:
+            print(f.read())
+        """),
+        ],
+        text=True,
+    )
+    assert 'PRIVATE KEY' in key_content
+    with key_file.open("w") as f:
+        f.write(key_content)
+    os.chmod(key_file, 0o600)
+    return str(key_file)

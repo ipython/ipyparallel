@@ -1311,7 +1311,6 @@ class SSHLauncher(LocalProcessLauncher):
         # do some checks that setting are correct
         shell_info = self.ssh_sender.get_shell_info()
         python_ok = self.ssh_sender.has_python()
-        ipython_installed = self.ssh_sender.has_ipython_package()
         if self.log:
             self.log.info(
                 f"ssh sender object initiated (break_away_support={self.ssh_sender.breakaway_support})"
@@ -1364,15 +1363,6 @@ class SSHLauncher(LocalProcessLauncher):
 
     def wait_one(self, timeout):
         python_code = f"from ipyparallel.cluster.launcher import ssh_waitpid; ssh_waitpid({self.pid}, timeout={timeout})"
-        # full_cmd = (
-        #     self.ssh_cmd
-        #     + self.ssh_args
-        #     # double-quote for ssh
-        #     + [self.location, "--", self.remote_python, "-c", f"'{python_code}'"]
-        # )
-        # out = check_output(full_cmd, input=None, start_new_session=True).decode(
-        #     "utf8", "replace"
-        # )
         out = self.ssh_sender.check_output_python_code(python_code)
         values = _ssh_outputs(out)
         if 'process_running' not in values:

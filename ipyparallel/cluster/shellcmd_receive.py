@@ -86,7 +86,7 @@ class ShellCommandReceiveBase(metaclass=ABCMeta):
         return start_cmd
 
     @abstractmethod
-    def cmd_start(self, start_cmd, env=None, output_file=None):
+    def cmd_start(self, cmd, env=None, output_file=None):
         pass
 
     @abstractmethod
@@ -124,8 +124,8 @@ class ShellCommandReceiveWindows(ShellCommandReceiveBase):
         super().__init__(debugging, log)
         self.use_breakaway = use_breakaway
 
-    def cmd_start(self, start_cmd, env=None, output_file=None):
-        start_cmd = self._prepare_cmd_start(start_cmd, env)
+    def cmd_start(self, cmd, env=None, output_file=None):
+        start_cmd = self._prepare_cmd_start(cmd, env)
 
         # under windows we need to remove embracing double quotes
         for idx, p in enumerate(start_cmd):
@@ -151,7 +151,7 @@ class ShellCommandReceiveWindows(ShellCommandReceiveBase):
             pkwargs['stderr'] = fo
             pkwargs['stdin'] = DEVNULL
 
-        self._log(f"Popen(**pkwargs={pkwargs}")
+        self._log(f"Popen(**pkwargs={pkwargs})")
         p = Popen(start_cmd, **pkwargs)
         self._log(f"pid={p.pid}")
 
@@ -216,8 +216,8 @@ class ShellCommandReceiveWindows(ShellCommandReceiveBase):
 class ShellCommandReceivePosix(ShellCommandReceiveBase):
     """Posix implementation of the ShellCommandReceive class"""
 
-    def cmd_start(self, start_cmd, env=None, output_file=None):
-        start_cmd = self._prepare_cmd_start(start_cmd, env)
+    def cmd_start(self, cmd, env=None, output_file=None):
+        start_cmd = self._prepare_cmd_start(cmd, env)
 
         fo = DEVNULL
         if output_file:

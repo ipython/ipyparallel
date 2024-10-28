@@ -15,33 +15,41 @@ windows_py_path = 'python'
 linux_py_path = '/opt/conda/bin/python3'
 
 senders = [
-    (
+    pytest.param(
         "windows",
         ShellCommandSend(["cmd.exe"], ["/C"], sys.executable, initialize=False),
+        id="cmd",
     ),
-    (
+    pytest.param(
         "windows",
         ShellCommandSend(
-            ["cmd.exe"], ["/C"], sys.executable, initialize=False, send_receiver_code=1
+            ["cmd.exe"],
+            ["/C"],
+            sys.executable,
+            initialize=False,
+            send_receiver_code=True,
         ),
+        id="cmd-src",
     ),
-    (
+    pytest.param(
         "windows",
         ShellCommandSend(
             ["powershell.exe"], ["-Command"], sys.executable, initialize=False
         ),
+        id="powershell",
     ),
-    (
+    pytest.param(
         "windows",
         ShellCommandSend(
             ["powershell.exe"],
             ["-Command"],
             sys.executable,
             initialize=False,
-            send_receiver_code=1,
+            send_receiver_code=True,
         ),
+        id="powershell-src",
     ),
-    (
+    pytest.param(
         "windows",
         ShellCommandSend(
             ["ssh"],
@@ -49,49 +57,59 @@ senders = [
             windows_py_path,
             initialize=False,
         ),
+        id="ssh-win",
     ),
-    (
+    pytest.param(
         "windows",
         ShellCommandSend(
             ["ssh"],
             ["-p", "2222", "ciuser@127.0.0.1"],
             windows_py_path,
             initialize=False,
-            send_receiver_code=1,
+            send_receiver_code=True,
         ),
+        id="ssh-win-src",
     ),
-    (
+    pytest.param(
         "wsl",
         ShellCommandSend(
-            ["bash"], ["-c"], "python3", initialize=False, send_receiver_code=1
+            ["bash"], ["-c"], "python3", initialize=False, send_receiver_code=True
         ),
+        id="wsl",
     ),
-    ("posix", ShellCommandSend(["bash"], ["-c"], "python3", initialize=False)),
-    (
+    pytest.param(
+        "posix",
+        ShellCommandSend(["bash"], ["-c"], "python3", initialize=False),
+        id="bash",
+    ),
+    pytest.param(
         "posix",
         ShellCommandSend(
             ["bash"],
             ["-c"],
             "python3",
             initialize=False,
-            send_receiver_code=1,
+            send_receiver_code=True,
         ),
+        id="bash-src",
     ),
-    (
+    pytest.param(
         "posix",
         ShellCommandSend(
             ["ssh"], ["-p", "2222", "ciuser@127.0.0.1"], linux_py_path, initialize=False
         ),
+        id="ssh-linux",
     ),
-    (
+    pytest.param(
         "posix",
         ShellCommandSend(
             ["ssh"],
             ["-p", "2222", "ciuser@127.0.0.1"],
             linux_py_path,
             initialize=False,
-            send_receiver_code=1,
+            send_receiver_code=True,
         ),
+        id="ssh-linux-src",
     ),
 ]
 
@@ -114,13 +132,13 @@ sender_ids = [
 def shellcmd_test_cmd():
     """returns a command that runs for 5 seconds"""
     if sys.platform.startswith("win"):
-        return 'ping -n 5 127.0.0.1'
+        return 'ping -n 5 127.0.0.1'.split()
     else:
-        return 'ping -c 5 127.0.0.1'
+        return 'ping -c 5 127.0.0.1'.split()
 
 
-@pytest.mark.parametrize("platform, sender", senders, ids=sender_ids)
-def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
+@pytest.mark.parametrize("platform, sender", senders)
+def test_shellcmds(request, platform, sender, shellcmd_test_cmd, ssh_key):
     def read_via_shell(shell, filename):
         # small helper function to read a file via shell commands
         if shell._win:
@@ -149,9 +167,8 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
         if platform != "posix":
             pytest.skip("other platform")
 
-    if 'ssh' in sender.shell and not ssh_running:
-        pytest.skip("No ssh server running")
-
+    if "ssh" in sender.shell:
+        sender.shell.extend(["-i", ssh_key])
     # start tests
 
     # initialize sender class

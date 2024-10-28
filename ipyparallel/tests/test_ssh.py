@@ -17,7 +17,7 @@ from .test_cluster import (
 
 
 @pytest.fixture(params=["SSH", "SSHProxy"])
-def ssh_config(ssh_dir, request):
+def ssh_config(ssh_key, request):
     windows = os.name == "nt"
 
     if (
@@ -29,7 +29,14 @@ def ssh_config(ssh_dir, request):
     c.Cluster.controller_ip = '0.0.0.0'
     c.Cluster.engine_launcher_class = request.param
     engine_set_cfg = c[f"{request.param}EngineSetLauncher"]
-    engine_set_cfg.ssh_args = []
+    engine_set_cfg.ssh_args = [
+        "-o",
+        "UserKnownHostsFile=/dev/null",
+        "-o",
+        "StrictHostKeyChecking=no",
+        "-i",
+        ssh_key,
+    ]
     engine_set_cfg.scp_args = list(engine_set_cfg.ssh_args)  # copy
     if windows:
         engine_set_cfg.remote_python = "python"
