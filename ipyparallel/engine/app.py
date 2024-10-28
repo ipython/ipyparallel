@@ -723,12 +723,18 @@ class IPEngine(BaseParallelApplication):
 
             kernel_kwargs = {}
             if ipykernel.version_info >= (6,):
-                kernel_kwargs["control_thread"] = ControlThread(daemon=True)
+                kernel_kwargs["control_thread"] = control_thread = ControlThread(
+                    daemon=True
+                )
             if ipykernel.version_info >= (7,):
                 kernel_kwargs["shell_socket"] = zmq.asyncio.Socket(shell_socket)
                 kernel_kwargs["control_socket"] = zmq.asyncio.Socket(control_socket)
             else:
-                kernel_kwargs["control_stream"] = zmqstream.ZMQStream(control_socket)
+                # Kernel.start starts control thread in kernel 7
+                control_thread.start()
+                kernel_kwargs["control_stream"] = zmqstream.ZMQStream(
+                    control_socket, control_thread.io_loop
+                )
 
                 kernel_kwargs["shell_streams"] = [zmqstream.ZMQStream(shell_socket)]
 
