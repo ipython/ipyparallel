@@ -113,12 +113,10 @@ sender_ids = [
 @pytest.fixture
 def shellcmd_test_cmd():
     """returns a command that runs for 5 seconds"""
-    test_command = {}
-    test_command["windows"] = 'ping -n 5 127.0.0.1'
-    test_command["posix"] = (
-        'ping -c 5 127.0.0.1'  # ping needs to be installed to the standard ubuntu docker image
-    )
-    return test_command
+    if sys.platform.startswith("win"):
+        return 'ping -n 5 127.0.0.1'
+    else:
+        return 'ping -c 5 127.0.0.1'
 
 
 @pytest.mark.parametrize("platform, sender", senders, ids=sender_ids)
@@ -172,7 +170,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     info = sender.get_shell_info()
     assert len(info) == 2 and info[0] and info[1]
 
-    test_cmd = shellcmd_test_cmd[str(sender.platform.name.lower())]
+    test_cmd = shellcmd_test_cmd
 
     python_ok = sender.has_python()
     assert python_ok is True
