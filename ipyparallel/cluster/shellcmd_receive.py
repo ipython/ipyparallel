@@ -9,64 +9,15 @@ which transfers this file to the 'other side'. However, this limits the imports 
 packages. Hence, DO NOT USE ANY ipyparallel IMPORTS IN THIS FILE!
 """
 
-import enum
+import logging
 import os
-import pathlib
 import shutil
 import sys
 from abc import ABCMeta, abstractmethod
 from contextlib import contextmanager
-from datetime import datetime
+from pathlib import Path
 from random import randint
 from subprocess import DEVNULL, Popen
-
-
-class Platform(enum.Enum):
-    Unknown = 0
-    Posix = 1  # Linux, macOS, FreeBSD, ...
-    Windows = 2
-
-    @staticmethod
-    def get():
-        import sys
-
-        tmp = sys.platform.lower()
-        if tmp == "win32":
-            return Platform.Windows
-        else:
-            return Platform.Posix
-
-
-class SimpleLog:
-    """Simple file logging class
-
-    In case commands are not working correctly on the receiver side, it can tricky to find the problem
-    especially in case of github runners. Activating the debugging flag on the ShellCommandSend object
-    will trigger writting such a log on the receiver side.
-    """
-
-    def __init__(self, filename):
-        userdir = str(pathlib.Path.home())
-        self.filename = filename.replace(
-            "${userdir}", userdir
-        )  # replace possible ${userdir} placeholder
-        self.file = open(self.filename, "a")
-
-    def _output_msg(self, level, msg):
-        self.file.write(f"{level:8} {datetime.now()} {msg}\n")
-        self.file.flush()
-
-    def info(self, msg):
-        self._output_msg("info", msg)
-
-    def warning(self, msg):
-        self._output_msg("warning", msg)
-
-    def error(self, msg):
-        self._output_msg("error", msg)
-
-    def debug(self, msg):
-        self._output_msg("debug", msg)
 
 
 class ShellCommandReceiveBase(metaclass=ABCMeta):
@@ -92,16 +43,18 @@ class ShellCommandReceiveBase(metaclass=ABCMeta):
     def __init__(self, debugging=False, log=None):
         self.debugging = debugging
         self.log = None
+        if log is None:
+            log = os.getenv("SHELLCMD_LOG")
         if log:
-            assert isinstance(log, str)
-            self.log = SimpleLog(log)
-        elif "SHELLCMD_LOG" in os.environ:
-            self.log = SimpleLog(os.environ["SHELLCMD_LOG"])
+            log_file = Path(log).expanduser()
+            self.log = logging.getLogger("shellcmd")
+            self.log.setLevel(logging.DEBUG if self.debugging else logging.INFO)
+            self.log.addHandler(logging.FileHandler(log_file, mode="a"))
 
         self.ranid = None
         if self.log:
             self.ranid = randint(0, 999)
-            self._log("ShellCommandReceiveBase instance created")
+            self._log(f"{self.__class__.__name__} instance created")
 
     def close(self):
         # perform possible clean up actions (currently not required)
@@ -170,8 +123,6 @@ class ShellCommandReceiveWindows(ShellCommandReceiveBase):
     def __init__(self, debugging=False, use_breakaway=True, log=None):
         super().__init__(debugging, log)
         self.use_breakaway = use_breakaway
-        assert isinstance(self.use_breakaway, bool)
-        self._log("ShellCommandReceiveWindows instance created")
 
     def cmd_start(self, start_cmd, env=None, output_file=None):
         start_cmd = self._prepare_cmd_start(start_cmd, env)
@@ -265,10 +216,6 @@ class ShellCommandReceiveWindows(ShellCommandReceiveBase):
 class ShellCommandReceivePosix(ShellCommandReceiveBase):
     """Posix implementation of the ShellCommandReceive class"""
 
-    def __init__(self, debugging=False, log=None):
-        super().__init__(debugging, log)
-        self._log("ShellCommandReceivePosix instance created")
-
     def cmd_start(self, start_cmd, env=None, output_file=None):
         start_cmd = self._prepare_cmd_start(start_cmd, env)
 
@@ -299,7 +246,7 @@ class ShellCommandReceivePosix(ShellCommandReceiveBase):
 @contextmanager
 def ShellCommandReceive(debugging=False, use_breakaway=True, log=None):
     """Generator returning the corresponding platform dependent ShellCommandReceive object (as Context Manager)"""
-    if Platform.get() == Platform.Windows:
+    if sys.platform.lower().startswith("win"):
         receiver = ShellCommandReceiveWindows(debugging, use_breakaway, log)
     else:
         receiver = ShellCommandReceivePosix(debugging, log)

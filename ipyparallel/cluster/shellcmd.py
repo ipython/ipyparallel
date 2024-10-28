@@ -14,6 +14,7 @@ Currently, the following command are supported:
 
 import base64
 import inspect
+import logging
 import pathlib
 import re
 import shlex
@@ -23,7 +24,7 @@ import warnings
 from subprocess import CalledProcessError, Popen, TimeoutExpired, check_output
 from tempfile import NamedTemporaryFile
 
-from .shellcmd_receive import Platform, ShellCommandReceive, SimpleLog
+from .shellcmd_receive import ShellCommandReceive
 
 
 class ShellCommandSend:
@@ -82,24 +83,17 @@ class ShellCommandSend:
 
         # shell dependent values. Those values are determined in the initialize function
         self.shell_info = None
-        self.platform = Platform.Unknown  # platform enum of shell
+        self._win = sys.platform.lower().startswith("win")
         self.is_powershell = None  # flag if shell is windows powershell (requires special parameter quoting)
         self.breakaway_support = None  # flag if process creation support the break_away flag (relevant for windows only; None under linux)
         self.join_params = True  # join all cmd params into a single param. does NOT work with windows cmd
-        self.pathsep = (
-            "/"  # equivalent to os.pathsep (will be changed during initialization)
-        )
+        # equivalent to os.pathsep (will be changed during initialization)
+        self.pathsep = "/"
 
-        self.send_receiver_code = (
-            send_receiver_code  # should be activated when developing...
-        )
-        self.debugging = False  # if activated an output log (${userdir}/shellcmd.log) is created on receiver side
-        self.log = None
-        if log:
-            if isinstance(log, str):
-                self.log = SimpleLog(log)
-            else:
-                self.log = log
+        # should be activated when developing...
+        self.send_receiver_code = send_receiver_code
+        self.debugging = False  # if activated an output log (~/ipp_shellcmd.log) is created on receiver side
+        self.log = log or logging.getLogger(__name__)
 
         if initialize:
             self.initialize()
@@ -174,7 +168,7 @@ class ShellCommandSend:
             else:
                 return param
 
-        if self.platform == Platform.Windows:
+        if self._win:
             if self.is_powershell:
                 paramlist = [_powershell_quote(p) for p in paramlist]
             else:
@@ -198,7 +192,7 @@ class ShellCommandSend:
         # proxy process that redirects output the to file, that can be read by current process
         # to retrieve the pid.
 
-        assert self.platform == Platform.Windows
+        assert self._win
         from subprocess import DETACHED_PROCESS
 
         tmp = NamedTemporaryFile(
@@ -214,8 +208,8 @@ class ShellCommandSend:
 
         # simple python code that starts the actual cmd in a detached process
         cmd_args_str = ", ".join(f'{self._format_for_python(c)}' for c in cmd_args)
-        if self.log:
-            detach_log = SimpleLog("${userdir}/detach.log").filename
+        if self.debugging:
+            detach_log = "~/ipp_shell_detach.log"
             tmp = str(cmd_args_str).replace("'", "")
             py_detached = (
                 f"from subprocess import Popen,PIPE;fo=open(r'{fo_name}','w');"
@@ -239,10 +233,8 @@ class ShellCommandSend:
                 "p.stdin.write(input);p.stdin.flush();p.communicate()"
             )
         # now start proxy process detached
-        # print(datetime.now(), " [py_detached] ", py_detached)
-        if self.log:
-            self.log.info("[ShellCommandSend._cmd_send] starting detached process...")
-            self.log.debug("[ShellCommandSend._cmd_send] python command: \n" + py_cmd)
+        self.log.info("[ShellCommandSend._cmd_send] starting detached process...")
+        self.log.debug("[ShellCommandSend._cmd_send] python command: \n%s", py_cmd)
         try:
             p = Popen(
                 [sys.executable, '-c', py_detached],
@@ -250,15 +242,13 @@ class ShellCommandSend:
                 creationflags=DETACHED_PROCESS,
             )
         except Exception as e:
-            if self.log:
-                self.log.error(
-                    f"[ShellCommandSend._cmd_send] detached process failed: {str(e)}"
-                )
-            raise e
-        if self.log:
-            self.log.info(
-                "[ShellCommandSend._cmd_send] detached process started successful. Waiting for redirected output (pid)..."
+            self.log.error(
+                f"[ShellCommandSend._cmd_send] detached process failed: {str(e)}"
             )
+            raise e
+        self.log.info(
+            "[ShellCommandSend._cmd_send] detached process started successful. Waiting for redirected output (pid)..."
+        )
 
         # retrieve (remote) pid from output file
         output = ""
@@ -277,11 +267,10 @@ class ShellCommandSend:
 
             time.sleep(0.1)  # wait a 0.1s and repeat
 
-        if self.log:
-            if len(output) == 0:
-                self.log.error("[ShellCommandSend._cmd_send] not output received!")
-            else:
-                self.log.info("[ShellCommandSend._cmd_send] output received: " + output)
+        if not output:
+            self.log.error("[ShellCommandSend._cmd_send] no output received!")
+        else:
+            self.log.debug("[ShellCommandSend._cmd_send] output received: %s", output)
 
         return output
 
@@ -317,7 +306,7 @@ class ShellCommandSend:
         if self.breakaway_support is False:
             receiver_params.append("use_breakaway=False")
         if self.debugging:
-            receiver_params.append("log='${userdir}/shellcmd.log'")
+            receiver_params.append("log='~/ipp_shellcmd.log'")
 
         py_cmd = f"{preamble}\nwith ShellCommandReceive({', '.join(receiver_params)}) as r:\n    r.{cmd}("
         for a in args:
@@ -343,7 +332,7 @@ class ShellCommandSend:
             raise RuntimeError(f"Failed to get pid from output: {output}")
 
     def _check_for_break_away_flag(self):
-        assert self.platform == Platform.Windows  # test only relevant for windows
+        assert self._win
         assert self.python_path is not None
         py_code = "import subprocess; subprocess.Popen(['cmd.exe', '/C'], close_fds=True, creationflags=subprocess.CREATE_BREAKAWAY_FROM_JOB); print('successful')"
         cmd = (
@@ -414,7 +403,7 @@ class ShellCommandSend:
                 system = val
                 shell = "cmd.exe"
                 self.is_powershell = False
-                self.platform = Platform.Windows
+                self._win = True
                 self.join_params = (
                     False  # disable joining, since it does not work for windows cmd.exe
                 )
@@ -423,16 +412,16 @@ class ShellCommandSend:
                 system = val
                 shell = "powershell.exe"
                 self.is_powershell = True
-                self.platform = Platform.Windows
+                self._win = True
                 self.pathsep = "\\"
             elif key == "OS-LINUX":
                 system = val
                 self.is_powershell = False
-                self.platform = Platform.Posix
+                self._win = False
             elif key == "SHELL":
                 shell = val
 
-        if self.platform == Platform.Windows and self.python_path is not None:
+        if self._win and self.python_path is not None:
             self.breakaway_support = self._check_for_break_away_flag()  # check if break away flag is available (its not in windows github runners)
 
         self.shell_info = (system, shell)
@@ -545,8 +534,8 @@ class ShellCommandSend:
         # string limit. Since the limit is typically > 2k, little code snippets should not cause any problems.
         encoded = base64.b64encode(python_code.encode())
         py_cmd = f'import base64;exec(base64.b64decode({encoded}).decode())'
-        if self.platform == Platform.Windows:
-            py_cmd = '"' + py_cmd + '"'
+        if self._win:
+            py_cmd = f'"{py_cmd}"'
         paramlist = [self.python_path, "-c", py_cmd]
         return self._get_pid(
             self._cmd_send("cmd_start", paramlist, env=env, output_file=output_file)
