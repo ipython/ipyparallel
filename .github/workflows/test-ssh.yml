@@ -2,7 +2,21 @@ name: Test ssh
 
 on:
   pull_request:
+    paths:
+      - ipyparallel/cluster/launcher.py
+      - ipyparallel/cluster/shellcmd*
+      - ipyparallel/tests/test_ssh.py
+      - ipyparallel/tests/test_shellcmd.py
+      - ci/ssh/**
+      - .github/workflows/test-ssh.yml
   push:
+    paths:
+      - ipyparallel/cluster/launcher.py
+      - ipyparallel/cluster/shellcmd*
+      - ipyparallel/tests/test_ssh.py
+      - ipyparallel/tests/test_shellcmd.py
+      - ci/ssh/**
+      - .github/workflows/test-ssh.yml
     branches-ignore:
       - "pre-commit-ci*"
 
