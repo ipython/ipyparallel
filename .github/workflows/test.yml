@@ -1,11 +1,10 @@
 name: Test
 
 on:
-  {}
-  # pull_request:
-  # push:
-  #   branches-ignore:
-  #     - "pre-commit-ci*"
+  pull_request:
+  push:
+    branches-ignore:
+      - "pre-commit-ci*"
 
 concurrency:
   group: >-
