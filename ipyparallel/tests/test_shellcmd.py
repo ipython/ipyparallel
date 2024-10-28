@@ -9,7 +9,7 @@ import warnings
 
 import pytest
 
-from ipyparallel.cluster.shellcmd import Platform, ShellCommandSend
+from ipyparallel.cluster.shellcmd import ShellCommandSend
 
 windows_py_path = 'python'
 linux_py_path = '/opt/conda/bin/python3'
@@ -125,7 +125,7 @@ def shellcmd_test_cmd():
 def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
     def read_via_shell(shell, filename):
         # small helper function to read a file via shell commands
-        if shell.platform == Platform.Windows:
+        if shell._win:
             content = shell.check_output(f"type {filename}").strip()
         else:
             content = shell.check_output(f"cat {filename}").strip()
@@ -139,7 +139,7 @@ def test_shellcmds(platform, sender, shellcmd_test_cmd, ssh_running):
             print(f"{idx:3}:{l}")
 
     prefix = ""
-    if Platform.get() == Platform.Windows:
+    if sys.platform.startswith("win"):
         if platform == "wsl":
             pytest.skip("wsl deactivated")  # comment to activate wsl tests
             prefix = "/home/" + os.environ["USERNAME"] + "/"
