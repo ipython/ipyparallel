@@ -77,11 +77,6 @@ jobs:
           mkdir $env:USERPROFILE/.ssh/
           docker run ipyparallel-sshd powershell.exe -Command "type C:\Users\ciuser\.ssh\id_rsa" | out-file -encoding ascii $env:USERPROFILE/.ssh/id_rsa
 
-          # install newer version of openssh (removes "GetConsoleMode on STD_INPUT_HANDLE failed with 6" error in pytest)
-          # also disable download progress to keep github runner output more compact
-          choco install openssh --pre --no-progress
-          mv C:\Windows\System32\OpenSSH C:\Windows\System32\_OpenSSH
-
           #check ssh connection and accept host key (with arbitrary windows command)
           ssh -o "StrictHostKeyChecking no" $env:SSH_HOST -p $env:SSH_PORT -v echo "ssh connection to container succeeded"
 
