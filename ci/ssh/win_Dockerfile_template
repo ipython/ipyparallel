@@ -72,7 +72,7 @@ RUN $url = ('https://www.python.org/ftp/python/{0}/python-{1}-amd64.exe' -f $env
 # we need to restart the wuauserv service. Otherwise the installation of the OpenSSH Server fails
 # we also need to start and stop service sshd that all necessary config file are generated
 USER containeradministrator
-RUN Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH*' \
+RUN Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH*'; \
 	Write-Host 'Install OpenSSH Server...'; \
 	Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0; \
 	Write-Host 'Initializing OpenSSH Server...'; \
