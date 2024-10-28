@@ -970,6 +970,8 @@ class IPEngine(BaseParallelApplication):
             # claims to be threadsafe, but is not
             kernel_stop = getattr(self.kernel, "stop", None)
             if kernel_stop is not None:
+                self.log.debug("Calling kernel.stop()")
+
                 # callback must be async for event loop to be
                 # detected by anyio
                 async def stop():
@@ -982,6 +984,7 @@ class IPEngine(BaseParallelApplication):
                 self.loop.add_callback_from_signal(stop)
             if self._kernel_start_future is None:
                 # not awaiting start_future, stop loop directly
+                self.log.debug("Stopping event loop")
                 self.loop.add_callback_from_signal(self.loop.stop)
         except Exception:
             self.log.critical("Failed to stop kernel", exc_info=True)
@@ -990,7 +993,12 @@ class IPEngine(BaseParallelApplication):
     def start(self):
         if self.id is not None:
             self.log.name += f".{self.id}"
-        asyncio.run(self._start())
+        try:
+            self.loop.run_sync(self._start)
+        except (asyncio.TimeoutError, KeyboardInterrupt):
+            # tornado run_sync raises TimeoutError
+            # if the task didn't finish
+            pass
 
     async def _start(self):
         await self.register()
