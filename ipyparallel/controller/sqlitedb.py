@@ -230,7 +230,7 @@ class SQLiteDB(BaseDB):
 
         If a bad (old) table does exist, return False
         """
-        cursor = self._db.execute("PRAGMA table_info('%s')" % self.table)
+        cursor = self._db.execute(f"PRAGMA table_info('{self.table}')")
         lines = cursor.fetchall()
         if not lines:
             # table does not exist
@@ -281,7 +281,7 @@ class SQLiteDB(BaseDB):
             previous_table = self.table
 
         self._db.execute(
-            """CREATE TABLE IF NOT EXISTS '%s'
+            f"""CREATE TABLE IF NOT EXISTS '{self.table}'
                 (msg_id text PRIMARY KEY,
                 header dict text,
                 metadata dict text,
@@ -305,7 +305,6 @@ class SQLiteDB(BaseDB):
                 stdout text,
                 stderr text)
                 """
-            % self.table
         )
         self._db.commit()
 
@@ -332,7 +331,7 @@ class SQLiteDB(BaseDB):
         skeys.difference_update(set(self._keys))
         skeys.difference_update({'buffers', 'result_buffers'})
         if skeys:
-            raise KeyError("Illegal testing key(s): %s" % skeys)
+            raise KeyError(f"Illegal testing key(s): {skeys}")
 
         for name, sub_check in check.items():
             if isinstance(sub_check, dict):
@@ -340,7 +339,7 @@ class SQLiteDB(BaseDB):
                     try:
                         op = operators[test]
                     except KeyError:
-                        raise KeyError("Unsupported operator: %r" % test)
+                        raise KeyError(f"Unsupported operator: {test!r}")
                     if isinstance(op, tuple):
                         op, join = op
 
@@ -352,10 +351,9 @@ class SQLiteDB(BaseDB):
                             if op in null_operators and any([v is None for v in value]):
                                 # equality tests don't work with NULL
                                 raise ValueError(
-                                    "Cannot use %r test with NULL values on SQLite backend"
-                                    % test
+                                    f"Cannot use {test!r} test with NULL values on SQLite backend"
                                 )
-                            expr = '( %s )' % (join.join([expr] * len(value)))
+                            expr = f'( {join.join([expr] * len(value))} )'
                             args.extend(value)
                         else:
                             args.append(value)
@@ -363,9 +361,9 @@ class SQLiteDB(BaseDB):
             else:
                 # it's an equality check
                 if sub_check is None:
-                    expressions.append("%s IS NULL" % name)
+                    expressions.append(f"{name} IS NULL")
                 else:
-                    expressions.append("%s = ?" % name)
+                    expressions.append(f"{name} = ?")
                     args.append(sub_check)
 
         expr = " AND ".join(expressions)
@@ -377,28 +375,28 @@ class SQLiteDB(BaseDB):
         d.update(rec)
         d['msg_id'] = msg_id
         line = self._dict_to_list(d)
-        tups = '(%s)' % (','.join(['?'] * len(line)))
+        tups = '({})'.format(','.join(['?'] * len(line)))
         self._db.execute(f"INSERT INTO '{self.table}' VALUES {tups}", line)
         # self._db.commit()
 
     def get_record(self, msg_id):
         """Get a specific Task Record, by msg_id."""
         cursor = self._db.execute(
-            """SELECT * FROM '%s' WHERE msg_id==?""" % self.table, (msg_id,)
+            f"""SELECT * FROM '{self.table}' WHERE msg_id==?""", (msg_id,)
         )
         line = cursor.fetchone()
         if line is None:
-            raise KeyError("No such msg: %r" % msg_id)
+            raise KeyError(f"No such msg: {msg_id!r}")
         return self._list_to_dict(line)
 
     def update_record(self, msg_id, rec):
         """Update the data in an existing record."""
-        query = "UPDATE '%s' SET " % self.table
+        query = f"UPDATE '{self.table}' SET "
         sets = []
         keys = sorted(rec.keys())
         values = []
         for key in keys:
-            sets.append('%s = ?' % key)
+            sets.append(f'{key} = ?')
             values.append(rec[key])
         query += ', '.join(sets)
         query += ' WHERE msg_id == ?'
@@ -408,7 +406,7 @@ class SQLiteDB(BaseDB):
 
     def drop_record(self, msg_id):
         """Remove a record from the DB."""
-        self._db.execute("""DELETE FROM '%s' WHERE msg_id==?""" % self.table, (msg_id,))
+        self._db.execute(f"""DELETE FROM '{self.table}' WHERE msg_id==?""", (msg_id,))
         # self._db.commit()
 
     def drop_matching_records(self, check):
@@ -434,7 +432,7 @@ class SQLiteDB(BaseDB):
         if keys:
             bad_keys = [key for key in keys if key not in self._keys]
             if bad_keys:
-                raise KeyError("Bad record key(s): %s" % bad_keys)
+                raise KeyError(f"Bad record key(s): {bad_keys}")
 
         if keys:
             # ensure msg_id is present and first:
@@ -456,7 +454,7 @@ class SQLiteDB(BaseDB):
 
     def get_history(self):
         """get all msg_ids, ordered by time submitted."""
-        query = """SELECT msg_id FROM '%s' ORDER by submitted ASC""" % self.table
+        query = f"""SELECT msg_id FROM '{self.table}' ORDER by submitted ASC"""
         cursor = self._db.execute(query)
         # will be a list of length 1 tuples
         return [tup[0] for tup in cursor.fetchall()]

@@ -153,7 +153,6 @@ ignore = [
     "F841", # unused variable
     "E741", # ambiguous names
     "E743", # ambiguous names
-    "UP031", # %-formatting - wait until we don't have large outstanding PRs
 ]
 select = [
     "E7", # comparisons
@@ -167,6 +166,13 @@ select = [
 "**/tests/**" = ["F841", "E741", "F401"]
 "**/__init__.py" = ["I", "F4"]
 "docs/source" = ["F402"]
+# ipyparallel and magics gives ruff a hard time
+# finding variable names
+"**/*.ipynb" = [
+    "F811",
+    "F821",
+]
+
 
 [tool.tbump]
 # Uncomment this if your project is hosted on GitHub:

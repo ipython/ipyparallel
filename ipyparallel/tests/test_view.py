@@ -329,7 +329,7 @@ class TestView(ClusterTestCase):
         view.push(dict(ts=ts), block=True)
         rts = view['ts']
 
-        assert type(rts) == type(ts)
+        assert type(rts) is type(ts)
         assert (ts == rts).all()
 
     def test_map(self):
@@ -469,8 +469,8 @@ class TestView(ClusterTestCase):
 
         @interactive
         def check_unicode(a, check):
-            assert not isinstance(a, bytes), "%r is bytes, not unicode" % a
-            assert isinstance(check, bytes), "%r is not bytes" % check
+            assert not isinstance(a, bytes), f"{a!r} is bytes, not unicode"
+            assert isinstance(check, bytes), f"{check!r} is not bytes"
             assert a.encode('utf8') == check, f"{a} != {check}"
 
         for s in ['é', 'ßø®∫', 'asdf']:
@@ -609,7 +609,7 @@ class TestView(ClusterTestCase):
                 if split == ['a', 'int', '5']:
                     found = True
                     break
-            assert found, "whos output wrong: %s" % stdout
+            assert found, f"whos output wrong: {stdout}"
 
     def test_execute_displaypub(self):
         """execute tracks display_pub output"""

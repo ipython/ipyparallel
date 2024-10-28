@@ -176,7 +176,7 @@ class BaseParallelApplication(BaseIPythonApplication):
         wd = self.work_dir
         if wd != os.getcwd():
             os.chdir(wd)
-            self.log.info("Changing to working dir: %s" % wd)
+            self.log.info(f"Changing to working dir: {wd}")
         # This is the working dir by now.
         sys.path.insert(0, '')
 
@@ -185,7 +185,7 @@ class BaseParallelApplication(BaseIPythonApplication):
         log_dir = self.profile_dir.log_dir
         if self.clean_logs:
             for f in os.listdir(log_dir):
-                if re.match(r'%s-\d+\.(log|err|out)' % self.name, f):
+                if re.match(rf'{self.name}-\d+\.(log|err|out)', f):
                     try:
                         os.remove(os.path.join(log_dir, f))
                     except OSError:
