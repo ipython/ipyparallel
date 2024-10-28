@@ -1252,7 +1252,7 @@ class SSHLauncher(LocalProcessLauncher):
 
     def _send_file(self, local, remote, wait=True):
         """send a single file"""
-        full_remote = f"{self.location}:{remote}".replace("\\", "/")
+        full_remote = f"{self.location}:{remote}".replace(os.path.sep, "/")
         for i in range(10 if wait else 0):
             if not os.path.exists(local):
                 self.log.debug(f"waiting for {local}")
@@ -1275,7 +1275,7 @@ class SSHLauncher(LocalProcessLauncher):
 
     def _fetch_file(self, remote, local, wait=True):
         """fetch a single file"""
-        full_remote = f"{self.location}:{remote}".replace("\\", "/")
+        full_remote = f"{self.location}:{remote}".replace(os.path.sep, "/")
         self.log.info("fetching %s from %s", local, full_remote)
         for i in range(10 if wait else 0):
             # wait up to 10s for remote file to exist
