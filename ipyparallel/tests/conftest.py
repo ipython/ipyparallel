@@ -197,7 +197,9 @@ def ssh_dir(request):
         yaml_file = "linux_docker-compose.yaml"
 
     try:
-        out = check_output(['docker-compose', '-f', yaml_file, 'ps', '-q'], cwd=ssh_dir)
+        out = check_output(
+            ['docker', 'compose', '-f', yaml_file, 'ps', '-q'], cwd=ssh_dir
+        )
     except Exception:
         pytest.skip("Needs docker compose")
     else:
@@ -213,24 +215,3 @@ def ssh_dir(request):
     # # shutdown service when we exit
     # request.addfinalizer(lambda: check_call(["docker-compose", "down"], cwd=ssh_dir))
     return ssh_dir
-
-
-# ssh_key fixture not needed any more, since id_rsa is copied during docker-compose stage
-# @pytest.fixture
-# def ssh_key(tmpdir, ssh_dir):
-#     key_file = tmpdir.join("id_rsa")
-#     check_call(
-#         # this should be `docker compose cp sshd:...`
-#         # but docker-compose 1.x doesn't support `cp` yet
-#         [
-#             'docker',
-#             'cp',
-#             'ssh_sshd_1:/home/ciuser/.ssh/id_rsa',
-#             key_file,
-#         ],
-#         cwd=ssh_dir,
-#     )
-#     os.chmod(key_file, 0o600)
-#     with key_file.open('r') as f:
-#         assert 'PRIVATE KEY' in f.readline()
-#     return str(key_file)
