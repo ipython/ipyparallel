@@ -35,13 +35,11 @@ jobs:
           pip freeze
 
       - name: build release
-        if: false # disabled for now
         run: |
           python -m build --sdist --wheel .
           ls -l dist
 
       - name: verify wheel
-        if: false # disabled for now
         run: |
           cd dist
           pip install ./*.whl jupyterlab==4.*
@@ -53,7 +51,6 @@ jobs:
 
       # ref: https://github.com/actions/upload-artifact#readme
       - uses: actions/upload-artifact@v4
-        if: false # disabled for now
         with:
           name: ipyparallel-${{ github.sha }}
           path: "dist/*"
