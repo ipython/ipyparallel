@@ -144,12 +144,12 @@ class Reference(CannedObject):
 
     def __init__(self, name):
         if not isinstance(name, str):
-            raise TypeError("illegal name: %r" % name)
+            raise TypeError(f"illegal name: {name!r}")
         self.name = name
         self.buffers = []
 
     def __repr__(self):
-        return "<Reference: %r>" % self.name
+        return f"<Reference: {self.name!r}>"
 
     def get_object(self, g=None):
         if g is None:
@@ -266,7 +266,7 @@ class CannedPartial(CannedObject):
 
     def _check_type(self, obj):
         if not isinstance(obj, functools.partial):
-            raise ValueError("Not a functools.partial: %r" % obj)
+            raise ValueError(f"Not a functools.partial: {obj!r}")
 
     def get_object(self, g=None):
         if g is None:

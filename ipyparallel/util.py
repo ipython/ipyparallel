@@ -51,7 +51,7 @@ class Namespace(dict):
     def __setattr__(self, key, value):
         """setattr aliased to setitem, with strict"""
         if hasattr(dict, key):
-            raise KeyError("Cannot override dict keys %r" % key)
+            raise KeyError(f"Cannot override dict keys {key!r}")
         self[key] = value
 
 
@@ -72,7 +72,7 @@ class ReverseDict(dict):
 
     def __setitem__(self, key, value):
         if key in self._reverse:
-            raise KeyError("Can't have key %r on both sides!" % key)
+            raise KeyError(f"Can't have key {key!r} on both sides!")
         dict.__setitem__(self, key, value)
         self._reverse[value] = key
 
@@ -134,15 +134,19 @@ def is_url(url):
 def validate_url(url):
     """validate a url for zeromq"""
     if not isinstance(url, str):
-        raise TypeError("url must be a string, not %r" % type(url))
+        raise TypeError(f"url must be a string, not {type(url)!r}")
     url = url.lower()
 
     proto_addr = url.split('://')
-    assert len(proto_addr) == 2, 'Invalid url: %r' % url
+    assert len(proto_addr) == 2, f'Invalid url: {url!r}'
     proto, addr = proto_addr
-    assert proto in ['tcp', 'pgm', 'epgm', 'ipc', 'inproc'], (
-        "Invalid protocol: %r" % proto
-    )
+    assert proto in [
+        'tcp',
+        'pgm',
+        'epgm',
+        'ipc',
+        'inproc',
+    ], f"Invalid protocol: {proto!r}"
 
     # domain pattern adapted from http://www.regexlib.com/REDetails.aspx?regexp_id=391
     # author: Remi Sabourin
@@ -152,14 +156,14 @@ def validate_url(url):
 
     if proto == 'tcp':
         lis = addr.split(':')
-        assert len(lis) == 2, 'Invalid url: %r' % url
+        assert len(lis) == 2, f'Invalid url: {url!r}'
         addr, s_port = lis
         try:
             port = int(s_port)
         except ValueError:
             raise AssertionError(f"Invalid port {port!r} in url: {url!r}")
 
-        assert addr == '*' or pat.match(addr) is not None, 'Invalid url: %r' % url
+        assert addr == '*' or pat.match(addr) is not None, f'Invalid url: {url!r}'
 
     else:
         # only validate tcp urls currently
@@ -183,10 +187,10 @@ def validate_url_container(container):
 def split_url(url):
     """split a zmq url (tcp://ip:port) into ('tcp','ip','port')."""
     proto_addr = url.split('://')
-    assert len(proto_addr) == 2, 'Invalid url: %r' % url
+    assert len(proto_addr) == 2, f'Invalid url: {url!r}'
     proto, addr = proto_addr
     lis = addr.split(':')
-    assert len(lis) == 2, 'Invalid url: %r' % url
+    assert len(lis) == 2, f'Invalid url: {url!r}'
     addr, s_port = lis
     return proto, addr, s_port
 
@@ -464,7 +468,7 @@ def int_keys(dikt):
                 except ValueError:
                     continue
             if nk in dikt:
-                raise KeyError("already have key %r" % nk)
+                raise KeyError(f"already have key {nk!r}")
             dikt[nk] = dikt.pop(k)
     return dikt
 
@@ -547,8 +551,7 @@ def _ensure_tzinfo(dt):
     if not dt.tzinfo:
         # No more naïve datetime objects!
         warnings.warn(
-            "Interpreting naïve datetime as local %s. Please add timezone info to timestamps."
-            % dt,
+            f"Interpreting naïve datetime as local {dt}. Please add timezone info to timestamps.",
             DeprecationWarning,
             stacklevel=4,
         )

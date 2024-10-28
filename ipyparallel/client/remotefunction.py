@@ -213,7 +213,7 @@ class ParallelFunction(RemoteFunction):
         client = self.view.client
         _mapping = kwargs.pop('__ipp_mapping', False)
         if kwargs:
-            raise TypeError("Unexpected keyword arguments: %s" % kwargs)
+            raise TypeError(f"Unexpected keyword arguments: {kwargs}")
 
         lens = []
         maxlen = minlen = -1
@@ -239,7 +239,7 @@ class ParallelFunction(RemoteFunction):
 
         # check that the length of sequences match
         if not _mapping and minlen != maxlen:
-            msg = 'all sequences must have equal length, but have %s' % lens
+            msg = f'all sequences must have equal length, but have {lens}'
             raise ValueError(msg)
 
         balanced = 'Balanced' in self.view.__class__.__name__

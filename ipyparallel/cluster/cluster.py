@@ -642,9 +642,9 @@ class Cluster(AsyncFirst, LoggingConfigurable):
             add_args = controller_args.extend
 
         if self.controller_ip:
-            add_args(['--ip=%s' % self.controller_ip])
+            add_args([f'--ip={self.controller_ip}'])
         if self.controller_location:
-            add_args(['--location=%s' % self.controller_location])
+            add_args([f'--location={self.controller_location}'])
         if self.controller_args:
             add_args(self.controller_args)
 
