@@ -1,0 +1,155 @@
+name: Test ssh
+
+on:
+  pull_request:
+    paths:
+      - ipyparallel/cluster/launcher.py
+      - ipyparallel/cluster/shellcmd*
+      - ipyparallel/tests/test_ssh.py
+      - ipyparallel/tests/test_shellcmd.py
+      - ci/ssh/**
+      - .github/workflows/test-ssh.yml
+  push:
+    paths:
+      - ipyparallel/cluster/launcher.py
+      - ipyparallel/cluster/shellcmd*
+      - ipyparallel/tests/test_ssh.py
+      - ipyparallel/tests/test_shellcmd.py
+      - ci/ssh/**
+      - .github/workflows/test-ssh.yml
+    branches-ignore:
+      - "pre-commit-ci*"
+
+concurrency:
+  group: >-
+    ${{ github.workflow }}-
+    ${{ github.ref_type }}-
+    ${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+env:
+  # UTF-8 content may be interpreted as ascii and causes errors without this.
+  LANG: C.UTF-8
+  IPP_DISABLE_JS: "1"
+  JUPYTER_PLATFORM_DIRS: "1"
+
+jobs:
+  test:
+    runs-on: ${{ matrix.runs_on || 'ubuntu-22.04' }}
+    timeout-minutes: 45
+
+    strategy:
+      # Keep running even if one variation of the job fail
+      fail-fast: false
+      matrix:
+        include:
+          - python: "3.9"
+          - python: "3.12"
+            runs_on: windows-2022
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get Docker infos
+        run: |
+          docker version
+          docker images
+
+      - name: Set up docker-compose for ssh linux launcher
+        if: ${{ !contains(matrix.runs_on, 'windows') }}
+        run: |
+          export DOCKER_BUILDKIT=1
+          export COMPOSE_DOCKER_CLI_BUILD=1
+          cd ci/ssh
+          docker compose up -d --build
+
+          # retrieve id_rsa file for public key authentication
+          mkdir ~/.ssh/
+          docker cp ssh-sshd-1:/home/ciuser/.ssh/id_rsa ~/.ssh/id_rsa
+          cat ~/.ssh/id_rsa
+
+          #check ssh connection and accept host key (for future ssh commands)
+          ssh -o "StrictHostKeyChecking no" ciuser@127.0.0.1 -p 2222 -v echo "ssh connection to container succeeded"
+
+      - name: Set up docker-compose for ssh windows launcher
+        if: ${{ contains(matrix.runs_on, 'windows') }}
+        env:
+          SSH_HOST: ciuser@127.0.0.1
+          SSH_PORT: 2222
+          CODE_ROOT: c:\src\ipyparallel
+        run: |
+          cd ci/ssh
+          # determine host ip and place it as 'static' env variables in corresponding docker compose file (win_Dockerfile_template -> win_Dockerfile)
+          $env:docker_host_ip=(Get-NetIPConfiguration -InterfaceAlias "Ethernet*").IPv4Address.IPAddress.Trim()
+          $content = Get-Content "win_Dockerfile_template"
+          $content | ForEach-Object {
+             $_ -replace '\${docker_host_ip}', $env:docker_host_ip -replace '\${docker_host_name}', $env:computername
+          } | Set-Content "win_Dockerfile"
+          docker compose -f win_docker-compose.yaml up -d --build
+
+          # retrieve id_rsa file for public key authentication
+          mkdir $env:USERPROFILE/.ssh/
+          docker run ipyparallel-sshd powershell.exe -Command "type C:\Users\ciuser\.ssh\id_rsa" | out-file -encoding ascii $env:USERPROFILE/.ssh/id_rsa
+
+          #check ssh connection and accept host key (with arbitrary windows command)
+          ssh -o "StrictHostKeyChecking no" $env:SSH_HOST -p $env:SSH_PORT -v echo "ssh connection to container succeeded"
+
+          # copy ipyparallel code to docker container (use zip, scp and unzip)
+          ssh $env:SSH_HOST -p $env:SSH_PORT mkdir $env:CODE_ROOT
+
+          # zip ipyparallel files (excluding files probably not needed)
+          cd ../..
+          $exclude = @("__pycache__", "node_modules", ".yarn")
+          $files = Get-ChildItem -Path "." -Exclude $exclude
+          Compress-Archive -Path $files -DestinationPath ipyparallel.zip -CompressionLevel Fastest
+          # copy file into docker (we need to do it over ssh since docker copy or mount doesn't work in Hyper-V)
+          scp -P $env:SSH_PORT ipyparallel.zip ${env:SSH_HOST}:${env:CODE_ROOT}
+          # deflate ipyparallel files
+          ssh $env:SSH_HOST -p $env:SSH_PORT powershell.exe -Command "Expand-Archive -Path $env:CODE_ROOT\ipyparallel.zip -DestinationPath $env:CODE_ROOT"
+
+          # pip install ipyparallel files
+          #ssh $env:SSH_HOST -p $env:SSH_PORT "echo IPP_DISABLE_JS=$env:IPP_DISABLE_JS"
+          ssh $env:SSH_HOST -p $env:SSH_PORT "pip install -e file://c:/src/ipyparallel#egg=ipyparallel[test]"
+
+          # we need to disable the windows firewall for github runners otherwise the ipyparallel engines cannot connect to the controller.
+          # obviously, a more precautious adaption of the firewall would be desirable. since an adaption of the firewall is NOT necessary
+          # for a local standard windows environment, no further improvements were made.
+          echo "Disable Firewall:"
+          Set-NetFirewallProfile -Profile Domain, Public, Private -Enabled False
+
+          # just see were pip is installed and what libraries are install 
+          echo "Check pip inside container"
+          ssh $env:SSH_HOST -p $env:SSH_PORT "where pip"
+          ssh $env:SSH_HOST -p $env:SSH_PORT "pip list"
+
+          echo "Check if container can ping the docker host (requires adapted hosts file and firewall disabled)"
+          docker run ipyparallel-sshd ping -n 1 $env:computername
+
+      - name: Install Python ${{ matrix.python }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: Install ipyparallel itself
+        run: |
+          pip install --upgrade pip
+          pip install --no-deps .
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade ipyparallel[test]
+
+      - name: Show environment
+        run: pip freeze
+
+      - name: Run shellcmd tests
+        run: |
+          pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_shellcmd.py
+
+      - name: Run ssh tests
+        run: |
+          pytest -v --maxfail=2 --cov=ipyparallel ipyparallel/tests/test_ssh.py
+
+      - name: Submit codecov report
+        uses: codecov/codecov-action@v4

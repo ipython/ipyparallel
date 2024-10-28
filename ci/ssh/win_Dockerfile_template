@@ -1,0 +1,54 @@
+# syntax = docker/dockerfile:1.2.1
+FROM python:3.12-windowsservercore-ltsc2022
+SHELL ["powershell"]
+
+# using docker env doesn't seem to work fully correctly. The environment variable is set in the powershell
+# but somehow it is not present during pip install process, which will cause the ipyparallel installation
+# to fail. Therefore, we use the SetEnvironmentVariable command (for the machine) to make this 'permanent'.
+# See run command below.
+ENV IPP_DISABLE_JS=1
+
+# the following env variable values will be 'statically' replaced by the corresponding github workflow script
+# if the values aren't replaced the container hosts file isn't changed which is typically no problem in a local
+# environment. but it's a necessity for github runners, since the host name resolution inside the container doesn't
+# work correctly while trying to register with the ipyparallel controller (for linux runners this isn't an issue)
+ENV docker_host_ip   ${docker_host_ip}
+ENV docker_host_name ${docker_host_name}
+
+# set IPP_DISABLE_JS=1 and install latest node js version
+RUN [System.Environment]::SetEnvironmentVariable('IPP_DISABLE_JS','1', [EnvironmentVariableTarget]::Machine); \
+#add the docker host name and ip to the container hosts file (needed for the github runners since the docker host name resolution doesn't work there)
+	$hostsfile='C:\Windows\System32\drivers\etc\hosts'; \
+	$line=\"$env:docker_host_ip $env:docker_host_name\"; \
+	if ($line.Trim().Length -eq 0) { \
+		Write-Host 'Environment variables docker_host_[name|ip] not set. Hosts file unchanged!'; \
+	} else { \
+		Write-Host 'Adapting hosts file '; \
+		$h=(Get-Content $hostsfile)+$line; \
+		echo $h | out-file -encoding ASCII $hostsfile; \
+		type $hostsfile; \
+	}
+
+RUN Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH*'; \
+	Write-Host 'Install OpenSSH Server...'; \
+	Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0; \
+	Write-Host 'Initializing OpenSSH Server...'; \
+	Start-Service sshd; \
+	Stop-Service sshd
+
+
+# create ciuser including key pair
+RUN Write-Host 'Create user ciuser...';\
+	NET USER ciuser /add
+USER ciuser
+RUN Write-Host 'Create key pair and copy public key...';\
+	ssh-keygen -t rsa -N '\"\"' -f $env:USERPROFILE/.ssh/id_rsa; \
+	cp $env:USERPROFILE/.ssh/id_rsa.pub $env:USERPROFILE/.ssh/authorized_keys
+
+# switch back to the admin user
+USER containeradministrator
+
+# This is apparently the only way to keep the sshd service running.
+# Running sshd in the foreground in the context of a user (as it is done for linux), doesn't work under Windows.
+# Even if it is started as admin user, errors occur during logon (lack of some system rights)
+CMD powershell -NoExit -Command "Start-Service sshd"

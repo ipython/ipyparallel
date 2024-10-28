@@ -393,7 +393,9 @@ class IPEngine(BaseParallelApplication):
             self.sshserver = d.get("ssh")
 
         proto, ip = d['interface'].split('://')
+        self.log.debug(f"calling disambiguate_ip_address({ip}, {self.location})")
         ip = disambiguate_ip_address(ip, self.location)
+        self.log.debug(f"disambiguate_ip_address returned ip={ip}")
         d['interface'] = f'{proto}://{ip}'
 
         if d.get('curve_serverkey'):

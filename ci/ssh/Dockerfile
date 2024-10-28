@@ -3,7 +3,11 @@ FROM ubuntu:20.04
 RUN --mount=type=cache,target=/var/cache/apt \
     rm -f /etc/apt/apt.conf.d/docker-clean \
  && apt-get update \
- && apt-get -y install wget openssh-server
+ && apt-get -y install \
+        iputils-ping \
+        bind9-utils \
+        wget \
+        openssh-server
 
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 ENV PATH=$MAMBA_ROOT_PREFIX/bin:$PATH

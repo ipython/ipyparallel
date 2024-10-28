@@ -6,8 +6,9 @@ import os
 import sys
 from contextlib import contextmanager
 from pathlib import Path
-from subprocess import check_call, check_output
+from subprocess import check_output
 from tempfile import NamedTemporaryFile, TemporaryDirectory
+from textwrap import dedent
 from unittest import mock
 
 import IPython.paths
@@ -177,8 +178,15 @@ def ssh_dir(request):
     ssh_dir = os.path.join(ci_directory, "ssh")
 
     # only run ssh test if service was started before
+    if os.name == "nt":
+        yaml_file = "win_docker-compose.yaml"
+    else:
+        yaml_file = "docker-compose.yaml"
+
     try:
-        out = check_output(['docker-compose', 'ps', '-q'], cwd=ssh_dir)
+        out = check_output(
+            ['docker', 'compose', '-f', yaml_file, 'ps', '-q'], cwd=ssh_dir
+        )
     except Exception:
         pytest.skip("Needs docker compose")
     else:
@@ -199,18 +207,29 @@ def ssh_dir(request):
 @pytest.fixture
 def ssh_key(tmpdir, ssh_dir):
     key_file = tmpdir.join("id_rsa")
-    check_call(
-        # this should be `docker compose cp sshd:...`
-        # but docker-compose 1.x doesn't support `cp` yet
+
+    home = "C:/Users/ciuser" if sys.platform.startswith("win") else "/home/ciuser"
+    # docker cp not available on Windows
+    # exec a command that outputs to stdout
+    key_content = check_output(
         [
             'docker',
-            'cp',
-            'ssh_sshd_1:/home/ciuser/.ssh/id_rsa',
-            key_file,
+            'exec',
+            '-i',
+            'ssh-sshd-1',
+            'python',
+            '-c',
+            dedent(f"""
+        from pathlib import Path
+        
+        with Path('{home}/.ssh/id_rsa').expanduser().open() as f:
+            print(f.read())
+        """),
         ],
-        cwd=ssh_dir,
+        text=True,
     )
+    assert 'PRIVATE KEY' in key_content
+    with key_file.open("w") as f:
+        f.write(key_content)
     os.chmod(key_file, 0o600)
-    with key_file.open('r') as f:
-        assert 'PRIVATE KEY' in f.readline()
     return str(key_file)

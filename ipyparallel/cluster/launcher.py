@@ -44,6 +44,7 @@ from traitlets.config.configurable import LoggingConfigurable
 
 from ..util import shlex_join
 from ._winhpcjob import IPControllerJob, IPControllerTask, IPEngineSetJob, IPEngineTask
+from .shellcmd import ShellCommandSend
 
 WINDOWS = os.name == 'nt'
 
@@ -1192,6 +1193,25 @@ class SSHLauncher(LocalProcessLauncher):
 
     _output = None
 
+    _ssh_sender = None
+
+    @property
+    def ssh_sender(self):
+        """instantiate ShellCommandSend object if needed"""
+        if self._ssh_sender:
+            return self._ssh_sender
+
+        self.log.info(
+            f'Create ShellCommandSend object ({self.ssh_cmd}, {self.ssh_args + [self.location]}, {self.remote_python} )'
+        )
+        self._ssh_sender = ShellCommandSend(
+            self.ssh_cmd,
+            self.ssh_args + [self.location],
+            self.remote_python,
+            log=self.log,
+        )
+        return self._ssh_sender
+
     def _reconstruct_process(self, d):
         # called in from_dict
         # override from LocalProcessLauncher which invokes psutil.Process
@@ -1225,37 +1245,24 @@ class SSHLauncher(LocalProcessLauncher):
                         self.log.info(
                             f"Removing {self.location}:{self.remote_output_file}"
                         )
-                        check_output(
-                            self.ssh_cmd
-                            + self.ssh_args
-                            + [
-                                self.location,
-                                "--",
-                                shlex_join(["rm", "-f", self.remote_output_file]),
-                            ],
-                            input=None,
-                        )
+                        self.ssh_sender.cmd_remove(self.remote_output_file)
                     with open(output_file) as f:
                         self._output = f.read()
         return self._output
 
     def _send_file(self, local, remote, wait=True):
         """send a single file"""
-        full_remote = f"{self.location}:{remote}"
+        full_remote = f"{self.location}:{remote}".replace(os.path.sep, "/")
         for i in range(10 if wait else 0):
             if not os.path.exists(local):
-                self.log.debug("waiting for %s" % local)
+                self.log.debug(f"waiting for {local}")
                 time.sleep(1)
             else:
                 break
         remote_dir = os.path.dirname(remote)
         self.log.info("ensuring remote %s:%s/ exists", self.location, remote_dir)
-        check_output(
-            self.ssh_cmd
-            + self.ssh_args
-            + [self.location, '--', 'mkdir', '-p', remote_dir],
-            input=None,
-        )
+        if not self.ssh_sender.cmd_exists(remote_dir):
+            self.ssh_sender.cmd_mkdir(remote_dir)
         self.log.info("sending %s to %s", local, full_remote)
         check_output(self.scp_cmd + self.scp_args + [local, full_remote], input=None)
 
@@ -1268,21 +1275,17 @@ class SSHLauncher(LocalProcessLauncher):
 
     def _fetch_file(self, remote, local, wait=True):
         """fetch a single file"""
-        full_remote = f"{self.location}:{remote}"
+        full_remote = f"{self.location}:{remote}".replace(os.path.sep, "/")
         self.log.info("fetching %s from %s", local, full_remote)
         for i in range(10 if wait else 0):
             # wait up to 10s for remote file to exist
-            check = check_output(
-                self.ssh_cmd
-                + self.ssh_args
-                + [self.location, 'test -e', remote, "&& echo 'yes' || echo 'no'"],
-                input=None,
-            )
-            check = check.decode("utf8", 'replace').strip()
-            if check == 'no':
+            check = self.ssh_sender.cmd_exists(remote)
+            if check is False:
                 time.sleep(1)
-            elif check == 'yes':
+            elif check is True:
                 break
+            else:
+                raise ValueError(f"cmd_exists expects bool, got {check!r}")
         local_dir = os.path.dirname(local)
         ensure_dir_exists(local_dir, 700)
         check_output(self.scp_cmd + self.scp_args + [full_remote, local])
@@ -1307,34 +1310,25 @@ class SSHLauncher(LocalProcessLauncher):
                 self.scp_args.append('-P')
                 self.scp_args.append(str(port))
 
+        # do some checks that setting are correct
+        shell_info = self.ssh_sender.get_shell_info()
+        python_ok = self.ssh_sender.has_python()
+        self.log.debug(
+            f"ssh sender object initiated (break_away_support={self.ssh_sender.breakaway_support})"
+        )
+
         # create remote profile dir
-        check_output(
-            self.ssh_cmd
-            + self.ssh_args
-            + [
-                self.location,
-                shlex_join(
-                    [
-                        self.remote_python,
-                        "-m",
-                        "IPython",
-                        "profile",
-                        "create",
-                        "--profile-dir",
-                        self.remote_profile_dir,
-                    ]
-                ),
-            ],
-            input=None,
+        self.ssh_sender.check_output_python_module(
+            ["IPython", "profile", "create", "--profile-dir", self.remote_profile_dir]
         )
         self.send_files()
-        self.pid = sshx(
-            self.ssh_cmd + self.ssh_args + [self.location],
+        self.pid = self.ssh_sender.cmd_start(
             self.program + self.program_args,
             env=self.get_env(),
-            remote_output_file=self.remote_output_file,
-            log=self.log,
+            output_file=self.remote_output_file,
         )
+        remote_cmd = ' '.join(self.program + self.program_args)
+        self.log.debug("Running `%s` (pid=%s)", remote_cmd, self.pid)
         self.notify_start({'host': self.location, 'pid': self.pid})
         self._start_waiting()
         self.fetch_files()
@@ -1367,15 +1361,7 @@ class SSHLauncher(LocalProcessLauncher):
 
     def wait_one(self, timeout):
         python_code = f"from ipyparallel.cluster.launcher import ssh_waitpid; ssh_waitpid({self.pid}, timeout={timeout})"
-        full_cmd = (
-            self.ssh_cmd
-            + self.ssh_args
-            # double-quote for ssh
-            + [self.location, "--", self.remote_python, "-c", f"'{python_code}'"]
-        )
-        out = check_output(full_cmd, input=None, start_new_session=True).decode(
-            "utf8", "replace"
-        )
+        out = self.ssh_sender.check_output_python_code(python_code)
         values = _ssh_outputs(out)
         if 'process_running' not in values:
             raise RuntimeError(out)
@@ -1405,18 +1391,7 @@ class SSHLauncher(LocalProcessLauncher):
 
     def signal(self, sig):
         if self.state == 'running':
-            check_output(
-                self.ssh_cmd
-                + self.ssh_args
-                + [
-                    self.location,
-                    '--',
-                    'kill',
-                    f'-{sig}',
-                    str(self.pid),
-                ],
-                input=None,
-            )
+            self.ssh_sender.cmd_kill(self.pid, sig)
 
     @property
     def remote_connection_files(self):
@@ -1646,9 +1621,9 @@ class WindowsHPCLauncher(BaseLauncher):
         if m is not None:
             job_id = m.group()
         else:
-            raise LauncherError("Job id couldn't be determined: %s" % output)
+            raise LauncherError(f"Job id couldn't be determined: {output}")
         self.job_id = job_id
-        self.log.info('Job started with id: %r', job_id)
+        self.log.info(f'Job started with id: {job_id}')
         return job_id
 
     def start(self, n):
@@ -1656,8 +1631,8 @@ class WindowsHPCLauncher(BaseLauncher):
         self.write_job_file(n)
         args = [
             'submit',
-            '/jobfile:%s' % self.job_file,
-            '/scheduler:%s' % self.scheduler,
+            f'/jobfile:{self.job_file}',
+            f'/scheduler:{self.scheduler}',
         ]
         self.log.debug(
             "Starting Win HPC Job: {}".format(self.job_cmd + ' ' + ' '.join(args))
@@ -1672,7 +1647,7 @@ class WindowsHPCLauncher(BaseLauncher):
         return job_id
 
     def stop(self):
-        args = ['cancel', self.job_id, '/scheduler:%s' % self.scheduler]
+        args = ['cancel', self.job_id, f'/scheduler:{self.scheduler}']
         self.log.info(
             "Stopping Win HPC Job: {}".format(self.job_cmd + ' ' + ' '.join(args))
         )
@@ -1682,7 +1657,7 @@ class WindowsHPCLauncher(BaseLauncher):
             )
             output = output.decode("utf8", 'replace')
         except Exception:
-            output = 'The job already appears to be stopped: %r' % self.job_id
+            output = f'The job already appears to be stopped: {self.job_id}'
         self.notify_stop(
             dict(job_id=self.job_id, output=output)
         )  # Pass the output of the kill cmd
@@ -1907,7 +1882,7 @@ class BatchSystemLauncher(BaseLauncher):
         if m is not None:
             job_id = m.group(self.job_id_regexp_group)
         else:
-            raise LauncherError("Job id couldn't be determined: %s" % output)
+            raise LauncherError(f"Job id couldn't be determined: {output}")
         self.job_id = job_id
         self.log.info('Job submitted with job id: %r', job_id)
         return job_id
