@@ -47,7 +47,7 @@ jobs:
           export DOCKER_BUILDKIT=1
           export COMPOSE_DOCKER_CLI_BUILD=1
           cd ci/ssh
-          docker-compose -f linux_docker-compose.yaml up -d --build
+          docker compose -f linux_docker-compose.yaml up -d --build
 
           # retrieve id_rsa file for public key authentication
           mkdir ~/.ssh/
@@ -71,7 +71,7 @@ jobs:
           $content | ForEach-Object {
              $_ -replace '\${docker_host_ip}', $env:docker_host_ip -replace '\${docker_host_name}', $env:computername
           } | Set-Content "win_Dockerfile"
-          docker-compose -f win_docker-compose.yaml up -d --build
+          docker compose -f win_docker-compose.yaml up -d --build
 
           # retrieve id_rsa file for public key authentication
           mkdir $env:USERPROFILE/.ssh/
