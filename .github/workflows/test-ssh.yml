@@ -47,7 +47,7 @@ jobs:
           export DOCKER_BUILDKIT=1
           export COMPOSE_DOCKER_CLI_BUILD=1
           cd ci/ssh
-          docker compose -f linux_docker-compose.yaml up -d --build
+          docker compose up -d --build
 
           # retrieve id_rsa file for public key authentication
           mkdir ~/.ssh/

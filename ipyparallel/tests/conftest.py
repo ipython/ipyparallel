@@ -181,7 +181,7 @@ def ssh_dir(request):
     if os.name == "nt":
         yaml_file = "win_docker-compose.yaml"
     else:
-        yaml_file = "linux_docker-compose.yaml"
+        yaml_file = "docker-compose.yaml"
 
     try:
         out = check_output(
