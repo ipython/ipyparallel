@@ -51,7 +51,7 @@ jobs:
 
           # retrieve id_rsa file for public key authentication
           mkdir ~/.ssh/
-          docker cp ssh_sshd_1:/home/ciuser/.ssh/id_rsa ~/.ssh/id_rsa
+          docker cp ssh-sshd-1:/home/ciuser/.ssh/id_rsa ~/.ssh/id_rsa
           cat ~/.ssh/id_rsa
 
           #check ssh connection and accept host key (for future ssh commands)
