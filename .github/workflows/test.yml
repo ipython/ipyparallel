@@ -48,6 +48,8 @@ jobs:
           - python: "3.9"
             runs_on: macos-14
           - python: "3.11"
+          - python: "3.12"
+            pre: pre
 
     steps:
       - uses: actions/checkout@v4
@@ -122,7 +124,12 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --pre --upgrade ipyparallel[test] 'https://github.com/minrk/ipykernel/archive/parallel.tar.gz#egg=ipykernel'
+          pip install --upgrade ipyparallel[test]
+
+      - name: Install pre-release dependencies
+        if: ${{ matrix.pre }}
+        run: |
+          pip install --pre --upgrade ipyparallel[test] 'https://github.com/ipython/ipykernel/archive/main.tar.gz#egg=ipykernel'
 
       - name: Install extra Python packages
         if: ${{ ! startsWith(matrix.python, '3.11') }}
