@@ -1,0 +1,16 @@
+# syntax = docker/dockerfile:1.2.1
+FROM python:3.12-windowsservercore-ltsc2022
+SHELL ["powershell"]
+
+
+RUN Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH*'; \
+    Write-Host 'Install OpenSSH Server...'; \
+    Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0; \
+    Write-Host 'Initializing OpenSSH Server...'; \
+    Start-Service sshd; \
+    Stop-Service sshd
+
+# This is apparently the only way to keep the sshd service running.
+# Running sshd in the foreground in the context of a user (as it is done for linux), doesn't work under Windows.
+# Even if it is started as admin user, errors occur during logon (lack of some system rights)
+CMD powershell -NoExit -Command "Start-Service sshd"
