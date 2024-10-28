@@ -10,7 +10,7 @@ ENV PYTHON_RELEASE 3.8.10
 # but somehow it is not present during pip install process, which will cause the ipyparallel installation
 # to fail. Therefore, we use the SetEnvironmentVariable command (for the machine) to make this 'permanent'.
 # See run command below.
-# ENV IPP_DISABLE_JS=1
+ENV IPP_DISABLE_JS=1
 
 # the following env variable values will be 'statically' replaced by the corresponding github workflow script
 # if the values aren't replaced the container hosts file isn't changed which is typically no problem in a local
@@ -21,35 +21,6 @@ ENV docker_host_name ${docker_host_name}
 
 # set IPP_DISABLE_JS=1 and install latest node js version
 RUN [System.Environment]::SetEnvironmentVariable('IPP_DISABLE_JS','1', [EnvironmentVariableTarget]::Machine); \
-    \
-#download and install latest node js version
-    $baseurl = 'https://nodejs.org/dist/latest/'; \
-	$line = Invoke-WebRequest -UseBasicParsing -Uri $baseurl | Select-Object -ExpandProperty Content | ForEach-Object { $_.Split(\"`r`n\") } | Select-String -Pattern '-x64.msi'; \
-	$filename = ($line -split '>' -split '<')[2]; \
-	Write-Host ('Latest node.js installer {0}' -f $filename); \
-	$url = ('{0}{1}' -f $baseurl, $filename); \
-	Write-Host ('Downloading {0} ...' -f $url); \
-	[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; \
-	Invoke-WebRequest -Uri $url -OutFile 'node.msi'; \
-	\
-	Write-Host 'Installing Node.js...'; \
-	Start-Process msiexec.exe -Wait -ArgumentList '/I node.msi /quiet'; \
-	\
-	Write-Host 'Path1 =' $env:PATH; \
-	\
-#the installer updated PATH, so we should refresh our local value
-	$env:PATH = [Environment]::GetEnvironmentVariable('PATH', [EnvironmentVariableTarget]::Machine); \
-	\
-	Write-Host 'Path2 =' $env:PATH; \
-	\
-	Write-Host 'Verifying install ...'; \
-	Write-Host '  node --version'; node --version; \
-	\
-	Write-Host 'Removing setup file...'; \
-	Remove-Item node.msi -Force; \
-	\
-	Write-Host 'Complete.'; \
-	\
 #add the docker host name and ip to the container hosts file (needed for the github runners since the docker host name resolution doesn't work there)
 	$hostsfile='C:\Windows\System32\drivers\etc\hosts'; \
 	$line=\"$env:docker_host_ip $env:docker_host_name\"; \
