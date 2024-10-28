@@ -329,7 +329,7 @@ class TestView(ClusterTestCase):
         view.push(dict(ts=ts), block=True)
         rts = view['ts']
 
-        assert type(rts) == type(ts)
+        assert type(rts) is type(ts)
         assert (ts == rts).all()
 
     def test_map(self):
