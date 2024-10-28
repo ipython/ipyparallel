@@ -100,11 +100,8 @@ class ShellCommandSend:
 
     @staticmethod
     def _check_output(cmd, **kwargs):
-        output = check_output(cmd, **kwargs)
-        if isinstance(output, str):
-            return output
-        else:
-            return output.decode('utf8', 'replace')
+        kwargs.setdefault("text", True)
+        return check_output(cmd, **kwargs)
 
     @staticmethod
     def _runs_successful(cmd):
@@ -129,60 +126,6 @@ class ShellCommandSend:
             return f"'{param.translate(ShellCommandSend._python_chars_map)}'"
         else:
             return str(param)
-
-    def _cmd_send_via_shell(self, paramlist):
-        # unused/deprecated function which send a command as shell command rather than as python code (see _cmd_send)
-        # since it requires proper quoting for different shells, it's much more sensitive and complex than sending
-        # poor python code
-        def _powershell_quote(param):
-            if '"' in param or "'" in param or " " in param:
-                # we need to replace single and double quotes be two double quotes, but if we are inside a string,
-                # we need to prepend a backslash to the double quote. Otherwise it will get removed
-                quoted = ""
-                in_string = False
-                for idx, c in enumerate(param):
-                    prev_c = None if idx == 0 else param[idx - 1]
-                    next_c = None if idx == len(param) - 1 else param[idx + 1]
-                    if c == '"' and prev_c != "\\":
-                        in_string = not in_string
-                        quoted += '"' * 2
-                        continue
-                    if c == "'":
-                        if in_string:
-                            quoted += '\\"' * 2
-                        else:
-                            quoted += '"' * 2
-                        continue
-                    quoted += c
-                return "'" + quoted + "'"
-            else:
-                return param
-
-        def _cmd_quote(param):
-            if "'" in param:
-                tmp = param.strip()  # if already double quoted we do not need to quote
-                if tmp[0] == '"' and tmp[-1] == '"':
-                    return tmp
-                else:
-                    return '"' + tmp + '"'
-            else:
-                return param
-
-        if self._win:
-            if self.is_powershell:
-                paramlist = [_powershell_quote(p) for p in paramlist]
-            else:
-                paramlist = [_cmd_quote(p) for p in paramlist]
-        else:
-            paramlist = [shlex.quote(p) for p in paramlist]
-
-        full_list = [self.python_path, "-m", self.package_name] + paramlist
-        if self.join_params:
-            cmd = self.shell + self.args + [" ".join(full_list)]
-        else:
-            cmd = self.shell + self.args + full_list
-
-        return self._check_output(cmd)
 
     def _cmd_start_windows_no_breakaway(self, cmd_args, py_cmd, cmd):
         # if windows platform doesn't support breakaway flag (e.g. Github Runner)
