@@ -30,8 +30,8 @@ jobs:
       matrix:
         include:
           - python: "3.9"
-          - python: "3.8"
-            runs_on: windows-2019
+          - python: "3.12"
+            runs_on: windows-2022
 
     steps:
       - uses: actions/checkout@v4

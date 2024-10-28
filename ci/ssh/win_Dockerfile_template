@@ -1,10 +1,10 @@
 # syntax = docker/dockerfile:1.2.1
-FROM mcr.microsoft.com/windows/servercore:ltsc2019
+FROM mcr.microsoft.com/windows/servercore:ltsc2022
 SHELL ["powershell"]
 
 # we use the native windows cpython installer
-ENV PYTHON_VERSION 3.8.10
-ENV PYTHON_RELEASE 3.8.10
+ENV PYTHON_VERSION 3.12.7
+ENV PYTHON_RELEASE 3.12.7
 
 # using docker env doesn't seem to work fully correctly. The environment variable is set in the powershell
 # but somehow it is not present during pip install process, which will cause the ipyparallel installation
@@ -71,9 +71,8 @@ RUN $url = ('https://www.python.org/ftp/python/{0}/python-{1}-amd64.exe' -f $env
 
 # we need to restart the wuauserv service. Otherwise the installation of the OpenSSH Server fails
 # we also need to start and stop service sshd that all necessary config file are generated
-RUN Write-Host 'Restart wuauserv service...'; \
-	Set-Service -Name wuauserv -StartupType Manual; \
-	Start-Service -name wuauserv; \
+USER containeradministrator
+RUN Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH*' \
 	Write-Host 'Install OpenSSH Server...'; \
 	Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0; \
 	Write-Host 'Initializing OpenSSH Server...'; \
@@ -89,7 +88,7 @@ RUN Write-Host 'Create key pair and copy public key...';\
 	ssh-keygen -t rsa -N '\"\"' -f $env:USERPROFILE/.ssh/id_rsa; \
 	cp $env:USERPROFILE/.ssh/id_rsa.pub $env:USERPROFILE/.ssh/authorized_keys
 
-# switch back to the admin user 
+# switch back to the admin user
 USER containeradministrator
 
 # This is apparently the only way to keep the sshd service running.

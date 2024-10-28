@@ -4,12 +4,13 @@ name: Release
 # always build releases (to make sure wheel-building works)
 # but only publish to PyPI on tags
 on:
-  push:
-    branches-ignore:
-      - "pre-commit-ci*"
-    tags:
-      - "*"
-  pull_request:
+  {}
+  # push:
+  #   branches-ignore:
+  #     - "pre-commit-ci*"
+  #   tags:
+  #     - "*"
+  # pull_request:
 
 concurrency:
   group: >-
