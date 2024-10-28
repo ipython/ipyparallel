@@ -195,7 +195,7 @@ class ShellCommandSend:
         py_detached = _py_detached_tpl.format(input_json=input_json)
 
         # now start proxy process detached
-        self.log.info("[ShellCommandSend._cmd_send] starting detached process...")
+        self.log.debug("[ShellCommandSend._cmd_send] starting detached process...")
         self.log.debug("[ShellCommandSend._cmd_send] python command: \n%s", py_cmd)
         try:
             p = Popen(
@@ -206,7 +206,7 @@ class ShellCommandSend:
         except Exception as e:
             self.log.error(f"[ShellCommandSend._cmd_send] detached process failed: {e}")
             raise e
-        self.log.info(
+        self.log.debug(
             "[ShellCommandSend._cmd_send] detached process started successful. Waiting for redirected output (pid)..."
         )
 

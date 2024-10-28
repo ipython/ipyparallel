@@ -1284,6 +1284,8 @@ class SSHLauncher(LocalProcessLauncher):
                 time.sleep(1)
             elif check is True:
                 break
+            else:
+                raise ValueError(f"cmd_exists expects bool, got {check!r}")
         local_dir = os.path.dirname(local)
         ensure_dir_exists(local_dir, 700)
         check_output(self.scp_cmd + self.scp_args + [full_remote, local])
@@ -1311,10 +1313,9 @@ class SSHLauncher(LocalProcessLauncher):
         # do some checks that setting are correct
         shell_info = self.ssh_sender.get_shell_info()
         python_ok = self.ssh_sender.has_python()
-        if self.log:
-            self.log.info(
-                f"ssh sender object initiated (break_away_support={self.ssh_sender.breakaway_support})"
-            )
+        self.log.debug(
+            f"ssh sender object initiated (break_away_support={self.ssh_sender.breakaway_support})"
+        )
 
         # create remote profile dir
         self.ssh_sender.check_output_python_module(
@@ -1326,11 +1327,8 @@ class SSHLauncher(LocalProcessLauncher):
             env=self.get_env(),
             output_file=self.remote_output_file,
         )
-        if self.log:
-            remote_cmd = ' '.join(self.program + self.program_args)
-            self.log.info(f"Running `{remote_cmd}` (pid={self.pid})")
-            # self.log.debug("Running script via ssh:\n%s", input_script)
-            pass
+        remote_cmd = ' '.join(self.program + self.program_args)
+        self.log.debug("Running `%s` (pid=%s)", remote_cmd, self.pid)
         self.notify_start({'host': self.location, 'pid': self.pid})
         self._start_waiting()
         self.fetch_files()

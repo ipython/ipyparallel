@@ -81,21 +81,10 @@ def main():
                 f.write(f"\t{idx}:{arg}$\n")
     del args.debug
 
-    recevier = ShellCommandReceive()
-    if cmd == "start":
-        recevier.cmd_start(**vars(args))
-    elif cmd == "running":
-        recevier.cmd_running(**vars(args))
-    elif cmd == "kill":
-        recevier.cmd_kill(**vars(args))
-    elif cmd == "mkdir":
-        recevier.cmd_mkdir(**vars(args))
-    elif cmd == "rmdir":
-        recevier.cmd_rmdir(**vars(args))
-    elif cmd == "exists":
-        recevier.cmd_exists(**vars(args))
-    elif cmd == "remove":
-        recevier.cmd_remove(**vars(args))
+    receiver = ShellCommandReceive()
+    with receiver as r:
+        recevier_method = getattr(r, f"cmd_{cmd}")
+        recevier_method(**vars(args))
 
 
 if __name__ == '__main__':
