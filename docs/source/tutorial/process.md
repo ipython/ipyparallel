@@ -789,6 +789,8 @@ in some scratch directory. This can be set with:
 c.IPEngine.work_dir = u'/path/to/scratch/'
 ```
 
+[^cite_mpi]: Message Passing Interface (MPI) <https://www.mpi-forum.org>
+
 [^cite_mongodb]: MongoDB database <https://www.mongodb.com/>
 
 [^cite_pbs]: Portable Batch System <https://www.mcs.anl.gov/research/projects/openpbs/>

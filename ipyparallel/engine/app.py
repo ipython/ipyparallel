@@ -5,6 +5,7 @@ The IPython engine application
 
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
+import asyncio
 import json
 import os
 import signal
@@ -14,6 +15,7 @@ from getpass import getpass
 from io import FileIO, TextIOWrapper
 from logging import StreamHandler
 
+import ipykernel
 import zmq
 from ipykernel.kernelapp import IPKernelApp
 from ipykernel.zmqshell import ZMQInteractiveShell
@@ -52,6 +54,10 @@ from .kernel import IPythonParallelKernel as Kernel
 from .log import EnginePUBHandler
 from .nanny import start_nanny
 
+try:
+    from ipykernel.control import ControlThread
+except ImportError:
+    ControlThread = None
 # -----------------------------------------------------------------------------
 # Module level variables
 # -----------------------------------------------------------------------------
@@ -162,7 +168,7 @@ class IPEngine(BaseParallelApplication):
             base = 'ipcontroller-{}'.format(change['new'])
         else:
             base = 'ipcontroller'
-        self.url_file_name = "%s-engine.json" % base
+        self.url_file_name = f"{base}-engine.json"
 
     log_url = Unicode(
         '',
@@ -270,7 +276,7 @@ class IPEngine(BaseParallelApplication):
             self.log.debug("MPI rank = %i", MPI.COMM_WORLD.rank)
             return MPI.COMM_WORLD.rank
 
-    registrar = Instance('zmq.eventloop.zmqstream.ZMQStream', allow_none=True)
+    registrar = Instance('zmq.Socket', allow_none=True)
     kernel = Instance(Kernel, allow_none=True)
     hb_check_period = Integer()
 
@@ -348,6 +354,8 @@ class IPEngine(BaseParallelApplication):
         if not self.curve_secretkey or not self.curve_publickey:
             self.log.info("Generating new CURVE credentials")
             self.curve_publickey, self.curve_secretkey = zmq.curve_keypair()
+
+    _kernel_start_future = None
 
     def find_connection_file(self):
         """Set the url file.
@@ -483,7 +491,7 @@ class IPEngine(BaseParallelApplication):
             ):
                 password = False
             else:
-                password = getpass("SSH Password for %s: " % self.sshserver)
+                password = getpass(f"SSH Password for {self.sshserver}: ")
         else:
             password = False
 
@@ -525,7 +533,7 @@ class IPEngine(BaseParallelApplication):
 
         return connect, maybe_tunnel
 
-    def register(self):
+    async def register(self):
         """send the registration_request"""
         if self.use_mpi and self.id and self.id >= 100 and self.mpi_registration_delay:
             # Some launchres implement delay at the Launcher level,
@@ -538,39 +546,70 @@ class IPEngine(BaseParallelApplication):
             )
             time.sleep(delay)
 
-        self.log.info("Registering with controller at %s" % self.registration_url)
+        self.log.info(f"Registering with controller at {self.registration_url}")
         ctx = self.context
         connect, maybe_tunnel = self.init_connector()
-        reg = ctx.socket(zmq.DEALER)
-        reg.setsockopt(zmq.IDENTITY, self.bident)
+        reg = self.registrar = ctx.socket(zmq.DEALER)
+        reg.IDENTITY = self.bident
         connect(reg, self.registration_url)
-
-        self.registrar = zmqstream.ZMQStream(reg, self.loop)
 
         content = dict(uuid=self.ident)
         if self.id is not None:
             self.log.info("Requesting id: %i", self.id)
             content['id'] = self.id
-        self._registration_completed = False
-        self.registrar.on_recv(
-            lambda msg: self.complete_registration(msg, connect, maybe_tunnel)
-        )
 
-        self.session.send(self.registrar, "registration_request", content=content)
+        self.session.send(reg, "registration_request", content=content)
+        # wait for reply
+        poller = zmq.asyncio.Poller()
+        poller.register(reg, zmq.POLLIN)
+        events = dict(await poller.poll(timeout=int(self.timeout * 1_000)))
+        if events:
+            msg = reg.recv_multipart()
+            try:
+                await self.complete_registration(msg, connect, maybe_tunnel)
+            except Exception as e:
+                self.log.critical(f"Error completing registration: {e}", exc_info=True)
+                self.exit(255)
+        else:
+            self.abort()
 
     def _report_ping(self, msg):
         """Callback for when the heartmonitor.Heart receives a ping"""
         # self.log.debug("Received a ping: %s", msg)
         self._hb_last_pinged = time.time()
 
-    def complete_registration(self, msg, connect, maybe_tunnel):
-        try:
-            self._complete_registration(msg, connect, maybe_tunnel)
-        except Exception as e:
-            self.log.critical(f"Error completing registration: {e}", exc_info=True)
-            self.exit(255)
+    def redirect_output(self, iopub_socket):
+        """Redirect std streams and set a display hook."""
+        if self.out_stream_factory:
+            sys.stdout = self.out_stream_factory(self.session, iopub_socket, 'stdout')
+            sys.stdout.topic = f"engine.{self.id}.stdout".encode("ascii")
+            sys.stderr = self.out_stream_factory(self.session, iopub_socket, 'stderr')
+            sys.stderr.topic = f"engine.{self.id}.stderr".encode("ascii")
 
-    def _complete_registration(self, msg, connect, maybe_tunnel):
+            # copied from ipykernel 6, which captures sys.__stderr__ at the FD-level
+            if getattr(sys.stderr, "_original_stdstream_copy", None) is not None:
+                for handler in self.log.handlers:
+                    print(handler)
+                    if isinstance(handler, StreamHandler) and (
+                        handler.stream.buffer.fileno()
+                    ):
+                        self.log.debug(
+                            "Seeing logger to stderr, rerouting to raw filedescriptor."
+                        )
+
+                        handler.stream = TextIOWrapper(
+                            FileIO(sys.stderr._original_stdstream_copy, "w")
+                        )
+        if self.display_hook_factory:
+            sys.displayhook = self.display_hook_factory(self.session, iopub_socket)
+            sys.displayhook.topic = f"engine.{self.id}.execute_result".encode("ascii")
+
+    def restore_output(self):
+        """Restore output after redirect_output"""
+        sys.stdout = sys.__stdout__
+        sys.stderr = sys.__stderr__
+
+    async def complete_registration(self, msg, connect, maybe_tunnel):
         ctx = self.context
         loop = self.loop
         identity = self.bident
@@ -594,7 +633,7 @@ class IPEngine(BaseParallelApplication):
                     f"Did not get the requested id: {self.id} != {requested_id}"
                 )
                 self.log.name = self.log.name.rsplit(".", 1)[0] + f".{self.id}"
-            elif self.id is None:
+            elif self.id is not None:
                 self.log.name += f".{self.id}"
 
             # create Shell Connections (MUX, Task, etc.):
@@ -610,16 +649,15 @@ class IPEngine(BaseParallelApplication):
             self.log.info(f'Shell_addrs: {shell_addrs}')
 
             # Use only one shell stream for mux and tasks
-            stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
-            stream.setsockopt(zmq.IDENTITY, identity)
+            shell_socket = ctx.socket(zmq.ROUTER)
+            shell_socket.setsockopt(zmq.IDENTITY, identity)
             # TODO: enable PROBE_ROUTER when schedulers can handle the empty message
             # stream.setsockopt(zmq.PROBE_ROUTER, 1)
             self.log.debug("Setting shell identity %r", identity)
 
-            shell_streams = [stream]
             for addr in shell_addrs:
                 self.log.info("Connecting shell to %s", addr)
-                connect(stream, addr)
+                connect(shell_socket, addr)
 
             # control stream:
             control_url = url('control')
@@ -631,9 +669,9 @@ class IPEngine(BaseParallelApplication):
                 control_url = nanny_url
                 # nanny uses our curve_publickey, not the controller's publickey
                 curve_serverkey = self.curve_publickey
-            control_stream = zmqstream.ZMQStream(ctx.socket(zmq.ROUTER), loop)
-            control_stream.setsockopt(zmq.IDENTITY, identity)
-            connect(control_stream, control_url, curve_serverkey=curve_serverkey)
+            control_socket = ctx.socket(zmq.ROUTER)
+            control_socket.setsockopt(zmq.IDENTITY, identity)
+            connect(control_socket, control_url, curve_serverkey=curve_serverkey)
 
             # create iopub stream:
             iopub_addr = url('iopub')
@@ -651,36 +689,6 @@ class IPEngine(BaseParallelApplication):
 
             # disable history:
             self.config.HistoryManager.hist_file = ':memory:'
-
-            # Redirect input streams and set a display hook.
-            if self.out_stream_factory:
-                sys.stdout = self.out_stream_factory(
-                    self.session, iopub_socket, 'stdout'
-                )
-                sys.stdout.topic = f"engine.{self.id}.stdout".encode("ascii")
-                sys.stderr = self.out_stream_factory(
-                    self.session, iopub_socket, 'stderr'
-                )
-                sys.stderr.topic = f"engine.{self.id}.stderr".encode("ascii")
-
-                # copied from ipykernel 6, which captures sys.__stderr__ at the FD-level
-                if getattr(sys.stderr, "_original_stdstream_copy", None) is not None:
-                    for handler in self.log.handlers:
-                        if isinstance(handler, StreamHandler) and (
-                            handler.stream.buffer.fileno() == 2
-                        ):
-                            self.log.debug(
-                                "Seeing logger to stderr, rerouting to raw filedescriptor."
-                            )
-
-                            handler.stream = TextIOWrapper(
-                                FileIO(sys.stderr._original_stdstream_copy, "w")
-                            )
-            if self.display_hook_factory:
-                sys.displayhook = self.display_hook_factory(self.session, iopub_socket)
-                sys.displayhook.topic = f"engine.{self.id}.execute_result".encode(
-                    "ascii"
-                )
 
             # patch Session to always send engine uuid metadata
             original_send = self.session.send
@@ -715,17 +723,32 @@ class IPEngine(BaseParallelApplication):
 
             self.session.send = send_with_metadata
 
+            kernel_kwargs = {}
+            if ipykernel.version_info >= (6,):
+                kernel_kwargs["control_thread"] = control_thread = ControlThread(
+                    daemon=True
+                )
+            if ipykernel.version_info >= (7,):
+                kernel_kwargs["shell_socket"] = zmq.asyncio.Socket(shell_socket)
+                kernel_kwargs["control_socket"] = zmq.asyncio.Socket(control_socket)
+            else:
+                # Kernel.start starts control thread in kernel 7
+                control_thread.start()
+                kernel_kwargs["control_stream"] = zmqstream.ZMQStream(
+                    control_socket, control_thread.io_loop
+                )
+
+                kernel_kwargs["shell_streams"] = [zmqstream.ZMQStream(shell_socket)]
+
             self.kernel = Kernel.instance(
                 parent=self,
                 engine_id=self.id,
                 ident=self.ident,
                 session=self.session,
-                control_stream=control_stream,
-                shell_streams=shell_streams,
                 iopub_socket=iopub_socket,
-                loop=loop,
                 user_ns=self.user_ns,
                 log=self.log,
+                **kernel_kwargs,
             )
 
             self.kernel.shell.display_pub.topic = f"engine.{self.id}.displaypub".encode(
@@ -733,19 +756,26 @@ class IPEngine(BaseParallelApplication):
             )
 
             # FIXME: This is a hack until IPKernelApp and IPEngineApp can be fully merged
-            self.init_signal()
-            app = IPKernelApp(
+            app = self.kernel_app = IPKernelApp(
                 parent=self, shell=self.kernel.shell, kernel=self.kernel, log=self.log
             )
+            self.init_signal()
+
             if self.use_mpi and self.init_mpi:
                 app.exec_lines.insert(0, self.init_mpi)
             app.init_profile_dir()
             app.init_code()
 
-            self.kernel.start()
+            # redirect output at the end, only after start is called
+            self.redirect_output(iopub_socket)
+
+            # ipykernel 7, kernel.start is the long-running main loop
+            start_future = self.kernel.start()
+            if start_future is not None:
+                self._kernel_start_future = asyncio.ensure_future(start_future)
         else:
-            self.log.fatal("Registration Failed: %s" % msg)
-            raise Exception("Registration Failed: %s" % msg)
+            self.log.fatal(f"Registration Failed: {msg}")
+            raise Exception(f"Registration Failed: {msg}")
 
         self.start_heartbeat(
             maybe_tunnel(url('hb_ping')),
@@ -754,7 +784,6 @@ class IPEngine(BaseParallelApplication):
             identity,
         )
         self.log.info("Completed registration with id %i" % self.id)
-        self.loop.remove_timeout(self._abort_timeout)
 
     def start_nanny(self, control_url):
         self.log.info("Starting nanny")
@@ -781,7 +810,7 @@ class IPEngine(BaseParallelApplication):
             if self.curve_serverkey:
                 mon.setsockopt(zmq.CURVE_SERVER, 1)
                 mon.setsockopt(zmq.CURVE_SECRETKEY, self.curve_secretkey)
-            mport = mon.bind_to_random_port('tcp://%s' % localhost())
+            mport = mon.bind_to_random_port(f'tcp://{localhost()}')
             mon.setsockopt(zmq.SUBSCRIBE, b"")
             self._hb_listener = zmqstream.ZMQStream(mon, self.loop)
             self._hb_listener.on_recv(self._report_ping)
@@ -819,7 +848,7 @@ class IPEngine(BaseParallelApplication):
             )
 
     def abort(self):
-        self.log.fatal("Registration timed out after %.1f seconds" % self.timeout)
+        self.log.fatal(f"Registration timed out after {self.timeout:.1f} seconds")
         if "127." in self.registration_url:
             self.log.fatal(
                 """
@@ -891,13 +920,13 @@ class IPEngine(BaseParallelApplication):
 
         exec_lines = []
         for app in ('IPKernelApp', 'InteractiveShellApp'):
-            if '%s.exec_lines' % app in config:
+            if f'{app}.exec_lines' in config:
                 exec_lines = config[app].exec_lines
                 break
 
         exec_files = []
         for app in ('IPKernelApp', 'InteractiveShellApp'):
-            if '%s.exec_files' % app in config:
+            if f'{app}.exec_files' in config:
                 exec_files = config[app].exec_files
                 break
 
@@ -921,12 +950,20 @@ class IPEngine(BaseParallelApplication):
 
     @catch_config_error
     def initialize(self, argv=None):
+        if "PYDEVD_DISABLE_FILE_VALIDATION" not in os.environ:
+            # suppress irrelevant debugger warnings by default
+            os.environ["PYDEVD_DISABLE_FILE_VALIDATION"] = "1"
         super().initialize(argv)
         self.init_engine()
         self.forward_logging()
 
     def init_signal(self):
-        signal.signal(signal.SIGINT, self._signal_sigint)
+        if ipykernel.version_info >= (7,):
+            # ipykernel 7 changes SIGINT handling
+            # to the app instead of the kernel
+            self.kernel_app.init_signal()
+        else:
+            signal.signal(signal.SIGINT, self._signal_sigint)
         signal.signal(signal.SIGTERM, self._signal_stop)
 
     def _signal_sigint(self, sig, frame):
@@ -934,24 +971,60 @@ class IPEngine(BaseParallelApplication):
 
     def _signal_stop(self, sig, frame):
         self.log.critical(f"received signal {sig}, stopping")
-        self.loop.add_callback_from_signal(self.loop.stop)
+        # we are shutting down, stop forwarding output
+        try:
+            self.restore_output()
+            # kernel.stop added in ipykernel 7
+            # claims to be threadsafe, but is not
+            kernel_stop = getattr(self.kernel, "stop", None)
+            if kernel_stop is not None:
+                self.log.debug("Calling kernel.stop()")
+
+                # callback must be async for event loop to be
+                # detected by anyio
+                async def stop():
+                    # guard against kernel stop being made async
+                    # in the future. It is sync in 7.0
+                    f = kernel_stop()
+                    if f is not None:
+                        await f
+
+                self.loop.add_callback_from_signal(stop)
+            if self._kernel_start_future is None:
+                # not awaiting start_future, stop loop directly
+                self.log.debug("Stopping event loop")
+                self.loop.add_callback_from_signal(self.loop.stop)
+        except Exception:
+            self.log.critical("Failed to stop kernel", exc_info=True)
+            self.loop.add_callback_from_signal(self.loop.stop)
 
     def start(self):
         if self.id is not None:
             self.log.name += f".{self.id}"
-        loop = self.loop
-
-        def _start():
-            self.register()
-            self._abort_timeout = loop.add_timeout(
-                loop.time() + self.timeout, self.abort
-            )
-
-        self.loop.add_callback(_start)
         try:
-            self.loop.start()
-        except KeyboardInterrupt:
-            self.log.critical("Engine Interrupted, shutting down...\n")
+            self.loop.run_sync(self._start)
+        except (asyncio.TimeoutError, KeyboardInterrupt):
+            # tornado run_sync raises TimeoutError
+            # if the task didn't finish
+            pass
+
+    async def _start(self):
+        await self.register()
+        # run forever
+        if self._kernel_start_future is None:
+            while True:
+                try:
+                    await asyncio.sleep(60)
+                except asyncio.CancelledError:
+                    pass
+        else:
+            self.log.info("awaiting start future")
+            try:
+                await self._kernel_start_future
+            except asyncio.CancelledError:
+                pass
+            except Exception as e:
+                self.log.critical("Error awaiting start future", exc_info=True)
 
 
 main = launch_new_instance = IPEngine.launch_instance

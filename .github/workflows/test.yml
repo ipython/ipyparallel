@@ -47,6 +47,8 @@ jobs:
           - python: "3.9"
             runs_on: macos-14
           - python: "3.11"
+          - python: "3.12"
+            pre: pre
 
     steps:
       - uses: actions/checkout@v4
@@ -87,7 +89,7 @@ jobs:
           export DOCKER_BUILDKIT=1
           export COMPOSE_DOCKER_CLI_BUILD=1
           cd ci/slurm
-          docker-compose up -d --build
+          docker compose up -d --build
 
       - name: Install Python (conda) ${{ matrix.python }}
         if: ${{ matrix.cluster_type == 'mpi' }}
@@ -113,16 +115,17 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          pip install --pre --upgrade ipyparallel[test]
+          pip install --upgrade ipyparallel[test]
+
+      - name: Install pre-release dependencies
+        if: ${{ matrix.pre }}
+        run: |
+          pip install --pre --upgrade ipyparallel[test] 'https://github.com/ipython/ipykernel/archive/main.tar.gz#egg=ipykernel'
 
       - name: Install extra Python packages
         if: ${{ ! startsWith(matrix.python, '3.11') }}
         run: |
           pip install distributed joblib
-          # pip install --only-binary :all: matplotlib || echo "no matplotlib"#
-          # the || syntax doesn't work under windows powershell, but since the command (currently) works for all
-          # python version (>3.8), the "||" branch can be simply removed. Otherwise we would need a splitted
-          # step for Windows and Linux (as for the docker-compose command)
           pip install --only-binary :all: matplotlib
 
       - name: Show environment
@@ -156,8 +159,8 @@ jobs:
         run: |
           set -x
           docker ps -a
-          docker logs slurmctld
           docker exec -i slurmctld squeue --states=all
           docker exec -i slurmctld sinfo
+          docker logs slurmctld
           docker logs c1
           docker logs c2
