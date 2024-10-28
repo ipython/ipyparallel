@@ -167,7 +167,7 @@ def test_shellcmds(request, platform, sender, shellcmd_test_cmd, ssh_key):
         if platform != "posix":
             pytest.skip("other platform")
 
-    if "ssh" in sender.shell:
+    if "ssh" in sender.shell and not sys.platform.startswith("win"):
         sender.shell.extend(["-i", ssh_key])
     # start tests
 
