@@ -144,7 +144,7 @@ filterwarnings = [
 
 [tool.nbqa.process_cells]
 # handle %px cell magics
-# it's still going to get confused about imports
+# it's still going to get confused about which imports are local
 "ruff format" = [
     "px",
 ]
@@ -175,6 +175,11 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["F841", "E741", "F401"]
 "**/__init__.py" = ["I", "F4"]
+# for nbqa, these should be *nbqa_ipynb.py
+# after https://github.com/nbQA-dev/nbQA/pull/870
+"docs/source/examples/**" = [
+    "F704" # top-level await is valid in IPython
+]
 
 
 [tool.tbump]
