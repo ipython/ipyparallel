@@ -7,6 +7,7 @@ import json
 import os
 import re
 import socket
+import sys
 import time
 import types
 import warnings
@@ -1078,6 +1079,16 @@ class Client(HasTraits):
         """main loop for background IO thread"""
         self._io_loop = self._make_io_loop()
         self._setup_streams()
+
+        # disable ipykernel's association of thread output with the cell that
+        # spawned the thread.
+        # there should be a public API for this...
+        thread_ident = current_thread().ident
+        for stream in [sys.stdout, sys.stderr]:
+            for name in ("_thread_to_parent", "_thread_to_parent_header"):
+                mapping = getattr(stream, name, None)
+                if mapping:
+                    mapping.pop(thread_ident, None)
         # signal that start has finished
         # so that the main thread knows that all our attributes are defined
         if start_evt:
