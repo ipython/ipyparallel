@@ -10,11 +10,19 @@ repos:
           - "--fix"
         exclude_types:
           - jupyter
+      - id: ruff
+        name: ruff (notebooks)
+        args:
+          - "--fix"
+        types:
+          - jupyter
       - id: ruff-format
+        # run via nbqa to handle cell magics
         exclude_types:
           - jupyter
   # run ruff via nbqa, which has better and configurable handling of cell magics
   # than ruff itself
+  # but has trouble with isort rules
   - repo: https://github.com/nbQA-dev/nbQA
     rev: 1.9.0
     hooks:
@@ -22,6 +30,8 @@ repos:
       - id: nbqa-ruff-check
         args:
           - --fix
+          # isort rules get confused in the temporary files
+          - --ignore=I
   - repo: https://github.com/pre-commit/mirrors-prettier
     rev: v4.0.0-alpha.8
     hooks:
