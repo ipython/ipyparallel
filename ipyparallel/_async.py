@@ -8,6 +8,8 @@ from functools import partial
 
 from tornado.ioloop import IOLoop
 
+from ipyparallel.util import _OutputProducingThread as Thread
+
 
 def _asyncio_run(coro):
     """Like asyncio.run, but works when there's no event loop"""
@@ -41,7 +43,7 @@ class AsyncFirst:
         """Run an async function in a background thread"""
         if self._async_thread is None:
             self._loop_started = threading.Event()
-            self._async_thread = threading.Thread(target=self._thread_main, daemon=True)
+            self._async_thread = Thread(target=self._thread_main, daemon=True)
             self._async_thread.start()
             self._loop_started.wait(timeout=5)
 

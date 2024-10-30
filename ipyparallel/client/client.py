@@ -15,7 +15,7 @@ from concurrent.futures import Future
 from functools import partial
 from getpass import getpass
 from pprint import pprint
-from threading import Event, Thread, current_thread
+from threading import Event, current_thread
 
 import jupyter_client.session
 import zmq
@@ -49,6 +49,7 @@ from zmq.eventloop.zmqstream import ZMQStream
 import ipyparallel as ipp
 from ipyparallel import error, serialize, util
 from ipyparallel.serialize import PrePickled, Reference
+from ipyparallel.util import _OutputProducingThread as Thread
 
 from .asyncresult import AsyncHubResult, AsyncResult
 from .futures import MessageFuture, multi_future

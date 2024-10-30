@@ -42,6 +42,7 @@ from traitlets import (
 from traitlets.config.configurable import LoggingConfigurable
 
 from ..traitlets import entry_points
+from ..util import _OutputProducingThread as Thread
 from ..util import shlex_join
 from ._winhpcjob import IPControllerJob, IPControllerTask, IPEngineSetJob, IPEngineTask
 from .shellcmd import ShellCommandSend
@@ -524,7 +525,7 @@ class LocalProcessLauncher(BaseLauncher):
         # ensure self.loop is accessed on the main thread before waiting
         self.loop
         self._stop_waiting = threading.Event()
-        self._wait_thread = threading.Thread(
+        self._wait_thread = Thread(
             target=self._wait, daemon=True, name=f"wait(pid={self.pid})"
         )
         self._wait_thread.start()
@@ -583,7 +584,7 @@ class LocalProcessLauncher(BaseLauncher):
                     time.sleep(0.1)
 
     def _start_streaming(self):
-        self._stream_thread = t = threading.Thread(
+        self._stream_thread = t = Thread(
             target=partial(self._stream_file, self.output_file),
             name=f"Stream Output {self.identifier}",
             daemon=True,
@@ -1352,7 +1353,7 @@ class SSHLauncher(LocalProcessLauncher):
         # ensure self.loop is accessed on the main thread before waiting
         self.loop
         self._stop_waiting = threading.Event()
-        self._wait_thread = threading.Thread(
+        self._wait_thread = Thread(
             target=self._wait,
             daemon=True,
             name=f"wait(host={self.location}, pid={self.pid})",
