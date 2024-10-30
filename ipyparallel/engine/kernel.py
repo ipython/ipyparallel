@@ -139,11 +139,9 @@ class IPythonParallelKernel(IPythonKernel):
         try:
             working = shell.user_ns
 
-            prefix = "_" + str(msg_id).replace("-", "") + "_"
+            prefix = f"_{str(msg_id).replace('-', '_')}_"
 
             f, args, kwargs = unpack_apply_message(bufs, working, copy=False)
-
-            fname = getattr(f, '__name__', 'f')
 
             fname = prefix + "f"
             argname = prefix + "args"
@@ -153,13 +151,18 @@ class IPythonParallelKernel(IPythonKernel):
             ns = {fname: f, argname: args, kwargname: kwargs, resultname: None}
             # print ns
             working.update(ns)
-            code = f"{resultname} = {fname}(*{argname},**{kwargname})"
+            code = f"{resultname} = {fname}(*{argname}, **{kwargname})"
             try:
                 exec(code, shell.user_global_ns, shell.user_ns)
                 result = working.get(resultname)
             finally:
                 for key in ns:
-                    working.pop(key)
+                    try:
+                        working.pop(key)
+                    except KeyError:
+                        self.log.warning(
+                            f"Failed to undefine temporary apply variable {key}, already undefined"
+                        )
 
             result_buf = serialize_object(
                 result,
