@@ -106,9 +106,10 @@ def raises_remote(etype):
         except error.CompositeError as e:
             e.raise_exception()
     except error.RemoteError as e:
+        tb = '\n'.join(e.render_traceback())
         assert (
             expected_ename == e.ename
-        ), f"Should have raised {expected_ename}, but raised {e.ename}"
+        ), f"Should have raised {expected_ename}, but raised {e.ename}:\n{tb}"
 
     else:
         pytest.fail("should have raised a RemoteError")
