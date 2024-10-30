@@ -178,7 +178,7 @@ select = [
 # for nbqa, these should be *nbqa_ipynb.py
 # after https://github.com/nbQA-dev/nbQA/pull/870
 "docs/source/examples/**" = [
-    "F704" # top-level await is valid in IPython
+    "F704", # top-level await is valid in IPython
 ]
 
 
