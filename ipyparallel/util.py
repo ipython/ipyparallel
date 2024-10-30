@@ -13,8 +13,9 @@ import socket
 import sys
 import warnings
 from datetime import datetime, timezone
-from functools import lru_cache
+from functools import lru_cache, partial
 from signal import SIGABRT, SIGINT, SIGTERM, signal
+from threading import Thread, current_thread
 from types import FunctionType
 
 import traitlets
@@ -804,3 +805,34 @@ def connect(
         socket.setsockopt(zmq.CURVE_SECRETKEY, curve_secretkey)
         socket.setsockopt(zmq.CURVE_PUBLICKEY, curve_publickey)
     return socket.connect(url)
+
+
+def _detach_thread_output(ident=None):
+    """undo thread-parent mapping in ipykernel#1186"""
+    # disable ipykernel's association of thread output with the cell that
+    # spawned the thread.
+    # there should be a public API for this...
+    if ident is None:
+        ident = current_thread().ident
+    for stream in (sys.stdout, sys.stderr):
+        for name in ("_thread_to_parent", "_thread_to_parent_header"):
+            mapping = getattr(stream, name, None)
+            if mapping:
+                mapping.pop(ident, None)
+
+
+class _OutputProducingThread(Thread):
+    """
+    Subclass Thread to workaround bug in ipykernel
+    associating thread output with wrong Cell
+
+    See https://github.com/ipython/ipykernel/issues/1289
+    """
+
+    def __init__(self, target, **kwargs):
+        wrapped_target = partial(self._wrapped_target, target)
+        super().__init__(target=wrapped_target, **kwargs)
+
+    def _wrapped_target(self, target, *args, **kwargs):
+        _detach_thread_output(self.ident)
+        return target(*args, **kwargs)
