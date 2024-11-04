@@ -113,6 +113,7 @@ target_version = [
     "py37",
     "py38",
 ]
+python_cell_magics = ["px"]
 
 [tool.isort]
 profile = "black"
@@ -145,12 +146,8 @@ filterwarnings = [
 [tool.nbqa.process_cells]
 # handle %px cell magics
 # it's still going to get confused about which imports are local
-"ruff format" = [
-    "px",
-]
-"ruff check" = [
-    "px",
-]
+"ruff format" = ["px"]
+"ruff check" = ["px"]
 
 [tool.ruff]
 line-length = 88
@@ -175,10 +172,13 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "**/tests/**" = ["F841", "E741", "F401"]
 "**/__init__.py" = ["I", "F4"]
+# ruff doesn't handle namespace issues with cell magics very well
+# nbqa will handle these
+"**/*.ipynb" = ["F4", "F8"]
 # for nbqa, these should be *nbqa_ipynb.py
 # after https://github.com/nbQA-dev/nbQA/pull/870
 "docs/source/examples/**" = [
-    "F704" # top-level await is valid in IPython
+    "F704", # top-level await is valid in IPython
 ]
 
 

@@ -424,39 +424,32 @@ class IPEngine(BaseParallelApplication):
         self.log.debug("%r", config)
         self.connection_info = d
 
+    _kernel_bound = False
+
     def bind_kernel(self, **kwargs):
         """Promote engine to listening kernel, accessible to frontends."""
-        if self.kernel_app is not None:
+        if self._kernel_bound:
+            # already run
             return
+        self._kernel_bound = True
 
         self.log.info("Opening ports for direct connections as an IPython kernel")
         if self.curve_serverkey:
             self.log.warning("Bound kernel does not support CURVE security")
 
         kernel = self.kernel
-
-        kwargs.setdefault('config', self.config)
-        kwargs.setdefault('log', self.log)
-        kwargs.setdefault('profile_dir', self.profile_dir)
-        kwargs.setdefault('session', self.session)
-
-        app = self.kernel_app = IPKernelApp(**kwargs)
-
-        # allow IPKernelApp.instance():
-        IPKernelApp._instance = app
+        app = self.kernel_app
 
         app.init_connection_file()
         # relevant contents of init_sockets:
 
-        app.shell_port = app._bind_socket(kernel.shell_streams[0], app.shell_port)
+        app.shell_port = app._bind_socket(self.shell_socket, app.shell_port)
         app.log.debug("shell ROUTER Channel on port: %i", app.shell_port)
 
-        iopub_socket = kernel.iopub_socket
-        # ipykernel 4.3 iopub_socket is an IOThread wrapper:
-        if hasattr(iopub_socket, 'socket'):
-            iopub_socket = iopub_socket.socket
+        app.control_port = app._bind_socket(self.control_socket, app.control_port)
+        app.log.debug("control ROUTER Channel on port: %i", app.control_port)
 
-        app.iopub_port = app._bind_socket(iopub_socket, app.iopub_port)
+        app.iopub_port = app._bind_socket(self.iopub_socket, app.iopub_port)
         app.log.debug("iopub PUB Channel on port: %i", app.iopub_port)
 
         kernel.stdin_socket = self.context.socket(zmq.ROUTER)
@@ -464,7 +457,6 @@ class IPEngine(BaseParallelApplication):
         app.log.debug("stdin ROUTER Channel on port: %i", app.stdin_port)
 
         # start the heartbeat, and log connection info:
-
         app.init_heartbeat()
 
         app.log_connection_info()
@@ -649,7 +641,7 @@ class IPEngine(BaseParallelApplication):
             self.log.info(f'Shell_addrs: {shell_addrs}')
 
             # Use only one shell stream for mux and tasks
-            shell_socket = ctx.socket(zmq.ROUTER)
+            shell_socket = self.shell_socket = ctx.socket(zmq.ROUTER)
             shell_socket.setsockopt(zmq.IDENTITY, identity)
             # TODO: enable PROBE_ROUTER when schedulers can handle the empty message
             # stream.setsockopt(zmq.PROBE_ROUTER, 1)
@@ -669,13 +661,13 @@ class IPEngine(BaseParallelApplication):
                 control_url = nanny_url
                 # nanny uses our curve_publickey, not the controller's publickey
                 curve_serverkey = self.curve_publickey
-            control_socket = ctx.socket(zmq.ROUTER)
+            control_socket = self.control_socket = ctx.socket(zmq.ROUTER)
             control_socket.setsockopt(zmq.IDENTITY, identity)
             connect(control_socket, control_url, curve_serverkey=curve_serverkey)
 
             # create iopub stream:
             iopub_addr = url('iopub')
-            iopub_socket = ctx.socket(zmq.PUB)
+            iopub_socket = self.iopub_socket = ctx.socket(zmq.PUB)
             iopub_socket.SNDHWM = 0
             iopub_socket.setsockopt(zmq.IDENTITY, identity)
             connect(iopub_socket, iopub_addr)
@@ -759,6 +751,8 @@ class IPEngine(BaseParallelApplication):
             app = self.kernel_app = IPKernelApp(
                 parent=self, shell=self.kernel.shell, kernel=self.kernel, log=self.log
             )
+            # allow IPKernelApp.instance():
+            IPKernelApp._instance = app
             self.init_signal()
 
             if self.use_mpi and self.init_mpi:

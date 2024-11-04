@@ -40,11 +40,6 @@ def bind_kernel(**kwargs):
 
     from ipyparallel.engine.app import IPEngine
 
-    # first check for IPKernelApp, in which case this should be a no-op
-    # because there is already a bound kernel
-    if IPKernelApp.initialized() and isinstance(IPKernelApp._instance, IPKernelApp):
-        return
-
     if IPEngine.initialized():
         try:
             app = IPEngine.instance()

@@ -7,8 +7,12 @@ maxdepth: 2
 intro
 process
 direct
-magics
 task
 asyncresult
 demos
 ```
+
+:::{seealso}
+[Tutorial example notebooks](example-tutorials)
+
+:::

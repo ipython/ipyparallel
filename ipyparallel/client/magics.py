@@ -117,13 +117,6 @@ def exec_args(f):
             help="specify the targets on which to execute",
         ),
         magic_arguments.argument(
-            '--local',
-            action="store_const",
-            const=True,
-            dest="local",
-            help="also execute the cell in the local namespace",
-        ),
-        magic_arguments.argument(
             '--verbose',
             action="store_const",
             const=True,
@@ -443,6 +436,13 @@ class ParallelMagics(Magics):
     @magic_arguments.magic_arguments()
     @exec_args
     @output_args
+    @magic_arguments.argument(
+        '--local',
+        action="store_const",
+        const=True,
+        dest="local",
+        help="also execute the cell in the local namespace",
+    )
     def cell_px(self, line='', cell=None):
         """Executes the cell in parallel.
 
@@ -490,7 +490,7 @@ class ParallelMagics(Magics):
         block = self.view.block if args.block is None else args.block
         if args.local:
             self.shell.run_cell(cell)
-            # now apply blocking behavor to remote execution
+            # now apply blocking behavior to remote execution
             if block:
                 ar.get()
                 ar.display_outputs(args.groupby)
