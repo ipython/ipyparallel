@@ -11,6 +11,8 @@ mystnb:
 
 Here you will find example notebooks and scripts for working with IPython Parallel.
 
+(example-tutorials)=
+
 ## Tutorials
 
 ```{toctree}
