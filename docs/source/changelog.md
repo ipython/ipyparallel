@@ -4,6 +4,18 @@
 
 Changes in IPython Parallel
 
+## 9.0 - 2024-11
+
+IPython Parallel 9 is a small major release.
+
+The biggest new feature highlight is Windows support for SSHLauncher (thanks [@ottointhesky](https://github.com/ottointhesky)!)
+
+Other changes:
+
+- Compatibility fixes for upcoming ipykernel 7 (ipykernel 6.9.1 is now required)
+- JupyterLab extension dependencies are updated from 3.x to JupyterLab 4.3
+- Use `importlib.metadata` instead of deprecated `entrypoints` (no effect for users)
+
 ## 8.8
 
 ### 8.8.0 - 2024-04-02
