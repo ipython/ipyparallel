@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ipyparallel"
-version = "8.9.0.dev"
+version = "9.0.0.dev"
 authors = [{name = "IPython Development Team", email = "ipython-dev@scipy.org"}]
 license = {file = "COPYING.md"}
 readme = "README.md"
@@ -21,7 +21,7 @@ keywords = [
 classifiers = [
     "Framework :: Jupyter",
     "Framework :: Jupyter :: JupyterLab",
-    "Framework :: Jupyter :: JupyterLab :: 3",
+    "Framework :: Jupyter :: JupyterLab :: 4",
     "Framework :: Jupyter :: JupyterLab :: Extensions",
     "Framework :: Jupyter :: JupyterLab :: Extensions :: Prebuilt",
     "Intended Audience :: Developers",
@@ -29,9 +29,7 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: BSD License",
     "Programming Language :: Python",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
 ]
 urls = {Homepage = "https://ipython.org"}
 requires-python = ">=3.8"
@@ -109,8 +107,6 @@ artifacts = [
 [tool.black]
 skip-string-normalization = true
 target_version = [
-    "py36",
-    "py37",
     "py38",
 ]
 python_cell_magics = ["px"]
@@ -187,7 +183,7 @@ select = [
 github_url = "https://github.com/jupyterhub/jupyterhub"
 
 [tool.tbump.version]
-current = "8.9.0.dev"
+current = "9.0.0.dev"
 
 # pep440 regex
 regex = '''
