@@ -10,6 +10,10 @@ IPython Parallel 9 is a small major release.
 
 The biggest new feature highlight is Windows support for SSHLauncher (thanks [@ottointhesky](https://github.com/ottointhesky)!)
 
+Fixes:
+
+- Fix for background-thread output going to the wrong cell in a notebook.
+
 Other changes:
 
 - Compatibility fixes for upcoming ipykernel 7 (ipykernel 6.9.1 is now required)
