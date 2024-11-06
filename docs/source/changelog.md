@@ -6,6 +6,8 @@ Changes in IPython Parallel
 
 ## 9.0 - 2024-11
 
+([full changelog](https://github.com/ipython/ipyparallel/compare/8.8.0...9.0.0))
+
 IPython Parallel 9 is a small major release.
 
 The biggest new feature highlight is Windows support for SSHLauncher (thanks [@ottointhesky](https://github.com/ottointhesky)!)
