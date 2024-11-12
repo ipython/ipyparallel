@@ -18,6 +18,8 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 # sys.path.insert(0, os.path.abspath('.'))
 # We load the ipython release info into a dict by explicit execution
+from intersphinx_registry import get_intersphinx_mapping
+
 iprelease = {}
 exec(
     compile(
@@ -358,13 +360,15 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {
-    'python': ('https://docs.python.org/3/', None),
-    'ipython': ('https://ipython.readthedocs.io/en/stable/', None),
-    'pymongo': ('https://pymongo.readthedocs.io/en/stable/', None),
-    'distributed': ('https://distributed.readthedocs.io/en/stable/', None),
-    'jupyterclient': ('https://jupyter-client.readthedocs.io/en/stable/', None),
-}
+intersphinx_mapping = get_intersphinx_mapping(
+    packages={
+        'python',
+        'ipython',
+        'pymongo',
+        'distributed',
+        'jupyterclient',
+    }
+)
 
 import os
 
