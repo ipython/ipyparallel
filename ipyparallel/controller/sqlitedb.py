@@ -274,7 +274,7 @@ class SQLiteDB(BaseDB):
         i = 0
         while not self._check_table():
             i += 1
-            self.table = first_table + '_%i' % i
+            self.table = f"{first_table}_{i}"
             self.log.warning(
                 f"Table {previous_table} exists and doesn't match db format, trying {self.table}"
             )

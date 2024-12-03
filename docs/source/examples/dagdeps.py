@@ -100,7 +100,7 @@ def main(nodes, edges):
 
     client = parallel.Client()
     view = client.load_balanced_view()
-    print("submitting %i tasks with %i dependencies" % (nodes, edges))
+    print(f"submitting {nodes} tasks with {edges} dependencies")
     results = submit_jobs(view, G, jobs)
     print("waiting for results")
     client.wait_interactive()
