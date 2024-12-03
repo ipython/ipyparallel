@@ -364,7 +364,7 @@ def signal_children(children):
 
     def terminate_children(sig, frame):
         log = get_logger()
-        log.critical("Got signal %i, terminating children..." % sig)
+        log.critical("Got signal %i, terminating children...", sig)
         for child in children:
             child.terminate()
 

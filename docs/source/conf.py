@@ -95,7 +95,7 @@ master_doc = 'index'
 from datetime import date
 
 project = 'ipyparallel'
-copyright = '%04d, The IPython Development Team' % date.today().year
+copyright = f'{date.today().year}, The IPython Development Team'
 author = 'The IPython Development Team'
 
 # The version info for the project you're documenting, acts as replacement for

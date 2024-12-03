@@ -161,11 +161,11 @@ class CompositeError(RemoteError):
             engine_str = self._get_engine_str(ei)
             s = s + '\n' + engine_str + en + ': ' + str(ev)
         if len(self.elist) > self.tb_limit:
-            s = s + '\n.... %i more exceptions ...' % (len(self.elist) - self.tb_limit)
+            s = s + f'\n.... {len(self.elist) - self.tb_limit} more exceptions ...'
         return s
 
     def __repr__(self):
-        return "CompositeError(%i)" % len(self.elist)
+        return f"CompositeError({len(self.elist)})"
 
     def render_traceback(self, excid=None):
         """render one or all of my tracebacks to a list of lines"""
@@ -177,13 +177,13 @@ class CompositeError(RemoteError):
                 lines.append('')
             if len(self.elist) > self.tb_limit:
                 lines.append(
-                    '... %i more exceptions ...' % (len(self.elist) - self.tb_limit)
+                    f'... {len(self.elist) - self.tb_limit} more exceptions ...'
                 )
         else:
             try:
                 en, ev, etb, ei = self.elist[excid]
             except Exception:
-                raise IndexError("an exception with index %i does not exist" % excid)
+                raise IndexError(f"an exception with index {excid} does not exist")
             else:
                 lines.append(self._get_engine_str(ei) + ":")
                 lines.extend((etb or 'No traceback available').splitlines())
@@ -197,7 +197,7 @@ class CompositeError(RemoteError):
         try:
             en, ev, etb, ei = self.elist[excid]
         except Exception:
-            raise IndexError("an exception with index %i does not exist" % excid)
+            raise IndexError(f"an exception with index {excid} does not exist")
         else:
             raise RemoteError(en, ev, etb, ei)
 

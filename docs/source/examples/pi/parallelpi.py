@@ -29,8 +29,8 @@ from pidigits import (
 import ipyparallel as ipp
 
 # Files with digits of pi (10m digits each)
-filestring = 'pi200m.ascii.%(i)02dof20'
-files = [filestring % {'i': i} for i in range(1, 21)]
+filestring = 'pi200m.ascii.{}of20'
+files = [filestring.format(i) for i in range(1, 21)]
 
 # Connect to the IPython cluster
 c = ipp.Client()
@@ -42,7 +42,7 @@ id0 = c.ids[0]
 v = c[:]
 v.block = True
 # fetch the pi-files
-print("downloading %i files of pi" % n)
+print(f"downloading {n} files of pi")
 v.map(fetch_pi_file, files[:n])  # noqa: F821
 print("done")
 
@@ -60,10 +60,10 @@ freqs_all = v.map(compute_two_digit_freqs, files[:n])
 freqs150m = reduce_freqs(freqs_all)
 t2 = clock()
 digits_per_second8 = n * 10.0e6 / (t2 - t1)
-print("Digits per second (%i engines, %i0m digits): " % (n, n), digits_per_second8)
+print(f"Digits per second ({n} engines, {n}0m digits): ", digits_per_second8)
 
 print("Speedup: ", digits_per_second8 / digits_per_second1)
 
 plot_two_digit_freqs(freqs150m)
-plt.title("2 digit sequences in %i0m digits of pi" % n)
+plt.title(f"2 digit sequences in {n}0m digits of pi")
 plt.show()

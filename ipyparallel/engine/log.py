@@ -15,6 +15,6 @@ class EnginePUBHandler(PUBHandler):
         """this is a property, in case the handler is created
         before the engine gets registered with an id"""
         if isinstance(getattr(self.engine, 'id', None), int):
-            return "engine.%i" % self.engine.id
+            return f"engine.{self.engine.id}"
         else:
             return "engine"

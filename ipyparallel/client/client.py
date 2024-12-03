@@ -153,7 +153,7 @@ class ExecuteReply(RichOutput):
         if len(text_out) > 32:
             text_out = text_out[:29] + '...'
 
-        return "<ExecuteReply[%i]: %s>" % (self.execution_count, text_out)
+        return f"<ExecuteReply[{self.execution_count}]: {text_out}>"
 
     def _plaintext(self):
         execute_result = self.metadata['execute_result'] or {'data': {}}

@@ -30,7 +30,7 @@ def sleep_here(count, t):
     import sys
     import time
 
-    print("hi from engine %i" % id)
+    print(f"hi from engine {id}")
     sys.stdout.flush()
     time.sleep(t)
     return count, t
@@ -52,7 +52,7 @@ while pending:
     for msg_id in finished:
         # we know these are done, so don't worry about blocking
         ar = rc.get_result(msg_id)
-        print("job id %s finished on engine %i" % (msg_id, ar.engine_id))
+        print(f"job id {msg_id} finished on engine {ar.engine_id}")
         print("with stdout:")
         print('    ' + ar.stdout.replace('\n', '\n    ').rstrip())
         print("and results:")
@@ -60,4 +60,4 @@ while pending:
         # note that each job in a map always returns a list of length chunksize
         # even if chunksize == 1
         for count, t in ar.get():
-            print("  item %i: slept for %.2fs" % (count, t))
+            print(f"  item {count}: slept for {t:.2f}s")
