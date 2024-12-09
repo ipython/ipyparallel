@@ -31,7 +31,8 @@ def mongo_conn(request):
         conn_kwargs['port'] = int(os.environ['DB_PORT'])
 
     try:
-        c = MongoClient(**conn_kwargs)
+        c = MongoClient(**conn_kwargs, serverSelectionTimeoutMS = 2000)
+        servinfo = c.server_info()
     except Exception:
         c = None
     if c is not None:
