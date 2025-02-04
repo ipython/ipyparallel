@@ -612,7 +612,7 @@ class IPEngine(BaseParallelApplication):
 
         def url(key):
             """get zmq url for given channel"""
-            return str(info["interface"] + ":%i" % info[key])
+            return f"{info['interface']}:{info[key]}"
 
         def urls(key):
             return [f'{info["interface"]}:{port}' for port in info[key]]
@@ -777,7 +777,7 @@ class IPEngine(BaseParallelApplication):
             content['hb_period'],
             identity,
         )
-        self.log.info("Completed registration with id %i" % self.id)
+        self.log.info("Completed registration with id %i", self.id)
 
     def start_nanny(self, control_url):
         self.log.info("Starting nanny")
@@ -809,7 +809,7 @@ class IPEngine(BaseParallelApplication):
             self._hb_listener = zmqstream.ZMQStream(mon, self.loop)
             self._hb_listener.on_recv(self._report_ping)
 
-            hb_monitor = "tcp://%s:%i" % (localhost(), mport)
+            hb_monitor = f"tcp://{localhost()}:{mport}"
 
         heart = Heart(
             hb_ping,

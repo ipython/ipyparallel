@@ -38,19 +38,19 @@ class TestDependency(ClusterTestCase):
         assert dep.check(self.succeeded, self.failed), "Dependency should be met"
 
     def assertUnmet(self, dep):
-        assert not dep.check(
-            self.succeeded, self.failed
-        ), "Dependency should not be met"
+        assert not dep.check(self.succeeded, self.failed), (
+            "Dependency should not be met"
+        )
 
     def assertUnreachable(self, dep):
-        assert dep.unreachable(
-            self.succeeded, self.failed
-        ), "Dependency should be unreachable"
+        assert dep.unreachable(self.succeeded, self.failed), (
+            "Dependency should be unreachable"
+        )
 
     def assertReachable(self, dep):
-        assert not dep.unreachable(
-            self.succeeded, self.failed
-        ), "Dependency should be reachable"
+        assert not dep.unreachable(self.succeeded, self.failed), (
+            "Dependency should be reachable"
+        )
 
     def cancan(self, f):
         """decorator to pass through canning into self.user_ns"""

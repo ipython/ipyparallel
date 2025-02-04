@@ -61,7 +61,7 @@ class RectPartitioner:
 
         nsd_ = self.nsd
         if nsd_ < 1:
-            print('Number of space dimensions is %d, nothing to do' % nsd_)
+            print(f'Number of space dimensions is {nsd_}, nothing to do')
             return
 
         self.subd_rank = [-1, -1, -1]
@@ -93,7 +93,7 @@ class RectPartitioner:
             self.subd_rank[1] = (my_id % offsets[2]) / self.num_parts[0]
             self.subd_rank[2] = my_id / offsets[2]
 
-        print("my_id=%d, subd_rank: " % my_id, self.subd_rank)
+        print(f"my_id={my_id}, subd_rank: {self.subd_rank}")
         if my_id == 0:
             print("offsets=", offsets)
 

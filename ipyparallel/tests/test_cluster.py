@@ -168,7 +168,7 @@ async def test_restart_engines(Cluster):
             await asyncio.sleep(0.1)
             if time.monotonic() > deadline:
                 raise TimeoutError(
-                    f"timeout waiting for engines 0-{n-1} to unregister, {rc.ids=}"
+                    f"timeout waiting for engines 0-{n - 1} to unregister, {rc.ids=}"
                 )
         # wait for register
         rc.wait_for_engines(n, timeout=_timeout)

@@ -564,8 +564,7 @@ class Hub(LoggingConfigurable):
             msg = self.session.deserialize(msg)
         except Exception as e:
             self.log.error(
-                f'broadcast:: client {client_id} sent invalid broadcast message:'
-                f' {msg}',
+                f'broadcast:: client {client_id} sent invalid broadcast message: {msg}',
                 exc_info=True,
             )
             return
@@ -588,7 +587,7 @@ class Hub(LoggingConfigurable):
             msg = self.session.deserialize(msg)
         except Exception as e:
             self.log.error(
-                f'broadcast::invalid broadcast result message send to {client_id}:' f''
+                f'broadcast::invalid broadcast result message send to {client_id}:'
             )
 
         # save the result of a completed broadcast
@@ -1246,7 +1245,7 @@ class Hub(LoggingConfigurable):
                 for eid in eids:
                     if eid not in self.engines:
                         try:
-                            raise IndexError("No such engine: %i" % eid)
+                            raise IndexError(f"No such engine: {eid}")
                         except Exception:
                             reply = error.wrap_exception()
                             self.log.exception("Error dropping records")

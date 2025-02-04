@@ -27,8 +27,8 @@ class EngineCommunicator:
         northport = self.north.bind_to_random_port(interface)
         eastport = self.east.bind_to_random_port(interface)
 
-        self.north_url = interface + ":%i" % northport
-        self.east_url = interface + ":%i" % eastport
+        self.north_url = f"{interface}:{northport}"
+        self.east_url = f"{interface}:{eastport}"
 
         # guess first public IP from socket
         self.location = socket.gethostbyname_ex(socket.gethostname())[-1][0]

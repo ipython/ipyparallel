@@ -106,8 +106,7 @@ class HeartMonitor(LoggingConfigurable):
     period = Integer(
         3000,
         config=True,
-        help='The frequency at which the Hub pings the engines for heartbeats '
-        '(in ms)',
+        help='The frequency at which the Hub pings the engines for heartbeats (in ms)',
     )
     max_heartmonitor_misses = Integer(
         10,

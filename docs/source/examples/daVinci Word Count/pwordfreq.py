@@ -57,7 +57,7 @@ if __name__ == '__main__':
     freqs = wordfreq(text)
     toc = time.time()
     print_wordfreq(freqs, 10)
-    print("Took %.3f s to calculate" % (toc - tic))
+    print(f"Took {toc - tic:.3f}s to calculate")
 
     # The parallel version
     print("\nParallel word frequency count:")
@@ -68,18 +68,18 @@ if __name__ == '__main__':
     block = nlines // n
     for i in range(n):
         chunk = lines[i * block : i * (block + 1)]
-        with open('davinci%i.txt' % i, 'w', encoding='utf8') as f:
+        with open(f'davinci{i}.txt', 'w', encoding='utf8') as f:
             f.write('\n'.join(chunk))
 
     try:  # python2
         cwd = os.path.abspath(os.getcwdu())
     except AttributeError:  # python3
         cwd = os.path.abspath(os.getcwd())
-    fnames = [os.path.join(cwd, 'davinci%i.txt' % i) for i in range(n)]
+    fnames = [os.path.join(cwd, f'davinci{i}.txt') for i in range(n)]
     tic = time.time()
     pfreqs = pwordfreq(view, fnames)
     toc = time.time()
     print_wordfreq(freqs)
-    print("Took %.3f s to calculate on %i engines" % (toc - tic, len(view.targets)))
+    print(f"Took {toc - tic:.3f} s to calculate on {len(view.targets)} engines")
     # cleanup split files
     map(os.remove, fnames)

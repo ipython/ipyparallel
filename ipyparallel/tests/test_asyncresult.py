@@ -242,9 +242,9 @@ class TestAsyncResult(ClusterTestCase):
             hr = rc2.get_result(ar.msg_ids)
             assert hr.elapsed > 0.0, f"got bad elapsed: {hr.elapsed}"
             hr.get(1)
-            assert (
-                hr.wall_time < ar.wall_time + 0.2
-            ), f"got bad wall_time: {hr.wall_time} > {ar.wall_time}"
+            assert hr.wall_time < ar.wall_time + 0.2, (
+                f"got bad wall_time: {hr.wall_time} > {ar.wall_time}"
+            )
             assert hr.serial_time == ar.serial_time
         finally:
             rc2.close()

@@ -324,9 +324,9 @@ class TestParallelMagics(ClusterTestCase):
         # Check that all expected lines are in the output
         self._check_expected_lines_unordered(expected, lines)
 
-        assert (
-            len(expected) - len(v) <= len(lines) <= len(expected)
-        ), f"expected {len(expected)} lines, got: {io.stdout}"
+        assert len(expected) - len(v) <= len(lines) <= len(expected), (
+            f"expected {len(expected)} lines, got: {io.stdout}"
+        )
 
         # Do the same for stderr
         print(io.stderr, file=sys.stderr)
@@ -343,9 +343,9 @@ class TestParallelMagics(ClusterTestCase):
             * len(v)
         )
         self._check_expected_lines_unordered(expected, lines)
-        assert (
-            len(expected) - len(v) <= len(lines) <= len(expected)
-        ), f"expected {len(expected)} lines, got: {io.stderr}"
+        assert len(expected) - len(v) <= len(lines) <= len(expected), (
+            f"expected {len(expected)} lines, got: {io.stderr}"
+        )
 
     def test_px_nonblocking(self):
         ip = get_ipython()
