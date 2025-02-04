@@ -60,10 +60,7 @@ def main():
     ]
     stime = sum(times)
 
-    print(
-        "executing %i tasks, totalling %.1f secs on %i engines"
-        % (opts.n, stime, nengines)
-    )
+    print(f"executing {opts.n} tasks, totalling {stime:.1f} secs on {nengines} engines")
     time.sleep(1)
     start = time.perf_counter()
     amr = view.map(time.sleep, times)
@@ -74,8 +71,8 @@ def main():
     scale = stime / ptime
 
     print(f"executed {stime:.1f} secs in {ptime:.1f} secs")
-    print("%.3fx parallel performance on %i engines" % (scale, nengines))
-    print("%.1f%% of theoretical max" % (100 * scale / nengines))
+    print(f"{scale:3f}x parallel performance on {nengines} engines")
+    print(f"{scale / nengines:.0%} of theoretical max")
 
 
 if __name__ == '__main__':

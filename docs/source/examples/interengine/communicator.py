@@ -21,8 +21,8 @@ class EngineCommunicator:
         # bind to ports
         port = self.socket.bind_to_random_port(interface)
         pub_port = self.pub.bind_to_random_port(interface)
-        self.url = interface + ":%i" % port
-        self.pub_url = interface + ":%i" % pub_port
+        self.url = f"{interface}:{port}"
+        self.pub_url = f"{interface}:{pub_port}"
         # guess first public IP from socket
         self.location = socket.gethostbyname_ex(socket.gethostname())[-1][0]
         self.peers = {}

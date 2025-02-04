@@ -1245,7 +1245,7 @@ class Hub(LoggingConfigurable):
                 for eid in eids:
                     if eid not in self.engines:
                         try:
-                            raise IndexError("No such engine: %i" % eid)
+                            raise IndexError(f"No such engine: {eid}")
                         except Exception:
                             reply = error.wrap_exception()
                             self.log.exception("Error dropping records")

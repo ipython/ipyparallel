@@ -127,11 +127,7 @@ if __name__ == '__main__':
         num_procs = min(num_procs, partition[0] * partition[1])
 
     assert partition[0] * partition[1] == num_procs, (
-        "can't map partition %s to %i engines"
-        % (
-            partition,
-            num_procs,
-        )
+        f"can't map partition {partition} to {num_procs} engines"
     )
 
     # construct the View:

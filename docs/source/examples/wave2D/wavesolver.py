@@ -303,14 +303,7 @@ class WaveSolver:
 
         t1 = time.time()
         print(
-            'my_id=%2d, dt=%g, %s version, slice_copy=%s, net Wtime=%g'
-            % (
-                partitioner.my_id,
-                dt,
-                implementation['inner'],
-                partitioner.slice_copy,
-                t1 - t0,
-            )
+            f'my_id={partitioner.my_id:2}, dt={dt:g}, {implementation["inner"]} version, slice_copy={partitioner.slice_copy}, net Wtime={t1 - t0:g}'
         )
         # save the us
         self.us = u, u_1, u_2

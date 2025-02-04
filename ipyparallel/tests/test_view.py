@@ -553,7 +553,7 @@ class TestView(ClusterTestCase):
         e0.block = True
         ar = e0.execute("5", silent=False)
         er = ar.get()
-        assert str(er) == "<ExecuteReply[%i]: 5>" % er.execution_count
+        assert str(er) == f"<ExecuteReply[{er.execution_count}]: 5>"
         assert er.execute_result['data']['text/plain'] == '5'
 
     def test_execute_reply_rich(self):

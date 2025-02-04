@@ -34,10 +34,10 @@ print("Engine IDs: ", dv['id'])
 # create a Reference to `id`. This will be a different value on each engine
 ref = ipp.Reference('id')
 print("sleeping for `id` seconds on each engine")
-tic = time.time()
+tic = time.perf_counter()
 ar = dv.apply(time.sleep, ref)
 for i, r in enumerate(ar):
-    print("%i: %.3f" % (i, time.time() - tic))
+    print(f"{i}: {time.perf_counter() - tic:.3f}")
 
 
 def sleep_here(t):
@@ -50,22 +50,22 @@ def sleep_here(t):
 # one call per task
 print("running with one call per task")
 amr = v.map(sleep_here, [0.01 * t for t in range(100)])
-tic = time.time()
+tic = time.perf_counter()
 for i, r in enumerate(amr):
-    print("task %i on engine %i: %.3f" % (i, r[0], time.time() - tic))
+    print(f"task {i} on engine {r[0]}: {time.perf_counter() - tic:.3f}")
 
 print("running with four calls per task")
 # with chunksize, we can have four calls per task
 amr = v.map(sleep_here, [0.01 * t for t in range(100)], chunksize=4)
-tic = time.time()
+tic = time.perf_counter()
 for i, r in enumerate(amr):
-    print("task %i on engine %i: %.3f" % (i, r[0], time.time() - tic))
+    print(f"task {i} on engine {r[0]}: {time.perf_counter() - tic:.3f}")
 
 print("running with two calls per task, with unordered results")
 # We can even iterate through faster results first, with ordered=False
 amr = v.map(
     sleep_here, [0.01 * t for t in range(100, 0, -1)], ordered=False, chunksize=2
 )
-tic = time.time()
+tic = time.perf_counter()
 for i, r in enumerate(amr):
-    print("slept %.2fs on engine %i: %.3f" % (r[1], r[0], time.time() - tic))
+    print(f"slept {r[1]:.2f}s on engine {r[0]}: {time.perf_counter() - tic:.3f}")
