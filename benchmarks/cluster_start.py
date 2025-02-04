@@ -15,7 +15,7 @@ def start_cluster(depth, number_of_engines, path='', log_output_to_file=False):
         f'--HubFactory.db_class=NoDB'
     )
     print(ipcontroller_cmd)
-    ipengine_cmd = f'{path}ipengine --profile=asv ' f'--cluster-id=depth_{depth} '
+    ipengine_cmd = f'{path}ipengine --profile=asv --cluster-id=depth_{depth} '
     ps = [
         Popen(
             ipcontroller_cmd.split(),

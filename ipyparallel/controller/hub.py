@@ -564,8 +564,7 @@ class Hub(LoggingConfigurable):
             msg = self.session.deserialize(msg)
         except Exception as e:
             self.log.error(
-                f'broadcast:: client {client_id} sent invalid broadcast message:'
-                f' {msg}',
+                f'broadcast:: client {client_id} sent invalid broadcast message: {msg}',
                 exc_info=True,
             )
             return
@@ -588,7 +587,7 @@ class Hub(LoggingConfigurable):
             msg = self.session.deserialize(msg)
         except Exception as e:
             self.log.error(
-                f'broadcast::invalid broadcast result message send to {client_id}:' f''
+                f'broadcast::invalid broadcast result message send to {client_id}:'
             )
 
         # save the result of a completed broadcast

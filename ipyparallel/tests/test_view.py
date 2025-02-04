@@ -933,9 +933,9 @@ class TestView(ClusterTestCase):
         view = self.client[:]
         # enable cloudpickle
         view.use_cloudpickle()
-        assert (
-            'types' not in globals()
-        ), "Test condition isn't met if types is already imported"
+        assert 'types' not in globals(), (
+            "Test condition isn't met if types is already imported"
+        )
 
         @ipp.require("types")
         @ipp.interactive
