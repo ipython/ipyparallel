@@ -165,9 +165,7 @@ class ExecuteReply(RichOutput):
             # add newline for multiline reprs
             text_out = '\n' + text_out
 
-        return (
-            f"Out[{self.metadata['engine_id']}:{self.execution_count}]: {text_out}",
-        )
+        return f"Out[{self.metadata['engine_id']}:{self.execution_count}]: {text_out}"
 
     def _repr_pretty_(self, p, cycle):
         p.text(self._plaintext())
