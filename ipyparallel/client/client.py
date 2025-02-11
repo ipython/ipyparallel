@@ -26,7 +26,6 @@ from IPython.core.application import BaseIPythonApplication
 from IPython.core.profiledir import ProfileDir, ProfileDirError
 from IPython.paths import get_ipython_dir
 from IPython.utils.capture import RichOutput
-from IPython.utils.coloransi import TermColors
 from IPython.utils.path import compress_user
 from jupyter_client.localinterfaces import is_local_ip, localhost
 from jupyter_client.session import Session
@@ -155,37 +154,18 @@ class ExecuteReply(RichOutput):
 
         return f"<ExecuteReply[{self.execution_count}]: {text_out}>"
 
-    def _plaintext(self):
+    def _plaintext(self) -> str:
         execute_result = self.metadata['execute_result'] or {'data': {}}
         text_out = execute_result['data'].get('text/plain', '')
 
         if not text_out:
             return ''
 
-        ip = get_ipython()
-        if ip is None:
-            colors = "NoColor"
-        else:
-            colors = ip.colors
-
-        if colors == "NoColor":
-            out = normal = ""
-        else:
-            out = TermColors.Red
-            normal = TermColors.Normal
-
         if '\n' in text_out and not text_out.startswith('\n'):
             # add newline for multiline reprs
             text_out = '\n' + text_out
 
-        return ''.join(
-            [
-                out,
-                f"Out[{self.metadata['engine_id']}:{self.execution_count}]: ",
-                normal,
-                text_out,
-            ]
-        )
+        return f"Out[{self.metadata['engine_id']}:{self.execution_count}]: {text_out}"
 
     def _repr_pretty_(self, p, cycle):
         p.text(self._plaintext())
