@@ -8,7 +8,7 @@ build-backend = "hatchling.build"
 [project]
 name = "ipyparallel"
 version = "9.1.0.dev"
-authors = [{name = "IPython Development Team", email = "ipython-dev@scipy.org"}]
+authors = [{name = "IPython Development Team", email = "ipython-dev@python.org"}]
 license = {file = "COPYING.md"}
 readme = "README.md"
 description = "Interactive Parallel Computing with IPython"
