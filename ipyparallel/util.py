@@ -13,7 +13,6 @@ import socket
 import sys
 import warnings
 from datetime import datetime, timezone
-from enum import Enum
 from functools import lru_cache, partial
 from signal import SIGABRT, SIGINT, SIGTERM, signal
 from threading import Thread, current_thread
@@ -841,6 +840,6 @@ class _OutputProducingThread(Thread):
 
 # minimal subset of TermColors, removed from IPython
 # not for public consumption
-class _TermColors(Enum):
+class _TermColors:
     Normal = '\033[0m'
     Red = '\033[0;31m'
