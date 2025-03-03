@@ -49,6 +49,7 @@ import ipyparallel as ipp
 from ipyparallel import error, serialize, util
 from ipyparallel.serialize import PrePickled, Reference
 from ipyparallel.util import _OutputProducingThread as Thread
+from ipyparallel.util import _TermColors
 
 from .asyncresult import AsyncHubResult, AsyncResult
 from .futures import MessageFuture, multi_future
@@ -161,11 +162,30 @@ class ExecuteReply(RichOutput):
         if not text_out:
             return ''
 
+        ip = get_ipython()
+        if ip is None:
+            colors = "NoColor"
+        else:
+            colors = ip.colors
+
+        if colors == "NoColor":
+            out = normal = ""
+        else:
+            out = _TermColors.Red
+            normal = _TermColors.Normal
+
         if '\n' in text_out and not text_out.startswith('\n'):
             # add newline for multiline reprs
             text_out = '\n' + text_out
 
-        return f"Out[{self.metadata['engine_id']}:{self.execution_count}]: {text_out}"
+        return ''.join(
+            [
+                out,
+                f"Out[{self.metadata['engine_id']}:{self.execution_count}]: ",
+                normal,
+                text_out,
+            ]
+        )
 
     def _repr_pretty_(self, p, cycle):
         p.text(self._plaintext())
