@@ -4,7 +4,15 @@
 
 Changes in IPython Parallel
 
-## 9.0 - 2024-11
+## 9.0
+
+### 9.0.1 - 2025-03
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/9.0.0...9.0.1))
+
+9.0.1 fixes compatibility with IPython 9.0.
+
+### 9.0.0 - 2024-11
 
 ([full changelog](https://github.com/ipython/ipyparallel/compare/8.8.0...9.0.0))
 
