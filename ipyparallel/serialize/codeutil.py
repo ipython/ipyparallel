@@ -29,11 +29,12 @@ _code_attr_map = {
 # pass every supported arg to the code constructor
 # this should be more forward-compatible
 # (broken on pypy: https://github.com/ipython/ipyparallel/issues/845)
-if sys.version_info >= (3, 10) and not hasattr(sys, "pypy_version_info"):
+if sys.version_info >= (3, 10) and getattr(sys, "pypy_version_info", (7, 3, 19)) >= (7, 3, 19):
     _code_attr_names = tuple(
         _code_attr_map.get(name, name)
         for name, param in inspect.signature(types.CodeType).parameters.items()
-        if param.POSITIONAL_ONLY or param.POSITIONAL_OR_KEYWORD
+        if (param.POSITIONAL_ONLY or param.POSITIONAL_OR_KEYWORD)
+        and not (hasattr(sys, "pypy_version_info") and name == "magic")
     )
 else:
     # can't inspect types.CodeType on Python < 3.10
