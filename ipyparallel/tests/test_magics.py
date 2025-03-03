@@ -173,18 +173,18 @@ class TestParallelMagics(ClusterTestCase):
         expected.extend(
             [
                 r'\[output:\d+\]',
-                'IPython.core.display.HTML',
+                'IPython..+.HTML',
             ]
             * len(v)
         )
         expected.extend(
             [
                 r'\[output:\d+\]',
-                'IPython.core.display.Math',
+                'IPython..+.Math',
             ]
             * len(v)
         )
-        expected.extend([r'Out\[\d+:\d+\]:.*IPython\.core\.display\.Math'] * len(v))
+        expected.extend([r'Out\[\d+:\d+\]:.*IPython\..+\.Math'] * len(v))
 
         assert len(lines), len(expected) == io.stdout
         for line, expect in zip(lines, expected):

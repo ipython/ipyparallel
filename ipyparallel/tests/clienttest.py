@@ -55,7 +55,7 @@ def generate_output():
     a rich displayable object.
     """
 
-    from IPython.core.display import HTML, Math, display
+    from IPython.display import HTML, Math, display
 
     print("stdout")
     print("stderr", file=sys.stderr)
