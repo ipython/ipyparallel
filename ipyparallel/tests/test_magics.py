@@ -440,8 +440,8 @@ class TestParallelMagics(ClusterTestCase):
                 ip.run_line_magic('pxresult', '')
             assert str(data[name]) in io.stdout
 
-    def test_px_pylab(self):
-        """%pylab works on engines"""
+    def test_px_matplotlib(self):
+        """%matplotlib inline works on engines"""
         pytest.importorskip('matplotlib')
         ip = get_ipython()
         v = self.client[-1]
@@ -449,15 +449,19 @@ class TestParallelMagics(ClusterTestCase):
         v.activate()
 
         with capture_output() as io:
-            ip.run_line_magic("px", "%pylab inline")
-
-        assert (
-            "Populating the interactive namespace from numpy and matplotlib"
-            in io.stdout
-        )
+            ip.run_line_magic(
+                "px",
+                "\n".join(
+                    [
+                        "%matplotlib inline",
+                        "import numpy as np",
+                        "import matplotlib.pyplot as plt",
+                    ]
+                ),
+            )
 
         with capture_output(display=False) as io:
-            ip.run_line_magic("px", "plot(rand(100))")
+            ip.run_line_magic("px", "plt.plot(np.random.rand(100))")
         assert 'Out[' in io.stdout
         assert 'matplotlib.lines' in io.stdout
 
