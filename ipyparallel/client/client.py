@@ -168,7 +168,7 @@ class ExecuteReply(RichOutput):
         else:
             colors = ip.colors
 
-        if colors == "NoColor":
+        if colors.lower() == "nocolor":
             out = normal = ""
         else:
             out = _TermColors.Red
