@@ -758,6 +758,8 @@ class IPEngine(BaseParallelApplication):
             if self.use_mpi and self.init_mpi:
                 app.exec_lines.insert(0, self.init_mpi)
             app.init_profile_dir()
+            app.init_gui_pylab()
+            app.init_extensions()
             app.init_code()
 
             # redirect output at the end, only after start is called

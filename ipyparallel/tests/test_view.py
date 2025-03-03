@@ -614,7 +614,7 @@ class TestView(ClusterTestCase):
     def test_execute_displaypub(self):
         """execute tracks display_pub output"""
         view = self.client[:]
-        view.execute("from IPython.core.display import *")
+        view.execute("from IPython.display import *")
         ar = view.execute("[ display(i) for i in range(5) ]", block=True)
 
         expected = [{'text/plain': str(j)} for j in range(5)]
@@ -625,7 +625,7 @@ class TestView(ClusterTestCase):
     def test_apply_displaypub(self):
         """apply tracks display_pub output"""
         view = self.client[:]
-        view.execute("from IPython.core.display import *")
+        view.execute("from IPython.display import *")
 
         @interactive
         def publish():

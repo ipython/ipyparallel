@@ -836,3 +836,10 @@ class _OutputProducingThread(Thread):
     def _wrapped_target(self, target, *args, **kwargs):
         _detach_thread_output(self.ident)
         return target(*args, **kwargs)
+
+
+# minimal subset of TermColors, removed from IPython
+# not for public consumption
+class _TermColors:
+    Normal = '\033[0m'
+    Red = '\033[0;31m'
