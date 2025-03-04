@@ -29,7 +29,11 @@ _code_attr_map = {
 # pass every supported arg to the code constructor
 # this should be more forward-compatible
 # (broken on pypy: https://github.com/ipython/ipyparallel/issues/845)
-if sys.version_info >= (3, 10) and getattr(sys, "pypy_version_info", (7, 3, 19)) >= (7, 3, 19):
+if sys.version_info >= (3, 10) and getattr(sys, "pypy_version_info", (7, 3, 19)) >= (
+    7,
+    3,
+    19,
+):
     _code_attr_names = tuple(
         _code_attr_map.get(name, name)
         for name, param in inspect.signature(types.CodeType).parameters.items()
