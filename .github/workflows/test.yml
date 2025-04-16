@@ -22,7 +22,7 @@ env:
 
 jobs:
   test:
-    runs-on: ${{ matrix.runs_on || 'ubuntu-20.04' }}
+    runs-on: ${{ matrix.runs_on || 'ubuntu-24.04' }}
     timeout-minutes: 20
 
     strategy:
@@ -31,12 +31,12 @@ jobs:
       matrix:
         include:
           - python: "3.9"
-          - python: "3.8"
             cluster_type: mpi
           - python: "3.10"
             cluster_type: slurm
             container: slurmctld
           - python: "3.8"
+            runs_on: 22.04
           - python: "3.10"
             env:
               IPP_CONTROLLER_IP: "*"
