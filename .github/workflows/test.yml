@@ -5,6 +5,7 @@ on:
   push:
     branches-ignore:
       - "pre-commit-ci*"
+      - "dependabot/**"
 
 concurrency:
   group: >-
