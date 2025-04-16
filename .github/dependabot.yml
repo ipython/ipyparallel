@@ -14,6 +14,15 @@ updates:
       interval: monthly
     groups:
       # one big pull request
-      lab:
+      lab-minor:
         patterns:
           - "*"
+        update-types:
+          - minor
+          - patch
+      # group major bumps
+      lab-major:
+        patterns:
+          - "*"
+        update-types:
+          - major
