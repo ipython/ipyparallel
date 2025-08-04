@@ -199,8 +199,8 @@ define(["base/js/namespace", "jquery", "base/js/utils"], function (
           that.cluster_list.load_list();
         },
         error: function (xhr, status, error) {
-          utils.log_ajax_error(xhr, status, error),
-            status_col.text("error stopping cluster");
+          (utils.log_ajax_error(xhr, status, error),
+            status_col.text("error stopping cluster"));
         },
       };
       status_col.text("stopping");
