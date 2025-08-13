@@ -228,7 +228,6 @@ The {class}`~.ipyparallel.Cluster` and {class}`~.ipyparallel.Client` classes can
 for easier cleanup of resources.
 
 - Entering a `Cluster` context
-
   1. starts the cluster
   2. waits for engines to be ready
   3. connects a client
