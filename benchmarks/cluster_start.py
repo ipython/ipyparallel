@@ -3,8 +3,9 @@ import sys
 import time
 from subprocess import Popen
 
-import ipyparallel as ipp
 from benchmarks.throughput import wait_for
+
+import ipyparallel as ipp
 
 
 def start_cluster(depth, number_of_engines, path='', log_output_to_file=False):

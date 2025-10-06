@@ -6,9 +6,8 @@ from datetime import datetime
 from enum import Enum
 from itertools import product
 
-from utils import seconds_to_ms
-
 from benchmarks.constants import DEFAULT_NUMBER_OF_ENGINES
+from utils import seconds_to_ms
 
 RESULTS_DIR = "results"
 
