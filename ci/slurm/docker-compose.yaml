@@ -1,5 +1,3 @@
-version: "2.2"
-
 services:
   slurmctld:
     image: ipp-cluster:slurm

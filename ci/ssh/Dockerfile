@@ -1,4 +1,3 @@
-# syntax = docker/dockerfile:1.2.1
 FROM ubuntu:24.04
 RUN --mount=type=cache,target=/var/cache/apt \
     rm -f /etc/apt/apt.conf.d/docker-clean \
