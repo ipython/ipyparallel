@@ -32,8 +32,8 @@ repos:
           - --fix
           # isort rules get confused in the temporary files
           - --ignore=I
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.6.2
     hooks:
       - id: prettier
   - repo: https://github.com/pre-commit/pre-commit-hooks

@@ -4,7 +4,6 @@ import os
 import sys
 from subprocess import Popen, check_call
 from time import sleep
-from typing import List
 
 import googleapiclient.discovery as gcd
 
@@ -25,7 +24,7 @@ def generate_template_name(number_of_cores_and_ram):
     return f"{INSTANCE_NAME_PREFIX}{number_of_cores_and_ram}"
 
 
-def get_running_instance_names() -> List[str]:
+def get_running_instance_names() -> list[str]:
     result = compute.instances().list(project=PROJECT_NAME, zone=ZONE).execute()
     return [item["name"] for item in result["items"]] if "items" in result else []
 
