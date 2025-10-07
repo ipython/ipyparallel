@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:1.2.1
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN --mount=type=cache,target=/var/cache/apt \

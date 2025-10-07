@@ -30,25 +30,23 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - python: "3.9"
+          - python: "3.11"
             cluster_type: mpi
-          - python: "3.10"
+          - python: "3.12"
             cluster_type: slurm
             container: slurmctld
-          - python: "3.8"
-            runs_on: 22.04
           - python: "3.10"
             env:
               IPP_CONTROLLER_IP: "*"
-          - python: "3.9"
+          - python: "3.13"
             env:
               IPP_ENABLE_CURVE: "1"
-          - python: "3.8"
-            runs_on: windows-2019
-          - python: "3.9"
+          - python: "3.10"
+            runs_on: windows-2025
+          - python: "3.12"
             runs_on: macos-14
           - python: "3.11"
-          - python: "3.12"
+          - python: "3.14"
             pre: pre
 
     steps:

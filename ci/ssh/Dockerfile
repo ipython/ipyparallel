@@ -1,5 +1,5 @@
 # syntax = docker/dockerfile:1.2.1
-FROM ubuntu:20.04
+FROM ubuntu:24.04
 RUN --mount=type=cache,target=/var/cache/apt \
     rm -f /etc/apt/apt.conf.d/docker-clean \
  && apt-get update \
@@ -19,7 +19,7 @@ RUN ARCH=$(uname -m | sed s@x86_@@) \
 
 RUN --mount=type=cache,target=${MAMBA_ROOT_PREFIX}/pkgs \
     micromamba install -y -p $MAMBA_ROOT_PREFIX -c conda-forge \
-        python=3.8 \
+        python=3.10 \
         pip \
         ipyparallel
 
