@@ -32,9 +32,8 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
 ]
 urls = {Homepage = "https://ipython.org"}
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 dependencies = [
-    "importlib_metadata>=3.6; python_version < '3.10'",
     "decorator",
     "pyzmq>=25",
     "traitlets>=5",
@@ -106,9 +105,6 @@ artifacts = [
 
 [tool.black]
 skip-string-normalization = true
-target_version = [
-    "py38",
-]
 python_cell_magics = ["px"]
 
 [tool.isort]

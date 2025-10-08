@@ -1,6 +1,6 @@
 import datetime
 import time
-from typing import Callable
+from collections.abc import Callable
 
 
 def wait_for(condition: Callable):

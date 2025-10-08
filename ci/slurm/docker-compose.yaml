@@ -1,84 +1,63 @@
-version: "2.2"
-
 services:
+  mysql:
+    image: mariadb:10.11
+    hostname: mysql
+    container_name: mysql
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: slurm_acct_db
+      MYSQL_USER: slurm
+      MYSQL_PASSWORD: password
+    volumes:
+      - var_lib_mysql:/var_lib/mysql
+
+  slurmdbd:
+    image: ipp-cluster:slurm
+    build: .
+    command:
+      - slurmdbd
+    container_name: slurmdbd
+    hostname: slurmdbd
+    volumes:
+      - etc_munge:/etc/munge
+      - var_log_slurm:/var/log/slurm
+    depends_on:
+      - mysql
+
   slurmctld:
     image: ipp-cluster:slurm
     build: .
+    command:
+      - slurmctld
     container_name: slurmctld
     hostname: slurmctld
-    command:
-      - tail
-      - "-f"
-      - /var/log/slurm-llnl/slurmctld.log
     volumes:
       - etc_munge:/etc/munge
-      - etc_slurm:/etc/slurm
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - ../..:/io
-    expose:
-      - "6817"
-    networks:
-      common-network:
-        ipv4_address: 10.1.1.10
-
-  c1:
-    image: ipp-cluster:slurm
-    build: .
-    hostname: c1
-    command:
-      - tail
-      - "-f"
-      - /var/log/slurm-llnl/slurmd.log
-    container_name: c1
-
-    volumes:
-      - etc_munge:/etc/munge
-      - etc_slurm:/etc/slurm
-      - slurm_jobdir:/data
-      - var_log_slurm:/var/log/slurm
-      - ../..:/io
-    expose:
-      - "6818"
     depends_on:
-      - "slurmctld"
-    networks:
-      common-network:
-        ipv4_address: 10.1.1.11
+      - slurmdbd
 
-  c2:
+  compute:
     image: ipp-cluster:slurm
     build: .
     command:
-      - tail
-      - "-f"
-      - /var/log/slurm-llnl/slurmd.log
-    hostname: c2
-    container_name: c2
+      - slurmd
+    deploy:
+      replicas: 2
+
     volumes:
       - etc_munge:/etc/munge
-      - etc_slurm:/etc/slurm
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - ../..:/io
-    expose:
-      - "6818"
     depends_on:
       - "slurmctld"
-    networks:
-      common-network:
-        ipv4_address: 10.1.1.12
 
 volumes:
   etc_munge:
-  etc_slurm:
+  # etc_slurm:
   slurm_jobdir:
+  var_lib_mysql:
   var_log_slurm:
-
-networks:
-  common-network:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 10.1.1.0/24
