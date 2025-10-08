@@ -20,10 +20,7 @@ services:
     hostname: slurmdbd
     volumes:
       - etc_munge:/etc/munge
-      # - $PWD/etc_slurm:/etc/slurm
       - var_log_slurm:/var/log/slurm
-    expose:
-      - "6819"
     depends_on:
       - mysql
 
@@ -36,68 +33,27 @@ services:
     hostname: slurmctld
     volumes:
       - etc_munge:/etc/munge
-      # - $PWD/etc_slurm:/etc/slurm
-      # - $PWD/slurm.conf:/etc/slurm/slurm.conf
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - ../..:/io
-    expose:
-      - "6817"
-      - "6818"
     depends_on:
       - slurmdbd
-    # networks:
-    #   common-network:
-    #     ipv4_address: 10.1.1.10
 
-  c1:
+  compute:
     image: ipp-cluster:slurm
     build: .
     command:
       - slurmd
-    hostname: c1
-    container_name: c1
+    deploy:
+      replicas: 2
 
     volumes:
       - etc_munge:/etc/munge
-      # - $PWD/etc_slurm:/etc/slurm
-      # - $PWD/slurm.conf:/etc/slurm/slurm.conf
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - ../..:/io
-    expose:
-      - "6817"
-      - "6818"
     depends_on:
       - "slurmctld"
-    # networks:
-    #   common-network:
-    #     ipv4_address: 10.1.1.11
-
-  c2:
-    image: ipp-cluster:slurm
-    build: .
-    command:
-      - slurmd
-    hostname: c2
-    container_name: c2
-    # need to be privileged for cgroup plugin
-    privileged: true
-    volumes:
-      - etc_munge:/etc/munge
-      # - $PWD/etc_slurm:/etc/slurm
-      # - $PWD/slurm.conf:/etc/slurm/slurm.conf
-      - slurm_jobdir:/data
-      - var_log_slurm:/var/log/slurm
-      - ../..:/io
-    expose:
-      - "6817"
-      - "6818"
-    depends_on:
-      - "slurmctld"
-    # networks:
-    #   common-network:
-    #     ipv4_address: 10.1.1.12
 
 volumes:
   etc_munge:
@@ -105,11 +61,3 @@ volumes:
   slurm_jobdir:
   var_lib_mysql:
   var_log_slurm:
-
-networks:
-  common-network:
-    driver: bridge
-    ipam:
-      driver: default
-      config:
-        - subnet: 10.1.1.0/24

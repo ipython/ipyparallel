@@ -58,7 +58,7 @@ then
     echo "-- slurmctld is now active ..."
 
     echo "---> Starting the Slurm Node Daemon (slurmd) ..."
-    exec /usr/sbin/slurmd -Dvvv
+    exec /usr/sbin/slurmd -Z --conf "CPUs=2 RealMemory=1000 Feature=compute" -Dvvv 
 fi
 
 exec "$@"
