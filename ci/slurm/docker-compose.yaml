@@ -1,76 +1,109 @@
 services:
+  mysql:
+    image: mariadb:10.11
+    hostname: mysql
+    container_name: mysql
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: slurm_acct_db
+      MYSQL_USER: slurm
+      MYSQL_PASSWORD: password
+    volumes:
+      - var_lib_mysql:/var_lib/mysql
+
+  slurmdbd:
+    image: ipp-cluster:slurm
+    build: .
+    command:
+      - slurmdbd
+    container_name: slurmdbd
+    hostname: slurmdbd
+    volumes:
+      - etc_munge:/etc/munge
+      # - $PWD/etc_slurm:/etc/slurm
+      - var_log_slurm:/var/log/slurm
+    expose:
+      - "6819"
+    depends_on:
+      - mysql
+
   slurmctld:
     image: ipp-cluster:slurm
     build: .
+    command:
+      - slurmctld
     container_name: slurmctld
     hostname: slurmctld
-    command:
-      - tail
-      - "-f"
-      - /var/log/slurm-llnl/slurmctld.log
     volumes:
       - etc_munge:/etc/munge
-      - etc_slurm:/etc/slurm
+      # - $PWD/etc_slurm:/etc/slurm
+      # - $PWD/slurm.conf:/etc/slurm/slurm.conf
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - ../..:/io
     expose:
       - "6817"
-    networks:
-      common-network:
-        ipv4_address: 10.1.1.10
+      - "6818"
+    depends_on:
+      - slurmdbd
+    # networks:
+    #   common-network:
+    #     ipv4_address: 10.1.1.10
 
   c1:
     image: ipp-cluster:slurm
     build: .
-    hostname: c1
     command:
-      - tail
-      - "-f"
-      - /var/log/slurm-llnl/slurmd.log
+      - slurmd
+    hostname: c1
     container_name: c1
 
     volumes:
       - etc_munge:/etc/munge
-      - etc_slurm:/etc/slurm
+      # - $PWD/etc_slurm:/etc/slurm
+      # - $PWD/slurm.conf:/etc/slurm/slurm.conf
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - ../..:/io
     expose:
+      - "6817"
       - "6818"
     depends_on:
       - "slurmctld"
-    networks:
-      common-network:
-        ipv4_address: 10.1.1.11
+    # networks:
+    #   common-network:
+    #     ipv4_address: 10.1.1.11
 
   c2:
     image: ipp-cluster:slurm
     build: .
     command:
-      - tail
-      - "-f"
-      - /var/log/slurm-llnl/slurmd.log
+      - slurmd
     hostname: c2
     container_name: c2
+    # need to be privileged for cgroup plugin
+    privileged: true
     volumes:
       - etc_munge:/etc/munge
-      - etc_slurm:/etc/slurm
+      # - $PWD/etc_slurm:/etc/slurm
+      # - $PWD/slurm.conf:/etc/slurm/slurm.conf
       - slurm_jobdir:/data
       - var_log_slurm:/var/log/slurm
       - ../..:/io
     expose:
+      - "6817"
       - "6818"
     depends_on:
       - "slurmctld"
-    networks:
-      common-network:
-        ipv4_address: 10.1.1.12
+    # networks:
+    #   common-network:
+    #     ipv4_address: 10.1.1.12
 
 volumes:
   etc_munge:
-  etc_slurm:
+  # etc_slurm:
   slurm_jobdir:
+  var_lib_mysql:
   var_log_slurm:
 
 networks:
