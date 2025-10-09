@@ -42,8 +42,8 @@ jobs:
           - python: "3.9"
             env:
               IPP_ENABLE_CURVE: "1"
-          - python: "3.8"
-            runs_on: windows-2019
+          - python: "3.9"
+            runs_on: windows-2022
           - python: "3.9"
             runs_on: macos-14
           - python: "3.11"
