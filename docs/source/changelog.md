@@ -6,6 +6,12 @@ Changes in IPython Parallel
 
 ## 9.0
 
+### 9.0.2 - 2025-10
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/9.0.1...9.0.2))
+
+9.0.2 fixes compatibility with upcoming ipykernel 7 (as of alpha 3).
+
 ### 9.0.1 - 2025-03
 
 ([full changelog](https://github.com/ipython/ipyparallel/compare/9.0.0...9.0.1))
