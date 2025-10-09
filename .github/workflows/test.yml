@@ -21,7 +21,7 @@ env:
 
 jobs:
   test:
-    runs-on: ${{ matrix.runs_on || 'ubuntu-20.04' }}
+    runs-on: ${{ matrix.runs_on || 'ubuntu-22.04' }}
     timeout-minutes: 20
 
     strategy:
