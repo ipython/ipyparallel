@@ -384,6 +384,10 @@ linkcheck_ignore = [
     "https://github.com/search",  # github search links
     "https://github.com/ipython/ipyparallel/compare/",  # too many comparisons in changelog
     r"https?://(localhost|127.0.0.1).*",  # ignore localhost references in auto-links
+    # requests from CI blocked
+    r"https://www.mcs.anl.gov/.*",
+    r"https://www.mcs.anl.gov/.*",
+    r"https://urn.nb.no/.*",
 ]
 
 # myst_nb execution

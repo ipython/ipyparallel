@@ -720,17 +720,13 @@ class IPEngine(BaseParallelApplication):
                 kernel_kwargs["control_thread"] = control_thread = ControlThread(
                     daemon=True
                 )
-            if ipykernel.version_info >= (7,):
-                kernel_kwargs["shell_socket"] = zmq.asyncio.Socket(shell_socket)
-                kernel_kwargs["control_socket"] = zmq.asyncio.Socket(control_socket)
-            else:
-                # Kernel.start starts control thread in kernel 7
-                control_thread.start()
-                kernel_kwargs["control_stream"] = zmqstream.ZMQStream(
-                    control_socket, control_thread.io_loop
-                )
 
-                kernel_kwargs["shell_streams"] = [zmqstream.ZMQStream(shell_socket)]
+            control_thread.start()
+            kernel_kwargs["control_stream"] = zmqstream.ZMQStream(
+                control_socket, control_thread.io_loop
+            )
+
+            kernel_kwargs["shell_streams"] = [zmqstream.ZMQStream(shell_socket)]
 
             self.kernel = Kernel.instance(
                 parent=self,
@@ -954,12 +950,7 @@ class IPEngine(BaseParallelApplication):
         self.forward_logging()
 
     def init_signal(self):
-        if ipykernel.version_info >= (7,):
-            # ipykernel 7 changes SIGINT handling
-            # to the app instead of the kernel
-            self.kernel_app.init_signal()
-        else:
-            signal.signal(signal.SIGINT, self._signal_sigint)
+        signal.signal(signal.SIGINT, self._signal_sigint)
         signal.signal(signal.SIGTERM, self._signal_stop)
 
     def _signal_sigint(self, sig, frame):
