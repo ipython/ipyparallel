@@ -50,7 +50,7 @@ jobs:
           jupyter server extension list 2>&1 | grep ipyparallel
 
       # ref: https://github.com/actions/upload-artifact#readme
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: ipyparallel-${{ github.sha }}
           path: "dist/*"
