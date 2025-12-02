@@ -50,7 +50,7 @@ jobs:
             pre: pre
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Cache conda environment
         uses: actions/cache@v4
