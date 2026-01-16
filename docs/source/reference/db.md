@@ -84,7 +84,7 @@ MongoDB operators we emulate on all backends:
 | '\$nin'  | not in            |
 | '\$eq'   | ==                |
 | '\$ne'   | !=                |
-| '\$ge'   | >                 |
+| '\$gt'   | >                 |
 | '\$gte'  | >=                |
 | '\$le'   | \<                |
 | '\$lte'  | \<=               |
