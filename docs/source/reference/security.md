@@ -379,7 +379,7 @@ and and/or SSH tunneled TCP/IP channels,
 address the core potential vulnerabilities in the system,
 while still enabling user's to use the system in open networks.
 
-[openssh]: https://www.openssh.com
+[openssh]: https://www.openssh.org
 [paramiko]: https://www.lag.net/paramiko
 [hmac]: https://datatracker.ietf.org/doc/html/rfc2104
 [curvezmq]: https://rfc.zeromq.org/spec/26/
