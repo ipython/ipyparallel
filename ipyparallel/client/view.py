@@ -97,6 +97,7 @@ class View(HasTraits):
     # flags
     block = Bool(False)
     track = Bool(False)
+    task_label = Any()
     targets = Any()
 
     history = List()
@@ -592,7 +593,7 @@ class DirectView(View):
         return ar
 
     @sync_results
-    def map(self, f, *sequences, block=None, track=False, return_exceptions=False):
+    def map(self, f, *sequences, block=None, track=False, return_exceptions=False, task_label=None):
         """Parallel version of builtin `map`, using this View's `targets`.
 
         There will be one task per target, so work will be chunked
@@ -1036,7 +1037,7 @@ class BroadcastView(DirectView):
         return list(map(f, *sequences))
 
     @_not_coalescing
-    def map(self, f, *sequences, block=None, track=False, return_exceptions=False):
+    def map(self, f, *sequences, block=None, track=False, return_exceptions=False, task_label=None):
         """Parallel version of builtin `map`, using this View's `targets`.
 
         There will be one task per engine, so work will be chunked
@@ -1360,6 +1361,8 @@ class LoadBalancedView(View):
         metadata = dict(
             after=after, follow=follow, timeout=timeout, targets=idents, retries=retries
         )
+        if self.task_label:
+            metadata["task_label"] = self.task_label
 
         future = self.client.send_apply_request(
             self._socket, f, args, kwargs, track=track, metadata=metadata
@@ -1389,6 +1392,7 @@ class LoadBalancedView(View):
         chunksize=1,
         ordered=True,
         return_exceptions=False,
+        task_label=None,
     ):
         """Parallel version of builtin `map`, load-balanced by this View.
 
@@ -1433,8 +1437,9 @@ class LoadBalancedView(View):
         # default
         if block is None:
             block = self.block
-
         assert len(sequences) > 0, "must have some sequences to map onto!"
+
+        self.task_label = task_label    # just for testing
 
         pf = ParallelFunction(
             self,
@@ -1443,6 +1448,7 @@ class LoadBalancedView(View):
             chunksize=chunksize,
             ordered=ordered,
             return_exceptions=return_exceptions,
+            task_label=task_label,
         )
         return pf.map(*sequences)
 

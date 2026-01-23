@@ -76,6 +76,7 @@ class IPythonParallelKernel(IPythonKernel):
             'is_broadcast': parent_metadata.get('is_broadcast', False),
             'is_coalescing': parent_metadata.get('is_coalescing', False),
             'original_msg_id': parent_metadata.get('original_msg_id', ''),
+            'task_label': parent_metadata.get('task_label', None),
         }
 
     def finish_metadata(self, parent, metadata, reply_content):

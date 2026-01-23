@@ -195,12 +195,14 @@ class ParallelFunction(RemoteFunction):
         chunksize=None,
         ordered=True,
         return_exceptions=False,
+        task_label=None,
         **flags,
     ):
         super().__init__(view, f, block=block, **flags)
         self.chunksize = chunksize
         self.ordered = ordered
         self.return_exceptions = return_exceptions
+        self.task_label = task_label
 
         mapClass = Map.dists[dist]
         self.mapObject = mapClass()
