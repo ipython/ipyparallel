@@ -295,7 +295,9 @@ class ParallelFunction(RemoteFunction):
 
             view = self.view if balanced else client[t]
             with view.temp_flags(block=False, **self.flags):
-                ar = view.apply(f, *args, task_label=self.task_label)   # is this the right place to insert the task_label?
+                ar = view.apply(
+                    f, *args, task_label=self.task_label
+                )  # is this the right place to insert the task_label?
                 ar.owner = False
 
             msg_id = ar.msg_ids[0]
