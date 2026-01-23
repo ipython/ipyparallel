@@ -61,21 +61,6 @@ filters = {
     '$exists': lambda a, b: (b and a is not None) or (a is None and not b),
 }
 
-def _debug_output(where, msg, stack=False):
-    import inspect, traceback
-    with open("d:/dictdb_log.txt", "a") as f:
-        f.write(f"{where} [{datetime.now()}]: {msg['msg_id']}\n")
-        f.write(f"\tmsg={msg}\n")
-        #if.write(f"has metadata={'metadata' in msg}\n")
-        #if 'metadata' in msg:
-        #    f.write(f"{msg['metadata']}\n")
-        f.write(f"has result_metadata={'result_metadata' in msg}\n")
-        if 'result_metadata' in msg:
-            f.write(f"{msg['result_metadata']}\n")
-        if stack:
-            for line in traceback.format_stack():
-                f.write(line.strip()+"\n")
-
 def _add_tz(obj):
     if isinstance(obj, datetime):
         obj = ensure_timezone(obj)
@@ -254,7 +239,6 @@ class DictDB(BaseDB):
         """Add a new Task Record, by msg_id."""
         if msg_id in self._records:
             raise KeyError(f"Already have msg_id {msg_id!r}")
-        #_debug_output("add_record", rec, False)
         self._check_dates(rec)
         self._records[msg_id] = rec
         self._add_bytes(rec)
@@ -272,7 +256,6 @@ class DictDB(BaseDB):
         """Update the data in an existing record."""
         if msg_id in self._culled_ids:
             raise KeyError(f"Record {msg_id!r} has been culled for size")
-        #_debug_output("update_record", rec)
         self._check_dates(rec)
         _rec = self._records[msg_id]
         self._drop_bytes(_rec)
