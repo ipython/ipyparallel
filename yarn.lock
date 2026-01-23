@@ -4420,7 +4420,7 @@ __metadata:
     "@lumino/polling": ^2.1.4
     "@lumino/signaling": ^2.1.4
     "@lumino/widgets": ^2.7.1
-    "@types/react": ^18.0.26
+    "@types/react": ^19.2.2
     "@types/react-dom": ~18.3.1
     "@typescript-eslint/eslint-plugin": ^8.46.0
     "@typescript-eslint/parser": ^8.46.0
@@ -4430,7 +4430,7 @@ __metadata:
     eslint-plugin-react: ^7.37.5
     npm-run-all2: ^8.0.4
     prettier: ^3.6.2
-    react: ^18.2.0
+    react: ^19.2.0
     react-dom: ^18.2.0
     rimraf: ^6.0.1
     typescript: ~5.9.3
@@ -5931,6 +5931,13 @@ __metadata:
   dependencies:
     loose-envify: "npm:^1.1.0"
   checksum: a27bcfa8ff7c15a1e50244ad0d0c1cb2ad4375eeffefd266a64889beea6f6b64c4966c9b37d14ee32d6c9fcd5aa6ba183b6988167ab4d127d13e7cb5b386a376
+  languageName: node
+  linkType: hard
+
+"react@npm:^19.2.0":
+  version: 19.2.0
+  resolution: "react@npm:19.2.0"
+  checksum: 33dd01bf699e1c5040eb249e0f552519adf7ee90b98c49d702a50bf23af6852ea46023a5f7f93966ab10acd7a45428fa0f193c686ecdaa7a75a03886e53ec3fe
   languageName: node
   linkType: hard
 
