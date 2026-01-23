@@ -97,7 +97,6 @@ class View(HasTraits):
     # flags
     block = Bool(False)
     track = Bool(False)
-    task_label = Any()
     targets = Any()
 
     history = List()
@@ -567,13 +566,16 @@ class DirectView(View):
         _idents, _targets = self.client._build_targets(targets)
         futures = []
 
+        task_label = kwargs.pop("task_label") if "task_label" in kwargs else None  # is this the correct/best way of retieving task_label?
+        metadata = dict(task_label=task_label)
+
         pf = PrePickled(f)
         pargs = [PrePickled(arg) for arg in args]
         pkwargs = {k: PrePickled(v) for k, v in kwargs.items()}
 
         for ident in _idents:
             future = self.client.send_apply_request(
-                self._socket, pf, pargs, pkwargs, track=track, ident=ident
+                self._socket, pf, pargs, pkwargs, track=track, ident=ident, metadata=metadata
             )
             futures.append(future)
         if track:
@@ -1356,13 +1358,13 @@ class LoadBalancedView(View):
             # ensure *not* bytes
             idents = [ident.decode() for ident in idents]
 
+        task_label = kwargs.pop("task_label") if "task_label" in kwargs else None   # is this the correct/best way of retieving task_label?
+
         after = self._render_dependency(after)
         follow = self._render_dependency(follow)
         metadata = dict(
-            after=after, follow=follow, timeout=timeout, targets=idents, retries=retries
+            after=after, follow=follow, timeout=timeout, targets=idents, retries=retries, task_label=task_label
         )
-        if self.task_label:
-            metadata["task_label"] = self.task_label
 
         future = self.client.send_apply_request(
             self._socket, f, args, kwargs, track=track, metadata=metadata
@@ -1438,8 +1440,6 @@ class LoadBalancedView(View):
         if block is None:
             block = self.block
         assert len(sequences) > 0, "must have some sequences to map onto!"
-
-        self.task_label = task_label    # just for testing
 
         pf = ParallelFunction(
             self,
