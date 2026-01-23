@@ -61,6 +61,7 @@ filters = {
     '$exists': lambda a, b: (b and a is not None) or (a is None and not b),
 }
 
+
 def _add_tz(obj):
     if isinstance(obj, datetime):
         obj = ensure_timezone(obj)

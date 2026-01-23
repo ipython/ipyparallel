@@ -18,6 +18,7 @@ except ImportError:
 # Chooser functions
 # ----------------------------------------------------------------------
 
+
 def plainrandom(loads):
     """Plain random pick."""
     n = len(loads)

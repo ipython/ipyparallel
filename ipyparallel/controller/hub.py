@@ -790,6 +790,7 @@ class Hub(LoggingConfigurable):
         except Exception:
             self.log.error("iopub::invalid IOPub message", exc_info=True)
             return
+
         msg_type = msg['header']['msg_type']
         if msg_type == 'shutdown_reply':
             session = msg['header']['session']
@@ -818,6 +819,7 @@ class Hub(LoggingConfigurable):
         msg_id = parent['msg_id']
         msg_type = msg['header']['msg_type']
         content = msg['content']
+
         # ensure msg_id is in db
         try:
             rec = self.db.get_record(msg_id)

@@ -1439,6 +1439,7 @@ class LoadBalancedView(View):
         # default
         if block is None:
             block = self.block
+
         assert len(sequences) > 0, "must have some sequences to map onto!"
 
         pf = ParallelFunction(
