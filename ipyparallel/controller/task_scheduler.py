@@ -18,13 +18,6 @@ except ImportError:
 # Chooser functions
 # ----------------------------------------------------------------------
 
-def _debug_output(where, msg):
-    with open("d:/task_scheduler_log.txt", "a") as f:
-        f.write(f"{where}: {msg['msg_id']}\n")
-        f.write(f"has metadata={'metadata' in msg}\n")
-        if 'metadata' in msg:
-            f.write(f"{msg['metadata']}\n\n")
-
 def plainrandom(loads):
     """Plain random pick."""
     n = len(loads)
@@ -355,8 +348,6 @@ class TaskScheduler(Scheduler):
 
         # send to monitor
         self.mon_stream.send_multipart([b'intask'] + raw_msg, copy=False)
-
-        #_debug_output("dispatch_submission",msg)
 
         header = msg['header']
         md = msg['metadata']

@@ -50,20 +50,6 @@ def _printer(*args, **kwargs):
     print(kwargs)
 
 
-def _debug_output(where, msg):
-    with open("d:/hub_log.txt", "a") as f:
-        f.write(f"{where} [{datetime.now()}]: ")
-        if 'msg_id' in msg:
-            f.write(f"{msg['msg_id']}\n")
-        else:
-            f.write(f"{msg}\n\n\n")
-            return
-        f.write(f"has metadata={'metadata' in msg}\n")
-        if 'metadata' in msg:
-            f.write(f"{msg['metadata']}\n")
-        f.write(f"{msg}\n\n\n")
-
-
 def empty_record():
     """Return an empty dict with all record keys."""
     return {
@@ -346,9 +332,6 @@ class Hub(LoggingConfigurable):
             return
         handler = self.monitor_handlers.get(switch, None)
         if handler is not None:
-            #if switch == b'intask':
-            #    _debug_output(f"dispatch_monitor_traffic ({switch} - {handler})", msg)
-
             handler(idents, msg)
         else:
             self.log.error("Unrecognized monitor topic: %r", switch)
@@ -489,8 +472,6 @@ class Hub(LoggingConfigurable):
         record['client_uuid'] = msg['header']['session']
         record['queue'] = 'mux'
 
-        #_debug_output('save_queue_request', msg)
-
         try:
             # it's posible iopub arrived first:
             existing = self.db.get_record(msg_id)
@@ -536,8 +517,6 @@ class Hub(LoggingConfigurable):
                 exc_info=True,
             )
             return
-
-        #_debug_output('save_queue_result', msg)
 
         eid = self.by_ident.get(queue_id, None)
         if eid is None:
@@ -599,8 +578,6 @@ class Hub(LoggingConfigurable):
         msg_id = header['msg_id']
         self.pending.add(msg_id)
 
-        #_debug_output('save_broadcast_request',msg)
-
         try:
             self.db.add_record(msg_id, record)
         except Exception as e:
@@ -626,8 +603,6 @@ class Hub(LoggingConfigurable):
         engine_uuid = md.get('engine', '')
         eid = self.by_ident.get(engine_uuid.encode("utf8"), None)
         status = md.get('status', None)
-
-        #_debug_output('save_broadcast_result', msg)
 
         if msg_id in self.pending:
             self.log.info(f'broadcast:: broadcast {msg_id} finished on {eid}')
@@ -675,8 +650,6 @@ class Hub(LoggingConfigurable):
             )
             return
         record = init_record(msg)
-
-        #_debug_output('save_task_request', msg)
 
         record['client_uuid'] = msg['header']['session']
         record['queue'] = 'task'
@@ -737,8 +710,6 @@ class Hub(LoggingConfigurable):
             )
             return
 
-        #_debug_output("save_task_result", msg)
-
         parent = msg['parent_header']
         if not parent:
             # print msg
@@ -792,8 +763,6 @@ class Hub(LoggingConfigurable):
         except Exception:
             self.log.error("task::invalid task tracking message", exc_info=True)
             return
-        #_debug_output("save_task_destination", msg)
-
         content = msg['content']
         # print (content)
         msg_id = content['msg_id']
@@ -821,8 +790,6 @@ class Hub(LoggingConfigurable):
         except Exception:
             self.log.error("iopub::invalid IOPub message", exc_info=True)
             return
-        #_debug_output("monitor_iopub_message", msg)
-
         msg_type = msg['header']['msg_type']
         if msg_type == 'shutdown_reply':
             session = msg['header']['session']
@@ -851,9 +818,6 @@ class Hub(LoggingConfigurable):
         msg_id = parent['msg_id']
         msg_type = msg['header']['msg_type']
         content = msg['content']
-        #_debug_output("save_iopub_message", msg)
-        #_debug_output("save_iopub_message[parent]", parent)
-
         # ensure msg_id is in db
         try:
             rec = self.db.get_record(msg_id)
@@ -907,7 +871,6 @@ class Hub(LoggingConfigurable):
         for eid, ec in self.engines.items():
             jsonable[str(eid)] = ec.uuid
         content['engines'] = jsonable
-        #_debug_output("connection_request", msg)
         self.session.send(
             self.query, 'connection_reply', content, parent=msg, ident=client_id
         )
