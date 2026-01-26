@@ -75,7 +75,7 @@ def empty_record():
         'error': None,
         'stdout': '',
         'stderr': '',
-        'task_label': None,
+        'label': None,
     }
 
 
@@ -112,7 +112,7 @@ def init_record(msg):
         'error': None,
         'stdout': '',
         'stderr': '',
-        'task_label': msg['metadata'].get('task_label', None),
+        'label': msg['metadata'].get('label', None),
     }
 
 

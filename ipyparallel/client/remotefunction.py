@@ -195,14 +195,14 @@ class ParallelFunction(RemoteFunction):
         chunksize=None,
         ordered=True,
         return_exceptions=False,
-        task_label=None,
+        label=None,
         **flags,
     ):
         super().__init__(view, f, block=block, **flags)
         self.chunksize = chunksize
         self.ordered = ordered
         self.return_exceptions = return_exceptions
-        self.task_label = task_label
+        self.label = label
 
         mapClass = Map.dists[dist]
         self.mapObject = mapClass()
@@ -296,8 +296,8 @@ class ParallelFunction(RemoteFunction):
             view = self.view if balanced else client[t]
             with view.temp_flags(block=False, **self.flags):
                 ar = view.apply(
-                    f, *args, task_label=self.task_label
-                )  # is this the right place to insert the task_label?
+                    f, *args, label=self.label
+                )  # is this the right place to insert the label?
                 ar.owner = False
 
             msg_id = ar.msg_ids[0]

@@ -566,10 +566,10 @@ class DirectView(View):
         _idents, _targets = self.client._build_targets(targets)
         futures = []
 
-        task_label = (
-            kwargs.pop("task_label") if "task_label" in kwargs else None
-        )  # is this the correct/best way of retieving task_label?
-        metadata = dict(task_label=task_label)
+        label = (
+            kwargs.pop("label") if "label" in kwargs else None
+        )  # is this the correct/best way of retieving label?
+        metadata = dict(label=label)
 
         pf = PrePickled(f)
         pargs = [PrePickled(arg) for arg in args]
@@ -610,7 +610,7 @@ class DirectView(View):
         block=None,
         track=False,
         return_exceptions=False,
-        task_label=None,
+        label=None,
     ):
         """Parallel version of builtin `map`, using this View's `targets`.
 
@@ -1062,7 +1062,7 @@ class BroadcastView(DirectView):
         block=None,
         track=False,
         return_exceptions=False,
-        task_label=None,
+        label=None,
     ):
         """Parallel version of builtin `map`, using this View's `targets`.
 
@@ -1382,9 +1382,9 @@ class LoadBalancedView(View):
             # ensure *not* bytes
             idents = [ident.decode() for ident in idents]
 
-        task_label = (
-            kwargs.pop("task_label") if "task_label" in kwargs else None
-        )  # is this the correct/best way of retieving task_label?
+        label = (
+            kwargs.pop("label") if "label" in kwargs else None
+        )  # is this the correct/best way of retieving label?
 
         after = self._render_dependency(after)
         follow = self._render_dependency(follow)
@@ -1394,7 +1394,7 @@ class LoadBalancedView(View):
             timeout=timeout,
             targets=idents,
             retries=retries,
-            task_label=task_label,
+            label=label,
         )
 
         future = self.client.send_apply_request(
@@ -1425,7 +1425,7 @@ class LoadBalancedView(View):
         chunksize=1,
         ordered=True,
         return_exceptions=False,
-        task_label=None,
+        label=None,
     ):
         """Parallel version of builtin `map`, load-balanced by this View.
 
@@ -1480,7 +1480,7 @@ class LoadBalancedView(View):
             chunksize=chunksize,
             ordered=ordered,
             return_exceptions=return_exceptions,
-            task_label=task_label,
+            label=label,
         )
         return pf.map(*sequences)
 
