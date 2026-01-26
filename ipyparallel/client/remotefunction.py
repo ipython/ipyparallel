@@ -293,9 +293,7 @@ class ParallelFunction(RemoteFunction):
 
             view = self.view if balanced else client[t]
             with view.temp_flags(block=False, **self.flags):
-                ar = view.apply(
-                    f, *args
-                )
+                ar = view.apply(f, *args)
                 ar.owner = False
 
             msg_id = ar.msg_ids[0]

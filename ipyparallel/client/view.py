@@ -530,7 +530,14 @@ class DirectView(View):
     @sync_results
     @save_ids
     def _really_apply(
-        self, f, args=None, kwargs=None, targets=None, block=None, track=None, label=None
+        self,
+        f,
+        args=None,
+        kwargs=None,
+        targets=None,
+        block=None,
+        track=None,
+        label=None,
     ):
         """calls f(*args, **kwargs) on remote engines, returning the result.
 
