@@ -23,25 +23,17 @@ balanced_view = True
 if balanced_view:
     # use load balanced view
     dview = rc.load_balanced_view()
-    ar_list = [
-        dview.map_async(wait, [2], label=f"mylabel_{i:02}") for i in range(10)
-    ]
+    ar_list = [dview.map_async(wait, [2], label=f"mylabel_{i:02}") for i in range(10)]
     dview.wait(ar_list)
 else:
     # use direct view
     dview = rc[:]
-    ar_list = [
-        dview.apply_async(wait, 2, label=f"mylabel_{i:02}") for i in range(10)
-    ]
+    ar_list = [dview.apply_async(wait, 2, label=f"mylabel_{i:02}") for i in range(10)]
     dview.wait(ar_list)
 
 # query database
-data = rc.db_query(
-    {'label': {"$nin": ""}}, keys=['msg_id', 'label', 'engine_uuid']
-)
+data = rc.db_query({'label': {"$nin": ""}}, keys=['msg_id', 'label', 'engine_uuid'])
 for d in data:
-    print(
-        f"msg_id={d['msg_id']}; label={d['label']}; engine_uuid={d['engine_uuid']}"
-    )
+    print(f"msg_id={d['msg_id']}; label={d['label']}; engine_uuid={d['engine_uuid']}")
 
 cluster.stop_cluster_sync()
