@@ -20,13 +20,26 @@ def wait(t):
 
 # use load balanced view
 bview = rc.load_balanced_view()
-ar_list1 = [bview.map_async(wait, [2], label=f"mylabel_{i:02}") for i in range(10)]
-bview.wait(ar_list1)
+ar_list_b1 = [
+    bview.map_async(wait, [2], label=f"mylabel_map_{i:02}") for i in range(10)
+]
+ar_list_b2 = [
+    bview.apply_async(wait, 2, label=f"mylabel_apply_{i:02}") for i in range(10)
+]
+bview.wait(ar_list_b1)
+bview.wait(ar_list_b2)
+
 
 # use direct view
 dview = rc[:]
-ar_list2 = [dview.apply_async(wait, 2, label=f"mylabel_{i + 10:02}") for i in range(10)]
-dview.wait(ar_list2)
+ar_list_d1 = [
+    dview.apply_async(wait, 2, label=f"mylabel_map_{i + 10:02}") for i in range(10)
+]
+ar_list_d2 = [
+    dview.map_async(wait, [2], label=f"mylabel_apply_{i + 10:02}") for i in range(10)
+]
+dview.wait(ar_list_d1)
+dview.wait(ar_list_d2)
 
 # query database
 data = rc.db_query({'label': {"$nin": ""}}, keys=['msg_id', 'label', 'engine_uuid'])

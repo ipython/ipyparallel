@@ -98,6 +98,7 @@ class View(HasTraits):
     block = Bool(False)
     track = Bool(False)
     targets = Any()
+    label = Any()
 
     history = List()
     outstanding = Set()
@@ -105,7 +106,7 @@ class View(HasTraits):
     client = Instance('ipyparallel.Client', allow_none=True)
 
     _socket = Any()
-    _flag_names = List(['targets', 'block', 'track'])
+    _flag_names = List(['targets', 'block', 'track', 'label'])
     _in_sync_results = Bool(False)
     _targets = Any()
     _idents = Any()
@@ -570,8 +571,11 @@ class DirectView(View):
         track = self.track if track is None else track
         targets = self.targets if targets is None else targets
         label = (
+            self.label if label is None else label
+        )  # comes into play when calling map[_async] (self.label)
+        label = (
             kwargs.pop("label") if "label" in kwargs and label is None else label
-        )  # is this the correct/best way of retieving label?
+        )  # this is required can calling apply[_async]
         metadata = dict(label=label)
 
         _idents, _targets = self.client._build_targets(targets)
@@ -658,7 +662,12 @@ class DirectView(View):
 
         assert len(sequences) > 0, "must have some sequences to map onto!"
         pf = ParallelFunction(
-            self, f, block=block, track=track, return_exceptions=return_exceptions
+            self,
+            f,
+            block=block,
+            track=track,
+            return_exceptions=return_exceptions,
+            label=label,
         )
         return pf.map(*sequences)
 
@@ -1308,11 +1317,6 @@ class LoadBalancedView(View):
                     raise ValueError(f"Invalid timeout: {t}")
 
             self.timeout = t
-        if 'label' in kwargs:
-            l = kwargs['label']
-            if not isinstance(l, (str, type(None))):
-                raise TypeError(f"Invalid type for label: {type(l)!r}")
-            self.label = l
 
     @sync_results
     @save_ids
@@ -1384,7 +1388,12 @@ class LoadBalancedView(View):
         follow = self.follow if follow is None else follow
         timeout = self.timeout if timeout is None else timeout
         targets = self.targets if targets is None else targets
-        label = self.label if label is None else label
+        label = (
+            self.label if label is None else label
+        )  # comes into play when calling map[_async] (self.label)
+        label = (
+            kwargs.pop("label") if "label" in kwargs and label is None else label
+        )  # this is required can calling apply[_async]
 
         if not isinstance(retries, int):
             raise TypeError(f'retries must be int, not {type(retries)!r}')
