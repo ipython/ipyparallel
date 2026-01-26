@@ -530,7 +530,7 @@ class DirectView(View):
     @sync_results
     @save_ids
     def _really_apply(
-        self, f, args=None, kwargs=None, targets=None, block=None, track=None
+        self, f, args=None, kwargs=None, targets=None, block=None, track=None, label=None
     ):
         """calls f(*args, **kwargs) on remote engines, returning the result.
 
@@ -562,14 +562,13 @@ class DirectView(View):
         block = self.block if block is None else block
         track = self.track if track is None else track
         targets = self.targets if targets is None else targets
+        label = (
+            kwargs.pop("label") if "label" in kwargs and label is None else label
+        )  # is this the correct/best way of retieving label?
+        metadata = dict(label=label)
 
         _idents, _targets = self.client._build_targets(targets)
         futures = []
-
-        label = (
-            kwargs.pop("label") if "label" in kwargs else None
-        )  # is this the correct/best way of retieving label?
-        metadata = dict(label=label)
 
         pf = PrePickled(f)
         pargs = [PrePickled(arg) for arg in args]
@@ -1203,10 +1202,11 @@ class LoadBalancedView(View):
     after = Any()
     timeout = CFloat()
     retries = Integer(0)
+    label = Any()
 
     _task_scheme = Any()
     _flag_names = List(
-        ['targets', 'block', 'track', 'follow', 'after', 'timeout', 'retries']
+        ['targets', 'block', 'track', 'follow', 'after', 'timeout', 'retries', 'label']
     )
     _outstanding_maps = Set()
 
@@ -1301,6 +1301,11 @@ class LoadBalancedView(View):
                     raise ValueError(f"Invalid timeout: {t}")
 
             self.timeout = t
+        if 'label' in kwargs:
+            l = kwargs['label']
+            if not isinstance(l, (str, type(None))):
+                raise TypeError(f"Invalid type for label: {type(l)!r}")
+            self.label = l
 
     @sync_results
     @save_ids
@@ -1316,6 +1321,7 @@ class LoadBalancedView(View):
         timeout=None,
         targets=None,
         retries=None,
+        label=None,
     ):
         """calls f(*args, **kwargs) on a remote engine, returning the result.
 
@@ -1371,6 +1377,7 @@ class LoadBalancedView(View):
         follow = self.follow if follow is None else follow
         timeout = self.timeout if timeout is None else timeout
         targets = self.targets if targets is None else targets
+        label = self.label if label is None else label
 
         if not isinstance(retries, int):
             raise TypeError(f'retries must be int, not {type(retries)!r}')
@@ -1381,10 +1388,6 @@ class LoadBalancedView(View):
             idents = self.client._build_targets(targets)[0]
             # ensure *not* bytes
             idents = [ident.decode() for ident in idents]
-
-        label = (
-            kwargs.pop("label") if "label" in kwargs else None
-        )  # is this the correct/best way of retieving label?
 
         after = self._render_dependency(after)
         follow = self._render_dependency(follow)

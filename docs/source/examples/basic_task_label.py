@@ -18,22 +18,19 @@ def wait(t):
     return time.time() - tic
 
 
-# send tasks to cluster
-balanced_view = True
-if balanced_view:
-    # use load balanced view
-    dview = rc.load_balanced_view()
-    ar_list = [
-        dview.map_async(wait, [2], label=f"mylabel_{i:02}") for i in range(10)
-    ]
-    dview.wait(ar_list)
-else:
-    # use direct view
-    dview = rc[:]
-    ar_list = [
-        dview.apply_async(wait, 2, label=f"mylabel_{i:02}") for i in range(10)
-    ]
-    dview.wait(ar_list)
+# use load balanced view
+bview = rc.load_balanced_view()
+ar_list1 = [
+    bview.map_async(wait, [2], label=f"mylabel_{i:02}") for i in range(10)
+]
+bview.wait(ar_list1)
+
+# use direct view
+dview = rc[:]
+ar_list2 = [
+    dview.apply_async(wait, 2, label=f"mylabel_{i+10:02}") for i in range(10)
+]
+dview.wait(ar_list2)
 
 # query database
 data = rc.db_query(

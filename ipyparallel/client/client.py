@@ -220,6 +220,7 @@ class Metadata(dict):
             'stderr': '',
             'outputs': [],
             'data': {},
+            'label': None,
         }
         self.update(md)
         self.update(dict(*args, **kwargs))
