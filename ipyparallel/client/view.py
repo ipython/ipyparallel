@@ -156,6 +156,8 @@ class View(HasTraits):
             else:
                 setattr(self, name, value)
 
+        return self  # returning self would allow direct calling of map/apply in one command (no context manager)
+
     @contextmanager
     def temp_flags(self, **kwargs):
         """temporarily set flags, for use in `with` statements.
@@ -570,12 +572,7 @@ class DirectView(View):
         block = self.block if block is None else block
         track = self.track if track is None else track
         targets = self.targets if targets is None else targets
-        label = (
-            self.label if label is None else label
-        )  # comes into play when calling map[_async] (self.label)
-        label = (
-            kwargs.pop("label") if "label" in kwargs and label is None else label
-        )  # this is required can calling apply[_async]
+        label = self.label if label is None else label
         metadata = dict(label=label)
 
         _idents, _targets = self.client._build_targets(targets)
@@ -659,6 +656,8 @@ class DirectView(View):
 
         if block is None:
             block = self.block
+        if label is None:
+            label = self.label
 
         assert len(sequences) > 0, "must have some sequences to map onto!"
         pf = ParallelFunction(
@@ -1318,6 +1317,8 @@ class LoadBalancedView(View):
 
             self.timeout = t
 
+        return self  # returning self would allow direct calling of map/apply in one command (no context manager)
+
     @sync_results
     @save_ids
     def _really_apply(
@@ -1388,12 +1389,7 @@ class LoadBalancedView(View):
         follow = self.follow if follow is None else follow
         timeout = self.timeout if timeout is None else timeout
         targets = self.targets if targets is None else targets
-        label = (
-            self.label if label is None else label
-        )  # comes into play when calling map[_async] (self.label)
-        label = (
-            kwargs.pop("label") if "label" in kwargs and label is None else label
-        )  # this is required can calling apply[_async]
+        label = self.label if label is None else label
 
         if not isinstance(retries, int):
             raise TypeError(f'retries must be int, not {type(retries)!r}')
@@ -1489,6 +1485,8 @@ class LoadBalancedView(View):
         # default
         if block is None:
             block = self.block
+        if label is None:
+            label = self.label
 
         assert len(sequences) > 0, "must have some sequences to map onto!"
 
