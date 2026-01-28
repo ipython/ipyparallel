@@ -823,6 +823,7 @@ class Client(HasTraits):
             'status': content['status'],
             'is_broadcast': msg_meta.get('is_broadcast', False),
             'is_coalescing': msg_meta.get('is_coalescing', False),
+            'label': msg_meta.get('label', None),
         }
 
         if md['engine_uuid'] is not None:
