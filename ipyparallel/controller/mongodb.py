@@ -1,8 +1,7 @@
 """A TaskRecord backend using mongodb"""
 
 try:
-    from pymongo import version
-    from pymongo import MongoClient
+    from pymongo import MongoClient, version
 except ImportError:
     from pymongo import Connection as MongoClient
 
