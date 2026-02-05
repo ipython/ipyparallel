@@ -1,6 +1,7 @@
 """A TaskRecord backend using mongodb"""
 
 try:
+    from pymongo import version
     from pymongo import MongoClient
 except ImportError:
     from pymongo import Connection as MongoClient
@@ -11,17 +12,14 @@ try:
 except ImportError:
     from bson import Binary
 
-# we need to determine the pymongo version because of API changes. see
-# https://pymongo.readthedocs.io/en/stable/migrate-to-pymongo4.html
-from importlib.metadata import version
-
 from traitlets import Dict, Instance, List, Unicode
 
 from .dictdb import BaseDB
 
-MongoClientVersion = version('pymongo')
-pymongo_version_major = int(MongoClientVersion.split('.')[0])
-pymongo_version_minor = int(MongoClientVersion.split('.')[1])
+# we need to determine the pymongo version because of API changes. see
+# https://pymongo.readthedocs.io/en/stable/migrate-to-pymongo4.html
+pymongo_version_major = int(version.split('.')[0])
+pymongo_version_minor = int(version.split('.')[1])
 
 # -----------------------------------------------------------------------------
 # MongoDB class
