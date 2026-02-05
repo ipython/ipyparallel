@@ -11,13 +11,14 @@ try:
 except ImportError:
     from bson import Binary
 
+# we need to determine the pymongo version because of API changes. see
+# https://pymongo.readthedocs.io/en/stable/migrate-to-pymongo4.html
+from importlib.metadata import version
+
 from traitlets import Dict, Instance, List, Unicode
 
 from .dictdb import BaseDB
 
-# we need to determine the pymongo version because of API changes. see
-# https://pymongo.readthedocs.io/en/stable/migrate-to-pymongo4.html
-from importlib.metadata import version
 MongoClientVersion = version('pymongo')
 pymongo_version_major = int(MongoClientVersion.split('.')[0])
 pymongo_version_minor = int(MongoClientVersion.split('.')[1])
