@@ -155,6 +155,7 @@ class SQLiteDB(BaseDB):
             'error',
             'stdout',
             'stderr',
+            'label',
         ]
     )
     # sqlite datatypes for checking that db is current format
@@ -182,6 +183,7 @@ class SQLiteDB(BaseDB):
             'error': 'text',
             'stdout': 'text',
             'stderr': 'text',
+            'label': 'text',
         }
     )
 
@@ -303,7 +305,8 @@ class SQLiteDB(BaseDB):
                 execute_result text,
                 error text,
                 stdout text,
-                stderr text)
+                stderr text,
+                label text)
                 """
         )
         self._db.commit()

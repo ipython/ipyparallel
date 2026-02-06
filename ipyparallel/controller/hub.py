@@ -75,6 +75,7 @@ def empty_record():
         'error': None,
         'stdout': '',
         'stderr': '',
+        'label': None,
     }
 
 
@@ -111,6 +112,7 @@ def init_record(msg):
         'error': None,
         'stdout': '',
         'stderr': '',
+        'label': msg['metadata'].get('label', None),
     }
 
 

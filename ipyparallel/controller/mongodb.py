@@ -1,7 +1,7 @@
 """A TaskRecord backend using mongodb"""
 
 try:
-    from pymongo import MongoClient
+    from pymongo import MongoClient, version
 except ImportError:
     from pymongo import Connection as MongoClient
 
@@ -14,6 +14,11 @@ except ImportError:
 from traitlets import Dict, Instance, List, Unicode
 
 from .dictdb import BaseDB
+
+# we need to determine the pymongo version because of API changes. see
+# https://pymongo.readthedocs.io/en/stable/migrate-to-pymongo4.html
+pymongo_version_major = int(version.split('.')[0])
+pymongo_version_minor = int(version.split('.')[1])
 
 # -----------------------------------------------------------------------------
 # MongoDB class
@@ -56,6 +61,13 @@ class MongoDB(BaseDB):
             self.database = self.session
         self._db = self._connection[self.database]
         self._records = self._db['task_records']
+        if pymongo_version_major >= 4:
+            # mimic the old API 3.x
+            self._records.insert = self._records.insert_one
+            self._records.update = self._records.update_one
+            self._records.ensure_index = self._records.create_index
+            self._records.remove = self._records.delete_many
+
         self._records.ensure_index('msg_id', unique=True)
         self._records.ensure_index('submitted')  # for sorting history
         # for rec in self._records.find

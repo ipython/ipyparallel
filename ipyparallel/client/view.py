@@ -98,6 +98,7 @@ class View(HasTraits):
     block = Bool(False)
     track = Bool(False)
     targets = Any()
+    label = Any()
 
     history = List()
     outstanding = Set()
@@ -105,7 +106,7 @@ class View(HasTraits):
     client = Instance('ipyparallel.Client', allow_none=True)
 
     _socket = Any()
-    _flag_names = List(['targets', 'block', 'track'])
+    _flag_names = List(['targets', 'block', 'track', 'label'])
     _in_sync_results = Bool(False)
     _targets = Any()
     _idents = Any()
@@ -154,6 +155,8 @@ class View(HasTraits):
                 raise KeyError(f"Invalid name: {name!r}")
             else:
                 setattr(self, name, value)
+
+        return self  # returning self would allow direct calling of map/apply in one command (no context manager)
 
     @contextmanager
     def temp_flags(self, **kwargs):
@@ -530,7 +533,14 @@ class DirectView(View):
     @sync_results
     @save_ids
     def _really_apply(
-        self, f, args=None, kwargs=None, targets=None, block=None, track=None
+        self,
+        f,
+        args=None,
+        kwargs=None,
+        targets=None,
+        block=None,
+        track=None,
+        label=None,
     ):
         """calls f(*args, **kwargs) on remote engines, returning the result.
 
@@ -562,6 +572,8 @@ class DirectView(View):
         block = self.block if block is None else block
         track = self.track if track is None else track
         targets = self.targets if targets is None else targets
+        label = self.label if label is None else label
+        metadata = dict(label=label)
 
         _idents, _targets = self.client._build_targets(targets)
         futures = []
@@ -572,7 +584,13 @@ class DirectView(View):
 
         for ident in _idents:
             future = self.client.send_apply_request(
-                self._socket, pf, pargs, pkwargs, track=track, ident=ident
+                self._socket,
+                pf,
+                pargs,
+                pkwargs,
+                track=track,
+                ident=ident,
+                metadata=metadata,
             )
             futures.append(future)
         if track:
@@ -592,7 +610,15 @@ class DirectView(View):
         return ar
 
     @sync_results
-    def map(self, f, *sequences, block=None, track=False, return_exceptions=False):
+    def map(
+        self,
+        f,
+        *sequences,
+        block=None,
+        track=False,
+        return_exceptions=False,
+        label=None,
+    ):
         """Parallel version of builtin `map`, using this View's `targets`.
 
         There will be one task per target, so work will be chunked
@@ -630,10 +656,17 @@ class DirectView(View):
 
         if block is None:
             block = self.block
+        if label is None:
+            label = self.label
 
         assert len(sequences) > 0, "must have some sequences to map onto!"
         pf = ParallelFunction(
-            self, f, block=block, track=track, return_exceptions=return_exceptions
+            self,
+            f,
+            block=block,
+            track=track,
+            return_exceptions=return_exceptions,
+            label=label,
         )
         return pf.map(*sequences)
 
@@ -1036,7 +1069,15 @@ class BroadcastView(DirectView):
         return list(map(f, *sequences))
 
     @_not_coalescing
-    def map(self, f, *sequences, block=None, track=False, return_exceptions=False):
+    def map(
+        self,
+        f,
+        *sequences,
+        block=None,
+        track=False,
+        return_exceptions=False,
+        label=None,
+    ):
         """Parallel version of builtin `map`, using this View's `targets`.
 
         There will be one task per engine, so work will be chunked
@@ -1176,10 +1217,11 @@ class LoadBalancedView(View):
     after = Any()
     timeout = CFloat()
     retries = Integer(0)
+    label = Any()
 
     _task_scheme = Any()
     _flag_names = List(
-        ['targets', 'block', 'track', 'follow', 'after', 'timeout', 'retries']
+        ['targets', 'block', 'track', 'follow', 'after', 'timeout', 'retries', 'label']
     )
     _outstanding_maps = Set()
 
@@ -1275,6 +1317,8 @@ class LoadBalancedView(View):
 
             self.timeout = t
 
+        return self  # returning self would allow direct calling of map/apply in one command (no context manager)
+
     @sync_results
     @save_ids
     def _really_apply(
@@ -1289,6 +1333,7 @@ class LoadBalancedView(View):
         timeout=None,
         targets=None,
         retries=None,
+        label=None,
     ):
         """calls f(*args, **kwargs) on a remote engine, returning the result.
 
@@ -1344,6 +1389,7 @@ class LoadBalancedView(View):
         follow = self.follow if follow is None else follow
         timeout = self.timeout if timeout is None else timeout
         targets = self.targets if targets is None else targets
+        label = self.label if label is None else label
 
         if not isinstance(retries, int):
             raise TypeError(f'retries must be int, not {type(retries)!r}')
@@ -1358,7 +1404,12 @@ class LoadBalancedView(View):
         after = self._render_dependency(after)
         follow = self._render_dependency(follow)
         metadata = dict(
-            after=after, follow=follow, timeout=timeout, targets=idents, retries=retries
+            after=after,
+            follow=follow,
+            timeout=timeout,
+            targets=idents,
+            retries=retries,
+            label=label,
         )
 
         future = self.client.send_apply_request(
@@ -1389,6 +1440,7 @@ class LoadBalancedView(View):
         chunksize=1,
         ordered=True,
         return_exceptions=False,
+        label=None,
     ):
         """Parallel version of builtin `map`, load-balanced by this View.
 
@@ -1433,6 +1485,8 @@ class LoadBalancedView(View):
         # default
         if block is None:
             block = self.block
+        if label is None:
+            label = self.label
 
         assert len(sequences) > 0, "must have some sequences to map onto!"
 
@@ -1443,6 +1497,7 @@ class LoadBalancedView(View):
             chunksize=chunksize,
             ordered=ordered,
             return_exceptions=return_exceptions,
+            label=label,
         )
         return pf.map(*sequences)
 
