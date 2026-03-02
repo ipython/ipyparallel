@@ -2,7 +2,7 @@
 
 This uses precomputed digits of pi from the website
 of Professor Yasumasa Kanada at the University of
-Tokoyo: https://www.super-computing.org/
+Tokoyo: https://oeis.org/A000796
 
 Currently, there are only functions to read the
 .txt (non-compressed, non-binary) files, but adding
@@ -25,11 +25,11 @@ from matplotlib import pyplot as plt
 
 
 def fetch_pi_file(filename):
-    """This will download a segment of pi from super-computing.org
+    """This will download a segment of pi from oeis.org
     if the file is not already present.
     """
 
-    ftpdir = "ftp://pi.super-computing.org/.2/pi200m/"
+    ftpdir = "https://oeis.org/A000796"
     if os.path.exists(filename):
         # we already have it
         return

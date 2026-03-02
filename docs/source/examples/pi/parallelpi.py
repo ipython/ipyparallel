@@ -4,13 +4,13 @@ This program uses the functions in :file:`pidigits.py` to calculate
 the frequencies of 2 digit sequences in the digits of pi. The
 results are plotted using matplotlib.
 
-To run, text files from https://www.super-computing.org/
+To run, text files from https://oeis.org/A000796
 must be installed in the working directory of the IPython engines.
 The actual filenames to be used can be set with the ``filestring``
 variable below.
 
 The dataset we have been using for this is the 200 million digit one here:
-ftp://pi.super-computing.org/.2/pi200m/
+https://oeis.org/A000796
 
 and the files used will be downloaded if they are not in the working directory
 of the IPython engines.
