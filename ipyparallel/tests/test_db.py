@@ -2,14 +2,14 @@
 
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
+import fnmatch
 import logging
 import os
+import re
 import tempfile
 import time
 from datetime import datetime, timedelta
 from unittest import TestCase
-import fnmatch
-import re
 
 import pytest
 from jupyter_client.session import Session
@@ -155,17 +155,16 @@ class TaskDBTest:
         hist = self.db.get_history()
 
         pattern = "^.+_.$"
-        ref = [msg_id for msg_id in hist if re.match(pattern,msg_id)]
+        ref = [msg_id for msg_id in hist if re.match(pattern, msg_id)]
         recs = self.db.find_records({'msg_id': {'$regex': pattern}}, ["msg_id"])
         found = [r['msg_id'] for r in recs]
         assert set(ref) == set(found)
 
         pattern = "^.+_1[0-9]$"
-        ref = [msg_id for msg_id in hist if re.match(pattern,msg_id)]
+        ref = [msg_id for msg_id in hist if re.match(pattern, msg_id)]
         recs = self.db.find_records({'msg_id': {'$regex': pattern}}, ["msg_id"])
         found = [r['msg_id'] for r in recs]
         assert set(ref) == set(found)
-
 
     def test_get_history(self):
         msg_ids = self.db.get_history()

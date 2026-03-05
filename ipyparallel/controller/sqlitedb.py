@@ -100,10 +100,12 @@ def _convert_timestamp(s):
     """Adapt text timestamp to datetime"""
     return ensure_timezone(dateutil_parse(s))
 
+
 def _regexp(expr, item):
     """sqlite callback function for performing a regex operation"""
     reg = re.compile(expr)
     return reg.match(item) is not None
+
 
 # -----------------------------------------------------------------------------
 # SQLiteDB class

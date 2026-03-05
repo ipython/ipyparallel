@@ -36,10 +36,10 @@ DictDB supports a subset of mongodb operators::
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
 import copy
-from copy import deepcopy
-from datetime import datetime
 import fnmatch
 import re
+from copy import deepcopy
+from datetime import datetime
 
 from traitlets import Dict, Float, Integer, Unicode
 from traitlets.config.configurable import LoggingConfigurable
