@@ -133,22 +133,21 @@ class TaskDBTest:
         found = [r['msg_id'] for r in recs]
         assert set(odd) == set(found)
 
-    # disabled for now. jo, 5.3.26
-    # def test_find_records_glob(self):
-    #     """test finding records with '$glob' operators"""
-    #     hist = self.db.get_history()
-    #
-    #     pattern = "*"+hist[0][5:-2]+"_?"
-    #     ref = [msg_id for msg_id in hist if fnmatch.fnmatch(msg_id, pattern)]
-    #     recs = self.db.find_records({'msg_id': {'$glob': pattern}}, ["msg_id"])
-    #     found = [r['msg_id'] for r in recs]
-    #     assert set(ref) == set(found)
-    #
-    #     pattern = "*_1?"
-    #     ref = [msg_id for msg_id in hist if fnmatch.fnmatch(msg_id, pattern)]
-    #     recs = self.db.find_records({'msg_id': {'$glob': pattern}},["msg_id"])
-    #     found = [r['msg_id'] for r in recs]
-    #     assert set(ref) == set(found)
+    def test_find_records_glob(self):
+        """test finding records with '$glob' operators"""
+        hist = self.db.get_history()
+
+        pattern = "*" + hist[0][5:-2] + "_?"
+        ref = [msg_id for msg_id in hist if fnmatch.fnmatch(msg_id, pattern)]
+        recs = self.db.find_records({'msg_id': {'$glob': pattern}}, ["msg_id"])
+        found = [r['msg_id'] for r in recs]
+        assert set(ref) == set(found)
+
+        pattern = "*_1?"
+        ref = [msg_id for msg_id in hist if fnmatch.fnmatch(msg_id, pattern)]
+        recs = self.db.find_records({'msg_id': {'$glob': pattern}}, ["msg_id"])
+        found = [r['msg_id'] for r in recs]
+        assert set(ref) == set(found)
 
     def test_find_records_regex(self):
         """test finding records with '$regex' operators"""

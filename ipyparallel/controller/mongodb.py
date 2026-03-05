@@ -11,6 +11,8 @@ try:
 except ImportError:
     from bson import Binary
 
+import fnmatch
+
 from bson.codec_options import CodecOptions
 from traitlets import Dict, Instance, List, Unicode
 
@@ -107,6 +109,35 @@ class MongoDB(BaseDB):
         """Remove a record from the DB."""
         self._records.delete_many({'msg_id': msg_id})
 
+    def _translate(self, filter):
+        """translates $glob to $regex operators"""
+        if isinstance(filter, list):
+            ret = []
+            for f in filter:
+                ret.append(self._translate(f))
+            return ret
+        elif isinstance(filter, dict):
+            ret = dict()
+            if "$glob" in filter:
+                params = dict(filter)
+                glob = params.pop("$glob")
+                if len(params) != 0:
+                    raise Exception(
+                        f"unkown paramters {params.keys()} for %glob operator"
+                    )
+                ret["$regex"] = fnmatch.translate(glob)
+            else:
+                for key, value in filter.items():
+                    if isinstance(value, dict):
+                        ret[key] = self._translate(value)
+                    elif isinstance(value, list):
+                        ret[key] = self._translate(value)
+                    else:
+                        ret[key] = value
+            return ret
+        else:
+            return filter
+
     def find_records(self, check, keys=None):
         """Find records matching a query dict, optionally extracting subset of keys.
 
@@ -122,7 +153,7 @@ class MongoDB(BaseDB):
         """
         if keys and 'msg_id' not in keys:
             keys.append('msg_id')
-        matches = list(self._records.find(check, keys))
+        matches = list(self._records.find(self._translate(check), keys))
         for rec in matches:
             rec.pop('_id')
         return matches
