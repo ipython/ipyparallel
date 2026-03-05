@@ -38,6 +38,8 @@ DictDB supports a subset of mongodb operators::
 import copy
 from copy import deepcopy
 from datetime import datetime
+import fnmatch
+import re
 
 from traitlets import Dict, Float, Integer, Unicode
 from traitlets.config.configurable import LoggingConfigurable
@@ -59,6 +61,8 @@ filters = {
     '$all': lambda a, b: all([a in bb for bb in b]),
     '$mod': lambda a, b: a % b[0] == b[1],
     '$exists': lambda a, b: (b and a is not None) or (a is None and not b),
+    '$glob': lambda a, b: fnmatch.fnmatch(a, b),
+    '$regex': lambda a, b: re.match(b, a),
 }
 
 

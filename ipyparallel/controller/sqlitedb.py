@@ -4,6 +4,7 @@
 # Distributed under the terms of the Modified BSD License.
 import json
 import os
+import re
 
 try:
     import cPickle as pickle
@@ -47,6 +48,8 @@ operators = {
     # '$all': None,
     # '$mod': None,
     # '$exists' : None
+    '$glob': "GLOB",
+    '$regex': "REGEXP",
 }
 null_operators = {
     '=': "IS NULL",
@@ -97,6 +100,10 @@ def _convert_timestamp(s):
     """Adapt text timestamp to datetime"""
     return ensure_timezone(dateutil_parse(s))
 
+def _regexp(expr, item):
+    """sqlite callback function for performing a regex operation"""
+    reg = re.compile(expr)
+    return reg.match(item) is not None
 
 # -----------------------------------------------------------------------------
 # SQLiteDB class
@@ -271,6 +278,7 @@ class SQLiteDB(BaseDB):
             # isolation_level = None)#,
             cached_statements=64,
         )
+        self._db.create_function("REGEXP", 2, _regexp)
         # print dir(self._db)
         first_table = previous_table = self.table
         i = 0
