@@ -79,16 +79,22 @@ TaskRecord keys:
 
 MongoDB operators we emulate on all backends:
 
-| Operator | Python equivalent |
-| -------- | ----------------- |
-| '\$in'   | in                |
-| '\$nin'  | not in            |
-| '\$eq'   | ==                |
-| '\$ne'   | !=                |
-| '\$gt'   | >                 |
-| '\$gte'  | >=                |
-| '\$le'   | \<                |
-| '\$lte'  | \<=               |
+| Operator | Python equivalent                                                             |
+| -------- |-------------------------------------------------------------------------------|
+| '\$in'   | in                                                                            |
+| '\$nin'  | not in                                                                        |
+| '\$eq'   | ==                                                                            |
+| '\$ne'   | !=                                                                            |
+| '\$gt'   | >                                                                             |
+| '\$gte'  | >=                                                                            |
+| '\$le'   | \<                                                                            |
+| '\$lte'  | \<=                                                                           |
+| '\$glob' | [fnmatch](https://docs.python.org/3/library/fnmatch.html) (wildcard matching) | 
+
+Remarks on _$glob_: The operator can be used to find substrings in DB columns based on 
+[unix style filename pattern matching](https://docs.python.org/3/library/fnmatch.html) 
+_$glob_ is **not** a regular MongoDB opertor, but is internally translated to a regular 
+expression (_$regex_) which is natively supported by MongoDB.  
 
 The DB Query is useful for two primary cases:
 

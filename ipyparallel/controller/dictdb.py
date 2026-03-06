@@ -62,7 +62,6 @@ filters = {
     '$mod': lambda a, b: a % b[0] == b[1],
     '$exists': lambda a, b: (b and a is not None) or (a is None and not b),
     '$glob': lambda a, b: fnmatch.fnmatch(a, b),
-    '$regex': lambda a, b: re.match(b, a),
 }
 
 

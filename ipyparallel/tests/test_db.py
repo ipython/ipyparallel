@@ -149,22 +149,6 @@ class TaskDBTest:
         found = [r['msg_id'] for r in recs]
         assert set(ref) == set(found)
 
-    def test_find_records_regex(self):
-        """test finding records with '$regex' operators"""
-        hist = self.db.get_history()
-
-        pattern = "^.+_.$"
-        ref = [msg_id for msg_id in hist if re.match(pattern, msg_id)]
-        recs = self.db.find_records({'msg_id': {'$regex': pattern}}, ["msg_id"])
-        found = [r['msg_id'] for r in recs]
-        assert set(ref) == set(found)
-
-        pattern = "^.+_1[0-9]$"
-        ref = [msg_id for msg_id in hist if re.match(pattern, msg_id)]
-        recs = self.db.find_records({'msg_id': {'$regex': pattern}}, ["msg_id"])
-        found = [r['msg_id'] for r in recs]
-        assert set(ref) == set(found)
-
     def test_get_history(self):
         msg_ids = self.db.get_history()
         latest = datetime(1984, 1, 1).replace(tzinfo=utc)

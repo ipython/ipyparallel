@@ -125,7 +125,9 @@ class MongoDB(BaseDB):
                     raise Exception(
                         f"unkown paramters {params.keys()} for %glob operator"
                     )
-                ret["$regex"] = fnmatch.translate(glob)
+                # we need to attach the start and end match character to achieve
+                # an equivalent matching behavior to fnmatch in mongoDB
+                ret["$regex"] = "^"+fnmatch.translate(glob)+"$"
             else:
                 for key, value in filter.items():
                     if isinstance(value, dict):
