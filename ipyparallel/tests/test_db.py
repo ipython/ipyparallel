@@ -135,19 +135,57 @@ class TaskDBTest:
 
     def test_find_records_glob(self):
         """test finding records with '$glob' operators"""
-        hist = self.db.get_history()
+        msg_ids = self.load_records(10)
+        labels = [
+            "group_a",
+            "group_a",
+            "group_a/subgroup_a",
+            "group_a/subgroup_b",
+            "group_b",
+            "group_b/subgroup_a",
+            "group_b/subgroup_b",
+            "group_b/subgroup_c",
+            "label*task",
+            "label?task",
+        ]
+        assert len(msg_ids) == len(labels)
+        for msg_id, label in zip(msg_ids, labels):
+            self.db.update_record(msg_id, dict(label=label))
 
-        pattern = "*" + hist[0][5:-2] + "_?"
-        ref = [msg_id for msg_id in hist if fnmatch.fnmatch(msg_id, pattern)]
-        recs = self.db.find_records({'msg_id': {'$glob': pattern}}, ["msg_id"])
-        found = [r['msg_id'] for r in recs]
-        assert set(ref) == set(found)
+        patterns = [
+            "group_a*",
+            "group_a/subgroup_?",
+            "group_b",
+            "group_b/subgroup_[ab]",
+            "*/subgroup_a",
+            "*[*]*",
+            "*[?]*",
+        ]
+        for pattern in patterns:
+            ref = [
+                msg_id
+                for msg_id, label in zip(msg_ids, labels)
+                if fnmatch.fnmatch(label, pattern)
+            ]
+            recs = self.db.find_records(
+                {'label': {'$glob': pattern}}, ["msg_id", 'label']
+            )
+            found = [r['msg_id'] for r in recs]
+            assert set(ref) == set(found)
 
-        pattern = "*_1?"
-        ref = [msg_id for msg_id in hist if fnmatch.fnmatch(msg_id, pattern)]
-        recs = self.db.find_records({'msg_id': {'$glob': pattern}}, ["msg_id"])
-        found = [r['msg_id'] for r in recs]
-        assert set(ref) == set(found)
+        # hist = self.db.get_history()
+        #
+        # pattern = "*" + hist[0][5:-2] + "_?"
+        # ref = [msg_id for msg_id in hist if fnmatch.fnmatch(msg_id, pattern)]
+        # recs = self.db.find_records({'msg_id': {'$glob': pattern}}, ["msg_id"])
+        # found = [r['msg_id'] for r in recs]
+        # assert set(ref) == set(found)
+        #
+        # pattern = "*_1?"
+        # ref = [msg_id for msg_id in hist if fnmatch.fnmatch(msg_id, pattern)]
+        # recs = self.db.find_records({'msg_id': {'$glob': pattern}}, ["msg_id"])
+        # found = [r['msg_id'] for r in recs]
+        # assert set(ref) == set(found)
 
     def test_get_history(self):
         msg_ids = self.db.get_history()

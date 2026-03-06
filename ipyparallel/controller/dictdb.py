@@ -60,7 +60,7 @@ filters = {
     '$all': lambda a, b: all([a in bb for bb in b]),
     '$mod': lambda a, b: a % b[0] == b[1],
     '$exists': lambda a, b: (b and a is not None) or (a is None and not b),
-    '$glob': lambda a, b: fnmatch.fnmatch(a, b),
+    '$glob': lambda a, b: fnmatch.fnmatch(a, b) if a is not None else False,
 }
 
 
