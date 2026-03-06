@@ -156,10 +156,10 @@ class TaskDBTest:
             "group_a*",
             "group_a/subgroup_?",
             "group_b",
-            "group_b/subgroup_[ab]",
+            "group_b/subgroup_[ab]",  # check sequence character matching
             "*/subgroup_a",
-            "*[*]*",
-            "*[?]*",
+            "*[*]*",  # test wildcard escaping
+            "*[?]*",  # test wildcard escaping
         ]
         for pattern in patterns:
             ref = [
