@@ -127,7 +127,7 @@ class MongoDB(BaseDB):
                     )
                 # we need to attach the start and end match character to achieve
                 # an equivalent matching behavior to fnmatch in mongoDB
-                ret["$regex"] = "^"+fnmatch.translate(glob)+"$"
+                ret["$regex"] = "^" + fnmatch.translate(glob) + "$"
             else:
                 for key, value in filter.items():
                     if isinstance(value, dict):

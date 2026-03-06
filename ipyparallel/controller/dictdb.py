@@ -37,7 +37,6 @@ DictDB supports a subset of mongodb operators::
 # Distributed under the terms of the Modified BSD License.
 import copy
 import fnmatch
-import re
 from copy import deepcopy
 from datetime import datetime
 
