@@ -173,20 +173,6 @@ class TaskDBTest:
             found = [r['msg_id'] for r in recs]
             assert set(ref) == set(found)
 
-        # hist = self.db.get_history()
-        #
-        # pattern = "*" + hist[0][5:-2] + "_?"
-        # ref = [msg_id for msg_id in hist if fnmatch.fnmatch(msg_id, pattern)]
-        # recs = self.db.find_records({'msg_id': {'$glob': pattern}}, ["msg_id"])
-        # found = [r['msg_id'] for r in recs]
-        # assert set(ref) == set(found)
-        #
-        # pattern = "*_1?"
-        # ref = [msg_id for msg_id in hist if fnmatch.fnmatch(msg_id, pattern)]
-        # recs = self.db.find_records({'msg_id': {'$glob': pattern}}, ["msg_id"])
-        # found = [r['msg_id'] for r in recs]
-        # assert set(ref) == set(found)
-
     def test_get_history(self):
         msg_ids = self.db.get_history()
         latest = datetime(1984, 1, 1).replace(tzinfo=utc)
