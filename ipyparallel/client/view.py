@@ -138,7 +138,7 @@ class View(HasTraits):
     def set_flags(self, **kwargs):
         """set my attribute flags by keyword.
 
-        Views determine behavior with a few attributes (`block`, `track`, etc.).
+        Views determine behavior with a few attributes (`block`, `track`, `label`, etc.).
         These attributes can be set all at once by name with this method.
 
         Parameters
@@ -149,6 +149,8 @@ class View(HasTraits):
             whether to create a MessageTracker to allow the user to
             safely edit after arrays and buffers during non-copying
             sends.
+        label : str
+            set an optional user-defined task identifier
         """
         for name, value in kwargs.items():
             if name not in self._flag_names:
@@ -557,6 +559,8 @@ class DirectView(View):
             whether to block
         track : bool [default: self.track]
             whether to ask zmq to track the message, for safe non-copying sends
+        label : str [default self.label]
+            set an optional user-defined task identifier
 
         Returns
         -------
@@ -642,6 +646,8 @@ class DirectView(View):
             Only for zero-copy sends such as numpy arrays that are going to be modified in-place.
         return_exceptions : bool [default False]
             Return remote Exceptions in the result sequence instead of raising them.
+        label : str [default self.label]
+            set an optional user-defined task identifier
 
         Returns
         -------
@@ -672,7 +678,7 @@ class DirectView(View):
 
     @sync_results
     @save_ids
-    def execute(self, code, silent=True, targets=None, block=None):
+    def execute(self, code, silent=True, targets=None, block=None, label=None):
         """Executes `code` on `targets` in blocking or nonblocking manner.
 
         ``execute`` is always `bound` (affects engine namespace)
@@ -681,18 +687,21 @@ class DirectView(View):
         ----------
         code : str
             the code string to be executed
-        block : bool
+        block : bool [default self.block]
             whether or not to wait until done to return
-            default: self.block
+        label : str [default self.label]
+            set an optional user-defined task identifier
         """
         block = self.block if block is None else block
         targets = self.targets if targets is None else targets
+        label = self.label if label is None else label
+        metadata = dict(label=label)
 
         _idents, _targets = self.client._build_targets(targets)
         futures = []
         for ident in _idents:
             future = self.client.send_execute_request(
-                self._socket, code, silent=silent, ident=ident
+                self._socket, code, silent=silent, ident=ident, metadata=metadata
             )
             futures.append(future)
         if isinstance(targets, int):
@@ -708,7 +717,7 @@ class DirectView(View):
                 pass
         return ar
 
-    def run(self, filename, targets=None, block=None):
+    def run(self, filename, targets=None, block=None, label=None):
         """Execute contents of `filename` on my engine(s).
 
         This simply reads the contents of the file and calls `execute`.
@@ -723,13 +732,15 @@ class DirectView(View):
         block : bool
             whether or not to wait until done
             default: self.block
+        label : str
+            set an optional user-defined task identifier
 
         """
         with open(filename) as f:
             # add newline in case of trailing indented whitespace
             # which will cause SyntaxError
             code = f.read() + '\n'
-        return self.execute(code, block=block, targets=targets)
+        return self.execute(code, block=block, targets=targets, label=label)
 
     def update(self, ns):
         """update remote namespace with dict `ns`
@@ -1076,7 +1087,6 @@ class BroadcastView(DirectView):
         block=None,
         track=False,
         return_exceptions=False,
-        label=None,
     ):
         """Parallel version of builtin `map`, using this View's `targets`.
 
@@ -1297,6 +1307,8 @@ class LoadBalancedView(View):
             DependencyTimeout.
         retries : int
             Number of times a task will be retried on failure.
+        label : str
+            set an optional user-defined task identifier
         """
 
         super().set_flags(**kwargs)
@@ -1348,6 +1360,8 @@ class LoadBalancedView(View):
             whether to block
         track : bool [default: self.track]
             whether to ask zmq to track the message, for safe non-copying sends
+        label : str [default self.label]
+            set an optional user-defined task identifier
         !!!!!! TODO : THE REST HERE  !!!!
 
         Returns
@@ -1470,6 +1484,8 @@ class LoadBalancedView(View):
 
         return_exceptions: bool [default False]
             Return Exceptions instead of raising on the first exception.
+        label : str [default self.label]
+            set an optional user-defined task identifier
 
         Returns
         -------

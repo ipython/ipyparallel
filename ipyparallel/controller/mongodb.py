@@ -11,14 +11,12 @@ try:
 except ImportError:
     from bson import Binary
 
+import fnmatch
+
+from bson.codec_options import CodecOptions
 from traitlets import Dict, Instance, List, Unicode
 
 from .dictdb import BaseDB
-
-# we need to determine the pymongo version because of API changes. see
-# https://pymongo.readthedocs.io/en/stable/migrate-to-pymongo4.html
-pymongo_version_major = int(version.split('.')[0])
-pymongo_version_minor = int(version.split('.')[1])
 
 # -----------------------------------------------------------------------------
 # MongoDB class
@@ -53,23 +51,28 @@ class MongoDB(BaseDB):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        # make sure that pymongo version is at least 4.x because of API changes. see
+        # https://pymongo.readthedocs.io/en/stable/migrate-to-pymongo4.html
+        # for more details
+        pymongo_version_major = int(version.split('.')[0])
+        if pymongo_version_major < 4:
+            raise Exception(
+                f"pymongo package too old (current version={version}). Please update to version 4.0 or higher"
+            )
+
         if self._connection is None:
             self._connection = MongoClient(
                 *self.connection_args, **self.connection_kwargs
             )
         if not self.database:
             self.database = self.session
+        options = CodecOptions(tz_aware=True)
         self._db = self._connection[self.database]
-        self._records = self._db['task_records']
-        if pymongo_version_major >= 4:
-            # mimic the old API 3.x
-            self._records.insert = self._records.insert_one
-            self._records.update = self._records.update_one
-            self._records.ensure_index = self._records.create_index
-            self._records.remove = self._records.delete_many
-
-        self._records.ensure_index('msg_id', unique=True)
-        self._records.ensure_index('submitted')  # for sorting history
+        self._records = self._db.get_collection("task_records", options)
+        # self._records = self._db['task_records']
+        self._records.create_index('msg_id', unique=True)
+        self._records.create_index('submitted')  # for sorting history
         # for rec in self._records.find
 
     def _binary_buffers(self, rec):
@@ -82,7 +85,7 @@ class MongoDB(BaseDB):
         """Add a new Task Record, by msg_id."""
         # print rec
         rec = self._binary_buffers(rec)
-        self._records.insert(rec)
+        self._records.insert_one(rec)
 
     def get_record(self, msg_id):
         """Get a specific Task Record, by msg_id."""
@@ -96,15 +99,46 @@ class MongoDB(BaseDB):
         """Update the data in an existing record."""
         rec = self._binary_buffers(rec)
 
-        self._records.update({'msg_id': msg_id}, {'$set': rec})
+        self._records.update_one({'msg_id': msg_id}, {'$set': rec})
 
     def drop_matching_records(self, check):
         """Remove a record from the DB."""
-        self._records.remove(check)
+        self._records.delete_many(check)
 
     def drop_record(self, msg_id):
         """Remove a record from the DB."""
-        self._records.remove({'msg_id': msg_id})
+        self._records.delete_many({'msg_id': msg_id})
+
+    def _translate(self, filter):
+        """translates $glob to $regex operators"""
+        if isinstance(filter, list):
+            ret = []
+            for f in filter:
+                ret.append(self._translate(f))
+            return ret
+        elif isinstance(filter, dict):
+            ret = dict()
+            if "$glob" in filter:
+                params = dict(filter)
+                glob = params.pop("$glob")
+                if len(params) != 0:
+                    raise Exception(
+                        f"unkown paramters {params.keys()} for %glob operator"
+                    )
+                # we need to attach the start and end match character to achieve
+                # an equivalent matching behavior to fnmatch in mongoDB
+                ret["$regex"] = "^" + fnmatch.translate(glob) + "$"
+            else:
+                for key, value in filter.items():
+                    if isinstance(value, dict):
+                        ret[key] = self._translate(value)
+                    elif isinstance(value, list):
+                        ret[key] = self._translate(value)
+                    else:
+                        ret[key] = value
+            return ret
+        else:
+            return filter
 
     def find_records(self, check, keys=None):
         """Find records matching a query dict, optionally extracting subset of keys.
@@ -121,7 +155,7 @@ class MongoDB(BaseDB):
         """
         if keys and 'msg_id' not in keys:
             keys.append('msg_id')
-        matches = list(self._records.find(check, keys))
+        matches = list(self._records.find(self._translate(check), keys))
         for rec in matches:
             rec.pop('_id')
         return matches

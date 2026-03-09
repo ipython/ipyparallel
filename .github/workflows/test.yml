@@ -84,11 +84,14 @@ jobs:
 
       - name: Set up slurm
         if: ${{ matrix.cluster_type == 'slurm' }}
+        # docker build can lead to race condition -> image "docker.io/library/ipp-cluster:slurm": already exists
+        # see https://github.com/mlflow/mlflow/pull/20779
+        # work-a-round fix: docker compose again if first call failed
         run: |
           export DOCKER_BUILDKIT=1
           export COMPOSE_DOCKER_CLI_BUILD=1
           cd ci/slurm
-          docker compose up -d --build
+          docker compose up -d --build || docker compose up -d --build
 
       - name: Install Python (conda) ${{ matrix.python }}
         if: ${{ matrix.cluster_type == 'mpi' }}
@@ -127,6 +130,23 @@ jobs:
         run: |
           pip install distributed joblib
           pip install --only-binary :all: matplotlib
+
+      - name: Start MongoDB
+        if: ${{ (! matrix.runs_on) && (! matrix.cluster_type) }} # only under linux with no cluster
+        uses: supercharge/mongodb-github-action@1.12.1 # uses latest mongodb per default
+
+      - name: Install pymongo package
+        if: ${{ (! matrix.runs_on) && (! matrix.cluster_type) }} # only under linux with no cluster
+        run: pip install pymongo
+
+      - name: Try to connect to mongodb
+        if: ${{ (! matrix.runs_on) && (! matrix.cluster_type) }} # only under linux with no cluster
+        run: |
+          python3 <<EOF
+          from pymongo import MongoClient
+          client = MongoClient('mongodb://localhost:27017/',serverSelectionTimeoutMS=1)
+          print(client.server_info())
+          EOF
 
       - name: Show environment
         run: pip freeze

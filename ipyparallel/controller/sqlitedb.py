@@ -47,6 +47,7 @@ operators = {
     # '$all': None,
     # '$mod': None,
     # '$exists' : None
+    '$glob': "GLOB",
 }
 null_operators = {
     '=': "IS NULL",

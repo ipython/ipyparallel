@@ -2,8 +2,10 @@
 
 # Copyright (c) IPython Development Team.
 # Distributed under the terms of the Modified BSD License.
+import fnmatch
 import logging
 import os
+import re
 import tempfile
 import time
 from datetime import datetime, timedelta
@@ -130,6 +132,46 @@ class TaskDBTest:
         recs = self.db.find_records({'msg_id': {'$nin': even}})
         found = [r['msg_id'] for r in recs]
         assert set(odd) == set(found)
+
+    def test_find_records_glob(self):
+        """test finding records with '$glob' operators"""
+        msg_ids = self.load_records(10)
+        labels = [
+            "group_a",
+            "group_a",
+            "group_a/subgroup_a",
+            "group_a/subgroup_b",
+            "group_b",
+            "group_b/subgroup_a",
+            "group_b/subgroup_b",
+            "group_b/subgroup_c",
+            "label*task",
+            "label?task",
+        ]
+        assert len(msg_ids) == len(labels)
+        for msg_id, label in zip(msg_ids, labels):
+            self.db.update_record(msg_id, dict(label=label))
+
+        patterns = [
+            "group_a*",
+            "group_a/subgroup_?",
+            "group_b",
+            "group_b/subgroup_[ab]",  # check sequence character matching
+            "*/subgroup_a",
+            "*[*]*",  # test wildcard escaping
+            "*[?]*",  # test wildcard escaping
+        ]
+        for pattern in patterns:
+            ref = [
+                msg_id
+                for msg_id, label in zip(msg_ids, labels)
+                if fnmatch.fnmatch(label, pattern)
+            ]
+            recs = self.db.find_records(
+                {'label': {'$glob': pattern}}, ["msg_id", 'label']
+            )
+            found = [r['msg_id'] for r in recs]
+            assert set(ref) == set(found)
 
     def test_get_history(self):
         msg_ids = self.db.get_history()

@@ -1226,7 +1226,9 @@ class Client(HasTraits):
             for callback in msg_future.iopub_callbacks:
                 callback(msg)
 
-    def create_message_futures(self, msg_id, header, async_result=False, track=False):
+    def create_message_futures(
+        self, msg_id, header, async_result=False, track=False, label=None
+    ):
         msg_future = MessageFuture(msg_id, header=header, track=track)
         futures = [msg_future]
         self._futures[msg_id] = msg_future
@@ -1237,6 +1239,7 @@ class Client(HasTraits):
             # hook up metadata
             output.metadata = self.metadata[msg_id]
             output.metadata['submitted'] = util.utcnow()
+            output.metadata['label'] = label
             msg_future.output = output
             futures.append(output)
         return futures
@@ -1266,6 +1269,7 @@ class Client(HasTraits):
         msg_id = msg['header']['msg_id']
 
         expect_reply = msg_type not in {"comm_msg", "comm_close", "comm_open"}
+        label = metadata["label"] if metadata and "label" in metadata else None
 
         if expect_reply and track_outstanding:
             # add to outstanding, history
@@ -1289,6 +1293,7 @@ class Client(HasTraits):
                 msg['header'],
                 async_result=msg_type in {'execute_request', 'apply_request'},
                 track=track,
+                label=label,
             )
             if message_future_hook is not None:
                 message_future_hook(futures[0])
