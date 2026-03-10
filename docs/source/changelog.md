@@ -4,7 +4,49 @@
 
 Changes in IPython Parallel
 
+## 9.1
+
+### 9.1.0 - 2026-03
+
+9.1.0 introduces a new task labeling feature for filtering task results (Thanks, @ottointhesky!).
+
+9.1 requires Python >=3.10.
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/9.0.1...9.1.0))
+
+#### New features added
+
+- Task label feature refined [#983](https://github.com/ipython/ipyparallel/pull/983) ([@ottointhesky](https://github.com/ottointhesky), [@minrk](https://github.com/minrk))
+- Task label feature [#979](https://github.com/ipython/ipyparallel/pull/979) ([@ottointhesky](https://github.com/ottointhesky), [@minrk](https://github.com/minrk))
+- handle XPUB socket type in kernel protocol [#985](https://github.com/ipython/ipyparallel/pull/985) ([@minrk](https://github.com/minrk))
+
+#### Bugs fixed
+
+- Use new serialization code for PyPy3.10+ 7.3.19+ [#934](https://github.com/ipython/ipyparallel/pull/934) ([@mgorny](https://github.com/mgorny), [@minrk](https://github.com/minrk))
+- ipykernel 7 support - take 2 [#947](https://github.com/ipython/ipyparallel/pull/947) ([@ianthomas23](https://github.com/ianthomas23), [@minrk](https://github.com/minrk))
+
+#### Maintenance and upkeep improvements
+
+- fix a couple of doc links [#976](https://github.com/ipython/ipyparallel/pull/976) ([@minrk](https://github.com/minrk))
+- require Python 3.10 [#954](https://github.com/ipython/ipyparallel/pull/954) ([@minrk](https://github.com/minrk))
+- dependabot: split major/minor js bumps [#940](https://github.com/ipython/ipyparallel/pull/940) ([@minrk](https://github.com/minrk))
+
+#### Contributors to this release
+
+The following people contributed discussions, new ideas, code and documentation contributions, and review.
+See [our definition of contributors](https://github-activity.readthedocs.io/en/latest/use/#how-does-this-tool-define-contributions-in-the-reports).
+
+([GitHub contributors page for this release](https://github.com/ipython/ipyparallel/graphs/contributors?from=2025-03-03&to=2026-03-10&type=c))
+
+@ianthomas23 ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Aianthomas23+updated%3A2025-03-03..2026-03-10&type=Issues)) | @mgorny ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Amgorny+updated%3A2025-03-03..2026-03-10&type=Issues)) | @minrk ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Aminrk+updated%3A2025-03-03..2026-03-10&type=Issues)) | @ottointhesky ([activity](https://github.com/search?q=repo%3Aipython%2Fipyparallel+involves%3Aottointhesky+updated%3A2025-03-03..2026-03-10&type=Issues))
+
 ## 9.0
+
+### 9.0.2 - 2025-10
+
+([full changelog](https://github.com/ipython/ipyparallel/compare/9.0.1...9.0.2))
+
+9.0.2 fixes compatibility with upcoming ipykernel 7 (as of alpha 3).
 
 ### 9.0.1 - 2025-03
 
