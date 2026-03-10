@@ -10,6 +10,8 @@ Changes in IPython Parallel
 
 9.1.0 introduces a new task labeling feature for filtering task results (Thanks, @ottointhesky!).
 
+9.1 requires Python >=3.10.
+
 ([full changelog](https://github.com/ipython/ipyparallel/compare/9.0.1...9.1.0))
 
 #### New features added
