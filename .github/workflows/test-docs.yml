@@ -22,7 +22,7 @@ jobs:
   test-docs:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.0
         with:
           # make rediraffecheckdiff requires git history to compare current
           # commit with the main branch and previous releases.
