@@ -16,7 +16,7 @@ import os
 import sys
 from argparse import ArgumentParser
 
-from .cluster.shellcmd import ShellCommandReceive
+from .cluster.shellcmd_receive import ShellCommandReceive
 
 
 def main():
