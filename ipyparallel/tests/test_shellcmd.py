@@ -128,6 +128,12 @@ sender_ids = [
 ]
 
 
+def test_shellcmd_module_import():
+    import ipyparallel.shellcmd
+
+    assert callable(ipyparallel.shellcmd.main)
+
+
 @pytest.fixture
 def shellcmd_test_cmd():
     """returns a command that runs for 5 seconds"""
