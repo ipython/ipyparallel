@@ -53,19 +53,19 @@ jobs:
             pre: pre
 
     steps:
-      - uses: actions/checkout@v6.0.2
+      - uses: actions/checkout@v7.0.0
         with:
           persist-credentials: false
 
       - name: Cache conda environment
-        uses: actions/cache@v5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             ~/conda
           key: conda
 
       - name: Cache node_modules
-        uses: actions/cache@v5
+        uses: actions/cache@v6.1.0
         with:
           path: |
             node_modules
@@ -177,7 +177,7 @@ jobs:
           ${EXEC} chmod -R a+rw .coverage*
 
       - name: Submit codecov report
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@v7
 
       - name: Report on slurm
         if: ${{ matrix.cluster_type == 'slurm' && failure() }}
