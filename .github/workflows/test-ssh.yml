@@ -51,7 +51,7 @@ jobs:
             runs_on: windows-2022
 
     steps:
-      - uses: actions/checkout@v7.0.0
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
@@ -131,7 +131,7 @@ jobs:
           docker run ipyparallel-sshd ping -n 1 $env:computername
 
       - name: Install Python ${{ matrix.python }}
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
           cache: pip
