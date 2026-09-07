@@ -319,6 +319,7 @@ data_pub messages are constructed via the {func}`ipyparallel.datapub.publish_dat
 
 ```python
 from ipyparallel.datapub import publish_data
+
 ns = dict(x=my_array)
 publish_data(ns)
 ```

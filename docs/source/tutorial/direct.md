@@ -21,6 +21,7 @@ Option 1. starting a new cluster
 
 ```python
 import ipyparallel as ipp
+
 cluster = ipp.Cluster(n=4)
 cluster.start_cluster_sync()
 ```
@@ -32,6 +33,7 @@ or a JupyterLab extension.
 
 ```python
 import ipyparallel as ipp
+
 cluster = ipp.Cluster.from_file()
 ```
 
