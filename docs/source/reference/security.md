@@ -111,24 +111,21 @@ circumstances:
 
 ```python
 {
-  "ssh": "",
-  "interface": "tcp://127.0.0.1",
-  "registration": 54886,
-  "control": 54888,
-  "mux": 54890,
-  "hb_ping": 54891,
-  "hb_pong": 54892,
-  "task": 54894,
-  "iopub": 54896,
-  "broadcast": [
-    54900,
-    54901
-  ],
-  "key": "7e99e423-c437d4daf7cf23ee84cae803",
-  "location": "mylaptop",
-  "pack": "json",
-  "unpack": "json",
-  "signature_scheme": "hmac-sha256"
+    "ssh": "",
+    "interface": "tcp://127.0.0.1",
+    "registration": 54886,
+    "control": 54888,
+    "mux": 54890,
+    "hb_ping": 54891,
+    "hb_pong": 54892,
+    "task": 54894,
+    "iopub": 54896,
+    "broadcast": [54900, 54901],
+    "key": "7e99e423-c437d4daf7cf23ee84cae803",
+    "location": "mylaptop",
+    "pack": "json",
+    "unpack": "json",
+    "signature_scheme": "hmac-sha256",
 }
 ```
 
@@ -143,25 +140,21 @@ $> ipcontroller --ip=* --ssh=login.mycluster.com
 
 ```python
 {
-  "ssh": "login.mycluster.com",
-  "interface": "tcp://*",
-  "registration": 55836,
-  "control": 55837,
-  "mux": 55839,
-  "task": 55843,
-  "task_scheme": "lru",
-  "iopub": 55845,
-  "notification": 55852,
-  "broadcast": [
-    55847,
-    55848,
-    55849
-  ],
-  "key": "70bc97ac-e66ac5143885ca8b376d4cb7",
-  "location": "mylaptop",
-  "pack": "json",
-  "unpack": "json",
-  "signature_scheme": "hmac-sha256"
+    "ssh": "login.mycluster.com",
+    "interface": "tcp://*",
+    "registration": 55836,
+    "control": 55837,
+    "mux": 55839,
+    "task": 55843,
+    "task_scheme": "lru",
+    "iopub": 55845,
+    "notification": 55852,
+    "broadcast": [55847, 55848, 55849],
+    "key": "70bc97ac-e66ac5143885ca8b376d4cb7",
+    "location": "mylaptop",
+    "pack": "json",
+    "unpack": "json",
+    "signature_scheme": "hmac-sha256",
 }
 ```
 

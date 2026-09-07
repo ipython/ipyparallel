@@ -22,7 +22,7 @@ or in your {file}`ipcontroller_config.py`:
 
 ```python
 c.IPController.db_class = "NoDB"
-c.IPController.db_class = "DictDB" # default
+c.IPController.db_class = "DictDB"  # default
 c.IPController.db_class = "MongoDB"
 c.IPController.db_class = "SQLiteDB"
 ```
