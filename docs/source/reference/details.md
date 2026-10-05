@@ -104,12 +104,14 @@ def f(a):
     def inner():
         # inner will have a closure
         return a
+
     return inner
+
 
 f1 = f(1)
 f2 = f(2)
-f1() # returns 1
-f2() # returns 2
+f1()  # returns 1
+f2()  # returns 2
 ```
 
 `f1` and `f2` will have closures referring to the scope in which `inner` was defined,
@@ -126,12 +128,15 @@ def g(b):
     def inner():
         # this inner will *not* have a closure
         return a
+
     return inner
+
+
 g1 = g(1)
 g2 = g(2)
-g1() # raises NameError on 'a'
-a=5
-g2() # returns 5
+g1()  # raises NameError on 'a'
+a = 5
+g2()  # returns 5
 ```
 
 `g1` and `g2` _will_ be sendable with IPython, and will treat the engine's namespace as
