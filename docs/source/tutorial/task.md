@@ -137,13 +137,16 @@ You can also require specific objects, not just module names:
 def foo(a):
     return a * a
 
+
 @ipp.require(foo)
 def bar(b):
     return foo(b)
 
+
 @ipp.require(bar)
 def baz(c, d):
     return bar(c) - bar(d)
+
 
 view.apply_sync(baz, 4, 5)
 ```
@@ -373,9 +376,9 @@ assigned to an engine at a given time. This limit is set with the
 
 ```python
 # the most common choices are:
-c.TaskSheduler.hwm = 0 # (minimal latency, default in IPython < 0.13)
+c.TaskSheduler.hwm = 0  # (minimal latency, default in IPython < 0.13)
 # or
-c.TaskScheduler.hwm = 1 # (most-informed balancing, default in ≥ 0.13)
+c.TaskScheduler.hwm = 1  # (most-informed balancing, default in ≥ 0.13)
 ```
 
 In IPython \< 0.13, the default is 0, or no-limit. That is, there is no limit to the number of
