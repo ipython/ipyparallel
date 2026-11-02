@@ -366,7 +366,7 @@ $ ipython profile create --parallel --profile=ssh
 To use this mode, select the SSH launchers in {file}`ipcluster_config.py`:
 
 ```python
-c.Cluster.engine_launcher_class = 'ssh' # or 'sshproxy'
+c.Cluster.engine_launcher_class = 'ssh'  # or 'sshproxy'
 # and if the Controller is also to be remote:
 c.Cluster.controller_launcher_class = 'ssh'
 ```
@@ -389,11 +389,17 @@ Engines are specified in a dictionary, by hostname and the number of engines to 
 on that host.
 
 ```python
-c.SSHEngineSetLauncher.engines = { 'host1.example.com' : 2,
-            'host2.example.com' : 5,
-            'host3.example.com' : (1, ['--profile-dir=/home/different/location']),
-            'host4.example.com' : {'n': 3, 'engine_args': ['--profile-dir=/away/location'], 'engine_cmd': ['/home/venv/bin/python', '-m', 'ipyparallel.engine']},
-            'host5.example.com' : 8 }
+c.SSHEngineSetLauncher.engines = {
+    'host1.example.com': 2,
+    'host2.example.com': 5,
+    'host3.example.com': (1, ['--profile-dir=/home/different/location']),
+    'host4.example.com': {
+        'n': 3,
+        'engine_args': ['--profile-dir=/away/location'],
+        'engine_cmd': ['/home/venv/bin/python', '-m', 'ipyparallel.engine'],
+    },
+    'host5.example.com': 8,
+}
 ```
 
 - The `engines` dict, where the keys are the host we want to run engines on and
@@ -655,6 +661,7 @@ c.IPController.ip = '*'
 c.IPController.location = '10.0.1.5'
 # or to get an automatic value, try this:
 import socket
+
 hostname = socket.gethostname()
 # alternate choices for hostname include `socket.getfqdn()`
 # or `socket.gethostname() + '.local'`
@@ -670,10 +677,10 @@ After doing this, your {file}`ipcontroller-client.json` file will look something
 
 ```python
 {
-  "url":"tcp:\/\/*:43447",
-  "exec_key":"9c7779e4-d08a-4c3b-ba8e-db1f80b562c1",
-  "ssh":"login.mycluster.net",
-  "location":"10.0.1.5"
+    "url": "tcp:\/\/*:43447",
+    "exec_key": "9c7779e4-d08a-4c3b-ba8e-db1f80b562c1",
+    "ssh": "login.mycluster.net",
+    "location": "10.0.1.5",
 }
 ```
 
@@ -775,7 +782,7 @@ You can also specify a file or python command to be run at startup of the
 Engine:
 
 ```python
-c.IPEngine.startup_script = u'/path/to/my/startup.py'
+c.IPEngine.startup_script = '/path/to/my/startup.py'
 
 c.IPEngine.startup_command = 'import numpy, scipy, mpi4py'
 ```
@@ -786,7 +793,7 @@ It's also useful on systems with shared filesystems to run the engines
 in some scratch directory. This can be set with:
 
 ```python
-c.IPEngine.work_dir = u'/path/to/scratch/'
+c.IPEngine.work_dir = '/path/to/scratch/'
 ```
 
 [^cite_mpi]: Message Passing Interface (MPI) <https://www.mpi-forum.org>

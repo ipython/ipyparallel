@@ -22,6 +22,7 @@ and can be selected via short lowercase string naming the kind of launcher, e.g.
 
 ```python
 import ipyparallel as ipp
+
 c = ipp.Cluster(engines="mpi")
 ```
 
@@ -102,6 +103,8 @@ For example:
 ```python
 from traitlets import Integer
 from ipyparallel.cluster.launcher import EngineLauncher
+
+
 class MyLauncher(EngineLauncher):
     pid = Integer(
         help="The pid of the process",
