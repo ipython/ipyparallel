@@ -65,10 +65,13 @@ You can similarly run MPI code using IPyParallel (requires [mpi4py](https://mpi4
 ```python
 import ipyparallel as ipp
 
+
 def mpi_example():
     from mpi4py import MPI
+
     comm = MPI.COMM_WORLD
     return f"Hello World from rank {comm.Get_rank()}. total ranks={comm.Get_size()}"
+
 
 # request an MPI cluster with 4 engines
 with ipp.Cluster(engines='mpi', n=4) as rc:

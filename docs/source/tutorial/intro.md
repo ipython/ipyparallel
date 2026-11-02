@@ -242,6 +242,7 @@ For example:
 
 ```python
 import ipyparallel as ipp
+
 # start cluster, connect client
 with ipp.Cluster(n=4) as rc:
     e_all = rc[:]
