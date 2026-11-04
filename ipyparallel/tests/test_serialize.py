@@ -148,6 +148,30 @@ def test_numpy_in_dict():
             assert_array_equal(A, B)
 
 
+def test_dict_unsortable_keys():
+    d = {'A': 1, 2: 2}
+    bufs = serialize_object(d)
+    d2, r = deserialize_object(bufs)
+    assert r == []
+    assert d2 == d
+
+
+def test_numpy_in_dict_unsortable_keys():
+    pytest.importorskip('numpy')
+    from numpy.testing import assert_array_equal
+
+    A = new_array((100, 100), dtype='float64')
+    B = new_array((1000,), dtype='int32')
+    d = {'b': B, 1: A, 'c': 3}
+    bufs = serialize_object(d)
+    assert len(bufs) == 3
+    d2, r = deserialize_object(bufs)
+    assert r == []
+    assert d2['c'] == 3
+    assert_array_equal(d2[1], A)
+    assert_array_equal(d2['b'], B)
+
+
 def test_class():
     @interactive
     class C:
