@@ -107,6 +107,7 @@ artifacts = [
 "jupyter-config" = "etc/jupyter"
 "ipyparallel/nbextension/static" = "share/jupyter/nbextensions/ipyparallel"
 "ipyparallel/labextension" = "share/jupyter/labextensions/ipyparallel-labextension"
+"install.json" = "share/jupyter/labextensions/ipyparallel-labextension/install.json"
 
 [tool.black]
 skip-string-normalization = true
